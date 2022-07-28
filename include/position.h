@@ -52,9 +52,12 @@ enum piece { all, pawn, knight, bishop, rook, queen, king };
 
 enum colored_piece { empty, white_pawn, white_knight, white_bishop, white_rook, white_queen, white_king, black_pawn, black_knight, black_bishop, black_rook, black_queen, black_king };
 
-uint64_t generate_checkers(struct position *pos);
-uint64_t generate_attacked(struct position *pos);
-uint64_t generate_pinned(struct position *pos);
+uint64_t generate_checkers_white(struct position *pos);
+uint64_t generate_checkers_black(struct position *pos);
+uint64_t generate_attacked_white(struct position *pos);
+uint64_t generate_attacked_black(struct position *pos);
+uint64_t generate_pinned_white(struct position *pos);
+uint64_t generate_pinned_black(struct position *pos);
 
 static inline void swap_turn(struct position *pos) {
 	pos->turn = 1 - pos->turn;

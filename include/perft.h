@@ -24,4 +24,8 @@
 
 uint64_t perft(struct position *pos, int depth, int print, int verbose);
 
+uint64_t perft_white(struct position *pos, int depth, int print, int verbose);
+
+uint64_t perft_black(struct position *pos, int depth, int print, int verbose);
+
 #endif

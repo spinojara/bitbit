@@ -23,6 +23,10 @@
 
 move *generate_all(struct position *pos, move *move_list);
 
+move *generate_white(struct position *pos, move *move_list);
+
+move *generate_black(struct position *pos, move *move_list);
+
 int move_count(move *m);
 
 #endif
