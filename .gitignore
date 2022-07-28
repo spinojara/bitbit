@@ -1,0 +1,15 @@
+# build files
+build/
+*.o
+*.obj
+
+# benchmark results
+results/
+
+# executable files
+bitbit
+*.exe
+
+# vim swp files
+*.swp
+*~

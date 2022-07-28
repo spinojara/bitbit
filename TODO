@@ -1,0 +1,13 @@
+add checks for malloc
+check environment variables for unicode support
+terminate if no magic found?
+look for compiler and architecture in Makefile
+implement own rand function
+
+change
+pos->white_pieces[7]
+pos->black_pieces[7]
+into
+pos->pieces[13]
+pos->white_pieces
+pos->black_pieces
