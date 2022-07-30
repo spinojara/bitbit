@@ -50,7 +50,7 @@ uint64_t perft_white(struct position *pos, int depth, int print, int verbose) {
 		}
 	}
 	if (print)
-		printf("\nnodes searched: %" PRIu64 "\n", nodes);
+		printf("\nnodes: %" PRIu64 "\n", nodes);
 	return nodes;
 }
 
@@ -76,6 +76,6 @@ uint64_t perft_black(struct position *pos, int depth, int print, int verbose) {
 		}
 	}
 	if (print)
-		printf("\nnodes searched: %" PRIu64 "\n", nodes);
+		printf("\nnodes: %" PRIu64 "\n", nodes);
 	return nodes;
 }
