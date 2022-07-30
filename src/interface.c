@@ -42,7 +42,7 @@ struct move_linked {
 	struct move_linked *previous;
 };
 
-struct position *pos;
+struct position *pos = NULL;
 struct move_linked *move_last = NULL;
 
 void move_next(move m) {
