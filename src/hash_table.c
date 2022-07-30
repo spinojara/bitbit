@@ -26,7 +26,7 @@
 struct hash_table *hash_table;
 
 #ifndef HASH
-#define HASH 128M
+#define HASH 64M
 #endif
 
 uint64_t hash_table_size_bytes() {
