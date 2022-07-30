@@ -38,7 +38,7 @@ def perft_bench(depth):
                   "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10", -1,
                 ]
     
-    Path("results").mkdir(exist_ok=True)
+    Path("results").mkdir(exist_ok = True)
     file = open("results/perft-" + date + ".txt", "w")
     for i in range((int)(len(perft_arr) / 2)):
         out = perft(perft_arr[2 * i], depth + perft_arr[2 * i + 1])
