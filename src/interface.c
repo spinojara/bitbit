@@ -275,16 +275,16 @@ int parse(int *argc, char ***argv) {
 	if (!arg)
 		return 0;
 
-	int i, j;
+	int i, j, l;
 	int ret = 1;
 	char *c;
 	if (*argc > 1) {
 		/* get arg->argc */
 		arg->argc = 0;
-		for (i = 1; i < *argc; i++) {
-			if ((*argv)[i][0] != '-' || strlen((*argv)[i]) == 1)
+		for (l = 1; l < *argc; l++) {
+			if ((*argv)[l][0] != '-' || strlen((*argv)[l]) == 1)
 				arg->argc++;
-			if ((*argv)[i][0] == ',') {
+			if ((*argv)[l][0] == ',') {
 				arg->argc--;
 				break;
 			}
@@ -333,8 +333,8 @@ int parse(int *argc, char ***argv) {
 			i++;
 		}
 
-		*argc -= arg->argc + 1;
-		*argv += arg->argc + 1;
+		*argc -= l;
+		*argv += l;
 	}
 	else {
 		char line[BUFSIZ];
