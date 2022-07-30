@@ -463,7 +463,7 @@ move *generate_white(struct position *pos, move *move_list) {
 		}
 	}
 
-	/* Set the terminating move. */
+	/* set the terminating move */
 	*move_ptr = 0;
 	return move_ptr;
 }
@@ -907,7 +907,7 @@ move *generate_black(struct position *pos, move *move_list) {
 		}
 	}
 
-	/* Set the terminating move. */
+	/* set the terminating move */
 	*move_ptr = 0;
 	return move_ptr;
 }
