@@ -42,7 +42,7 @@ struct move_linked {
 	struct move_linked *previous;
 };
 
-struct position *pos;
+struct position *pos = NULL;
 struct move_linked *move_last = NULL;
 
 void move_next(move m) {
@@ -150,9 +150,8 @@ int interface_setpos(struct arg *arg) {
 	UNUSED(arg);
 	if (arg->r) {
 		random_pos(pos, 32);
-		while (move_last) {
+		while (move_last)
 			move_previous();
-		}
 	}
 	else if (arg->argc < 2) {
 		return 2;
@@ -160,9 +159,8 @@ int interface_setpos(struct arg *arg) {
 	else {
 		if (fen_is_ok(arg->argc - 1, arg->argv + 1)) {
 			pos_from_fen(pos, arg->argc - 1, arg->argv + 1);
-			while (move_last) {
+			while (move_last)
 				move_previous();
-			}
 		}
 		else {
 			return 3;
@@ -481,4 +479,6 @@ void interface_init() {
 
 void interface_term() {
 	free(pos);
+	while (move_last)
+		move_previous();
 }

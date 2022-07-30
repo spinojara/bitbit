@@ -32,7 +32,7 @@ struct counter {
 	clock_t time;
 };
 
-struct counter *counter;
+struct counter *counter = NULL;
 
 int init(int argc, char **argv) {
 	if (argc > 1) {

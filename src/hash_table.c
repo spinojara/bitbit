@@ -23,7 +23,7 @@
 #include "util.h"
 #include "init.h"
 
-struct hash_table *hash_table;
+struct hash_table *hash_table = NULL;
 
 #ifndef HASH
 #define HASH 64M
@@ -131,7 +131,9 @@ int hash_table_init() {
 }
 
 void hash_table_term() {
-	free(hash_table->zobrist_key);
-	free(hash_table->table);
+	if (hash_table) {
+		free(hash_table->zobrist_key);
+		free(hash_table->table);
+	}
 	free(hash_table);
 }

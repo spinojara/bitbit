@@ -27,7 +27,7 @@
 int main(int argc, char **argv) {
 	/* --version */
 	if (!init(argc, argv))
-		return 0;
+		goto term;
 	util_init();
 	magic_bitboard_init();
 	attack_gen_init();
@@ -35,12 +35,11 @@ int main(int argc, char **argv) {
 	evaluate_init();
 	/* hash table size == 0 */
 	if (!hash_table_init())
-		goto exit_early;
-	hash_table_init();
+		goto term;
 	interface_init();
 	interface(argc, argv);
+term:;
 	interface_term();
 	hash_table_term();
-exit_early:
 	term();
 }
