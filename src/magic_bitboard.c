@@ -299,7 +299,7 @@ int magic_bitboard_init() {
 		bishop_magic[square] = bishop_magic_calc(square);
 		if (!bishop_magic[square]) {
 			printf("fatal error: no bishop magic found for %s\n", algebraic(str, square));
-			return 0;
+			return 1;
 		}
 		init_status("generating bishop magics");
 	}
@@ -307,7 +307,7 @@ int magic_bitboard_init() {
 		rook_magic[square] = rook_magic_calc(square);
 		if (!rook_magic[square]) {
 			printf("fatal error: no rook magic found for %s\n", algebraic(str, square));
-			return 0;
+			return 1;
 		}
 		init_status("generating rook magics");
 	}
@@ -332,5 +332,5 @@ int magic_bitboard_init() {
 			init_status("populating rook attack table");
 		}
 	}
-	return 1;
+	return 0;
 }
