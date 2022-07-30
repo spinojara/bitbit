@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import sys
 import subprocess
 from datetime import datetime
 from pathlib import Path
@@ -40,8 +41,14 @@ def perft_bench(depth):
     
     Path("results").mkdir(exist_ok = True)
     file = open("results/perft-" + date + ".txt", "w")
-    for i in range((int)(len(perft_arr) / 2)):
+    for i in range(int(len(perft_arr) / 2)):
         out = perft(perft_arr[2 * i], depth + perft_arr[2 * i + 1])
         file.write(out + "\n")
 
-perft_bench(5)
+depth = 6
+if len(sys.argv) > 1:
+    if sys.argv[1].isdigit():
+        if int(sys.argv[1]) > 1:
+            depth = int(sys.argv[1])
+
+perft_bench(depth)
