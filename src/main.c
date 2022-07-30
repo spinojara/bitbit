@@ -26,15 +26,17 @@
 
 int main(int argc, char **argv) {
 	/* --version */
-	if (!init(argc, argv))
+	if (init(argc, argv))
 		goto term;
 	util_init();
-	magic_bitboard_init();
+	/* no magic found */
+	if (magic_bitboard_init())
+		goto term;
 	attack_gen_init();
 	bitboard_init();
 	evaluate_init();
 	/* hash table size == 0 */
-	if (!hash_table_init())
+	if (hash_table_init())
 		goto term;
 	interface_init();
 	interface(argc, argv);

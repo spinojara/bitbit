@@ -20,7 +20,7 @@
 
 #include <stdint.h>
 
-void magic_bitboard_init();
+int magic_bitboard_init();
 
 extern uint64_t bishop_attacks_lookup[64 * 512];
 extern uint64_t rook_attacks_lookup[64 * 4096];

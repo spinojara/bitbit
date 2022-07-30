@@ -112,7 +112,7 @@ int hash_table_init() {
 	uint64_t t = hash_table_size_bytes();
 	if (t < sizeof(struct hash_entry)) {
 		printf("\33[2Kfatal error: bad hash table size\n");
-		return 0;
+		return 1;
 	}
 
 	hash_table = malloc(sizeof(struct hash_table));
@@ -127,7 +127,7 @@ int hash_table_init() {
 		hash_table->zobrist_key[i] = rand_uint64();
 		init_status("generating zobrist keys");
 	}
-	return 1;
+	return 0;
 }
 
 void hash_table_term() {
