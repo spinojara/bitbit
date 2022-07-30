@@ -89,7 +89,7 @@ int interface_help(struct arg *arg) {
 	"eval [-hmtv] [depth]\n"
 	"print [-v]\n"
 	);
-	return 1;
+	return 0;
 }
 
 int interface_domove(struct arg *arg) {
@@ -120,7 +120,7 @@ int interface_domove(struct arg *arg) {
 			return 3;
 		}
 	}
-	return 1;
+	return 0;
 }
 
 int interface_perft(struct arg *arg) {
@@ -143,7 +143,7 @@ int interface_perft(struct arg *arg) {
 			return 3;
 		}
 	}
-	return 1;
+	return 0;
 }
 
 int interface_setpos(struct arg *arg) {
@@ -166,7 +166,7 @@ int interface_setpos(struct arg *arg) {
 			return 3;
 		}
 	}
-	return 1;
+	return 0;
 }
 
 int interface_clear(struct arg *arg) {
@@ -179,13 +179,13 @@ int interface_clear(struct arg *arg) {
 #else
 		if (system("clear"))
 #endif
-			return 0;
-	return 1;
+			return 1;
+	return 0;
 }
 
 int interface_exit(struct arg *arg) {
 	UNUSED(arg);
-	return 0;
+	return 1;
 }
 
 int interface_print(struct arg *arg) {
@@ -203,7 +203,7 @@ int interface_print(struct arg *arg) {
 		printf("\n");
 		printf("fen: %s\n", pos_to_fen(t, pos));
 	}
-	return 1;
+	return 0;
 }
 
 int interface_eval(struct arg *arg) {
@@ -239,7 +239,7 @@ int interface_eval(struct arg *arg) {
 			return 3;
 		}
 	}
-	return 1;
+	return 0;
 }
 
 int interface_version(struct arg *arg) {
@@ -255,7 +255,7 @@ int interface_version(struct arg *arg) {
 			 				* sizeof(struct hash_entry));
 	printf("hash entry size: %" PRIu64 "B\n", sizeof(struct hash_entry));
 
-	return 1;
+	return 0;
 }
 
 struct func func_arr[] = {
@@ -276,7 +276,7 @@ int parse(int *argc, char ***argv) {
 		return 0;
 
 	int i, j, l;
-	int ret = 1;
+	int ret = -1;
 	char *c;
 	if (*argc > 1) {
 		/* get arg->argc */
@@ -341,7 +341,7 @@ int parse(int *argc, char ***argv) {
 		/* prompt */
 		printf("> ");
 		if (!fgets(line, sizeof(line), stdin)) {
-			ret = 0;
+			ret = 1;
 			goto end_early;
 		}
 
@@ -443,22 +443,21 @@ int parse(int *argc, char ***argv) {
 		}
 	}
 
+	ret = -1;
 	if (arg->argc) {
-		for (unsigned long k = 0; k < SIZE(func_arr); k++) {
-			if (strcmp(func_arr[k].name, arg->argv[0]) == 0) {
+		for (unsigned long k = 0; k < SIZE(func_arr); k++)
+			if (strcmp(func_arr[k].name, arg->argv[0]) == 0)
 				ret = func_arr[k].ptr(arg);
-				goto end_early;
-			}
-		}
-		printf("unknown command: %s\n", arg->argv[0]);
+		if (ret == -1)
+			printf("unknown command: %s\n", arg->argv[0]);
 	}
-end_early:;
 	if (ret == 2)
 		printf("error: missing argument\n");
 	else if (ret == 3)
 		printf("error: bad argument\n");
 	else if (ret == 4)
 		printf("error: missing flag\n");
+end_early:;
 	for (i = 0; i < arg->argc; i++)
 		if (arg->argv[i])
 			free(arg->argv[i]);
@@ -470,7 +469,7 @@ end_early:;
 
 void interface(int argc, char **argv) {
 	printf("\33[2Kbitbit Copyright (C) 2022 Isak Ellmer\n");
-	while (parse(&argc, &argv));
+	while (parse(&argc, &argv) != 1);
 }
 
 void interface_init() {
