@@ -186,6 +186,7 @@ int interface_eval(struct arg *arg) {
 			else
 				s = evaluate(pos, atoi(arg->argv[1]), m, arg->v);
 			t = clock() - t;
+			/* arg->v already sent to evaluate */
 			if (!arg->v) {
 				printf("%.2f ", (double)s / 100);
 				print_move(m);
