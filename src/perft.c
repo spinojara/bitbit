@@ -15,7 +15,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "search.h"
+#include "perft.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -25,8 +25,12 @@
 #include "move_gen.h"
 
 uint64_t perft(struct position *pos, int depth, int print, int verbose) {
+	return pos->turn ? perft_white(pos, depth, print, verbose) : perft_black(pos, depth, print, verbose);
+}
+
+uint64_t perft_white(struct position *pos, int depth, int print, int verbose) {
 	move move_list[256];
-	generate_all(pos, move_list);
+	generate_white(pos, move_list);
 	uint64_t nodes = 0, count;
 
 	for (move *move_ptr = move_list; *move_ptr; move_ptr++){
@@ -36,7 +40,33 @@ uint64_t perft(struct position *pos, int depth, int print, int verbose) {
 		}
 		else {
 			do_move(pos, move_ptr);
-			count = perft(pos, depth - 1, 0, 0);
+			count = perft_black(pos, depth - 1, 0, 0);
+			undo_move(pos, move_ptr);
+			nodes += count;
+		}
+		if (verbose) {
+			print_move(move_ptr);
+			printf(": %" PRIu64 "\n", count);
+		}
+	}
+	if (print)
+		printf("\nnodes searched: %" PRIu64 "\n", nodes);
+	return nodes;
+}
+
+uint64_t perft_black(struct position *pos, int depth, int print, int verbose) {
+	move move_list[256];
+	generate_black(pos, move_list);
+	uint64_t nodes = 0, count;
+
+	for (move *move_ptr = move_list; *move_ptr; move_ptr++){
+		if (depth == 1) {
+			count = 1;
+			nodes++;
+		}
+		else {
+			do_move(pos, move_ptr);
+			count = perft_white(pos, depth - 1, 0, 0);
 			undo_move(pos, move_ptr);
 			nodes += count;
 		}

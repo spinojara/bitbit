@@ -94,7 +94,6 @@ void do_move(struct position *pos, move *m) {
 		pos->mailbox[source_square] = empty;
 	}
 	else {
-		pos->fullmove++;
 		if (pos->mailbox[target_square]) {
 			pos->white_pieces[pos->mailbox[target_square]] ^= to;
 			move_set_captured(m, pos->mailbox[target_square]);
@@ -162,7 +161,6 @@ void undo_move(struct position *pos, move *m) {
 	pos->en_passant = move_en_passant(m);
 
 	if (pos->turn) {
-		pos->fullmove--;
 		pos->black_pieces[pos->mailbox[target_square] - 6] ^= from_to;
 		if (move_flag(m) == 1) {
 			pos->white_pieces[pawn] |= bitboard(target_square + 8);
