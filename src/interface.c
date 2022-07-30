@@ -31,14 +31,49 @@
 #include "hash_table.h"
 #include "version.h"
 
-struct position *pos;
-move *move_mem;
-move *last_move;
-
 struct func {
 	char *name;
 	int (*ptr)(struct arg *arg);
 };
+
+struct move_linked {
+	move *move;
+	struct move_linked *next;
+	struct move_linked *previous;
+};
+
+struct position *pos;
+struct move_linked *move_last = NULL;
+
+void move_next(move m) {
+	if (!move_last) {
+		move_last = malloc(sizeof(struct move_linked));
+		move_last->previous = NULL;
+	}
+	else {
+		move_last->next = malloc(sizeof(struct move_linked));
+		move_last->next->previous = move_last;
+		move_last = move_last->next;
+	}
+	move_last->next = NULL;
+	move_last->move = malloc(sizeof(move));
+	*(move_last->move) = m;
+}
+
+void move_previous() {
+	if (!move_last)
+		return;
+	free(move_last->move);
+	if (!move_last->previous) {
+		free(move_last);
+		move_last = NULL;
+	}
+	else {
+		move_last = move_last->previous;
+		free(move_last->next);
+		move_last->next = NULL;
+	}
+}
 
 int interface_help(struct arg *arg) {
 	UNUSED(arg);
@@ -64,9 +99,9 @@ int interface_domove(struct arg *arg) {
 		swap_turn(pos);
 	}
 	else if (arg->r) {
-		if (*last_move) {
-			undo_move_zobrist(pos, last_move);
-			last_move--;
+		if (move_last) {
+			undo_move_zobrist(pos, move_last->move);
+			move_previous();
 		}
 		else {
 			printf("error: no move to undo\n");
@@ -76,14 +111,12 @@ int interface_domove(struct arg *arg) {
 		return 2;
 	}
 	else {
-		/* move_mem is only of size 512 */
-		last_move++;
-		*last_move = string_to_move(pos, arg->argv[1]);
-		if (*last_move) {
-			do_move_zobrist(pos, last_move);
+		move_next(string_to_move(pos, arg->argv[1]));
+		if (*(move_last->move)) {
+			do_move_zobrist(pos, move_last->move);
 		}
 		else {
-			last_move--;
+			move_previous();
 			return 3;
 		}
 	}
@@ -117,7 +150,9 @@ int interface_setpos(struct arg *arg) {
 	UNUSED(arg);
 	if (arg->r) {
 		random_pos(pos, 32);
-		last_move = move_mem;
+		while (move_last) {
+			move_previous();
+		}
 	}
 	else if (arg->argc < 2) {
 		return 2;
@@ -125,7 +160,9 @@ int interface_setpos(struct arg *arg) {
 	else {
 		if (fen_is_ok(arg->argc - 1, arg->argv + 1)) {
 			pos_from_fen(pos, arg->argc - 1, arg->argv + 1);
-			last_move = move_mem;
+			while (move_last) {
+				move_previous();
+			}
 		}
 		else {
 			return 3;
@@ -195,9 +232,8 @@ int interface_eval(struct arg *arg) {
 			if (arg->t)
 				printf("time: %.2f\n", (double)t / CLOCKS_PER_SEC);
 			if (arg->m && *m) {
-				last_move++;
-				*last_move = *m;
-				do_move_zobrist(pos, last_move);
+				move_next(*m);
+				do_move_zobrist(pos, move_last->move);
 			}
 			free(m);
 		}
@@ -441,12 +477,8 @@ void interface_init() {
 	char *fen[] = { "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR", "w", "KQkq", "-", "0", "1", };
 	pos = malloc(sizeof(struct position));
 	pos_from_fen(pos, SIZE(fen), fen);
-	move_mem = malloc(512 * sizeof(move));
-	last_move = move_mem;
-	*last_move = 0;
 }
 
 void interface_term() {
 	free(pos);
-	free(move_mem);
 }
