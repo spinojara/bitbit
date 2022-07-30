@@ -298,7 +298,7 @@ int parse(int *argc, char ***argv) {
 		arg->argv = malloc(arg->argc * sizeof(char *));
 
 		/* get arg->argv */
-		for (i = 0, j = 1; i < arg->argc; ) {
+		for (i = 0, j = 1; i + j < *argc; ) {
 			if ((*argv)[i + j][0] == '-' && strlen((*argv)[i + j]) != 1) {
 				for (c = (*argv)[i + j] + 1; *c != '\0'; c++) {
 					switch (*c) {
@@ -325,6 +325,8 @@ int parse(int *argc, char ***argv) {
 				j++;
 				continue;
 			}
+			if (i >= arg->argc)
+				break;
 			/* strlen + 1 for null character */
 			arg->argv[i] = malloc((strlen((*argv)[i + j]) + 1) * sizeof(char));
 			strcpy(arg->argv[i], (*argv)[i + j]);
