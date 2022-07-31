@@ -35,8 +35,14 @@ install: all
 	cp -f bitbit $(DESTDIR)$(PREFIX)$(BINDIR)
 	chmod 755 $(DESTDIR)$(PREFIX)$(BINDIR)/bitbit
 
+install_startup_script:
+	mkdir -p $(DESTDIR)$(PREFIX)$(BINDIR)
+	cp -f scripts/start/bitbitpos.sh $(DESTDIR)$(PREFIX)$(BINDIR)/bitbitpos
+	chmod 755 $(DESTDIR)$(PREFIX)$(BINDIR)/bitbitpos
+
 uninstall:
 	rm -f $(DESTDIR)$(PREFIX)$(BINDIR)/bitbit
+	rm -f $(DESTDIR)$(PREFIX)$(BINDIR)/bitbitpos
 
 build:
 	mkdir $(BUILD_DIR)
