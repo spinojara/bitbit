@@ -88,6 +88,7 @@ int interface_help(struct arg *arg) {
 	"perft [-tv] [depth]\n"
 	"eval [-hmtv] [depth]\n"
 	"print [-v]\n"
+	"hash [-es]\n"
 	);
 	return 0;
 }
