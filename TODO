@@ -1,5 +1,3 @@
 add checks for malloc
 check environment variables for unicode support
 look for compiler and architecture in Makefile
-
-clear screen exit bug
