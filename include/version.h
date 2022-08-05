@@ -70,17 +70,18 @@ char *date(char *str) {
 	/* second digit of month */
 	str[3] =
 	(__DATE__[2] == 'l') ? '7' : /* jul */
+	(__DATE__[2] == 'g') ? '8' : /* aug */
 	(__DATE__[1] == 'u') ? '6' : /* jun */
 	(__DATE__[2] == 'n') ? '1' : /* jan */
 	(__DATE__[2] == 'y') ? '5' : /* may */
 	(__DATE__[1] == 'a') ? '3' : /* mar */
 	(__DATE__[2] == 'b') ? '2' : /* feb */
-	(__DATE__[2] == 'r') ? '4' : /* apr */
-	(__DATE__[2] == 'g') ? '8' : /* aug */
+	(__DATE__[0] == 'a') ? '4' : /* apr */
 	(__DATE__[2] == 'p') ? '9' : /* sep */
 	(__DATE__[2] == 't') ? '0' : /* oct */
 	(__DATE__[2] == 'v') ? '1' : /* nov */
 	'2'; /* dec */
+
 	/* first digit of day */
 	str[4] = (__DATE__[4] == ' ') ? '0' : __DATE__[4];
 	/* second digit of day */
