@@ -137,7 +137,8 @@ int interface_perft(struct arg *arg) {
 			if (arg->t) {
 				printf("time: %.2f\n", (double)t / CLOCKS_PER_SEC);
 				if (t != 0)
-					printf("mpns: %i\n", (int)(p * CLOCKS_PER_SEC / (t * 1000000)));
+					printf("mpns: %" PRIu64 "\n",
+						(p * CLOCKS_PER_SEC / ((uint64_t)t * 1000000)));
 			}
 		}
 		else {
