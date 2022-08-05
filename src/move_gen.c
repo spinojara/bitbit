@@ -918,3 +918,16 @@ int move_count(move *m) {
 			return i;
 	return 256;
 }
+
+int mate(struct position *pos) {
+	/* no need to check for castling moves */
+	return pos->turn ? mate_white(pos) : mate_black(pos);
+}
+
+int mate_white(struct position *pos) {
+
+}
+
+int mate_black(struct position *pos) {
+
+}

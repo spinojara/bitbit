@@ -107,6 +107,7 @@ void evaluate_init() {
 }
 
 int count_position(struct position *pos) {
+	int r = mate(pos);
 	int eval = 0;
 	for (int i = 0; i < 64; i++) {
 		eval += eval_table[pos->mailbox[i]][i];

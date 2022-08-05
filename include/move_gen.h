@@ -29,4 +29,10 @@ move *generate_black(struct position *pos, move *move_list);
 
 int move_count(move *m);
 
+int mate(struct position *pos);
+
+int mate_white(struct position *pos);
+
+int mate_black(struct position *pos);
+
 #endif
