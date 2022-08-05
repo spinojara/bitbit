@@ -246,12 +246,33 @@ int interface_version(struct arg *arg) {
 	printf("environment: %s\n", environment);
 	char t[8];
 	printf("compilation date: %s\n", date(t));
-	printf("hash table size: %" PRIu64 "B\n", (hash_table_size_bytes()
-							/ sizeof(struct hash_entry))
-			 				* sizeof(struct hash_entry));
-	printf("hash entry size: %" PRIu64 "B\n", sizeof(struct hash_entry));
+	printf("hash table size: ");
+	hash_table_size_print((hash_table_size_bytes(MACRO_VALUE(HASH))
+				/ sizeof(struct hash_entry))
+				* sizeof(struct hash_entry));
+	printf("\nhash entry size: %" PRIu64 "B\n", sizeof(struct hash_entry));
 
 	return 0;
+}
+
+int interface_hash(struct arg *arg) {
+	UNUSED(arg);
+
+	if (arg->e) {
+		hash_table_clear();
+		return 0;
+	}
+	if (arg->s) {
+		if (arg->argc < 2) {
+			hash_table_size_print(hash_table_size() * sizeof(struct hash_entry));
+			printf("\n");
+			return 0;
+		}
+		else {
+			return 3 * allocate_hash_table(hash_table_size_bytes(arg->argv[1]));
+		}
+	}
+	return 4;
 }
 
 struct func func_arr[] = {
@@ -264,6 +285,7 @@ struct func func_arr[] = {
 	{ "print",   interface_print,   },
 	{ "eval",    interface_eval,    },
 	{ "version", interface_version, },
+	{ "hash",    interface_hash,    },
 };
 
 int parse(int *argc, char ***argv) {
@@ -315,6 +337,12 @@ int parse(int *argc, char ***argv) {
 						break;
 					case 'h':
 						arg->h = 1;
+						break;
+					case 's':
+						arg->s = 1;
+						break;
+					case 'e':
+						arg->e = 1;
 						break;
 					}
 				}
@@ -390,6 +418,12 @@ int parse(int *argc, char ***argv) {
 							break;
 						case 'h':
 							arg->h = 1;
+							break;
+						case 's':
+							arg->s = 1;
+							break;
+						case 'e':
+							arg->e = 1;
 							break;
 					}
 				}
