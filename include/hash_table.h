@@ -22,6 +22,10 @@
 
 #include "position.h"
 
+#ifndef HASH
+#define HASH 64M
+#endif
+
 struct hash_entry {
 	uint64_t zobrist_key;
 	int16_t evaluation;
@@ -40,7 +44,9 @@ struct hash_table {
 	uint64_t *zobrist_key;
 };
 
-uint64_t hash_table_size_bytes();
+void hash_table_size_print(uint64_t size);
+
+uint64_t hash_table_size_bytes(char *t);
 
 struct hash_entry *table_entry(struct position *pos);
 
@@ -57,6 +63,8 @@ uint64_t zobrist_turn_key();
 uint64_t zobrist_castle_key(int castle);
 
 uint64_t zobrist_en_passant_key(int square);
+
+int allocate_hash_table(uint64_t t);
 
 int hash_table_init();
 

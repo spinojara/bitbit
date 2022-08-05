@@ -25,6 +25,8 @@ struct arg {
 	int f;
 	int h;
 	int m;
+	int s;
+	int e;
 	int argc;
 	char **argv;
 };

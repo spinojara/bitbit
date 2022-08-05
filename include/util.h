@@ -37,6 +37,8 @@ uint64_t rand_uint64();
 
 int rand_int(int i);
 
+int power(int m, int n);
+
 int find_char(char *s, char c);
 
 int string_is_int(char *s);

@@ -82,12 +82,13 @@ int interface_help(struct arg *arg) {
 	"exit\n"
 	"help\n"
 	"version\n"
-	"clear [-h]\n"
+	"clear\n"
 	"setpos [-r] [fen]\n"
 	"domove [-fr] [move]\n"
 	"perft [-tv] [depth]\n"
 	"eval [-hmtv] [depth]\n"
 	"print [-v]\n"
+	"hash [-es]\n"
 	);
 	return 0;
 }
@@ -171,10 +172,7 @@ int interface_setpos(struct arg *arg) {
 
 int interface_clear(struct arg *arg) {
 	UNUSED(arg);
-	if (arg->h)
-		hash_table_clear();
-	else
-		printf("\033[1;1H\033[2J");
+	printf("\033[1;1H\033[2J");
 	return 0;
 }
 
@@ -245,12 +243,38 @@ int interface_version(struct arg *arg) {
 	printf("environment: %s\n", environment);
 	char t[8];
 	printf("compilation date: %s\n", date(t));
-	printf("hash table size: %" PRIu64 "B\n", (hash_table_size_bytes()
-							/ sizeof(struct hash_entry))
-			 				* sizeof(struct hash_entry));
-	printf("hash entry size: %" PRIu64 "B\n", sizeof(struct hash_entry));
+	printf("hash table size: ");
+	hash_table_size_print((hash_table_size_bytes(MACRO_VALUE(HASH))
+				/ sizeof(struct hash_entry))
+				* sizeof(struct hash_entry));
+	printf("\nhash entry size: %" PRIu64 "B\n", sizeof(struct hash_entry));
 
 	return 0;
+}
+
+int interface_hash(struct arg *arg) {
+	UNUSED(arg);
+
+	if (arg->e) {
+		hash_table_clear();
+		return 0;
+	}
+	if (arg->s) {
+		if (arg->argc < 2) {
+			hash_table_size_print(hash_table_size() * sizeof(struct hash_entry));
+			printf("\n");
+			return 0;
+		}
+		else {
+			int ret = allocate_hash_table(hash_table_size_bytes(arg->argv[1]));
+			if (ret == 1)
+				return 3;
+			if (ret == 2)
+				return 1;
+			return 0;
+		}
+	}
+	return 4;
 }
 
 struct func func_arr[] = {
@@ -263,6 +287,7 @@ struct func func_arr[] = {
 	{ "print",   interface_print,   },
 	{ "eval",    interface_eval,    },
 	{ "version", interface_version, },
+	{ "hash",    interface_hash,    },
 };
 
 int parse(int *argc, char ***argv) {
@@ -314,6 +339,12 @@ int parse(int *argc, char ***argv) {
 						break;
 					case 'h':
 						arg->h = 1;
+						break;
+					case 's':
+						arg->s = 1;
+						break;
+					case 'e':
+						arg->e = 1;
 						break;
 					}
 				}
@@ -389,6 +420,12 @@ int parse(int *argc, char ***argv) {
 							break;
 						case 'h':
 							arg->h = 1;
+							break;
+						case 's':
+							arg->s = 1;
+							break;
+						case 'e':
+							arg->e = 1;
 							break;
 					}
 				}

@@ -19,18 +19,32 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <inttypes.h>
 
 #include "util.h"
 #include "init.h"
 
 struct hash_table *hash_table = NULL;
 
-#ifndef HASH
-#define HASH 64M
-#endif
+void hash_table_size_print(uint64_t size) {
+	/* 0 -> B
+	 * 1 -> K
+	 * 2 -> M
+	 * 3 -> G
+	 */
+	int t = 0;
 
-uint64_t hash_table_size_bytes() {
-	char t[] = MACRO_VALUE(HASH);
+	if (size >= (uint64_t)10000)
+		t++;
+	if (size >= (uint64_t)10000 * 1024)
+		t++;
+	if (size >= (uint64_t)10000 * 1024 * 1024)
+		t++;
+
+	printf("%" PRIu64 "%c", size / power(1024, t), "BKMG"[t]);
+}
+
+uint64_t hash_table_size_bytes(char *t) {
 	int i;
 	int flag;
 	uint64_t size;
@@ -108,18 +122,31 @@ uint64_t zobrist_en_passant_key(int square) {
 	return hash_table->zobrist_key[12 * 64 + 1 + 16 + square % 8];
 }
 
-int hash_table_init() {
-	uint64_t t = hash_table_size_bytes();
-	if (t < sizeof(struct hash_entry)) {
-		printf("\33[2Kfatal error: bad hash table size\n");
+int allocate_hash_table(uint64_t t) {
+	if (t < sizeof(struct hash_entry))
 		return 1;
+	hash_table->size = t / sizeof(struct hash_entry);
+	free(hash_table->table);
+	hash_table->table = malloc(hash_table->size * sizeof(struct hash_entry));
+	if (!hash_table->table) {
+		printf("\33[2Kfatal error: could not allocate hash table\n");
+		return 2;
 	}
+	hash_table_clear();
+	return 0;
+}
+
+int hash_table_init() {
+	uint64_t t = hash_table_size_bytes(MACRO_VALUE(HASH));
 
 	hash_table = malloc(sizeof(struct hash_table));
-	hash_table->size = t / sizeof(struct hash_entry);
-	hash_table->table = malloc(hash_table->size * sizeof(struct hash_entry));
-
-	hash_table_clear();
+	hash_table->table = NULL;
+	int ret = allocate_hash_table(t);
+	if (ret) {
+		if (ret == 1)
+			printf("\33[2Kfatal error: could not allocate hash table\n");
+		return 1;
+	}
 
 	hash_table->zobrist_key = malloc((12 * 64 + 1 + 16 + 8) * sizeof(uint64_t));
 
