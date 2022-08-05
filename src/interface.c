@@ -82,7 +82,7 @@ int interface_help(struct arg *arg) {
 	"exit\n"
 	"help\n"
 	"version\n"
-	"clear [-h]\n"
+	"clear\n"
 	"setpos [-r] [fen]\n"
 	"domove [-fr] [move]\n"
 	"perft [-tv] [depth]\n"
@@ -172,10 +172,7 @@ int interface_setpos(struct arg *arg) {
 
 int interface_clear(struct arg *arg) {
 	UNUSED(arg);
-	if (arg->h)
-		hash_table_clear();
-	else
-		printf("\033[1;1H\033[2J");
+	printf("\033[1;1H\033[2J");
 	return 1;
 }
 
