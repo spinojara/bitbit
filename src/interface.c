@@ -175,7 +175,7 @@ int interface_clear(struct arg *arg) {
 		hash_table_clear();
 	else
 		printf("\033[1;1H\033[2J");
-	return 1;
+	return 0;
 }
 
 int interface_exit(struct arg *arg) {
