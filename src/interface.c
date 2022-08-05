@@ -269,7 +269,12 @@ int interface_hash(struct arg *arg) {
 			return 0;
 		}
 		else {
-			return 3 * allocate_hash_table(hash_table_size_bytes(arg->argv[1]));
+			int ret = allocate_hash_table(hash_table_size_bytes(arg->argv[1]));
+			if (ret == 1)
+				return 3;
+			if (ret == 2)
+				return 1;
+			return 0;
 		}
 	}
 	return 4;

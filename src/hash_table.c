@@ -128,20 +128,25 @@ int allocate_hash_table(uint64_t t) {
 	hash_table->size = t / sizeof(struct hash_entry);
 	free(hash_table->table);
 	hash_table->table = malloc(hash_table->size * sizeof(struct hash_entry));
+	if (!hash_table->table) {
+		printf("\33[2Kfatal error: could not allocate hash table\n");
+		return 2;
+	}
 	hash_table_clear();
 	return 0;
 }
 
 int hash_table_init() {
 	uint64_t t = hash_table_size_bytes(MACRO_VALUE(HASH));
-	if (t < sizeof(struct hash_entry)) {
-		printf("\33[2Kfatal error: bad hash table size\n");
-		return 1;
-	}
 
 	hash_table = malloc(sizeof(struct hash_table));
 	hash_table->table = NULL;
-	allocate_hash_table(t);
+	int ret = allocate_hash_table(t);
+	if (ret) {
+		if (ret == 1)
+			printf("\33[2Kfatal error: could not allocate hash table\n");
+		return 1;
+	}
 
 	hash_table->zobrist_key = malloc((12 * 64 + 1 + 16 + 8) * sizeof(uint64_t));
 
