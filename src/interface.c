@@ -86,7 +86,7 @@ int interface_help(struct arg *arg) {
 	"setpos [-r] [fen]\n"
 	"domove [-fr] [move]\n"
 	"perft [-tv] [depth]\n"
-	"eval [-hmtv] [depth]\n"
+	"eval [-mtv] [depth]\n"
 	"print [-v]\n"
 	"hash [-es] [size]\n"
 	);
