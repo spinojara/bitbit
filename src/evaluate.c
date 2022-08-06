@@ -178,8 +178,6 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, i
 }
 
 int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose) {
-	if (depth <= 0)
-		return count_position(pos);
 
 	int16_t evaluation;
 	int16_t evaluation_list[256];
@@ -194,12 +192,30 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose) {
 			evaluation = pos->turn ? -0x8000 : 0x7FFF;
 		if (m)
 			*m = 0;
+		if (verbose) {
+			if (evaluation)
+				printf("\33[2K[%i/%i] %cm\n", depth, depth,
+						pos->turn ? '-' : '+');
+			else
+				printf("\33[2K[%i/%i] s\n", depth, depth);
+		}
+		else {
+			if (evaluation)
+				printf("%cm\n", pos->turn ? '-' : '+');
+			else
+				printf("s\n");
+		}
+		return evaluation;
+	}
+
+	if (depth <= 0) {
+		evaluation = count_position(pos);
 		if (verbose)
-			printf("\33[2K[%i/%i] %c%c\n", depth, depth,
-					evaluation ? 'm' : 's',
-					pos->turn ? '-' : '+');
+			printf("\33[2K[0/0] %+.2f\n", (double)evaluation / 100);
 		else
-			printf("m%c\n", pos->turn ? '-' : '+');
+			printf("%+.2f\n", (double)evaluation / 100);
+		if (m)
+			*m = 0;
 		return evaluation;
 	}
 
@@ -253,13 +269,13 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose) {
 		}
 		if (verbose) {
 			if (evaluation < -0x4000) {
-				printf("\33[2K[%i/%i] m%i- ", d, depth, ((0x8000 + evaluation) + 1) / 2);
+				printf("\33[2K[%i/%i] -m%i ", d, depth, ((0x8000 + evaluation) + 1) / 2);
 			}
 			else if (evaluation > 0x4000) {
-				printf("\33[2K[%i/%i] m%i+ ", d, depth, ((0x7FFF - evaluation) + 1) / 2);
+				printf("\33[2K[%i/%i] +m%i ", d, depth, ((0x7FFF - evaluation) + 1) / 2);
 			}
 			else {
-				printf("\33[2K[%i/%i] %.2f ", d, depth, (double)evaluation / 100);
+				printf("\33[2K[%i/%i] %+.2f ", d, depth, (double)evaluation / 100);
 			}
 			print_move(move_list);
 			printf("\r");
@@ -274,7 +290,7 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose) {
 		printf("\n");
 	}
 	else {
-		printf("%.2f ", (double)evaluation / 100);
+		printf("%+.2f ", (double)evaluation / 100);
 		print_move(move_list);
 		printf("\n");
 	}
