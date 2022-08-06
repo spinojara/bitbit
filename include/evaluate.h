@@ -23,8 +23,6 @@
 
 int count_position(struct position *pos);
 
-int16_t evaluate_hash(struct position *pos, uint8_t depth, move *m, int verbose);
-
 int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose);
 
 void evaluate_init();

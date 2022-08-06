@@ -49,6 +49,10 @@ void print_position(struct position *pos) {
 	printf("       a   b   c   d   e   f   g   h\n\n");
 }
 
+uint64_t generate_checkers(struct position *pos) {
+	return pos->turn ? generate_checkers_white(pos) : generate_checkers_black(pos);
+}
+
 uint64_t generate_checkers_white(struct position *pos) {
 	uint64_t checkers = 0;
 	int square;

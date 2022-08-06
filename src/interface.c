@@ -210,10 +210,7 @@ int interface_eval(struct arg *arg) {
 			uint64_t s;
 			move *m = malloc(sizeof(move));
 			clock_t t = clock();
-			if (arg->h)
-				s = evaluate_hash(pos, atoi(arg->argv[1]), m, arg->v);
-			else
-				s = evaluate(pos, atoi(arg->argv[1]), m, arg->v);
+			s = evaluate(pos, atoi(arg->argv[1]), m, arg->v);
 			t = clock() - t;
 			/* arg->v already sent to evaluate */
 			if (!arg->v) {
