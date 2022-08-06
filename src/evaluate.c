@@ -200,9 +200,9 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose) {
 			merge_sort(move_list, evaluation_list, 0, i - 1, 1);
 		}
 		if (verbose) {
-			printf("[%i/%i] %.2f ", d, depth, (double)evaluation / 100);
+			printf("\33[2K[%i/%i] %.2f ", d, depth, (double)evaluation / 100);
 			print_move(move_list);
-			printf("       \r");
+			printf("\r");
 			fflush(stdout);
 		}
 		if (m)
@@ -297,9 +297,9 @@ int16_t evaluate_hash(struct position *pos, uint8_t depth, move *m, int verbose)
 
 		}
 		if (verbose) {
-			printf("\r[%i/%i] %.2f ", d, depth, (double)evaluation / 100);
+			printf("\33[2K[%i/%i] %.2f ", d, depth, (double)evaluation / 100);
 			print_move(move_list);
-			printf("       \r");
+			printf("\r");
 			fflush(stdout);
 		}
 		store_table_entry(pos, evaluation, d);
