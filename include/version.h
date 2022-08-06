@@ -93,5 +93,3 @@ char *date(char *str) {
 	return str;
 #endif
 }
-
-char hash_table_size_str[] = MACRO_VALUE(HASH_TABLE_SIZE)"MiB";

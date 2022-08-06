@@ -229,7 +229,8 @@ int interface_eval(struct arg *arg) {
 int interface_version(struct arg *arg) {
 	UNUSED(arg);
 
-	printf("bitbit Copyright (C) 2022 Isak Ellmer  \n");
+	printf("bitbit " MACRO_VALUE(VERSION) "\n");
+	printf("Copyright (C) 2022 Isak Ellmer  \n");
 	printf("c compiler: %s\n", compiler);
 	printf("environment: %s\n", environment);
 	char t[8];
