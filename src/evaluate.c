@@ -265,7 +265,6 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose) {
 				}
 			}
 			merge_sort(move_list, evaluation_list, 0, i - 1, 1);
-
 		}
 		if (verbose) {
 			if (evaluation < -0x4000) {
