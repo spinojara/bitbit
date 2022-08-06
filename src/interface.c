@@ -207,17 +207,10 @@ int interface_eval(struct arg *arg) {
 	}
 	else {
 		if (string_is_int(arg->argv[1])) {
-			uint64_t s;
 			move *m = malloc(sizeof(move));
 			clock_t t = clock();
-			s = evaluate(pos, atoi(arg->argv[1]), m, arg->v);
+			evaluate(pos, atoi(arg->argv[1]), m, arg->v);
 			t = clock() - t;
-			/* arg->v already sent to evaluate */
-			if (!arg->v) {
-				printf("%.2f ", (double)s / 100);
-				print_move(m);
-				printf("\n");
-			}
 			if (arg->t)
 				printf("time: %.2f\n", (double)t / CLOCKS_PER_SEC);
 			if (arg->m && *m) {
