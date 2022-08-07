@@ -40,7 +40,7 @@ install: all
 	cp -f bitbit $(DESTDIR)$(PREFIX)$(BINDIR)
 	chmod 755 $(DESTDIR)$(PREFIX)$(BINDIR)/bitbit
 
-install_startup_script:
+install_script:
 	mkdir -p $(DESTDIR)$(PREFIX)$(BINDIR)
 	cp -f scripts/start/bitbitpos.sh $(DESTDIR)$(PREFIX)$(BINDIR)/bitbitpos
 	chmod 755 $(DESTDIR)$(PREFIX)$(BINDIR)/bitbitpos
@@ -59,4 +59,4 @@ options:
 	@echo "CC     = $(CC)    "
 	@echo "CFLAGS = $(CFLAGS)"
 
-.PHONY: all clean install uninstall options
+.PHONY: all clean install install_script uninstall options
