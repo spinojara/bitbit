@@ -50,7 +50,7 @@ uint64_t hash_table_size_bytes(char *t);
 
 struct hash_entry *table_entry(struct position *pos);
 
-void store_table_entry(struct position *pos, int16_t evaluation, int8_t depth);
+void store(struct position *pos, int16_t evaluation, int8_t depth);
 
 uint64_t hash_table_size();
 

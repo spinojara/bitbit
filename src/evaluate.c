@@ -173,7 +173,7 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, i
 				break;
 		}
 	}
-	store_table_entry(pos, evaluation, depth);
+	store(pos, evaluation, depth);
 	return evaluation;
 }
 
@@ -280,7 +280,7 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose) {
 			printf("\r");
 			fflush(stdout);
 		}
-		store_table_entry(pos, evaluation, d);
+		store(pos, evaluation, d);
 		if (m)
 			*m = *move_list;
 	}

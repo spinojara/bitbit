@@ -91,7 +91,11 @@ struct hash_entry *table_entry(struct position *pos) {
 	return hash_table->table + (pos->zobrist_key % hash_table->size);
 }
 
-void store_table_entry(struct position *pos, int16_t evaluation, int8_t depth) {
+void attempt_store(struct position *pos, int16_t evaluation, int8_t depth) {
+
+}
+
+void store(struct position *pos, int16_t evaluation, int8_t depth) {
 	table_entry(pos)->evaluation = evaluation;
 	table_entry(pos)->depth = depth;
 	table_entry(pos)->zobrist_key = pos->zobrist_key;
