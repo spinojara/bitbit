@@ -30,7 +30,10 @@ struct hash_entry {
 	uint64_t zobrist_key;
 	int16_t evaluation;
 
-	/* first 6 bits for depth, last 2 bits for node type */
+	/* first 6 bits for depth, last 2 bits for node type
+	 * node type, 0: pv, 1: cut, 2: all
+	 * <https://www.chessprogramming.org/Node_Types>
+	 */
 	uint8_t depth_type;
 
 	/* first 12 bits for move, last 4 bits for age */
