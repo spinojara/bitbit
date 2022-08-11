@@ -127,8 +127,9 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, i
 	if (depth <= 0)
 		return count_position(pos);
 
-	if (table_entry(pos)->depth >= depth && table_entry(pos)->zobrist_key == pos->zobrist_key)
-		return table_entry(pos)->evaluation;
+	struct hash_entry *e = attempt_get(pos);
+	if (e && hash_entry_depth(e) >= depth)
+		return hash_entry_evaluation(e);
 
 	int16_t evaluation;
 	move move_list[256];
@@ -173,7 +174,7 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, i
 				break;
 		}
 	}
-	attempt_store(pos, evaluation, depth);
+	attempt_store(pos, evaluation, depth, 0, 0);
 	return evaluation;
 }
 

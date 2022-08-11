@@ -87,29 +87,45 @@ uint64_t hash_table_size_bytes(char *t) {
 	return size;
 }
 
-struct hash_entry *table_entry(struct position *pos) {
+struct hash_entry *get(struct position *pos) {
 	return hash_table->table + (pos->zobrist_key % hash_table->size);
 }
 
-void store(struct hash_entry *e, struct position *pos, int16_t evaluation, int8_t depth) {
-	e->evaluation = evaluation;
-	e->depth = depth;
-	e->zobrist_key = pos->zobrist_key;
+struct hash_entry *attempt_get(struct position *pos) {
+	struct hash_entry *e = get(pos);
+	if (hash_entry_zobrist_key(e) == pos->zobrist_key)
+		return e;
+	return NULL;
 }
 
-void attempt_store(struct position *pos, int16_t evaluation, int8_t depth) {
-	struct hash_entry *e = table_entry(pos);
-	if (depth >= e->depth)
-		store(e, pos, evaluation, depth);
+void store(struct hash_entry *e, struct position *pos, int16_t evaluation, uint8_t depth, uint8_t type, uint16_t m) {
+	hash_entry_set_zobrist_key(e, pos->zobrist_key);
+	hash_entry_set_evaluation(e, evaluation);
+	e->depth_type = 0;
+	hash_entry_set_depth(e, depth);
+	hash_entry_set_type(e, type);
+	e->move_age = 0;
+	hash_entry_set_move(e, m);
+	hash_entry_set_age(e, pos->halfmove % 0x10);
+}
+
+void attempt_store(struct position *pos, int16_t evaluation, uint8_t depth, uint8_t type, uint16_t m) {
+	struct hash_entry *e = get(pos);
+	if (depth >= hash_entry_depth(e))
+		store(e, pos, evaluation, depth, type, m);
 }
 
 uint64_t hash_table_size() {
 	return hash_table->size;
 }
 
+void hash_entry_clear(struct hash_entry *e) {
+	e->depth_type = 0;
+}
+
 void hash_table_clear() {
 	for (uint64_t i = 0; i < hash_table->size; i++)
-		(hash_table->table + i)->depth = -1;
+		hash_entry_clear(hash_table->table + i);
 }
 
 uint64_t zobrist_piece_key(int piece, int square) {
