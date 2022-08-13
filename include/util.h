@@ -29,7 +29,6 @@
 
 #define UNUSED(x) (void)(x)
 
-/* exploit of how macro expansions work */
 #define MACRO_NAME(x) #x
 #define MACRO_VALUE(x) MACRO_NAME(x)
 
