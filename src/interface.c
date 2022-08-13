@@ -28,7 +28,7 @@
 #include "move.h"
 #include "perft.h"
 #include "evaluate.h"
-#include "hash_table.h"
+#include "transposition_table.h"
 #include "version.h"
 
 struct func {
@@ -88,7 +88,7 @@ int interface_help(struct arg *arg) {
 	"perft [-tv] [depth]\n"
 	"eval [-mtv] [depth]\n"
 	"print [-v]\n"
-	"hash [-es] [size]\n"
+	"tt [-es] [size]\n"
 	);
 	return 0;
 }
@@ -101,7 +101,7 @@ int interface_domove(struct arg *arg) {
 	}
 	else if (arg->r) {
 		if (move_last) {
-			undo_move_zobrist(pos, move_last->move);
+			undo_move(pos, move_last->move);
 			move_previous();
 		}
 		else {
@@ -114,7 +114,7 @@ int interface_domove(struct arg *arg) {
 	else {
 		move_next(string_to_move(pos, arg->argv[1]));
 		if (*(move_last->move)) {
-			do_move_zobrist(pos, move_last->move);
+			do_move(pos, move_last->move);
 		}
 		else {
 			move_previous();
@@ -215,7 +215,7 @@ int interface_eval(struct arg *arg) {
 				printf("time: %.2f\n", (double)t / CLOCKS_PER_SEC);
 			if (arg->m && *m) {
 				move_next(*m);
-				do_move_zobrist(pos, move_last->move);
+				do_move(pos, move_last->move);
 			}
 			free(m);
 		}
@@ -235,30 +235,30 @@ int interface_version(struct arg *arg) {
 	printf("environment: %s\n", environment);
 	char t[8];
 	printf("compilation date: %s\n", date(t));
-	printf("hash table size: ");
-	hash_table_size_print((hash_table_size_bytes(MACRO_VALUE(HASH))
-				/ sizeof(struct hash_entry))
-				* sizeof(struct hash_entry));
-	printf("\nhash entry size: %" PRIu64 "B\n", sizeof(struct hash_entry));
+	printf("transposition table size: ");
+	transposition_table_size_print((transposition_table_size_bytes(MACRO_VALUE(TT))
+				/ sizeof(struct transposition))
+				* sizeof(struct transposition));
+	printf("\ntransposition entry size: %" PRIu64 "B\n", sizeof(struct transposition));
 
 	return 0;
 }
 
-int interface_hash(struct arg *arg) {
+int interface_tt(struct arg *arg) {
 	UNUSED(arg);
 
 	if (arg->e) {
-		hash_table_clear();
+		transposition_table_clear();
 		return 0;
 	}
 	if (arg->s) {
 		if (arg->argc < 2) {
-			hash_table_size_print(hash_table_size() * sizeof(struct hash_entry));
+			transposition_table_size_print(transposition_table_size() * sizeof(struct transposition));
 			printf("\n");
 			return 0;
 		}
 		else {
-			int ret = allocate_hash_table(hash_table_size_bytes(arg->argv[1]));
+			int ret = allocate_transposition_table(transposition_table_size_bytes(arg->argv[1]));
 			if (ret == 1)
 				return 3;
 			if (ret == 2)
@@ -279,7 +279,7 @@ struct func func_arr[] = {
 	{ "print",   interface_print,   },
 	{ "eval",    interface_eval,    },
 	{ "version", interface_version, },
-	{ "hash",    interface_hash,    },
+	{ "tt",      interface_tt,      },
 };
 
 int parse(int *argc, char ***argv) {

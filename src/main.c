@@ -21,7 +21,7 @@
 #include "magic_bitboard.h"
 #include "attack_gen.h"
 #include "evaluate.h"
-#include "hash_table.h"
+#include "transposition_table.h"
 #include "interface.h"
 
 int main(int argc, char **argv) {
@@ -35,13 +35,13 @@ int main(int argc, char **argv) {
 	attack_gen_init();
 	bitboard_init();
 	evaluate_init();
-	/* hash table size == 0 */
-	if (hash_table_init())
+	/* transposition table size == 0 */
+	if (transposition_table_init())
 		goto term;
 	interface_init();
 	interface(argc, argv);
 term:;
 	interface_term();
-	hash_table_term();
+	transposition_table_term();
 	term();
 }

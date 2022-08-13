@@ -24,7 +24,7 @@
 #include "bitboard.h"
 #include "util.h"
 #include "attack_gen.h"
-#include "hash_table.h"
+#include "transposition_table.h"
 #include "move.h"
 #include "move_gen.h"
 
@@ -546,7 +546,7 @@ void random_pos(struct position *pos, int n) {
 		generate_all(pos, m);
 		if (!*m)
 			return;
-		do_move_zobrist(pos, m + rand_int(move_count(m)));
+		do_move(pos, m + rand_int(move_count(m)));
 	}
 }
 

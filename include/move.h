@@ -50,13 +50,13 @@ static inline void move_set_en_passant(move *m, uint8_t i) { *m |= (i << 0x18); 
 static inline void move_set_halfmove(move *m, uint8_t i) { *m |= (i << 0x1E); }
 static inline void move_set_fullmove(move *m, uint64_t i) { *m |= (i << 0x24); }
 
+void do_move_perft(struct position *pos, move *m);
+
+void undo_move_perft(struct position *pos, move *m);
+
 void do_move(struct position *pos, move *m);
 
 void undo_move(struct position *pos, move *m);
-
-void do_move_zobrist(struct position *pos, move *m);
-
-void undo_move_zobrist(struct position *pos, move *m);
 
 static inline move new_move(uint8_t source_square, uint8_t target_square, uint8_t flag, uint8_t promotion) {
 	return source_square | (target_square << 0x6) | (flag << 0xC) | (promotion << 0xE);

@@ -9,16 +9,16 @@ Run
 
 	make
 
-in the root directory. To choose a hash table size, run
+in the root directory. To choose a transposition table size, run
 
-	make HASH={size}
+	make TT={size}
 
-size is by default specified in bytes. For a 128 MiB hash
+size is by default specified in bytes. For a 128 MiB transposition
 table, run
 
-	make HASH=128M
+	make TT=128M
 
-K and G are also valid suffixes. The default size is 64 MiB.
-To add support for unicode, run
+K and G are also valid suffixes. The default size is 64 MiB. To add
+support for unicode, run
 
 	make UNICODE=1
