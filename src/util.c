@@ -117,7 +117,7 @@ void reorder_moves(move *arr, uint16_t m) {
 	move t1, t2;
 	int i, j, flag = 0;
 	for (i = 0; arr[i]; i++) {
-		if ((arr[i] & 0xC) == m) {
+		if ((arr[i] & 0xFFF) == m) {
 			flag = 1;
 			break;
 		}
