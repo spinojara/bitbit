@@ -27,7 +27,7 @@
 #include "move_gen.h"
 #include "hash_table.h"
 
-void do_move(struct position *pos, move *m) {
+void do_move_perft(struct position *pos, move *m) {
 	uint8_t source_square = move_from(m);
 	uint8_t target_square = move_to(m);
 
@@ -148,7 +148,7 @@ void do_move(struct position *pos, move *m) {
 	pos->turn = 1 - pos->turn;
 }
 
-void undo_move(struct position *pos, move *m) {
+void undo_move_perft(struct position *pos, move *m) {
 	uint8_t source_square = move_from(m);
 	uint8_t target_square = move_to(m);
 
@@ -239,7 +239,7 @@ void undo_move(struct position *pos, move *m) {
 	pos->pieces = pos->white_pieces[all] | pos->black_pieces[all];
 }
 
-void do_move_zobrist(struct position *pos, move *m) {
+void do_move(struct position *pos, move *m) {
 	uint8_t source_square = move_from(m);
 	uint8_t target_square = move_to(m);
 
@@ -396,7 +396,7 @@ void do_move_zobrist(struct position *pos, move *m) {
 	pos->zobrist_key ^= zobrist_castle_key(pos->castle);
 }
 
-void undo_move_zobrist(struct position *pos, move *m) {
+void undo_move(struct position *pos, move *m) {
 	uint8_t source_square = move_from(m);
 	uint8_t target_square = move_to(m);
 

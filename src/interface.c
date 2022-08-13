@@ -101,7 +101,7 @@ int interface_domove(struct arg *arg) {
 	}
 	else if (arg->r) {
 		if (move_last) {
-			undo_move_zobrist(pos, move_last->move);
+			undo_move(pos, move_last->move);
 			move_previous();
 		}
 		else {
@@ -114,7 +114,7 @@ int interface_domove(struct arg *arg) {
 	else {
 		move_next(string_to_move(pos, arg->argv[1]));
 		if (*(move_last->move)) {
-			do_move_zobrist(pos, move_last->move);
+			do_move(pos, move_last->move);
 		}
 		else {
 			move_previous();
@@ -215,7 +215,7 @@ int interface_eval(struct arg *arg) {
 				printf("time: %.2f\n", (double)t / CLOCKS_PER_SEC);
 			if (arg->m && *m) {
 				move_next(*m);
-				do_move_zobrist(pos, move_last->move);
+				do_move(pos, move_last->move);
 			}
 			free(m);
 		}

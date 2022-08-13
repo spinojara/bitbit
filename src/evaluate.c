@@ -151,9 +151,9 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, i
 	if (pos->turn) {
 		evaluation = -0x8000;
 		for (move *move_ptr = move_list; *move_ptr; move_ptr++) {
-			do_move_zobrist(pos, move_ptr);
+			do_move(pos, move_ptr);
 			int16_t t = evaluate_recursive(pos, depth - 1, alpha, beta);
-			undo_move_zobrist(pos, move_ptr);
+			undo_move(pos, move_ptr);
 			if (t < -0x4000)
 				t++;
 			else if (t > 0x4000)
@@ -175,9 +175,9 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, i
 	else {
 		evaluation = 0x7FFF;
 		for (move *move_ptr = move_list; *move_ptr; move_ptr++) {
-			do_move_zobrist(pos, move_ptr);
+			do_move(pos, move_ptr);
 			int16_t t = evaluate_recursive(pos, depth - 1, alpha, beta);
-			undo_move_zobrist(pos, move_ptr);
+			undo_move(pos, move_ptr);
 			if (t < -0x4000)
 				t++;
 			else if (t > 0x4000)
@@ -249,9 +249,9 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose) {
 		if (pos->turn) {
 			evaluation = -0x8000;
 			for (i = 0; move_list[i]; i++) {
-				do_move_zobrist(pos, move_list + i);
+				do_move(pos, move_list + i);
 				evaluation_list[i] = evaluate_recursive(pos, d - 1, alpha, beta);
-				undo_move_zobrist(pos, move_list + i);
+				undo_move(pos, move_list + i);
 
 				if (evaluation_list[i] < -0x4000)
 					evaluation_list[i]++;
@@ -270,9 +270,9 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose) {
 		else {
 			evaluation = 0x7FFF;
 			for (i = 0; move_list[i]; i++) {
-				do_move_zobrist(pos, move_list + i);
+				do_move(pos, move_list + i);
 				evaluation_list[i] = evaluate_recursive(pos, d - 1, alpha, beta);
-				undo_move_zobrist(pos, move_list + i);
+				undo_move(pos, move_list + i);
 
 				if (evaluation_list[i] < -0x4000)
 					evaluation_list[i]++;
