@@ -247,8 +247,7 @@ void do_move_zobrist(struct position *pos, move *m) {
 	uint64_t to = bitboard(target_square);
 	uint64_t from_to = from | to;
 
-	if (pos->en_passant)
-		pos->zobrist_key ^= zobrist_en_passant_key(pos->en_passant);
+	pos->zobrist_key ^= zobrist_en_passant_key(pos->en_passant);
 	pos->zobrist_key ^= zobrist_castle_key(pos->castle);
 	move_set_castle(m, pos->castle);
 	move_set_en_passant(m, pos->en_passant);
@@ -268,7 +267,7 @@ void do_move_zobrist(struct position *pos, move *m) {
 		if (pos->mailbox[source_square] == white_pawn) {
 			pos->mailbox[target_square] = white_pawn;
 			if (source_square + 16 == target_square) {
-				pos->zobrist_key ^= zobrist_en_passant_key(target_square - 8);
+				pos->zobrist_key ^= zobrist_en_passant_key(target_square);
 				pos->en_passant = target_square - 8;
 			}
 			else if (move_flag(m) == 1) {
@@ -336,7 +335,7 @@ void do_move_zobrist(struct position *pos, move *m) {
 			pos->mailbox[target_square] = black_pawn;
 			if (source_square - 16 == target_square) {
 				pos->en_passant = target_square + 8;
-				pos->zobrist_key ^= zobrist_en_passant_key(target_square + 8);
+				pos->zobrist_key ^= zobrist_en_passant_key(target_square);
 			}
 			else if (move_flag(m) == 1) {
 				pos->white_pieces[pawn] ^= bitboard(target_square + 8);
@@ -408,8 +407,7 @@ void undo_move_zobrist(struct position *pos, move *m) {
 	pos->zobrist_key ^= zobrist_castle_key(move_castle(m));
 	pos->castle = move_castle(m);
 
-	if (pos->en_passant)
-		pos->zobrist_key ^= zobrist_en_passant_key(pos->en_passant);
+	pos->zobrist_key ^= zobrist_en_passant_key(pos->en_passant);
 	pos->en_passant = move_en_passant(m);
 	pos->zobrist_key ^= zobrist_en_passant_key(pos->en_passant);
 

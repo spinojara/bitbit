@@ -119,6 +119,8 @@ uint64_t zobrist_castle_key(int castle) {
 }
 
 uint64_t zobrist_en_passant_key(int square) {
+	if (!square)
+		return 0;
 	return hash_table->zobrist_key[12 * 64 + 1 + 16 + square % 8];
 }
 
