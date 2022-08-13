@@ -114,22 +114,13 @@ void merge(move *arr, int16_t *val, unsigned int first, unsigned int last, int i
 }
 
 void reorder_moves(move *arr, uint16_t m) {
-	move t1, t2;
-	int i, j, flag = 0;
-	for (i = 0; arr[i]; i++) {
+	for (int i = 0; arr[i]; i++) {
 		if ((arr[i] & 0xFFF) == m) {
-			flag = 1;
-			break;
+			move t = arr[0];
+			arr[0] = arr[i];
+			arr[i] = t;
+			return;
 		}
-	}
-	if (!flag)
-		return;
-	t2 = arr[0];
-	arr[0] = arr[i];
-	for (j = 1; j <= i; j++) {
-		t1 = arr[j];
-		arr[j] = t2;
-		t2 = t1;
 	}
 }
 
