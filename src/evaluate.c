@@ -142,8 +142,12 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, i
 		return pos->turn ? -0x8000 : 0x7FFF;
 	}
 
+	if (e)
+		reorder_moves(move_list, hash_entry_move(e));
+
 	/* type all */
 	uint8_t type = 2;
+	uint16_t m = 0;
 	if (pos->turn) {
 		evaluation = -0x8000;
 		for (move *move_ptr = move_list; *move_ptr; move_ptr++) {
@@ -155,6 +159,7 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, i
 			else if (t > 0x4000)
 				t--;
 			if (evaluation < t) {
+				m = *move_ptr & 0xFFF;
 				evaluation = t;
 				/* type pv */
 				type = 0;
@@ -178,6 +183,7 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, i
 			else if (t > 0x4000)
 				t--;
 			if (evaluation > t) {
+				m = *move_ptr & 0xFFF;
 				evaluation = t;
 				/* type pv */
 				type = 0;
@@ -190,7 +196,7 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, i
 			}
 		}
 	}
-	attempt_store(pos, evaluation, depth, type, 0);
+	attempt_store(pos, evaluation, depth, type, m);
 	return evaluation;
 }
 
