@@ -127,8 +127,9 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, i
 	if (depth <= 0)
 		return count_position(pos);
 
-	if (table_entry(pos)->depth >= depth && table_entry(pos)->zobrist_key == pos->zobrist_key)
-		return table_entry(pos)->evaluation;
+	struct hash_entry *e = attempt_get(pos);
+	if (e && hash_entry_depth(e) >= depth && hash_entry_type(e) == 0)
+		return hash_entry_evaluation(e);
 
 	int16_t evaluation;
 	move move_list[256];
@@ -141,20 +142,29 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, i
 		return pos->turn ? -0x8000 : 0x7FFF;
 	}
 
+	/* type all */
+	uint8_t type = 2;
 	if (pos->turn) {
 		evaluation = -0x8000;
 		for (move *move_ptr = move_list; *move_ptr; move_ptr++) {
 			do_move_zobrist(pos, move_ptr);
 			int16_t t = evaluate_recursive(pos, depth - 1, alpha, beta);
+			undo_move_zobrist(pos, move_ptr);
 			if (t < -0x4000)
 				t++;
 			else if (t > 0x4000)
 				t--;
-			evaluation = MAX(evaluation, t);
-			undo_move_zobrist(pos, move_ptr);
+			if (evaluation < t) {
+				evaluation = t;
+				/* type pv */
+				type = 0;
+			}
 			alpha = MAX(evaluation, alpha);
-			if (beta < alpha)
+			if (beta < alpha) {
+				/* type cut */
+				type = 1;
 				break;
+			}
 		}
 	}
 	else {
@@ -162,23 +172,29 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, i
 		for (move *move_ptr = move_list; *move_ptr; move_ptr++) {
 			do_move_zobrist(pos, move_ptr);
 			int16_t t = evaluate_recursive(pos, depth - 1, alpha, beta);
+			undo_move_zobrist(pos, move_ptr);
 			if (t < -0x4000)
 				t++;
 			else if (t > 0x4000)
 				t--;
-			evaluation = MIN(evaluation, t);
-			undo_move_zobrist(pos, move_ptr);
+			if (evaluation > t) {
+				evaluation = t;
+				/* type pv */
+				type = 0;
+			}
 			beta = MIN(evaluation, beta);
-			if (beta < alpha)
+			if (beta < alpha) {
+				/* type cut */
+				type = 1;
 				break;
+			}
 		}
 	}
-	store_table_entry(pos, evaluation, depth);
+	attempt_store(pos, evaluation, depth, type, 0);
 	return evaluation;
 }
 
 int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose) {
-
 	int16_t evaluation;
 	int16_t evaluation_list[256];
 	move move_list[256];
@@ -228,15 +244,15 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose) {
 			evaluation = -0x8000;
 			for (i = 0; move_list[i]; i++) {
 				do_move_zobrist(pos, move_list + i);
-
 				evaluation_list[i] = evaluate_recursive(pos, d - 1, alpha, beta);
+				undo_move_zobrist(pos, move_list + i);
+
 				if (evaluation_list[i] < -0x4000)
 					evaluation_list[i]++;
 				else if (evaluation_list[i] > 0x4000)
 					evaluation_list[i]--;
 
 				evaluation = MAX(evaluation, evaluation_list[i]);
-				undo_move_zobrist(pos, move_list + i);
 				alpha = MAX(evaluation, alpha);
 				if (beta < alpha) {
 					i++;
@@ -249,15 +265,15 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose) {
 			evaluation = 0x7FFF;
 			for (i = 0; move_list[i]; i++) {
 				do_move_zobrist(pos, move_list + i);
-
 				evaluation_list[i] = evaluate_recursive(pos, d - 1, alpha, beta);
+				undo_move_zobrist(pos, move_list + i);
+
 				if (evaluation_list[i] < -0x4000)
 					evaluation_list[i]++;
 				else if (evaluation_list[i] > 0x4000)
 					evaluation_list[i]--;
 
 				evaluation = MIN(evaluation, evaluation_list[i]);
-				undo_move_zobrist(pos, move_list + i);
 				beta = MIN(evaluation, beta);
 				if (beta < alpha) {
 					i++;
@@ -280,7 +296,6 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose) {
 			printf("\r");
 			fflush(stdout);
 		}
-		store_table_entry(pos, evaluation, d);
 		if (m)
 			*m = *move_list;
 	}
