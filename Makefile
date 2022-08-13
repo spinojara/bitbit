@@ -12,10 +12,10 @@ VERSION = -DVERSION=$(MAJOR).$(MINOR)
 SOURCE_DIR = src
 INCLUDE_DIR = include
 BUILD_DIR = build
-SRC = main.c bitboard.c magic_bitboard.c attack_gen.c move.c util.c position.c move_gen.c perft.c evaluate.c interface.c hash_table.c init.c
+SRC = main.c bitboard.c magic_bitboard.c attack_gen.c move.c util.c position.c move_gen.c perft.c evaluate.c interface.c transposition_table.c init.c
 
-ifneq ($(HASH), )
-	CFLAGS += -DHASH=$(HASH)
+ifneq ($(TT), )
+	CFLAGS += -DTT=$(TT)
 endif
 
 ifeq ($(UNICODE), 1)

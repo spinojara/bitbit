@@ -23,7 +23,7 @@
 #include "move_gen.h"
 #include "move.h"
 #include "util.h"
-#include "hash_table.h"
+#include "transposition_table.h"
 #include "init.h"
 #include "position.h"
 
@@ -127,9 +127,9 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, i
 	if (depth <= 0)
 		return count_position(pos);
 
-	struct hash_entry *e = attempt_get(pos);
-	if (e && hash_entry_depth(e) >= depth && hash_entry_type(e) == 0)
-		return hash_entry_evaluation(e);
+	struct transposition *e = attempt_get(pos);
+	if (e && transposition_depth(e) >= depth && transposition_type(e) == 0)
+		return transposition_evaluation(e);
 
 	int16_t evaluation;
 	move move_list[256];
@@ -143,7 +143,7 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, i
 	}
 
 	if (e)
-		reorder_moves(move_list, hash_entry_move(e));
+		reorder_moves(move_list, transposition_move(e));
 
 	/* type all */
 	uint8_t type = 2;

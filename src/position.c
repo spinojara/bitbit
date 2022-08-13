@@ -24,7 +24,7 @@
 #include "bitboard.h"
 #include "util.h"
 #include "attack_gen.h"
-#include "hash_table.h"
+#include "transposition_table.h"
 #include "move.h"
 #include "move_gen.h"
 

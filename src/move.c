@@ -25,7 +25,7 @@
 #include "bitboard.h"
 #include "util.h"
 #include "move_gen.h"
-#include "hash_table.h"
+#include "transposition_table.h"
 
 void do_move_perft(struct position *pos, move *m) {
 	uint8_t source_square = move_from(m);
