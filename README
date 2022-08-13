@@ -18,7 +18,4 @@ table, run
 
 	make TT=128M
 
-K and G are also valid suffixes. The default size is 64 MiB. To add
-support for unicode, run
-
-	make UNICODE=1
+K and G are also valid suffixes. The default size is 64 MiB.
