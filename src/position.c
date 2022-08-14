@@ -600,3 +600,45 @@ char *pos_to_fen(char *fen, struct position *pos) {
 	fen[k++] = '\0';
 	return fen;
 }
+
+void interactive_setpos(struct position *pos) {
+	char *u = " PNBRQKpnbrqk";
+	char c;
+	int i, j, t, mailbox[64];
+	int x, y;
+	for (i = 0; i < 64; i++)
+		mailbox[i] = 0;
+	x = y = 0;
+	while (x + 8 * y < 64) {
+		printf("\033[1;1H\033[2J");
+		printf("\n      a   b   c   d   e   f   g   h\n");
+		for (i = 0; i < 8; i++) {
+			printf("    +---+---+---+---+---+---+---+---+\n  %i |", 8 - i);
+			for (j = 0; j < 8; j++) {
+				t = 8 * i + j;
+				printf(" %c |", u[mailbox[t]]);
+			}
+			printf(" %i\n", 8 - i);
+		}
+		printf("    +---+---+---+---+---+---+---+---+\n");
+		printf("      a   b   c   d   e   f   g   h\n\n");
+		printf("\033[1;1H\033[%iB\033[%iC", 3 + 2 * y, 6 + 4 * x);
+
+		c = getc(stdin);
+		t = mailbox[x + 8 * y];
+		mailbox[x + 8 * y] = find_char(u, c);
+		if (mailbox[x + 8 * y] == -1) {
+			mailbox[x + 8 * y] = t;
+		}
+		if (find_char(u, c) != -1 || c == '\n') {
+			x++;
+			if (x == 8) {
+				y++;
+				x = 0;
+			}
+		}
+		/* clears buffer */
+		while (c != '\n')
+			c = getc(stdin);
+	}
+}
