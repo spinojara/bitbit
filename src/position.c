@@ -36,17 +36,17 @@ void print_position(struct position *pos) {
 	char *u = " PNBRQKpnbrqk";
 #endif
 
-	printf("\n       a   b   c   d   e   f   g   h\n");
+	printf("\n      a   b   c   d   e   f   g   h\n");
 	for (int i = 0; i < 8; i++) {
-		printf("     +---+---+---+---+---+---+---+---+\n   %i |", 8 - i);
+		printf("    +---+---+---+---+---+---+---+---+\n  %i |", 8 - i);
 		for (int j = 0; j < 8; j++) {
 			t = 8 * (7 - i) + j;
 			printf(" %c |", u[pos->mailbox[t]]);
 		}
 		printf(" %i\n", 8 - i);
 	}
-	printf("     +---+---+---+---+---+---+---+---+\n");
-	printf("       a   b   c   d   e   f   g   h\n\n");
+	printf("    +---+---+---+---+---+---+---+---+\n");
+	printf("      a   b   c   d   e   f   g   h\n\n");
 }
 
 uint64_t generate_checkers(struct position *pos) {
