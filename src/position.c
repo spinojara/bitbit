@@ -580,7 +580,7 @@ char *pos_to_fen(char *fen, struct position *pos) {
 		}
 	}
 	fen[k++] = ' ';
-	fen[k++] = "bw"[pos->turn];
+	fen[k++] = pos->turn ? 'w' : 'b';
 	fen[k++] = ' ';
 	castle_string(tmp, pos->castle);
 	for (i = 0; i < strlen(tmp); i++)
