@@ -125,6 +125,21 @@ int16_t count_position(struct position *pos) {
 }
 
 int16_t quiescence(struct position *pos, int16_t alpha, int16_t beta) {
+	int16_t evaluation = count_position(pos);
+	move move_list[256];
+
+	if (pos->turn) {
+		if (evaluation >= beta)
+			return beta;
+		if (alpha < evaluation)
+			alpha = evaluation;
+	}
+	else {
+		if (evaluation <= alpha)
+			return alpha;
+		if (beta > evaluation)
+			beta = evaluation;
+	}
 	return 0;
 }
 
