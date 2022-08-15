@@ -107,8 +107,8 @@ void evaluate_init() {
 	}
 }
 
-int count_position(struct position *pos) {
-	int i, eval = mate(pos);
+int16_t count_position(struct position *pos) {
+	int16_t eval = mate(pos);
 
 	/* stalemate */
 	if (eval == 1)
@@ -117,10 +117,15 @@ int count_position(struct position *pos) {
 	if (eval == 2)
 		return pos->turn ? -0x8000 : 0x7FFF;
 
+	int i;
 	for (i = 0, eval = 0; i < 64; i++) {
 		eval += eval_table[pos->mailbox[i]][i];
 	}
 	return eval;
+}
+
+int16_t quiescence(struct position *pos, int16_t alpha, int16_t beta) {
+	return 0;
 }
 
 int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, int16_t beta) {
