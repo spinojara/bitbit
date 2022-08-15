@@ -54,7 +54,7 @@ void term() {
 }
 
 void init_print(char *str) {
-	printf("\33[2K[%" PRIu64 "/%" PRIu64 "] %s\r", counter->done, counter->total, str);
+	printf("\033[2K[%" PRIu64 "/%" PRIu64 "] %s\r", counter->done, counter->total, str);
 	fflush(stdout);
 }
 
