@@ -608,8 +608,10 @@ void interactive_setpos(struct position *pos) {
 	char en_passant[3];
 	char castling[5];
 	char line[BUFSIZ];
-	int i, j, t, mailbox[64];
+	int i, j, k, t, mailbox[64];
 	int x, y;
+	char *argv[4];
+	int argc;
 	for (i = 0; i < 64; i++)
 		mailbox[i] = 0;
 	x = y = 0;
@@ -665,7 +667,8 @@ void interactive_setpos(struct position *pos) {
 		case 'r':
 		case 'q':
 		case 'k':
-			mailbox[x + 8 * y] = find_char(u, c);
+		case 'x':
+			mailbox[x + 8 * y] = find_char("xPNBRQKpnbrqk", c);
 			/* fallthrough */
 		case '\n':
 			x++;
@@ -754,4 +757,34 @@ void interactive_setpos(struct position *pos) {
 	en_passant[0] = line[0];
 	en_passant[1] = (en_passant[0] == '-') ? '\0' : line[1];
 	en_passant[2] = '\0';
+	
+	j = k = 0;
+	for (i = 0; i < 64; i++) {
+		if (mailbox[i]) {
+			if (j)
+				line[k++] = "012345678"[j];
+			j = 0;
+			line[k++] = " PNBRQKpnbrqk"[mailbox[i]];
+		}
+		else {
+			j++;
+		}
+		if (i && i % 8 == 7) {
+			if (j)
+				line[k++] = "012345678"[j];
+			j = 0;
+			if (i != 63)
+				line[k++] = '/';
+		}
+	}
+	line[k] = '\0';
+
+	argc = 4;
+	argv[0] = line;
+	argv[1] = turn;
+	argv[2] = castling;
+	argv[3] = en_passant;
+
+	if (fen_is_ok(argc, argv))
+		pos_from_fen(pos, argc, argv);
 }
