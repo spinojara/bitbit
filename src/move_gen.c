@@ -1399,7 +1399,6 @@ move *generate_quiescence(struct position *pos, move *move_list) {
 
 move *generate_quiescence_white(struct position *pos, move *move_list) {
 	move *move_ptr = move_list;
-	uint8_t i;
 
 	uint64_t piece;
 	uint64_t attacks;
@@ -1429,9 +1428,7 @@ move *generate_quiescence_white(struct position *pos, move *move_list) {
 		while (piece) {
 			source_square = ctz(piece);
 			if (48 <= source_square) {
-				for (i = 0; i < 4; i++) {
-					*move_ptr++ = new_move(source_square, source_square + 9, 2, i);
-				}
+				*move_ptr++ = new_move(source_square, source_square + 9, 2, 3);
 			}
 			else {
 				*move_ptr++ = new_move(source_square, source_square + 9, 0, 0);
@@ -1444,9 +1441,7 @@ move *generate_quiescence_white(struct position *pos, move *move_list) {
 			source_square = ctz(piece);
 			if (source_square % 8 > king_square % 8 && source_square / 8 > king_square / 8) {
 				if (48 <= source_square) {
-					for (i = 0; i < 4; i++) {
-						*move_ptr++ = new_move(source_square, source_square + 9, 2, i);
-					}
+					*move_ptr++ = new_move(source_square, source_square + 9, 2, 3);
 				}
 				else {
 					*move_ptr++ = new_move(source_square, source_square + 9, 0, 0);
@@ -1459,9 +1454,7 @@ move *generate_quiescence_white(struct position *pos, move *move_list) {
 		while (piece) {
 			source_square = ctz(piece);
 			if (48 <= source_square) {
-				for (i = 0; i < 4; i++) {
-					*move_ptr++ = new_move(source_square, source_square + 7, 2, i);
-				}
+				*move_ptr++ = new_move(source_square, source_square + 7, 2, 3);
 			}
 			else {
 				*move_ptr++ = new_move(source_square, source_square + 7, 0, 0);
@@ -1474,9 +1467,7 @@ move *generate_quiescence_white(struct position *pos, move *move_list) {
 			source_square = ctz(piece);
 			if (source_square % 8 < king_square % 8 && source_square / 8 > king_square / 8) {
 				if (48 <= source_square) {
-					for (i = 0; i < 4; i++) {
-						*move_ptr++ = new_move(source_square, source_square + 7, 2, i);
-					}
+					*move_ptr++ = new_move(source_square, source_square + 7, 2, 3);
 				}
 				else {
 					*move_ptr++ = new_move(source_square, source_square + 7, 0, 0);
@@ -1591,9 +1582,7 @@ move *generate_quiescence_white(struct position *pos, move *move_list) {
 		while (piece) {
 			source_square = ctz(piece);
 			if (48 <= source_square) {
-				for (i = 0; i < 4; i++) {
-					*move_ptr++ = new_move(source_square, source_square + 9, 2, i);
-				}
+				*move_ptr++ = new_move(source_square, source_square + 9, 2, 3);
 			}
 			else {
 				*move_ptr++ = new_move(source_square, source_square + 9, 0, 0);
@@ -1605,9 +1594,7 @@ move *generate_quiescence_white(struct position *pos, move *move_list) {
 		while (piece) {
 			source_square = ctz(piece);
 			if (48 <= source_square) {
-				for (i = 0; i < 4; i++) {
-					*move_ptr++ = new_move(source_square, source_square + 7, 2, i);
-				}
+				*move_ptr++ = new_move(source_square, source_square + 7, 2, 3);
 			}
 			else {
 				*move_ptr++ = new_move(source_square, source_square + 7, 0, 0);
@@ -1678,7 +1665,6 @@ move *generate_quiescence_white(struct position *pos, move *move_list) {
 
 move *generate_quiescence_black(struct position *pos, move *move_list) {
 	move *move_ptr = move_list;
-	uint8_t i;
 
 	uint64_t piece;
 	uint64_t attacks;
@@ -1708,9 +1694,7 @@ move *generate_quiescence_black(struct position *pos, move *move_list) {
 		while (piece) {
 			source_square = ctz(piece);
 			if (source_square < 16) {
-				for (i = 0; i < 4; i++) {
-					*move_ptr++ = new_move(source_square, source_square - 7, 2, i);
-				}
+				*move_ptr++ = new_move(source_square, source_square - 7, 2, 3);
 			}
 			else {
 				*move_ptr++ = new_move(source_square, source_square - 7, 0, 0);
@@ -1723,9 +1707,7 @@ move *generate_quiescence_black(struct position *pos, move *move_list) {
 			source_square = ctz(piece);
 			if (source_square % 8 > king_square % 8 && source_square / 8 < king_square / 8) {
 				if (source_square < 16) {
-					for (i = 0; i < 4; i++) {
-						*move_ptr++ = new_move(source_square, source_square - 7, 2, i);
-					}
+					*move_ptr++ = new_move(source_square, source_square - 7, 2, 3);
 				}
 				else {
 					*move_ptr++ = new_move(source_square, source_square - 7, 0, 0);
@@ -1738,9 +1720,7 @@ move *generate_quiescence_black(struct position *pos, move *move_list) {
 		while (piece) {
 			source_square = ctz(piece);
 			if (source_square < 16) {
-				for (i = 0; i < 4; i++) {
-					*move_ptr++ = new_move(source_square, source_square - 9, 2, i);
-				}
+				*move_ptr++ = new_move(source_square, source_square - 9, 2, 3);
 			}
 			else {
 				*move_ptr++ = new_move(source_square, source_square - 9, 0, 0);
@@ -1753,9 +1733,7 @@ move *generate_quiescence_black(struct position *pos, move *move_list) {
 			source_square = ctz(piece);
 			if (source_square % 8 < king_square % 8 && source_square / 8 < king_square / 8) {
 				if (source_square < 16) {
-					for (i = 0; i < 4; i++) {
-						*move_ptr++ = new_move(source_square, source_square - 9, 2, i);
-					}
+					*move_ptr++ = new_move(source_square, source_square - 9, 2, 3);
 				}
 				else {
 					*move_ptr++ = new_move(source_square, source_square - 9, 0, 0);
@@ -1870,9 +1848,7 @@ move *generate_quiescence_black(struct position *pos, move *move_list) {
 		while (piece) {
 			source_square = ctz(piece);
 			if (source_square < 16) {
-				for (i = 0; i < 4; i++) {
-					*move_ptr++ = new_move(source_square, source_square - 7, 2, i);
-				}
+				*move_ptr++ = new_move(source_square, source_square - 7, 2, 3);
 			}
 			else {
 				*move_ptr++ = new_move(source_square, source_square - 7, 0, 0);
@@ -1884,9 +1860,7 @@ move *generate_quiescence_black(struct position *pos, move *move_list) {
 		while (piece) {
 			source_square = ctz(piece);
 			if (source_square < 16) {
-				for (i = 0; i < 4; i++) {
-					*move_ptr++ = new_move(source_square, source_square - 9, 2, i);
-				}
+				*move_ptr++ = new_move(source_square, source_square - 9, 2, 3);
 			}
 			else {
 				*move_ptr++ = new_move(source_square, source_square - 9, 0, 0);
