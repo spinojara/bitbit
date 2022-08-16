@@ -135,6 +135,9 @@ int16_t quiescence(struct position *pos, int16_t alpha, int16_t beta) {
 		return evaluation;
 
 	if (pos->turn) {
+		alpha = MAX(evaluation, alpha);
+		if (beta < alpha)
+			return evaluation;
 		for (t = 0; move_list[t]; t++) {
 			evaluation_list[t] = eval_table[pos->mailbox[move_to(move_list + t)]][move_to(move_list + t)] +
 				eval_table[pos->mailbox[move_from(move_list + t)]][move_from(move_list + t)];
@@ -156,6 +159,9 @@ int16_t quiescence(struct position *pos, int16_t alpha, int16_t beta) {
 		}
 	}
 	else {
+		beta = MIN(evaluation, beta);
+		if (beta < alpha)
+			return evaluation;
 		for (t = 0; move_list[t]; t++) {
 			evaluation_list[t] = eval_table[pos->mailbox[move_to(move_list + t)]][move_to(move_list + t)] +
 				eval_table[pos->mailbox[move_from(move_list + t)]][move_from(move_list + t)];
