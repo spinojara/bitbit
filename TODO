@@ -4,3 +4,4 @@ look for compiler and architecture in Makefile
 add colored output with c flag
 add multi threading for cancelling search and perft early
 add promotions to quiescence search
+add error messages for setpos -i
