@@ -130,8 +130,9 @@ int16_t quiescence(struct position *pos, int16_t alpha, int16_t beta) {
 	int16_t evaluation_list[256];
 	generate_quiescence(pos, move_list);
 
+	evaluation = count_position(pos);
 	if (!move_list[0])
-		return count_position(pos);
+		return evaluation;
 
 	if (pos->turn) {
 		for (t = 0; move_list[t]; t++) {
@@ -175,7 +176,7 @@ int16_t quiescence(struct position *pos, int16_t alpha, int16_t beta) {
 				break;
 		}
 	}
-	return 0;
+	return evaluation;
 }
 
 int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, int16_t beta) {
