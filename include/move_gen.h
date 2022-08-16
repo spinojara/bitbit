@@ -35,4 +35,10 @@ int mate_white(struct position *pos);
 
 int mate_black(struct position *pos);
 
+move *generate_quiescence(struct position *pos, move *move_list);
+
+move *generate_quiescence_white(struct position *pos, move *move_list);
+
+move *generate_quiescence_black(struct position *pos, move *move_list);
+
 #endif

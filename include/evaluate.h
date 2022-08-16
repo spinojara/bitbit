@@ -21,8 +21,6 @@
 #include "position.h"
 #include "move.h"
 
-int count_position(struct position *pos);
-
 int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose);
 
 void evaluate_init();

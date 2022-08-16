@@ -107,35 +107,91 @@ void evaluate_init() {
 	}
 }
 
-int count_position(struct position *pos) {
-	int i, eval = mate(pos);
-
-	/* stalemate */
-	if (eval == 1)
-		return 0;
-	/* checkmate */
-	if (eval == 2)
-		return pos->turn ? -0x8000 : 0x7FFF;
-
+int16_t count_position(struct position *pos) {
+	int eval, i;
 	for (i = 0, eval = 0; i < 64; i++) {
 		eval += eval_table[pos->mailbox[i]][i];
 	}
 	return eval;
 }
 
+int16_t quiescence(struct position *pos, int16_t alpha, int16_t beta) {
+	int16_t evaluation, t;
+	evaluation = mate(pos);
+
+	/* stalemate */
+	if (evaluation == 1)
+		return 0;
+	/* checkmate */
+	if (evaluation == 2)
+		return pos->turn ? -0x8000 : 0x7FFF;
+
+	move move_list[256];
+	int16_t evaluation_list[256];
+	generate_quiescence(pos, move_list);
+
+	evaluation = count_position(pos);
+	if (!move_list[0])
+		return evaluation;
+
+	if (pos->turn) {
+		for (t = 0; move_list[t]; t++) {
+			evaluation_list[t] = eval_table[pos->mailbox[move_to(move_list + t)]][move_to(move_list + t)] +
+				eval_table[pos->mailbox[move_from(move_list + t)]][move_from(move_list + t)];
+		}
+		merge_sort(move_list, evaluation_list, 0, t - 1, 1);
+		evaluation = -0x8000;
+		for (move *move_ptr = move_list; *move_ptr; move_ptr++) {
+			do_move(pos, move_ptr);
+			t = quiescence(pos, alpha, beta);
+			undo_move(pos, move_ptr);
+			if (t < -0x4000)
+				t++;
+			else if (t > 0x4000)
+				t--;
+			evaluation = MAX(evaluation, t);
+			alpha = MAX(evaluation, alpha);
+			if (beta < alpha)
+				break;
+		}
+	}
+	else {
+		for (t = 0; move_list[t]; t++) {
+			evaluation_list[t] = eval_table[pos->mailbox[move_to(move_list + t)]][move_to(move_list + t)] +
+				eval_table[pos->mailbox[move_from(move_list + t)]][move_from(move_list + t)];
+		}
+		merge_sort(move_list, evaluation_list, 0, t - 1, 0);
+		evaluation = 0x7FFF;
+		for (move *move_ptr = move_list; *move_ptr; move_ptr++) {
+			do_move(pos, move_ptr);
+			t = quiescence(pos, alpha, beta);
+			undo_move(pos, move_ptr);
+			if (t < -0x4000)
+				t++;
+			else if (t > 0x4000)
+				t--;
+			evaluation = MIN(evaluation, t),
+			beta = MIN(evaluation, beta);
+			if (beta < alpha)
+				break;
+		}
+	}
+	return evaluation;
+}
+
 int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, int16_t beta) {
 	if (depth <= 0)
-		return count_position(pos);
+		return quiescence(pos, alpha, beta);
 
 	struct transposition *e = attempt_get(pos);
 	if (e && transposition_depth(e) >= depth && transposition_type(e) == 0)
 		return transposition_evaluation(e);
 
-	int16_t evaluation;
+	int16_t evaluation, t;
 	move move_list[256];
 	generate_all(pos, move_list);
 
-	if (!move_count(move_list)) {
+	if (!move_list[0]) {
 		uint64_t checkers = generate_checkers(pos);
 		if (!checkers)
 			return 0;
@@ -152,7 +208,7 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, i
 		evaluation = -0x8000;
 		for (move *move_ptr = move_list; *move_ptr; move_ptr++) {
 			do_move(pos, move_ptr);
-			int16_t t = evaluate_recursive(pos, depth - 1, alpha, beta);
+			t = evaluate_recursive(pos, depth - 1, alpha, beta);
 			undo_move(pos, move_ptr);
 			if (t < -0x4000)
 				t++;
@@ -176,7 +232,7 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, i
 		evaluation = 0x7FFF;
 		for (move *move_ptr = move_list; *move_ptr; move_ptr++) {
 			do_move(pos, move_ptr);
-			int16_t t = evaluate_recursive(pos, depth - 1, alpha, beta);
+			t = evaluate_recursive(pos, depth - 1, alpha, beta);
 			undo_move(pos, move_ptr);
 			if (t < -0x4000)
 				t++;
@@ -206,7 +262,7 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose) {
 	move move_list[256];
 	generate_all(pos, move_list);
 
-	if (!move_count(move_list)) {
+	if (!move_list[0]) {
 		uint64_t checkers = generate_checkers(pos);
 		if (!checkers)
 			evaluation = 0;
