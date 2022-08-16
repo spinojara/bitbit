@@ -82,4 +82,6 @@ int fen_is_ok(int argc, char **argv);
 
 void print_position(struct position *pos);
 
+void interactive_setpos(struct position *pos);
+
 #endif

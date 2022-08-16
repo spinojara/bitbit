@@ -600,3 +600,191 @@ char *pos_to_fen(char *fen, struct position *pos) {
 	fen[k++] = '\0';
 	return fen;
 }
+
+void interactive_setpos(struct position *pos) {
+	char *u = " PNBRQKpnbrqk";
+	char c, b = '\0';
+	char turn[2];
+	char en_passant[3];
+	char castling[5];
+	char line[BUFSIZ];
+	int i, j, k, t, mailbox[64];
+	int x, y;
+	char *argv[4];
+	int argc;
+	for (i = 0; i < 64; i++)
+		mailbox[i] = 0;
+	x = y = 0;
+	int quit = 0;
+	while (!quit) {
+		printf("\033[1;1H\033[2J");
+		printf("\n      a   b   c   d   e   f   g   h\n");
+		for (i = 0; i < 8; i++) {
+			printf("    +---+---+---+---+---+---+---+---+\n  %i |", 8 - i);
+			for (j = 0; j < 8; j++) {
+				t = 8 * i + j;
+				printf(" %c |", u[mailbox[t]]);
+			}
+			printf(" %i\n", 8 - i);
+		}
+		printf("    +---+---+---+---+---+---+---+---+\n");
+		printf("      a   b   c   d   e   f   g   h\n\n");
+		printf("\033[1;1H\033[%iB\033[%iC", 3 + 2 * y, 6 + 4 * x);
+
+		c = getc(stdin);
+		switch (c) {
+		case 's':
+			quit = 1;
+			break;
+		case 'a':
+		case 'b':
+		case 'c':
+		case 'd':
+		case 'e':
+		case 'f':
+		case 'g':
+		case 'h':
+			t = find_char("abcdefgh", c);
+			b = getc(stdin);
+			if (find_char("12345678", b) != -1) {
+				x = t;
+				y = 7 - find_char("12345678", b);
+				break;
+			}
+			if (c != 'b') {
+				break;
+			}
+			/* fallthrough */
+		case 'P':
+		case 'N':
+		case 'B':
+		case 'R':
+		case 'Q':
+		case 'K':
+		case 'p':
+		case 'n':
+		/* case 'b': */
+		case 'r':
+		case 'q':
+		case 'k':
+		case 'x':
+			mailbox[x + 8 * y] = find_char("xPNBRQKpnbrqk", c);
+			/* fallthrough */
+		case '\n':
+			x++;
+			if (x == 8) {
+				y++;
+				x = 0;
+			}
+			if (y == 8)
+				y = 0;
+		}
+
+		/* clear buffer */
+		if (c == 'b' && b == '\n')
+			c = '\n';
+		while (c != '\n')
+			c = getc(stdin);
+	}
+	printf("\033[1;1H\033[2J");
+	printf("\n      a   b   c   d   e   f   g   h\n");
+	for (i = 0; i < 8; i++) {
+		printf("    +---+---+---+---+---+---+---+---+\n  %i |", 8 - i);
+		for (j = 0; j < 8; j++) {
+			t = 8 * i + j;
+			printf(" %c |", u[mailbox[t]]);
+		}
+		printf(" %i\n", 8 - i);
+	}
+	printf("    +---+---+---+---+---+---+---+---+\n");
+	printf("      a   b   c   d   e   f   g   h\n\n");
+	c = '\0';
+
+	turn[0] = turn[1] = '\0';
+	while (1) {
+		printf("\033[22;1H\033[2Kturn: ");
+		c = getc(stdin);
+		if (c == 'w' || c == 'b')
+			turn[0] = c;
+
+		/* clear buffer */
+		while (c != '\n')
+			c = getc(stdin);
+
+		if (turn[0] != '\0')
+			break;
+	}
+
+	while (1) {
+		printf("\033[23;1H\033[2Kcastling: ");
+		if (!fgets(line, sizeof(line), stdin))
+			return;
+
+		for (t = 0; t < 4; t++) {
+			if (find_char("KQkq", line[t]) != -1) {
+				castling[t] = line[t];
+			}
+			else if (line[t] == '-' && t == 0) {
+				castling[0] = '-';
+				castling[1] = '\0';
+				break;
+			}
+			else {
+				castling[t] = '\0';
+				break;
+			}
+		}
+
+		castling[4] = '\0';
+		if (castling[0] != '\0')
+			break;
+	}
+
+	while (1) {
+		printf("\033[24;1H\033[2Ken passant: ");
+		if (!fgets(line, sizeof(line), stdin))
+			return;
+		if (find_char("abcdefgh", line[0]) != -1) {
+			if (find_char("12345678", line[1]) != -1) {
+				break;
+			}
+		}
+		else if (line[0] == '-') {
+			break;
+		}
+	}
+
+	en_passant[0] = line[0];
+	en_passant[1] = (en_passant[0] == '-') ? '\0' : line[1];
+	en_passant[2] = '\0';
+	
+	j = k = 0;
+	for (i = 0; i < 64; i++) {
+		if (mailbox[i]) {
+			if (j)
+				line[k++] = "012345678"[j];
+			j = 0;
+			line[k++] = " PNBRQKpnbrqk"[mailbox[i]];
+		}
+		else {
+			j++;
+		}
+		if (i && i % 8 == 7) {
+			if (j)
+				line[k++] = "012345678"[j];
+			j = 0;
+			if (i != 63)
+				line[k++] = '/';
+		}
+	}
+	line[k] = '\0';
+
+	argc = 4;
+	argv[0] = line;
+	argv[1] = turn;
+	argv[2] = castling;
+	argv[3] = en_passant;
+
+	if (fen_is_ok(argc, argv))
+		pos_from_fen(pos, argc, argv);
+}

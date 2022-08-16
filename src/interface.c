@@ -150,7 +150,12 @@ int interface_perft(struct arg *arg) {
 
 int interface_setpos(struct arg *arg) {
 	UNUSED(arg);
-	if (arg->r) {
+	if (arg->i) {
+		interactive_setpos(pos);
+		while(move_last)
+			move_previous();
+	}
+	else if (arg->r) {
 		random_pos(pos, 32);
 		while (move_last)
 			move_previous();
@@ -338,6 +343,9 @@ int parse(int *argc, char ***argv) {
 					case 'e':
 						arg->e = 1;
 						break;
+					case 'i':
+						arg->i = 1;
+						break;
 					}
 				}
 				j++;
@@ -418,6 +426,9 @@ int parse(int *argc, char ***argv) {
 							break;
 						case 'e':
 							arg->e = 1;
+							break;
+						case 'i':
+							arg->i = 1;
 							break;
 					}
 				}
