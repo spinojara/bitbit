@@ -127,12 +127,18 @@ int16_t quiescence(struct position *pos, int16_t alpha, int16_t beta) {
 		return pos->turn ? -0x8000 : 0x7FFF;
 
 	move move_list[256];
+	int16_t evaluation_list[256];
 	generate_quiescence(pos, move_list);
 
 	if (!move_list[0])
 		return count_position(pos);
 
 	if (pos->turn) {
+		for (t = 0; move_list[t]; t++) {
+			evaluation_list[t] = eval_table[pos->mailbox[move_to(move_list + t)]][move_to(move_list + t)] +
+				eval_table[pos->mailbox[move_from(move_list + t)]][move_from(move_list + t)];
+		}
+		merge_sort(move_list, evaluation_list, 0, t - 1, 1);
 		evaluation = -0x8000;
 		for (move *move_ptr = move_list; *move_ptr; move_ptr++) {
 			do_move(pos, move_ptr);
@@ -149,6 +155,11 @@ int16_t quiescence(struct position *pos, int16_t alpha, int16_t beta) {
 		}
 	}
 	else {
+		for (t = 0; move_list[t]; t++) {
+			evaluation_list[t] = eval_table[pos->mailbox[move_to(move_list + t)]][move_to(move_list + t)] +
+				eval_table[pos->mailbox[move_from(move_list + t)]][move_from(move_list + t)];
+		}
+		merge_sort(move_list, evaluation_list, 0, t - 1, 0);
 		evaluation = 0x7FFF;
 		for (move *move_ptr = move_list; *move_ptr; move_ptr++) {
 			do_move(pos, move_ptr);
