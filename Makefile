@@ -68,7 +68,7 @@ $(BUILD_DIR)/init.o: $(SOURCE_DIR)/init.c
 	$(CC) $(CFLAGS) -I$(INCLUDE_DIR) -c $^ -o $@
 
 $(BUILD_DIR)/interrupt.o: $(SOURCE_DIR)/interrupt.c
-	$(CC) $(CFLAGS) -I$(INCLUDE_DIR) -D_POSIX_C_SOURCE -c $^ -o $@
+	$(CC) $(CFLAGS) -I$(INCLUDE_DIR) -c $^ -o $@
 
 install: all
 	mkdir -p $(DESTDIR)$(PREFIX)$(BINDIR)

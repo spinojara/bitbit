@@ -22,13 +22,11 @@
 
 int interrupt = 0;
 
-struct sigaction sa;
-
 void sigint_handler(int num) {
 	interrupt = 1;
+	signal(SIGINT, sigint_handler);
 }
 
 void interrupt_init() {
-	sa.sa_handler = &sigint_handler;
-	sigaction(SIGINT, &sa, NULL);
+	signal(SIGINT, sigint_handler);
 }
