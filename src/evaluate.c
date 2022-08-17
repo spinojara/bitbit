@@ -377,7 +377,7 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose) {
 			printf("\r");
 			fflush(stdout);
 		}
-		if (m)
+		if (!interrupt && m)
 			*m = *move_list;
 		if (interrupt)
 			break;
