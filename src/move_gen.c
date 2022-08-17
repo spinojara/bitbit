@@ -960,8 +960,6 @@ int mate_white(struct position *pos) {
 
 			piece = white_pawn_capture_e(pos->white_pieces[pawn], target_bitboard) & ~pinned;
 			if (piece) {
-				source_square = ctz(piece);
-
 				pos->pieces ^= target_bitboard | shift_south(target_bitboard) | shift_south_west(target_bitboard);
 
 				if (!(rook_attacks(king_square, pos->pieces) & (pos->black_pieces[rook] | pos->black_pieces[queen])) && !(bishop_attacks(king_square, pos->pieces) & (pos->black_pieces[bishop] | pos->black_pieces[queen]))) {
@@ -983,8 +981,6 @@ int mate_white(struct position *pos) {
 
 			piece = white_pawn_capture_w(pos->white_pieces[pawn], target_bitboard) & ~pinned;
 			if (piece) {
-				source_square = ctz(piece);
-
 				pos->pieces ^= target_bitboard | shift_south(target_bitboard) | shift_south_east(target_bitboard);
 
 				if (!(rook_attacks(king_square, pos->pieces) & (pos->black_pieces[rook] | pos->black_pieces[queen])) && !(bishop_attacks(king_square, pos->pieces) & (pos->black_pieces[bishop] | pos->black_pieces[queen]))) {
@@ -1215,8 +1211,6 @@ int mate_black(struct position *pos) {
 
 			piece = black_pawn_capture_e(pos->black_pieces[pawn], target_bitboard) & ~pinned;
 			if (piece) {
-				source_square = ctz(piece);
-
 				pos->pieces ^= target_bitboard | shift_north(target_bitboard) | shift_north_west(target_bitboard);
 
 				if (!(rook_attacks(king_square, pos->pieces) & (pos->white_pieces[rook] | pos->white_pieces[queen])) && !(bishop_attacks(king_square, pos->pieces) & (pos->white_pieces[bishop] | pos->white_pieces[queen])))
@@ -1237,8 +1231,6 @@ int mate_black(struct position *pos) {
 
 			piece = black_pawn_capture_w(pos->black_pieces[pawn], target_bitboard) & ~pinned;
 			if (piece) {
-				source_square = ctz(piece);
-
 				pos->pieces ^= target_bitboard | shift_north(target_bitboard) | shift_north_east(target_bitboard);
 
 				if (!(rook_attacks(king_square, pos->pieces) & (pos->white_pieces[rook] | pos->white_pieces[queen])) && !(bishop_attacks(king_square, pos->pieces) & (pos->white_pieces[bishop] | pos->white_pieces[queen]))) {
