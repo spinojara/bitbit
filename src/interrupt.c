@@ -15,35 +15,20 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "init.h"
-#include "util.h"
-#include "bitboard.h"
-#include "magic_bitboard.h"
-#include "attack_gen.h"
-#include "evaluate.h"
-#include "transposition_table.h"
-#include "interface.h"
 #include "interrupt.h"
 
-int main(int argc, char **argv) {
-	interrupt_init();
-	/* --version */
-	if (init(argc, argv))
-		goto term;
-	util_init();
-	/* no magic found */
-	if (magic_bitboard_init())
-		goto term;
-	attack_gen_init();
-	bitboard_init();
-	evaluate_init();
-	/* transposition table size == 0 */
-	if (transposition_table_init())
-		goto term;
-	interface_init();
-	interface(argc, argv);
-term:;
-	interface_term();
-	transposition_table_term();
-	term();
+#include <signal.h>
+#include <stdlib.h>
+
+int interrupt = 0;
+
+struct sigaction sa;
+
+void sigint_handler(int num) {
+	interrupt = 1;
+}
+
+void interrupt_init() {
+	sa.sa_handler = &sigint_handler;
+	sigaction(SIGINT, &sa, NULL);
 }

@@ -12,7 +12,7 @@ VERSION = -DVERSION=$(MAJOR).$(MINOR)
 SOURCE_DIR = src
 INCLUDE_DIR = include
 BUILD_DIR = build
-SRC = main.c bitboard.c magic_bitboard.c attack_gen.c move.c util.c position.c move_gen.c perft.c evaluate.c interface.c transposition_table.c init.c
+SRC = main.c bitboard.c magic_bitboard.c attack_gen.c move.c util.c position.c move_gen.c perft.c evaluate.c interface.c transposition_table.c init.c interrupt.c
 
 OBJ = $(addprefix $(BUILD_DIR)/,$(SRC:.c=.o))
 
@@ -66,6 +66,9 @@ $(BUILD_DIR)/transposition_table.o: $(SOURCE_DIR)/transposition_table.c
 
 $(BUILD_DIR)/init.o: $(SOURCE_DIR)/init.c
 	$(CC) $(CFLAGS) -I$(INCLUDE_DIR) -c $^ -o $@
+
+$(BUILD_DIR)/interrupt.o: $(SOURCE_DIR)/interrupt.c
+	$(CC) $(CFLAGS) -I$(INCLUDE_DIR) -D_POSIX_C_SOURCE -c $^ -o $@
 
 install: all
 	mkdir -p $(DESTDIR)$(PREFIX)$(BINDIR)

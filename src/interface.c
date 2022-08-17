@@ -30,6 +30,7 @@
 #include "evaluate.h"
 #include "transposition_table.h"
 #include "version.h"
+#include "interrupt.h"
 
 struct func {
 	char *name;
@@ -287,7 +288,11 @@ struct func func_arr[] = {
 	{ "tt",      interface_tt,      },
 };
 
+void handler(int num);
+
 int parse(int *argc, char ***argv) {
+	/* reset interrupt */
+	interrupt = 0;
 	struct arg *arg = calloc(1, sizeof(struct arg));
 	if (!arg)
 		return 0;
