@@ -17,8 +17,6 @@
 
 #include "move_gen.h"
 
-#include <stdlib.h>
-
 #include "bitboard.h"
 #include "attack_gen.h"
 
