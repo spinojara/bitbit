@@ -27,11 +27,13 @@
 #include "interrupt.h"
 
 uint64_t perft(struct position *pos, int depth, int verbose) {
+	if (depth <= 0)
+		return 0;
 	return pos->turn ? perft_white(pos, depth, verbose) : perft_black(pos, depth, verbose);
 }
 
 uint64_t perft_white(struct position *pos, int depth, int verbose) {
-	if (interrupt || !depth)
+	if (interrupt)
 		return 0;
 	move move_list[256];
 	generate_white(pos, move_list);
@@ -57,7 +59,7 @@ uint64_t perft_white(struct position *pos, int depth, int verbose) {
 }
 
 uint64_t perft_black(struct position *pos, int depth, int verbose) {
-	if (interrupt || !depth)
+	if (interrupt)
 		return 0;
 	move move_list[256];
 	generate_black(pos, move_list);

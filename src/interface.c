@@ -133,8 +133,7 @@ int interface_perft(struct arg *arg) {
 	else {
 		if (string_is_int(arg->argv[1]) && atoi(arg->argv[1]) >= 0) {
 			clock_t t = clock();
-			//uint64_t p = perft(pos, atoi(arg->argv[1]), arg->v);
-			uint64_t p = atoi(arg->argv[1]);
+			uint64_t p = perft(pos, atoi(arg->argv[1]), arg->v);
 			t = clock() - t;
 			printf("nodes: %" PRIu64 "\n", p);
 			if (arg->t) {
