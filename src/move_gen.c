@@ -1414,6 +1414,13 @@ move *generate_quiescence_white(struct position *pos, move *move_list) {
 	}
 
 	if (!checkers) {
+		piece = white_pawn_push(pos->white_pieces[pawn] & RANK_7, pos->pieces) & ~pinned;
+		while (piece) {
+			source_square = ctz(piece);
+			*move_ptr++ = new_move(source_square, source_square + 8, 2, 3);
+			piece = clear_ls1b(piece);
+		}
+		
 		piece = white_pawn_capture_e(pos->white_pieces[pawn], pos->black_pieces[all]) & ~pinned;
 		while (piece) {
 			source_square = ctz(piece);
@@ -1680,6 +1687,13 @@ move *generate_quiescence_black(struct position *pos, move *move_list) {
 	}
 	
 	if (!checkers) {
+		piece = black_pawn_push(pos->black_pieces[pawn] & RANK_2, pos->pieces) & ~pinned;
+		while (piece) {
+			source_square = ctz(piece);
+			*move_ptr++ = new_move(source_square, source_square - 8, 2, 3);
+			piece = clear_ls1b(piece);
+		}
+
 		piece = black_pawn_capture_e(pos->black_pieces[pawn], pos->white_pieces[all]) & ~pinned;
 		while (piece) {
 			source_square = ctz(piece);
