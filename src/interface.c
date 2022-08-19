@@ -297,7 +297,6 @@ void handler(int num);
 
 int parse(int *argc, char ***argv) {
 	/* reset interrupt */
-	interrupt = 0;
 	struct arg *arg = calloc(1, sizeof(struct arg));
 	if (!arg)
 		return 0;
@@ -494,6 +493,7 @@ int parse(int *argc, char ***argv) {
 		}
 	}
 
+	interrupt = 0;
 	ret = -1;
 	if (arg->argc) {
 		for (unsigned long k = 0; k < SIZE(func_arr); k++)
