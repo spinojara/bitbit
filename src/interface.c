@@ -131,10 +131,12 @@ int interface_perft(struct arg *arg) {
 		return 2;
 	}
 	else {
-		if (string_is_int(arg->argv[1])) {
+		if (string_is_int(arg->argv[1]) && atoi(arg->argv[1]) >= 0) {
 			clock_t t = clock();
-			uint64_t p = perft(pos, atoi(arg->argv[1]), 1, arg->v);
+			//uint64_t p = perft(pos, atoi(arg->argv[1]), arg->v);
+			uint64_t p = atoi(arg->argv[1]);
 			t = clock() - t;
+			printf("nodes: %" PRIu64 "\n", p);
 			if (arg->t) {
 				printf("time: %.2f\n", (double)t / CLOCKS_PER_SEC);
 				if (t != 0)
@@ -212,7 +214,7 @@ int interface_eval(struct arg *arg) {
 		return 2;
 	}
 	else {
-		if (string_is_int(arg->argv[1])) {
+		if (string_is_int(arg->argv[1]) && atoi(arg->argv[1]) >= 0) {
 			move *m = malloc(sizeof(move));
 			clock_t t = clock();
 			evaluate(pos, atoi(arg->argv[1]), m, arg->v);
