@@ -26,10 +26,10 @@
 #include "interrupt.h"
 
 int main(int argc, char **argv) {
-	interrupt_init();
 	/* --version */
 	if (init(argc, argv))
 		goto term;
+	interrupt_init();
 	util_init();
 	/* no magic found */
 	if (magic_bitboard_init())
