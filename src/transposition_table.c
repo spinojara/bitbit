@@ -111,9 +111,7 @@ void store(struct transposition *e, struct position *pos, int16_t evaluation, ui
 }
 
 void attempt_store(struct position *pos, int16_t evaluation, uint8_t depth, uint8_t type, uint16_t m) {
-	struct transposition *e = get(pos);
-	if (depth >= transposition_depth(e))
-		store(e, pos, evaluation, depth, type, m);
+	store(get(pos), pos, evaluation, depth, type, m);
 }
 
 uint64_t transposition_table_size() {
