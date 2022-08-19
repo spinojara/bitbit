@@ -212,12 +212,12 @@ int16_t quiescence(struct position *pos, int16_t alpha, int16_t beta) {
 int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, int16_t beta) {
 	if (interrupt)
 		return 0;
-	if (depth <= 0)
-		return quiescence(pos, alpha, beta);
 
 	struct transposition *e = attempt_get(pos);
 	if (e && transposition_depth(e) >= depth && transposition_type(e) == 0)
 		return transposition_evaluation(e);
+	if (depth <= 0)
+		return quiescence(pos, alpha, beta);
 
 	int16_t evaluation, evaluation_list[256], t;
 	move move_list[256];

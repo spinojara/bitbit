@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <inttypes.h>
+#include <string.h>
 
 #include "util.h"
 #include "init.h"
@@ -93,7 +94,7 @@ struct transposition *get(struct position *pos) {
 
 struct transposition *attempt_get(struct position *pos) {
 	struct transposition *e = get(pos);
-	if (transposition_depth(e) && transposition_zobrist_key(e) == pos->zobrist_key)
+	if (transposition_zobrist_key(e) == pos->zobrist_key)
 		return e;
 	return NULL;
 }
@@ -119,13 +120,8 @@ uint64_t transposition_table_size() {
 	return transposition_table->size;
 }
 
-void transposition_clear(struct transposition *e) {
-	e->depth_type = 0;
-}
-
 void transposition_table_clear() {
-	for (uint64_t i = 0; i < transposition_table->size; i++)
-		transposition_clear(transposition_table->table + i);
+	memset(transposition_table->table, 0, transposition_table->size * sizeof(struct transposition));
 }
 
 uint64_t zobrist_piece_key(int piece, int square) {
