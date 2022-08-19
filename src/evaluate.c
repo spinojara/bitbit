@@ -219,7 +219,7 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, i
 	if (e && transposition_depth(e) >= depth && transposition_type(e) == 0)
 		return transposition_evaluation(e);
 
-	int16_t evaluation, t;
+	int16_t evaluation, evaluation_list[256], t;
 	move move_list[256];
 	generate_all(pos, move_list);
 
@@ -230,6 +230,14 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, i
 		return pos->turn ? -0x8000 : 0x7FFF;
 	}
 
+	for (t = 0; move_list[t]; t++) {
+		if (pos->mailbox[move_to(move_list + t)])
+			evaluation_list[t] = eval_table[pos->mailbox[move_to(move_list + t)]][move_to(move_list + t)] * 10 +
+				eval_table[pos->mailbox[move_from(move_list + t)]][move_from(move_list + t)] * 10;
+		else
+			evaluation_list[t] = eval_table[pos->mailbox[move_from(move_list + t)]][move_from(move_list + t)];
+	}
+	merge_sort(move_list, evaluation_list, 0, t - 1, pos->turn);
 	if (e)
 		reorder_moves(move_list, transposition_move(e));
 
@@ -330,6 +338,7 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int 
 	}
 
 	eval_clock_set(max_duration);
+
 	int i;
 	int16_t alpha, beta;
 	for (int d = 1; d <= depth; d++) {
