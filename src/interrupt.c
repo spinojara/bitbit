@@ -29,13 +29,6 @@ void sigint_handler(int num) {
 	signal(SIGINT, sigint_handler);
 }
 
-void sigalrm_handler(int num) {
-	UNUSED(num);
-	interrupt = 1;
-	signal(SIGALRM, sigalrm_handler);
-}
-
 void interrupt_init() {
 	signal(SIGINT, sigint_handler);
-	signal(SIGALRM, sigalrm_handler);
 }

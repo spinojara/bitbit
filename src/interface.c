@@ -21,7 +21,6 @@
 #include <inttypes.h>
 #include <time.h>
 #include <string.h>
-#include <unistd.h>
 
 #include "bitboard.h"
 #include "util.h"
@@ -134,9 +133,7 @@ int interface_perft(struct arg *arg) {
 	else {
 		if (string_is_int(arg->argv[1])) {
 			clock_t t = clock();
-			alarm(3);
 			uint64_t p = perft(pos, atoi(arg->argv[1]), 1, arg->v);
-			alarm(0);
 			t = clock() - t;
 			if (arg->t) {
 				printf("time: %.2f\n", (double)t / CLOCKS_PER_SEC);
