@@ -265,7 +265,7 @@ int interface_tt(struct arg *arg) {
 	if (arg->s) {
 		if (arg->argc < 2) {
 			transposition_table_size_print(transposition_table_size() * sizeof(struct transposition));
-			printf("\n");
+			printf("\n%d%%\n", transposition_table_occupancy());
 			return 0;
 		}
 		else {

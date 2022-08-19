@@ -89,6 +89,8 @@ uint64_t zobrist_en_passant_key(int square);
 
 int allocate_transposition_table(uint64_t t);
 
+int transposition_table_occupancy();
+
 int transposition_table_init();
 
 void transposition_table_term();

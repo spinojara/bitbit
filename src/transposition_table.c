@@ -111,7 +111,11 @@ void store(struct transposition *e, struct position *pos, int16_t evaluation, ui
 }
 
 void attempt_store(struct position *pos, int16_t evaluation, uint8_t depth, uint8_t type, uint16_t m) {
-	store(get(pos), pos, evaluation, depth, type, m);
+	struct transposition *e = get(pos);
+	if (transposition_type(e) == 0 ||
+			transposition_zobrist_key(e) != pos->zobrist_key ||
+			depth >= transposition_depth(e))
+		store(get(pos), pos, evaluation, depth, type, m);
 }
 
 uint64_t transposition_table_size() {
@@ -150,6 +154,14 @@ int allocate_transposition_table(uint64_t t) {
 	}
 	transposition_table_clear();
 	return 0;
+}
+
+int transposition_table_occupancy() {
+	uint64_t occupied = 0;
+	for (uint64_t i = 0; i < transposition_table->size; i++)
+		if ((transposition_table->table + i)->zobrist_key)
+			occupied++;
+	return 100 * occupied / transposition_table->size;
 }
 
 int transposition_table_init() {
