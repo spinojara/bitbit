@@ -87,7 +87,7 @@ int interface_help(struct arg *arg) {
 	"setpos [-r] [fen]\n"
 	"domove [-fr] [move]\n"
 	"perft [-tv] [depth]\n"
-	"eval [-mtv] [depth]\n"
+	"eval [-dmtv] [depth]\n"
 	"print [-v]\n"
 	"tt [-es] [size]\n"
 	);
@@ -217,11 +217,14 @@ int interface_eval(struct arg *arg) {
 		if (string_is_int(arg->argv[1]) && atoi(arg->argv[1]) >= 0) {
 			move *m = malloc(sizeof(move));
 			clock_t t = clock();
-			evaluate(pos, atoi(arg->argv[1]), m, arg->v);
+			if (arg->d)
+				evaluate(pos, atoi(arg->argv[1]), m, arg->v, -1);
+			else
+				evaluate(pos, 255, m, arg->v, atoi(arg->argv[1]));
 			t = clock() - t;
 			if (arg->t)
 				printf("time: %.2f\n", (double)t / CLOCKS_PER_SEC);
-			if (arg->m && *m) {
+			if (arg->m && *m && interrupt < 2) {
 				move_next(*m);
 				do_move(pos, move_last->move);
 			}
@@ -353,6 +356,9 @@ int parse(int *argc, char ***argv) {
 					case 'i':
 						arg->i = 1;
 						break;
+					case 'd':
+						arg->d = 1;
+						break;
 					}
 				}
 				j++;
@@ -436,6 +442,9 @@ int parse(int *argc, char ***argv) {
 							break;
 						case 'i':
 							arg->i = 1;
+							break;
+						case 'd':
+							arg->d = 1;
 							break;
 					}
 				}

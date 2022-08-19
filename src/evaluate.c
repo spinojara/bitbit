@@ -19,6 +19,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <time.h>
 
 #include "move_gen.h"
 #include "move.h"
@@ -27,6 +28,10 @@
 #include "init.h"
 #include "position.h"
 #include "interrupt.h"
+
+uint64_t nodes_since_clock_check = 0;
+
+clock_t eval_stop_time;
 
 int eval_table[13][64];
 
@@ -91,6 +96,19 @@ int white_side_eval_table[6][64] = {
 
 };
 
+void eval_clock_set(int max_duration) {
+	if (max_duration >= 0)
+		eval_stop_time = clock() + CLOCKS_PER_SEC * max_duration;
+	else
+		eval_stop_time = 0;
+}
+
+void eval_clock_check() {
+	nodes_since_clock_check = 0;
+	if (eval_stop_time && clock() > eval_stop_time)
+		interrupt = 1;
+}
+
 void evaluate_init() {
 	for (int i = 0; i < 13; i++) {
 		for (int j  = 0; j < 64; j++) {
@@ -119,6 +137,9 @@ int16_t count_position(struct position *pos) {
 int16_t quiescence(struct position *pos, int16_t alpha, int16_t beta) {
 	if (interrupt)
 		return 0;
+	if (nodes_since_clock_check > 4096)
+		eval_clock_check();
+	nodes_since_clock_check++;
 	int16_t evaluation, t;
 	evaluation = mate(pos);
 
@@ -267,7 +288,7 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, i
 	return evaluation;
 }
 
-int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose) {
+int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int max_duration) {
 	int16_t evaluation, last_evaluation = 0;
 	int16_t evaluation_list[256];
 	move move_list[256];
@@ -308,6 +329,7 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose) {
 		return evaluation;
 	}
 
+	eval_clock_set(max_duration);
 	int i;
 	int16_t alpha, beta;
 	for (int d = 1; d <= depth; d++) {
