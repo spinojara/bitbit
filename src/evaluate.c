@@ -19,6 +19,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <time.h>
 
 #include "move_gen.h"
 #include "move.h"
@@ -26,6 +27,11 @@
 #include "transposition_table.h"
 #include "init.h"
 #include "position.h"
+#include "interrupt.h"
+
+uint64_t nodes_since_clock_check = 0;
+
+clock_t eval_stop_time;
 
 int eval_table[13][64];
 
@@ -90,6 +96,19 @@ int white_side_eval_table[6][64] = {
 
 };
 
+void eval_clock_set(int max_duration) {
+	if (max_duration >= 0)
+		eval_stop_time = clock() + CLOCKS_PER_SEC * max_duration;
+	else
+		eval_stop_time = 0;
+}
+
+void eval_clock_check() {
+	nodes_since_clock_check = 0;
+	if (eval_stop_time && clock() > eval_stop_time)
+		interrupt = 1;
+}
+
 void evaluate_init() {
 	for (int i = 0; i < 13; i++) {
 		for (int j  = 0; j < 64; j++) {
@@ -116,6 +135,11 @@ int16_t count_position(struct position *pos) {
 }
 
 int16_t quiescence(struct position *pos, int16_t alpha, int16_t beta) {
+	if (interrupt)
+		return 0;
+	if (nodes_since_clock_check > 4096)
+		eval_clock_check();
+	nodes_since_clock_check++;
 	int16_t evaluation, t;
 	evaluation = mate(pos);
 
@@ -186,6 +210,8 @@ int16_t quiescence(struct position *pos, int16_t alpha, int16_t beta) {
 }
 
 int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, int16_t beta) {
+	if (interrupt)
+		return 0;
 	if (depth <= 0)
 		return quiescence(pos, alpha, beta);
 
@@ -262,8 +288,8 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, i
 	return evaluation;
 }
 
-int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose) {
-	int16_t evaluation;
+int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int max_duration) {
+	int16_t evaluation, last_evaluation = 0;
 	int16_t evaluation_list[256];
 	move move_list[256];
 	generate_all(pos, move_list);
@@ -292,7 +318,7 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose) {
 		return evaluation;
 	}
 
-	if (depth <= 0) {
+	if (depth == 0) {
 		evaluation = count_position(pos);
 		if (verbose)
 			printf("\33[2K[0/0] %+.2f\n", (double)evaluation / 100);
@@ -303,6 +329,7 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose) {
 		return evaluation;
 	}
 
+	eval_clock_set(max_duration);
 	int i;
 	int16_t alpha, beta;
 	for (int d = 1; d <= depth; d++) {
@@ -327,7 +354,10 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose) {
 					break;
 				}
 			}
-			merge_sort(move_list, evaluation_list, 0, i - 1, 0);
+			if (!interrupt) {
+				last_evaluation = evaluation;
+				merge_sort(move_list, evaluation_list, 0, i - 1, 0);
+			}
 		}
 		else {
 			evaluation = 0x7FFF;
@@ -348,33 +378,40 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose) {
 					break;
 				}
 			}
-			merge_sort(move_list, evaluation_list, 0, i - 1, 1);
-		}
-		if (verbose) {
-			if (evaluation < -0x4000) {
-				printf("\33[2K[%i/%i] -m%i ", d, depth, ((0x8000 + evaluation) + 1) / 2);
+			if (!interrupt) {
+				last_evaluation = evaluation;
+				merge_sort(move_list, evaluation_list, 0, i - 1, 1);
 			}
-			else if (evaluation > 0x4000) {
-				printf("\33[2K[%i/%i] +m%i ", d, depth, ((0x7FFF - evaluation) + 1) / 2);
+		}
+		if (interrupt)
+			d--;
+		if (verbose) {
+			if (last_evaluation < -0x4000) {
+				printf("\r\33[2K[%i/%i] -m%i ", d, depth, ((0x8000 + last_evaluation) + 1) / 2);
+			}
+			else if (last_evaluation > 0x4000) {
+				printf("\r\33[2K[%i/%i] +m%i ", d, depth, ((0x7FFF - last_evaluation) + 1) / 2);
 			}
 			else {
-				printf("\33[2K[%i/%i] %+.2f ", d, depth, (double)evaluation / 100);
+				printf("\r\33[2K[%i/%i] %+.2f ", d, depth, (double)last_evaluation / 100);
 			}
 			print_move(move_list);
 			printf("\r");
 			fflush(stdout);
 		}
-		if (m)
+		if (!interrupt && m)
 			*m = *move_list;
+		if (interrupt)
+			break;
 	}
 
 	if (verbose) {
 		printf("\n");
 	}
 	else {
-		printf("%+.2f ", (double)evaluation / 100);
+		printf("%+.2f ", (double)last_evaluation / 100);
 		print_move(move_list);
 		printf("\n");
 	}
-	return evaluation;
+	return last_evaluation;
 }

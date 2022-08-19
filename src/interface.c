@@ -30,6 +30,7 @@
 #include "evaluate.h"
 #include "transposition_table.h"
 #include "version.h"
+#include "interrupt.h"
 
 struct func {
 	char *name;
@@ -86,7 +87,7 @@ int interface_help(struct arg *arg) {
 	"setpos [-r] [fen]\n"
 	"domove [-fr] [move]\n"
 	"perft [-tv] [depth]\n"
-	"eval [-mtv] [depth]\n"
+	"eval [-dmtv] [depth]\n"
 	"print [-v]\n"
 	"tt [-es] [size]\n"
 	);
@@ -130,11 +131,13 @@ int interface_perft(struct arg *arg) {
 		return 2;
 	}
 	else {
-		if (string_is_int(arg->argv[1])) {
+		if (string_is_int(arg->argv[1]) && atoi(arg->argv[1]) >= 0) {
 			clock_t t = clock();
-			uint64_t p = perft(pos, atoi(arg->argv[1]), 1, arg->v);
+			uint64_t p = perft(pos, atoi(arg->argv[1]), arg->v);
 			t = clock() - t;
-			if (arg->t) {
+			if (!interrupt)
+			printf("nodes: %" PRIu64 "\n", p);
+			if (arg->t && !interrupt) {
 				printf("time: %.2f\n", (double)t / CLOCKS_PER_SEC);
 				if (t != 0)
 					printf("mpns: %" PRIu64 "\n",
@@ -211,14 +214,17 @@ int interface_eval(struct arg *arg) {
 		return 2;
 	}
 	else {
-		if (string_is_int(arg->argv[1])) {
+		if (string_is_int(arg->argv[1]) && atoi(arg->argv[1]) >= 0) {
 			move *m = malloc(sizeof(move));
 			clock_t t = clock();
-			evaluate(pos, atoi(arg->argv[1]), m, arg->v);
+			if (arg->d)
+				evaluate(pos, atoi(arg->argv[1]), m, arg->v, -1);
+			else
+				evaluate(pos, 255, m, arg->v, atoi(arg->argv[1]));
 			t = clock() - t;
 			if (arg->t)
 				printf("time: %.2f\n", (double)t / CLOCKS_PER_SEC);
-			if (arg->m && *m) {
+			if (arg->m && *m && interrupt < 2) {
 				move_next(*m);
 				do_move(pos, move_last->move);
 			}
@@ -287,7 +293,11 @@ struct func func_arr[] = {
 	{ "tt",      interface_tt,      },
 };
 
+void handler(int num);
+
 int parse(int *argc, char ***argv) {
+	/* reset interrupt */
+	interrupt = 0;
 	struct arg *arg = calloc(1, sizeof(struct arg));
 	if (!arg)
 		return 0;
@@ -346,6 +356,9 @@ int parse(int *argc, char ***argv) {
 					case 'i':
 						arg->i = 1;
 						break;
+					case 'd':
+						arg->d = 1;
+						break;
 					}
 				}
 				j++;
@@ -365,7 +378,7 @@ int parse(int *argc, char ***argv) {
 	else {
 		char line[BUFSIZ];
 		/* prompt */
-		printf("> ");
+		printf("\r\33[2K> ");
 		if (!fgets(line, sizeof(line), stdin)) {
 			ret = 1;
 			goto end_early;
@@ -429,6 +442,9 @@ int parse(int *argc, char ***argv) {
 							break;
 						case 'i':
 							arg->i = 1;
+							break;
+						case 'd':
+							arg->d = 1;
 							break;
 					}
 				}
