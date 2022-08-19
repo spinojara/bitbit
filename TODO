@@ -2,5 +2,4 @@ add checks for malloc
 check environment variables for unicode support
 look for compiler and architecture in Makefile
 add colored output with c flag
-add promotions to quiescence search
 add error messages for setpos -i
