@@ -93,7 +93,7 @@ struct transposition *get(struct position *pos) {
 
 struct transposition *attempt_get(struct position *pos) {
 	struct transposition *e = get(pos);
-	if (transposition_zobrist_key(e) == pos->zobrist_key)
+	if (transposition_depth(e) && transposition_zobrist_key(e) == pos->zobrist_key)
 		return e;
 	return NULL;
 }
