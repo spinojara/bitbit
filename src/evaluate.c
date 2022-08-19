@@ -35,7 +35,7 @@ clock_t eval_stop_time;
 
 int eval_table[13][64];
 
-int piece_value[6] = { 100, 300, 315, 500, 900, 0 };
+int piece_value[13] = { 0, 100, 300, 315, 500, 900, 0, -100, -300, -315, -500, -900, 0 };
 
 int white_side_eval_table[6][64] = {
 	{
@@ -116,11 +116,11 @@ void evaluate_init() {
 				eval_table[i][j] = 0;
 			else if (i < 7) {
 				eval_table[i][j] = white_side_eval_table[i - 1][(7 - j / 8) * 8 + (j % 8)] +
-					           piece_value[i - 1];
+					           piece_value[i];
 			}
 			else
-				eval_table[i][j] = -white_side_eval_table[i - 7][j] -
-						   piece_value[i - 7];
+				eval_table[i][j] = -white_side_eval_table[i - 7][j] +
+						   piece_value[i];
 			init_status("populating evaluation lookup table");
 		}
 	}
