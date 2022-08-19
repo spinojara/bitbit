@@ -25,7 +25,7 @@ int interrupt = 0;
 
 void sigint_handler(int num) {
 	UNUSED(num);
-	interrupt = 1;
+	interrupt = 2;
 	signal(SIGINT, sigint_handler);
 }
 

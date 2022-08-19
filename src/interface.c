@@ -135,8 +135,9 @@ int interface_perft(struct arg *arg) {
 			clock_t t = clock();
 			uint64_t p = perft(pos, atoi(arg->argv[1]), arg->v);
 			t = clock() - t;
+			if (!interrupt)
 			printf("nodes: %" PRIu64 "\n", p);
-			if (arg->t) {
+			if (arg->t && !interrupt) {
 				printf("time: %.2f\n", (double)t / CLOCKS_PER_SEC);
 				if (t != 0)
 					printf("mpns: %" PRIu64 "\n",
@@ -371,7 +372,7 @@ int parse(int *argc, char ***argv) {
 	else {
 		char line[BUFSIZ];
 		/* prompt */
-		printf("> ");
+		printf("\r\33[2K> ");
 		if (!fgets(line, sizeof(line), stdin)) {
 			ret = 1;
 			goto end_early;

@@ -365,13 +365,13 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose) {
 			d--;
 		if (verbose) {
 			if (last_evaluation < -0x4000) {
-				printf("\33[2K[%i/%i] -m%i ", d, depth, ((0x8000 + last_evaluation) + 1) / 2);
+				printf("\r\33[2K[%i/%i] -m%i ", d, depth, ((0x8000 + last_evaluation) + 1) / 2);
 			}
 			else if (last_evaluation > 0x4000) {
-				printf("\33[2K[%i/%i] +m%i ", d, depth, ((0x7FFF - last_evaluation) + 1) / 2);
+				printf("\r\33[2K[%i/%i] +m%i ", d, depth, ((0x7FFF - last_evaluation) + 1) / 2);
 			}
 			else {
-				printf("\33[2K[%i/%i] %+.2f ", d, depth, (double)last_evaluation / 100);
+				printf("\r\33[2K[%i/%i] %+.2f ", d, depth, (double)last_evaluation / 100);
 			}
 			print_move(move_list);
 			printf("\r");
