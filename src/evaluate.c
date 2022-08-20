@@ -245,6 +245,9 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, i
 		return pos->turn ? -0x8000 : 0x7FFF;
 	}
 
+	if (pos->halfmove >= 100)
+		return 0;
+
 	for (t = 0; move_list[t]; t++) {
 		if (pos->mailbox[move_to(move_list + t)])
 			evaluation_list[t] = eval_table[pos->mailbox[move_to(move_list + t)]][move_to(move_list + t)] * 10 +
