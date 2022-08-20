@@ -18,6 +18,8 @@
 #ifndef INTERFACE_H
 #define INTERFACE_H
 
+#include "move.h"
+
 struct arg {
 	int v;
 	int t;
@@ -31,6 +33,12 @@ struct arg {
 	int d;
 	int argc;
 	char **argv;
+};
+
+struct move_linked {
+	move *move;
+	struct position *pos;
+	struct move_linked *previous;
 };
 
 void interface(int argc, char **argv);

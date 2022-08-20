@@ -84,4 +84,8 @@ void print_position(struct position *pos);
 
 void interactive_setpos(struct position *pos);
 
+void copy_position(struct position *dest, struct position *src);
+
+int pos_are_equal(struct position *pos1, struct position *pos2);
+
 #endif

@@ -126,6 +126,15 @@ void evaluate_init() {
 	}
 }
 
+int is_threefold(struct position *pos, struct move_linked *move_last) {
+	int count;
+	struct move_linked *t;
+	for (t = move_last, count = 0; t; t = t->previous)
+		if (pos_are_equal(pos, t->pos))
+			count++;
+	return count >= 2;
+}
+
 int16_t count_position(struct position *pos) {
 	int eval, i;
 	for (i = 0, eval = 0; i < 64; i++) {
@@ -306,7 +315,7 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, i
 	return evaluation;
 }
 
-int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int max_duration) {
+int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int max_duration, struct move_linked *move_last) {
 	int16_t evaluation, last_evaluation = 0;
 	int16_t evaluation_list[256];
 	move move_list[256];
@@ -359,6 +368,8 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int 
 			for (i = 0; move_list[i]; i++) {
 				do_move(pos, move_list + i);
 				evaluation_list[i] = evaluate_recursive(pos, d - 1, alpha, beta);
+				if (is_threefold(pos, move_last))
+					evaluation_list[i] = 0;
 				undo_move(pos, move_list + i);
 
 				if (evaluation_list[i] < -0x4000)
@@ -383,6 +394,8 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int 
 			for (i = 0; move_list[i]; i++) {
 				do_move(pos, move_list + i);
 				evaluation_list[i] = evaluate_recursive(pos, d - 1, alpha, beta);
+				if (is_threefold(pos, move_last))
+					evaluation_list[i] = 0;
 				undo_move(pos, move_list + i);
 
 				if (evaluation_list[i] < -0x4000)

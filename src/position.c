@@ -787,3 +787,24 @@ void interactive_setpos(struct position *pos) {
 	if (fen_is_ok(argc, argv))
 		pos_from_fen(pos, argc, argv);
 }
+
+void copy_position(struct position *dest, struct position *src) {
+	dest->turn = src->turn;
+	dest->en_passant = src->en_passant;
+	dest->castle = src->castle;
+	for (int i = 0; i < 64; i++)
+		dest->mailbox[i] = src->mailbox[i];
+}
+
+int pos_are_equal(struct position *pos1, struct position *pos2) {
+	if (pos1->turn != pos2->turn)
+		return 0;
+	if (pos1->en_passant != pos2->en_passant)
+		return 0;
+	if (pos1->castle != pos2->castle)
+		return 0;
+	for (int i = 0; i < 64; i++)
+		if (pos1->mailbox[i] != pos2->mailbox[i])
+			return 0;
+	return 1;
+}

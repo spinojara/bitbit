@@ -20,8 +20,9 @@
 
 #include "position.h"
 #include "move.h"
+#include "interface.h"
 
-int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int max_duration);
+int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int max_duration, struct move_linked *move_last);
 
 void evaluate_init();
 

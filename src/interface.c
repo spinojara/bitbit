@@ -25,7 +25,6 @@
 #include "bitboard.h"
 #include "util.h"
 #include "position.h"
-#include "move.h"
 #include "perft.h"
 #include "evaluate.h"
 #include "transposition_table.h"
@@ -37,43 +36,29 @@ struct func {
 	int (*ptr)(struct arg *arg);
 };
 
-struct move_linked {
-	move *move;
-	struct move_linked *next;
-	struct move_linked *previous;
-};
-
 struct position *pos = NULL;
 struct move_linked *move_last = NULL;
 
 void move_next(move m) {
-	if (!move_last) {
-		move_last = malloc(sizeof(struct move_linked));
-		move_last->previous = NULL;
-	}
-	else {
-		move_last->next = malloc(sizeof(struct move_linked));
-		move_last->next->previous = move_last;
-		move_last = move_last->next;
-	}
-	move_last->next = NULL;
+	struct move_linked *t = move_last;
+	move_last = malloc(sizeof(struct move_linked));
+	move_last->previous = t;
 	move_last->move = malloc(sizeof(move));
+	move_last->pos = malloc(sizeof(struct position));
+	copy_position(move_last->pos, pos);
 	*(move_last->move) = m;
+	do_move(pos, move_last->move);
 }
 
 void move_previous() {
+	undo_move(pos, move_last->move);
 	if (!move_last)
 		return;
-	free(move_last->move);
-	if (!move_last->previous) {
-		free(move_last);
-		move_last = NULL;
-	}
-	else {
-		move_last = move_last->previous;
-		free(move_last->next);
-		move_last->next = NULL;
-	}
+	struct move_linked *t = move_last;
+	move_last = move_last->previous;
+	free(t->move);
+	free(t->pos);
+	free(t);
 }
 
 int interface_help(struct arg *arg) {
@@ -102,7 +87,6 @@ int interface_domove(struct arg *arg) {
 	}
 	else if (arg->r) {
 		if (move_last) {
-			undo_move(pos, move_last->move);
 			move_previous();
 		}
 		else {
@@ -113,14 +97,10 @@ int interface_domove(struct arg *arg) {
 		return 2;
 	}
 	else {
-		move_next(string_to_move(pos, arg->argv[1]));
-		if (*(move_last->move)) {
-			do_move(pos, move_last->move);
-		}
-		else {
-			move_previous();
+		if (string_to_move(pos, arg->argv[1]))
+			move_next(string_to_move(pos, arg->argv[1]));
+		else
 			return 3;
-		}
 	}
 	return 0;
 }
@@ -192,6 +172,9 @@ int interface_exit(struct arg *arg) {
 
 int interface_print(struct arg *arg) {
 	UNUSED(arg);
+	struct move_linked *s = move_last;
+	for (; s; s = s->previous)
+		print_position(s->pos);
 	print_position(pos);
 	if (arg->v) {
 		char t[128];
@@ -218,15 +201,14 @@ int interface_eval(struct arg *arg) {
 			move *m = malloc(sizeof(move));
 			clock_t t = clock();
 			if (arg->d)
-				evaluate(pos, atoi(arg->argv[1]), m, arg->v, -1);
+				evaluate(pos, atoi(arg->argv[1]), m, arg->v, -1, move_last);
 			else
-				evaluate(pos, 255, m, arg->v, atoi(arg->argv[1]));
+				evaluate(pos, 255, m, arg->v, atoi(arg->argv[1]), move_last);
 			t = clock() - t;
 			if (arg->t)
 				printf("time: %.2f\n", (double)t / CLOCKS_PER_SEC);
 			if (arg->m && *m && interrupt < 2) {
 				move_next(*m);
-				do_move(pos, move_last->move);
 			}
 			free(m);
 		}
