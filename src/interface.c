@@ -172,9 +172,6 @@ int interface_exit(struct arg *arg) {
 
 int interface_print(struct arg *arg) {
 	UNUSED(arg);
-	struct move_linked *s = move_last;
-	for (; s; s = s->previous)
-		print_position(s->pos);
 	print_position(pos);
 	if (arg->v) {
 		char t[128];
