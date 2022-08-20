@@ -29,8 +29,8 @@
  * 16-18 capture, 0: no piece, 1: pawn, 2: knight, 3: bishop, 4: rook, 5: queen.
  * 19-23 available castles before move. First bit, 0: K, 1: Q, 2: k, 3: q.
  * 24-29 en passant square before move.
- * 30-35 halfmove.
- * 36-63 fullmove.
+ * 30-36 halfmove.
+ * 37-63 fullmove.
  */
 typedef uint64_t move;
 
@@ -42,13 +42,13 @@ static inline uint8_t move_promote(move *m) { return (*m >> 0xE) & 0x3; }
 static inline uint8_t move_capture(move *m) { return (*m >> 0x10) & 0x7; }
 static inline uint8_t move_castle(move *m) { return (*m >> 0x13) & 0xF; }
 static inline uint8_t move_en_passant(move *m) { return (*m >> 0x18) & 0x3F; }
-static inline uint8_t move_halfmove(move *m) { return (*m >> 0x1E) & 0x3F; }
-static inline uint32_t move_fullmove(move *m) { return (*m >> 0x24); }
-static inline void move_set_captured(move *m, uint8_t i) { *m |= (i << 0x10); }
-static inline void move_set_castle(move *m, uint8_t i) { *m |= (i << 0x13); }
-static inline void move_set_en_passant(move *m, uint8_t i) { *m |= (i << 0x18); }
-static inline void move_set_halfmove(move *m, uint8_t i) { *m |= (i << 0x1E); }
-static inline void move_set_fullmove(move *m, uint64_t i) { *m |= (i << 0x24); }
+static inline uint16_t move_halfmove(move *m) { return (*m >> 0x1E) & 0x7F; }
+static inline uint32_t move_fullmove(move *m) { return (*m >> 0x25); }
+static inline void move_set_captured(move *m, uint64_t i) { *m |= (i << 0x10); }
+static inline void move_set_castle(move *m, uint64_t i) { *m |= (i << 0x13); }
+static inline void move_set_en_passant(move *m, uint64_t i) { *m |= (i << 0x18); }
+static inline void move_set_halfmove(move *m, uint64_t i) { *m |= (i << 0x1E); }
+static inline void move_set_fullmove(move *m, uint64_t i) { *m |= (i << 0x25); }
 
 void do_move_perft(struct position *pos, move *m);
 

@@ -251,7 +251,9 @@ void do_move(struct position *pos, move *m) {
 	pos->zobrist_key ^= zobrist_castle_key(pos->castle);
 	move_set_castle(m, pos->castle);
 	move_set_en_passant(m, pos->en_passant);
+	move_set_halfmove(m, pos->halfmove);
 
+	pos->halfmove++;
 	pos->en_passant = 0;
 
 	pos->castle = castle(source_square, target_square, pos->castle);
@@ -262,6 +264,8 @@ void do_move(struct position *pos, move *m) {
 			move_set_captured(m, pos->mailbox[target_square] - 6);
 			pos->black_pieces[all] ^= to;
 			pos->zobrist_key ^= zobrist_piece_key(pos->mailbox[target_square] - 1, target_square);
+
+			pos->halfmove = 0;
 		}
 
 		if (pos->mailbox[source_square] == white_pawn) {
@@ -287,6 +291,8 @@ void do_move(struct position *pos, move *m) {
 			pos->white_pieces[pawn] ^= from_to;
 			pos->zobrist_key ^= zobrist_piece_key(white_pawn - 1, source_square);
 			pos->zobrist_key ^= zobrist_piece_key(white_pawn - 1, target_square);
+
+			pos->halfmove = 0;
 		}
 		else if (pos->mailbox[source_square] == white_king) {
 			pos->white_pieces[king] ^= from_to;
@@ -329,6 +335,8 @@ void do_move(struct position *pos, move *m) {
 			move_set_captured(m, pos->mailbox[target_square]);
 			pos->white_pieces[all] ^= to;
 			pos->zobrist_key ^= zobrist_piece_key(pos->mailbox[target_square] - 1, target_square);
+
+			pos->halfmove = 0;
 		}
 
 		if (pos->mailbox[source_square] == black_pawn) {
@@ -353,6 +361,8 @@ void do_move(struct position *pos, move *m) {
 			pos->black_pieces[pawn] ^= from_to;
 			pos->zobrist_key ^= zobrist_piece_key(black_pawn - 1, source_square);
 			pos->zobrist_key ^= zobrist_piece_key(black_pawn - 1, target_square);
+
+			pos->halfmove = 0;
 		}
 		else if (pos->mailbox[source_square] == black_king) {
 			pos->black_pieces[king] ^= from_to;
@@ -393,6 +403,9 @@ void do_move(struct position *pos, move *m) {
 	pos->turn = 1 - pos->turn;
 	pos->zobrist_key ^= zobrist_turn_key();
 	pos->zobrist_key ^= zobrist_castle_key(pos->castle);
+
+	if (pos->castle != move_castle(m))
+		pos->halfmove = 0;
 }
 
 void undo_move(struct position *pos, move *m) {
@@ -410,6 +423,8 @@ void undo_move(struct position *pos, move *m) {
 	pos->zobrist_key ^= zobrist_en_passant_key(pos->en_passant);
 	pos->en_passant = move_en_passant(m);
 	pos->zobrist_key ^= zobrist_en_passant_key(pos->en_passant);
+
+	pos->halfmove = move_halfmove(m);
 
 	if (pos->turn) {
 		pos->fullmove--;
