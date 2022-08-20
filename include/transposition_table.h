@@ -40,11 +40,14 @@ static inline int16_t transposition_evaluation(struct transposition *e) { return
 static inline uint8_t transposition_depth(struct transposition *e) { return e->depth; }
 static inline uint8_t transposition_type(struct transposition *e) { return e->type; }
 static inline uint16_t transposition_move(struct transposition *e) { return e->move; }
+static inline uint8_t transposition_open(struct transposition *e) { return e->open; }
 static inline void transposition_set_zobrist_key(struct transposition *e, uint64_t t) { e->zobrist_key = t; }
 static inline void transposition_set_evaluation(struct transposition *e, int16_t t) { e->evaluation = t; }
 static inline void transposition_set_depth(struct transposition *e, uint8_t t) { e->depth = t; }
 static inline void transposition_set_type(struct transposition *e, uint8_t t) { e->type = t; }
 static inline void transposition_set_move(struct transposition *e, uint16_t t) { e->move = t; }
+static inline void transposition_set_open(struct transposition *e) { e->open++; }
+static inline void transposition_set_closed(struct transposition *e) { e->open--; }
 
 struct transposition_table {
 	struct transposition *table;

@@ -140,6 +140,7 @@ int16_t quiescence(struct position *pos, int16_t alpha, int16_t beta) {
 	if (nodes_since_clock_check > 4096)
 		eval_clock_check();
 	nodes_since_clock_check++;
+
 	int16_t evaluation, t;
 	evaluation = mate(pos);
 
@@ -212,8 +213,13 @@ int16_t quiescence(struct position *pos, int16_t alpha, int16_t beta) {
 int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, int16_t beta) {
 	if (interrupt)
 		return 0;
+	if (nodes_since_clock_check > 4096)
+		eval_clock_check();
+	nodes_since_clock_check++;
 
 	struct transposition *e = attempt_get(pos);
+	if (e && transposition_open(e))
+		return 0;
 	if (e && transposition_depth(e) >= depth && transposition_type(e) == 0)
 		return transposition_evaluation(e);
 	if (depth <= 0)
@@ -238,8 +244,10 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, i
 			evaluation_list[t] = eval_table[pos->mailbox[move_from(move_list + t)]][move_from(move_list + t)];
 	}
 	merge_sort(move_list, evaluation_list, 0, t - 1, pos->turn);
-	if (e)
+	if (e) {
 		reorder_moves(move_list, transposition_move(e));
+		transposition_set_open(e);
+	}
 
 	/* type all */
 	uint8_t type = 2;
@@ -292,6 +300,8 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, i
 			}
 		}
 	}
+	if (e)
+		transposition_set_closed(e);
 	attempt_store(pos, evaluation, depth, type, m);
 	return evaluation;
 }

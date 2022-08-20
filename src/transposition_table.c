@@ -45,8 +45,6 @@ void transposition_table_size_print(uint64_t t) {
 	printf("%" PRIu64 "%c", power(2, t) / power(1024, s), "BKMG"[s]);
 }
 
-#include <assert.h>
-
 struct transposition *get(struct position *pos) {
 	return transposition_table->table + (pos->zobrist_key & transposition_table->index);
 }
