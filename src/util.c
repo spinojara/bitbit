@@ -36,10 +36,16 @@ int rand_int(int i) {
 	return rand() % i;
 }
 
-int power(int m, int n) {
+uint64_t power(uint64_t m, uint64_t n) {
 	if (n == 0)
 		return 1;
 	return m * power(m, n - 1);
+}
+
+uint64_t log_2(uint64_t m) {
+	if (m <= 2)
+		return 1;
+	return 1 + log_2(m / 2);
 }
 
 int find_char(char *s, char c) {

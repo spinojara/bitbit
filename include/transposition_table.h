@@ -23,39 +23,33 @@
 #include "position.h"
 
 #ifndef TT
-#define TT 64M
+#define TT 26
 #endif
 
 struct transposition {
 	uint64_t zobrist_key;
 	int16_t evaluation;
-
-	/* first 6 bits for depth, last 2 bits for node type
-	 * node type, 0: pv, 1: cut, 2: all
-	 * <https://www.chessprogramming.org/Node_Types>
-	 */
-	uint8_t depth_type;
-
-	/* first 12 bits for move, last 4 bits for age */
-	uint16_t move_age;
+	uint8_t depth;
+	uint8_t type;
+	uint16_t move;
+	uint8_t open;
 };
 
 static inline uint64_t transposition_zobrist_key(struct transposition *e) { return e->zobrist_key; }
 static inline int16_t transposition_evaluation(struct transposition *e) { return e->evaluation; }
-static inline uint8_t transposition_depth(struct transposition *e) { return e->depth_type & 0x3F; }
-static inline uint8_t transposition_type(struct transposition *e) { return e->depth_type >> 0x6; }
-static inline uint16_t transposition_move(struct transposition *e) { return e->move_age & 0xFFF; }
-static inline uint16_t transposition_age(struct transposition *e) { return e->move_age >> 0xC; }
+static inline uint8_t transposition_depth(struct transposition *e) { return e->depth; }
+static inline uint8_t transposition_type(struct transposition *e) { return e->type; }
+static inline uint16_t transposition_move(struct transposition *e) { return e->move; }
 static inline void transposition_set_zobrist_key(struct transposition *e, uint64_t t) { e->zobrist_key = t; }
 static inline void transposition_set_evaluation(struct transposition *e, int16_t t) { e->evaluation = t; }
-static inline void transposition_set_depth(struct transposition *e, uint8_t t) { e->depth_type |= t; }
-static inline void transposition_set_type(struct transposition *e, uint8_t t) { e->depth_type |= (t << 0x6); }
-static inline void transposition_set_move(struct transposition *e, uint16_t t) { e->move_age |= t; }
-static inline void transposition_set_age(struct transposition *e, uint8_t t) { e->move_age |= (t << 0xC); }
+static inline void transposition_set_depth(struct transposition *e, uint8_t t) { e->depth = t; }
+static inline void transposition_set_type(struct transposition *e, uint8_t t) { e->type = t; }
+static inline void transposition_set_move(struct transposition *e, uint16_t t) { e->move = t; }
 
 struct transposition_table {
 	struct transposition *table;
 	uint64_t size;
+	uint64_t index;
 
 	/* 12 * 64: each piece each square
 	 * 1: turn to move is white
@@ -65,7 +59,7 @@ struct transposition_table {
 	uint64_t *zobrist_key;
 };
 
-void transposition_table_size_print(uint64_t size);
+void transposition_table_size_print(uint64_t t);
 
 uint64_t transposition_table_size_bytes(char *t);
 

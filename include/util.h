@@ -36,7 +36,9 @@ uint64_t rand_uint64();
 
 int rand_int(int i);
 
-int power(int m, int n);
+uint64_t power(uint64_t m, uint64_t n);
+
+uint64_t log_2(uint64_t m);
 
 int find_char(char *s, char c);
 

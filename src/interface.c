@@ -247,9 +247,7 @@ int interface_version(struct arg *arg) {
 	char t[8];
 	printf("compilation date: %s\n", date(t));
 	printf("transposition table size: ");
-	transposition_table_size_print((transposition_table_size_bytes(MACRO_VALUE(TT))
-				/ sizeof(struct transposition))
-				* sizeof(struct transposition));
+	transposition_table_size_print(TT);
 	printf("\ntransposition entry size: %" PRIu64 "B\n", sizeof(struct transposition));
 
 	return 0;
@@ -264,12 +262,15 @@ int interface_tt(struct arg *arg) {
 	}
 	if (arg->s) {
 		if (arg->argc < 2) {
-			transposition_table_size_print(transposition_table_size() * sizeof(struct transposition));
+			transposition_table_size_print(log_2(transposition_table_size() *
+						sizeof(struct transposition)));
 			printf("\n%d%%\n", transposition_table_occupancy());
 			return 0;
 		}
 		else {
-			int ret = allocate_transposition_table(transposition_table_size_bytes(arg->argv[1]));
+			if (!string_is_int(arg->argv[1]))
+				return 3;
+			int ret = allocate_transposition_table(atoi(arg->argv[1]));
 			if (ret == 1)
 				return 3;
 			if (ret == 2)

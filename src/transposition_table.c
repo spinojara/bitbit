@@ -27,69 +27,28 @@
 
 struct transposition_table *transposition_table = NULL;
 
-void transposition_table_size_print(uint64_t size) {
+void transposition_table_size_print(uint64_t t) {
 	/* 0 -> B
 	 * 1 -> K
 	 * 2 -> M
 	 * 3 -> G
 	 */
-	int t = 0;
+	int s = 0;
 
-	if (size >= (uint64_t)10000)
-		t++;
-	if (size >= (uint64_t)10000 * 1024)
-		t++;
-	if (size >= (uint64_t)10000 * 1024 * 1024)
-		t++;
+	if (t >= 12)
+		s++;
+	if (t >= 22)
+		s++;
+	if (t >= 32)
+		s++;
 
-	printf("%" PRIu64 "%c", size / power(1024, t), "BKMG"[t]);
+	printf("%" PRIu64 "%c", power(2, t) / power(1024, s), "BKMG"[s]);
 }
 
-uint64_t transposition_table_size_bytes(char *t) {
-	int i;
-	int flag;
-	uint64_t size;
-	for (size = 0, flag = 0, i = 0; t[i] != '\0'; i++) {
-		switch (t[i]) {
-		case 'G':
-			size *= 1024;
-			/* fallthrough */
-		case 'M':
-			size *= 1024;
-			/* fallthrough */
-		case 'K':
-			size *= 1024;
-			if (!flag) {
-				flag = 1;
-				break;
-			}
-			/* fallthrough */
-		case '0':
-		case '1':
-		case '2':
-		case '3':
-		case '4':
-		case '5':
-		case '6':
-		case '7':
-		case '8':
-		case '9':
-			if (!flag) {
-				size *= 10;
-				/* will return 0 anyway if t[i] is K, M, G */
-				size += find_char("0123456789", t[i]);
-				break;
-			}
-			/* fallthrough */
-		default:
-			return 0;
-		}
-	}
-	return size;
-}
+#include <assert.h>
 
 struct transposition *get(struct position *pos) {
-	return transposition_table->table + (pos->zobrist_key % transposition_table->size);
+	return transposition_table->table + (pos->zobrist_key & transposition_table->index);
 }
 
 struct transposition *attempt_get(struct position *pos) {
@@ -102,12 +61,9 @@ struct transposition *attempt_get(struct position *pos) {
 void store(struct transposition *e, struct position *pos, int16_t evaluation, uint8_t depth, uint8_t type, uint16_t m) {
 	transposition_set_zobrist_key(e, pos->zobrist_key);
 	transposition_set_evaluation(e, evaluation);
-	e->depth_type = 0;
 	transposition_set_depth(e, depth);
 	transposition_set_type(e, type);
-	e->move_age = 0;
 	transposition_set_move(e, m);
-	transposition_set_age(e, pos->halfmove % 0x10);
 }
 
 void attempt_store(struct position *pos, int16_t evaluation, uint8_t depth, uint8_t type, uint16_t m) {
@@ -143,15 +99,17 @@ uint64_t zobrist_en_passant_key(int square) {
 }
 
 int allocate_transposition_table(uint64_t t) {
-	if (t < sizeof(struct transposition))
+	uint64_t size = power(2, t);
+	if (size < sizeof(struct transposition))
 		return 1;
-	transposition_table->size = t / sizeof(struct transposition);
+	transposition_table->size = size / sizeof(struct transposition);
 	free(transposition_table->table);
 	transposition_table->table = malloc(transposition_table->size * sizeof(struct transposition));
 	if (!transposition_table->table) {
 		printf("\33[2Kfatal error: could not allocate transposition table\n");
 		return 2;
 	}
+	transposition_table->index = transposition_table->size - 1;
 	transposition_table_clear();
 	return 0;
 }
@@ -165,11 +123,9 @@ int transposition_table_occupancy() {
 }
 
 int transposition_table_init() {
-	uint64_t t = transposition_table_size_bytes(MACRO_VALUE(TT));
-
 	transposition_table = malloc(sizeof(struct transposition_table));
 	transposition_table->table = NULL;
-	int ret = allocate_transposition_table(t);
+	int ret = allocate_transposition_table(TT);
 	if (ret) {
 		if (ret == 1)
 			printf("\33[2Kfatal error: could not allocate transposition table\n");
