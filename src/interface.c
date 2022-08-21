@@ -43,25 +43,25 @@ struct func {
 };
 
 struct position *pos = NULL;
-struct move_linked *move_last = NULL;
+struct history *history = NULL;
 
 void move_next(move m) {
-	struct move_linked *t = move_last;
-	move_last = malloc(sizeof(struct move_linked));
-	move_last->previous = t;
-	move_last->move = malloc(sizeof(move));
-	move_last->pos = malloc(sizeof(struct position));
-	copy_position(move_last->pos, pos);
-	*(move_last->move) = m;
-	do_move(pos, move_last->move);
+	struct history *t = history;
+	history = malloc(sizeof(struct history));
+	history->previous = t;
+	history->move = malloc(sizeof(move));
+	history->pos = malloc(sizeof(struct position));
+	copy_position(history->pos, pos);
+	*(history->move) = m;
+	do_move(pos, history->move);
 }
 
 void move_previous() {
-	if (!move_last)
+	if (!history)
 		return;
-	undo_move(pos, move_last->move);
-	struct move_linked *t = move_last;
-	move_last = move_last->previous;
+	undo_move(pos, history->move);
+	struct history *t = history;
+	history = history->previous;
 	free(t->move);
 	free(t->pos);
 	free(t);
@@ -92,7 +92,7 @@ int interface_domove(struct arg *arg) {
 		swap_turn(pos);
 	}
 	else if (arg->r) {
-		if (move_last) {
+		if (history) {
 			move_previous();
 		}
 		else {
@@ -141,12 +141,12 @@ int interface_setpos(struct arg *arg) {
 	UNUSED(arg);
 	if (arg->i) {
 		interactive_setpos(pos);
-		while(move_last)
+		while(history)
 			move_previous();
 	}
 	else if (arg->r) {
 		random_pos(pos, 32);
-		while (move_last)
+		while (history)
 			move_previous();
 	}
 	else if (arg->argc < 2) {
@@ -155,7 +155,7 @@ int interface_setpos(struct arg *arg) {
 	else {
 		if (fen_is_ok(arg->argc - 1, arg->argv + 1)) {
 			pos_from_fen(pos, arg->argc - 1, arg->argv + 1);
-			while (move_last)
+			while (history)
 				move_previous();
 		}
 		else {
@@ -197,16 +197,16 @@ int interface_print(struct arg *arg) {
 int interface_eval(struct arg *arg) {
 	UNUSED(arg);
 	if (arg->argc < 2) {
-		evaluate(pos, 255, NULL, arg->v, -1, move_last);
+		evaluate(pos, 255, NULL, arg->v, -1, history);
 	}
 	else {
 		if (string_is_int(arg->argv[1]) && atoi(arg->argv[1]) >= 0) {
 			move *m = malloc(sizeof(move));
 			clock_t t = clock();
 			if (arg->d)
-				evaluate(pos, atoi(arg->argv[1]), m, arg->v, -1, move_last);
+				evaluate(pos, atoi(arg->argv[1]), m, arg->v, -1, history);
 			else
-				evaluate(pos, 255, m, arg->v, atoi(arg->argv[1]), move_last);
+				evaluate(pos, 255, m, arg->v, atoi(arg->argv[1]), history);
 			t = clock() - t;
 			if (arg->t)
 				printf("time: %.2f\n", (double)t / CLOCKS_PER_SEC);
@@ -537,6 +537,6 @@ void interface_init() {
 
 void interface_term() {
 	free(pos);
-	while (move_last)
+	while (history)
 		move_previous();
 }

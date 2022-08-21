@@ -35,10 +35,10 @@ struct arg {
 	char **argv;
 };
 
-struct move_linked {
+struct history {
 	move *move;
 	struct position *pos;
-	struct move_linked *previous;
+	struct history *previous;
 };
 
 void interface(int argc, char **argv);
