@@ -294,7 +294,7 @@ int parse(int *argc, char ***argv) {
 		/* get arg->argc */
 		arg->argc = 0;
 		for (l = 1; l < *argc; l++) {
-			if ((*argv)[l][0] != '-' || strlen((*argv)[l]) == 1)
+			if ((*argv)[l][0] != '-' || find_char("0123456789", (*argv)[l][1]) != -1)
 				arg->argc++;
 			if ((*argv)[l][0] == ',') {
 				arg->argc--;
@@ -311,7 +311,7 @@ int parse(int *argc, char ***argv) {
 
 		/* get arg->argv */
 		for (i = 0, j = 1; i + j < *argc; ) {
-			if ((*argv)[i + j][0] == '-' && strlen((*argv)[i + j]) != 1) {
+			if ((*argv)[i + j][0] == '-' && find_char("0123456789", (*argv)[i + j][1]) != 1) {
 				for (c = (*argv)[i + j] + 1; *c != '\0'; c++) {
 					switch (*c) {
 					case 'v':
@@ -386,6 +386,16 @@ int parse(int *argc, char ***argv) {
 					case '\0':
 					case '\n':
 					case ' ':
+					case '0':
+					case '1':
+					case '2':
+					case '3':
+					case '4':
+					case '5':
+					case '6':
+					case '7':
+					case '8':
+					case '9':
 						break;
 					default:
 						j = 1;
@@ -456,6 +466,16 @@ int parse(int *argc, char ***argv) {
 					case '\0':
 					case '\n':
 					case ' ':
+					case '0':
+					case '1':
+					case '2':
+					case '3':
+					case '4':
+					case '5':
+					case '6':
+					case '7':
+					case '8':
+					case '9':
 						break;
 					default:
 						i = 0;
