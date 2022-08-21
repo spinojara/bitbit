@@ -4,3 +4,5 @@ look for compiler and architecture in Makefile
 add colored output with c flag
 add error messages for setpos -i
 add support for 3 fold and 50 move rule
+parse flags correctly
+add pgn support
