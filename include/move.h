@@ -64,6 +64,8 @@ static inline move new_move(uint8_t source_square, uint8_t target_square, uint8_
 
 void print_move(move *m);
 
+char *move_str_pgn(char *str, struct position *pos, move *m);
+
 move string_to_move(struct position *pos, char *str);
 
 #endif

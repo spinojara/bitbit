@@ -43,25 +43,25 @@ struct func {
 };
 
 struct position *pos = NULL;
-struct move_linked *move_last = NULL;
+struct history *history = NULL;
 
 void move_next(move m) {
-	struct move_linked *t = move_last;
-	move_last = malloc(sizeof(struct move_linked));
-	move_last->previous = t;
-	move_last->move = malloc(sizeof(move));
-	move_last->pos = malloc(sizeof(struct position));
-	copy_position(move_last->pos, pos);
-	*(move_last->move) = m;
-	do_move(pos, move_last->move);
+	struct history *t = history;
+	history = malloc(sizeof(struct history));
+	history->previous = t;
+	history->move = malloc(sizeof(move));
+	history->pos = malloc(sizeof(struct position));
+	copy_position(history->pos, pos);
+	*(history->move) = m;
+	do_move(pos, history->move);
 }
 
 void move_previous() {
-	undo_move(pos, move_last->move);
-	if (!move_last)
+	if (!history)
 		return;
-	struct move_linked *t = move_last;
-	move_last = move_last->previous;
+	undo_move(pos, history->move);
+	struct history *t = history;
+	history = history->previous;
 	free(t->move);
 	free(t->pos);
 	free(t);
@@ -92,7 +92,7 @@ int interface_domove(struct arg *arg) {
 		swap_turn(pos);
 	}
 	else if (arg->r) {
-		if (move_last) {
+		if (history) {
 			move_previous();
 		}
 		else {
@@ -141,12 +141,12 @@ int interface_setpos(struct arg *arg) {
 	UNUSED(arg);
 	if (arg->i) {
 		interactive_setpos(pos);
-		while(move_last)
+		while(history)
 			move_previous();
 	}
 	else if (arg->r) {
 		random_pos(pos, 32);
-		while (move_last)
+		while (history)
 			move_previous();
 	}
 	else if (arg->argc < 2) {
@@ -155,14 +155,14 @@ int interface_setpos(struct arg *arg) {
 	else {
 		if (fen_is_ok(arg->argc - 1, arg->argv + 1)) {
 			pos_from_fen(pos, arg->argc - 1, arg->argv + 1);
-			while (move_last)
+			while (history)
 				move_previous();
 		}
 		else {
 			return ERR_BAD_ARG;
 		}
 	}
-	return ERR_MISS_ARG;
+	return DONE;
 }
 
 int interface_clear(struct arg *arg) {
@@ -178,6 +178,10 @@ int interface_exit(struct arg *arg) {
 
 int interface_print(struct arg *arg) {
 	UNUSED(arg);
+	if (arg->h) {
+		print_history_pgn(history);
+		return DONE;
+	}
 	print_position(pos);
 	if (arg->v) {
 		char t[128];
@@ -197,16 +201,16 @@ int interface_print(struct arg *arg) {
 int interface_eval(struct arg *arg) {
 	UNUSED(arg);
 	if (arg->argc < 2) {
-		evaluate(pos, 255, NULL, arg->v, -1, move_last);
+		evaluate(pos, 255, NULL, arg->v, -1, history);
 	}
 	else {
 		if (str_is_int(arg->argv[1]) && str_to_int(arg->argv[1]) >= 0) {
 			move *m = malloc(sizeof(move));
 			clock_t t = clock();
 			if (arg->d)
-				evaluate(pos, str_to_int(arg->argv[1]), m, arg->v, -1, move_last);
+				evaluate(pos, str_to_int(arg->argv[1]), m, arg->v, -1, history);
 			else
-				evaluate(pos, 255, m, arg->v, str_to_int(arg->argv[1]), move_last);
+				evaluate(pos, 255, m, arg->v, str_to_int(arg->argv[1]), history);
 			t = clock() - t;
 			if (arg->t)
 				printf("time: %.2f\n", (double)t / CLOCKS_PER_SEC);
@@ -293,7 +297,7 @@ int parse(int *argc, char ***argv) {
 		/* get arg->argc */
 		arg->argc = 0;
 		for (l = 1; l < *argc; l++) {
-			if ((*argv)[l][0] != '-' || find_char("0123456789", (*argv)[l][1]) != -1)
+			if ((*argv)[l][0] != '-' || find_char("0123456789", (*argv)[l][1]) != -1 || (*argv)[l][1] == '\0')
 				arg->argc++;
 			if ((*argv)[l][0] == ',') {
 				arg->argc--;
@@ -310,7 +314,7 @@ int parse(int *argc, char ***argv) {
 
 		/* get arg->argv */
 		for (i = 0, j = 1; i + j < *argc; ) {
-			if ((*argv)[i + j][0] == '-' && find_char("0123456789", (*argv)[i + j][1]) != 1) {
+			if ((*argv)[i + j][0] == '-' && find_char("0123456789", (*argv)[i + j][1]) == -1 && (*argv)[i + j][1] != '\0') {
 				for (c = (*argv)[i + j] + 1; *c != '\0'; c++) {
 					switch (*c) {
 					case 'v':
@@ -536,6 +540,6 @@ void interface_init() {
 
 void interface_term() {
 	free(pos);
-	while (move_last)
+	while (history)
 		move_previous();
 }

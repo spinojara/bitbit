@@ -27,6 +27,7 @@
 #include "transposition_table.h"
 #include "move.h"
 #include "move_gen.h"
+#include "interface.h"
 
 void print_position(struct position *pos) {
 	int t;
@@ -789,10 +790,18 @@ void interactive_setpos(struct position *pos) {
 }
 
 void copy_position(struct position *dest, struct position *src) {
+	int i;
+	for(i = 0; i < 7; i++) {
+		dest->white_pieces[i] = src->white_pieces[i];
+		dest->black_pieces[i] = src->black_pieces[i];
+	}
+	dest->pieces = src->pieces;
 	dest->turn = src->turn;
 	dest->en_passant = src->en_passant;
 	dest->castle = src->castle;
-	for (int i = 0; i < 64; i++)
+	dest->halfmove = src->halfmove;
+	dest->fullmove = src->fullmove;
+	for (i = 0; i < 64; i++)
 		dest->mailbox[i] = src->mailbox[i];
 }
 
@@ -807,4 +816,28 @@ int pos_are_equal(struct position *pos1, struct position *pos2) {
 		if (pos1->mailbox[i] != pos2->mailbox[i])
 			return 0;
 	return 1;
+}
+
+void print_history_pgn(struct history *history) {
+	if (!history)
+		return;
+	struct history *t, *t_last = NULL;
+	char str[8];
+	while (1) {
+		for (t = history; t->previous != t_last; t = t->previous);
+		t_last = t;
+		if (t->pos->turn) {
+			printf("%i. ", t->pos->fullmove);
+		}
+		else if (!t->previous && !t->pos->turn) {
+			printf("%i. ... ", t->pos->fullmove);
+		}
+		printf("%s ", move_str_pgn(str, t->pos, t->move));
+		if (t == history) {
+			printf("\n");
+			break;
+		}
+		if (!t->pos->turn)
+			printf("\n");
+	}
 }
