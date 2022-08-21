@@ -789,10 +789,18 @@ void interactive_setpos(struct position *pos) {
 }
 
 void copy_position(struct position *dest, struct position *src) {
+	int i;
+	for(i = 0; i < 7; i++) {
+		dest->white_pieces[i] = src->white_pieces[i];
+		dest->black_pieces[i] = src->black_pieces[i];
+	}
+	dest->pieces = src->pieces;
 	dest->turn = src->turn;
 	dest->en_passant = src->en_passant;
 	dest->castle = src->castle;
-	for (int i = 0; i < 64; i++)
+	dest->halfmove = src->halfmove;
+	dest->fullmove = src->fullmove;
+	for (i = 0; i < 64; i++)
 		dest->mailbox[i] = src->mailbox[i];
 }
 
