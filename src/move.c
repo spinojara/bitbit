@@ -26,6 +26,7 @@
 #include "util.h"
 #include "move_gen.h"
 #include "transposition_table.h"
+#include "attack_gen.h"
 
 void do_move_perft(struct position *pos, move *m) {
 	uint8_t source_square = move_from(m);
@@ -537,34 +538,107 @@ void print_move(move *m) {
 		printf("%c", "nbrq"[move_promote(m)]);
 }
 
+/* str needs to be at least 6 bytes */
+char *move_str_algebraic(char *str, move *m) {
+	algebraic(str, move_from(m));
+	algebraic(str + 2, move_to(m));
+	str[4] = str[5] = '\0';
+	if (move_flag(m) == 2)
+		str[4] = "nbrq"[move_promote(m)];
+	return str;
+}
+
+/* str needs to be at least 8 bytes */
+char *move_str_pgn(char *str, struct position *pos, move *m) {
+	int x = move_from(m) % 8;
+	int y = move_from(m) / 8;
+	int i = 0;
+	uint64_t attackers = 0;
+
+	str[i] = '\0';
+	switch((pos->mailbox[move_from(m)] - 1) % 6) {
+	case 0:
+		if (pos->mailbox[move_to(m)])
+			attackers = rank_calc(move_from(m));
+		break;
+	case 1:
+		str[i++] = 'N';
+		attackers = knight_attacks(move_to(m)) &
+			(pos->turn ? pos->white_pieces[knight] : pos->black_pieces[knight]);
+		break;
+	case 2:
+		str[i++] = 'B';
+		attackers = bishop_attacks(move_to(m), pos->pieces) &
+			(pos->turn ? pos->white_pieces[bishop] : pos->black_pieces[bishop]);
+		break;
+	case 3:
+		str[i++] = 'R';
+		attackers = rook_attacks(move_to(m), pos->pieces) &
+			(pos->turn ? pos->white_pieces[rook] : pos->black_pieces[rook]);
+		break;
+	case 4:
+		str[i++] = 'Q';
+		attackers = queen_attacks(move_to(m), pos->pieces) &
+			(pos->turn ? pos->white_pieces[queen] : pos->black_pieces[queen]);
+		break;
+	case 5:
+		if (x == 4 && move_to(m) % 8 == 6) {
+			sprintf(str, "O-O");
+			i = 3;
+		}
+		else if (x == 4 && move_to(m) % 8 == 2) {
+			sprintf(str, "O-O-O");
+			i = 5;
+		}
+		else {
+			str[i++] = 'K';
+		}
+	}
+	if (popcount(attackers & file_calc(move_from(m))) > 1) {
+		if (popcount(attackers & rank_calc(move_from(m))) > 1) {
+			str[i++] = "abcdefgh"[x];
+			str[i++] = "12345678"[y];
+		}
+		else {
+			str[i++] = "12345678"[y];
+		}
+	}
+	else if (popcount(attackers & rank_calc(move_from(m))) > 1) {
+		str[i++] = "abcdefgh"[x];
+	}
+
+	if (pos->mailbox[move_to(m)])
+		str[i++] = 'x';
+	if (str[0] != 'O') {
+		algebraic(str + i, move_to(m));
+		i += 2;
+	}
+
+	if (move_flag(m) == 2) {
+		str[i++] = '=';
+		str[i++] = "NBRQ"[move_promote(m)];
+	}
+
+	do_move(pos, m);
+	uint64_t checkers = generate_checkers(pos);
+	undo_move(pos, m);
+	if (checkers)
+		str[i++] = '+';
+	str[i++] = '\0';
+	return str;
+}
+
 move string_to_move(struct position *pos, char *str) {
-	if (strlen(str) < 4 || strlen(str) > 5)
-		return 0;
-	uint8_t move_from_t, move_to_t, promotion = 4;
-	char tmp[3] = "\0\0\0";
-
-	strncpy(tmp, str, 2);
-	move_from_t = square(tmp);
-	strncpy(tmp, str + 2, 2);
-	move_to_t = square(tmp);
-
-	if (strlen(str) == 5)
-		promotion = find_char("nbrq", str[4]);
-
 	move move_list[256];
 	generate_all(pos, move_list);
+	char str_t[8];
 	for (move *move_ptr = move_list; *move_ptr; move_ptr++) {
-		if (move_from(move_ptr) != move_from_t || move_to(move_ptr) != move_to_t)
-			continue;
-		if (promotion != 4) {
-			if (move_flag(move_ptr) != 2)
-				continue;
-			else
-				if (promotion != move_promote(move_ptr))
-					continue;
-		}
-
-		return *move_ptr;
+		move_str_algebraic(str_t, move_ptr);
+		if (strcmp(str_t, str) == 0)
+			return *move_ptr;
+		move_str_pgn(str_t, pos, move_ptr);
+		if (strcmp(str_t, str) == 0)
+			return *move_ptr;
 	}
 	return 0;
 }
