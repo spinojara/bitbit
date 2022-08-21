@@ -128,6 +128,24 @@ void bitboard_init() {
 	}
 }
 
+uint64_t file_calc(int square) {
+	int x = square % 8;
+	uint64_t ret = FILE_A;
+
+	for (int i = 0; i < x; i++)
+		ret = shift_east(ret);
+	return ret;
+}
+
+uint64_t rank_calc(int square) {
+	int y = square / 8;
+	uint64_t ret = RANK_1;
+
+	for (int i = 0; i < y; i++)
+		ret = shift_north(ret);
+	return ret;
+}
+
 const uint64_t FILE_H = 0x8080808080808080;
 const uint64_t FILE_G = 0x4040404040404040;
 const uint64_t FILE_F = 0x2020202020202020;
