@@ -65,7 +65,7 @@ int str_is_int(char *s) {
 int str_to_int(char *s) {
 	int ret = 0;
 	for (int i = 0; s[i]; i++)
-		ret = ret * 10 + find_char("0123456789", s[i]);
+		ret = ret * 10 + s[i] - '0';
 	return ret;
 }
 
