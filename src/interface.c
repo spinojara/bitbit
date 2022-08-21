@@ -197,7 +197,7 @@ int interface_print(struct arg *arg) {
 int interface_eval(struct arg *arg) {
 	UNUSED(arg);
 	if (arg->argc < 2) {
-		return ERR_MISS_ARG;
+		evaluate(pos, 255, NULL, arg->v, -1, move_last);
 	}
 	else {
 		if (string_is_int(arg->argv[1]) && atoi(arg->argv[1]) >= 0) {
