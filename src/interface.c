@@ -117,9 +117,9 @@ int interface_perft(struct arg *arg) {
 		return ERR_MISS_ARG;
 	}
 	else {
-		if (string_is_int(arg->argv[1]) && atoi(arg->argv[1]) >= 0) {
+		if (str_is_int(arg->argv[1]) && str_to_int(arg->argv[1]) >= 0) {
 			clock_t t = clock();
-			uint64_t p = perft(pos, atoi(arg->argv[1]), arg->v);
+			uint64_t p = perft(pos, str_to_int(arg->argv[1]), arg->v);
 			t = clock() - t;
 			if (!interrupt)
 			printf("nodes: %" PRIu64 "\n", p);
@@ -200,13 +200,13 @@ int interface_eval(struct arg *arg) {
 		evaluate(pos, 255, NULL, arg->v, -1, move_last);
 	}
 	else {
-		if (string_is_int(arg->argv[1]) && atoi(arg->argv[1]) >= 0) {
+		if (str_is_int(arg->argv[1]) && str_to_int(arg->argv[1]) >= 0) {
 			move *m = malloc(sizeof(move));
 			clock_t t = clock();
 			if (arg->d)
-				evaluate(pos, atoi(arg->argv[1]), m, arg->v, -1, move_last);
+				evaluate(pos, str_to_int(arg->argv[1]), m, arg->v, -1, move_last);
 			else
-				evaluate(pos, 255, m, arg->v, atoi(arg->argv[1]), move_last);
+				evaluate(pos, 255, m, arg->v, str_to_int(arg->argv[1]), move_last);
 			t = clock() - t;
 			if (arg->t)
 				printf("time: %.2f\n", (double)t / CLOCKS_PER_SEC);
@@ -253,9 +253,9 @@ int interface_tt(struct arg *arg) {
 			return DONE;
 		}
 		else {
-			if (!string_is_int(arg->argv[1]))
+			if (!str_is_int(arg->argv[1]))
 				return ERR_BAD_ARG;
-			int ret = allocate_transposition_table(atoi(arg->argv[1]));
+			int ret = allocate_transposition_table(str_to_int(arg->argv[1]));
 			if (ret == 1)
 				return ERR_BAD_ARG;
 			if (ret == 2)
@@ -282,7 +282,6 @@ struct func func_arr[] = {
 void handler(int num);
 
 int parse(int *argc, char ***argv) {
-	/* reset interrupt */
 	struct arg *arg = calloc(1, sizeof(struct arg));
 	if (!arg)
 		return DONE;

@@ -49,17 +49,24 @@ uint64_t log_2(uint64_t m) {
 }
 
 int find_char(char *s, char c) {
-	for (long unsigned int i = 0; i < strlen(s); i++)
+	for (int i = 0; s[i]; i++)
 		if (s[i] == c)
 			return i;
 	return -1;
 }
 
-int string_is_int(char *s) {
-	for (long unsigned int i = 0; i < strlen(s); i++)
-		if (find_char("0123456789", s[i]) == -1)
+int str_is_int(char *s) {
+	for (int i = 0; s[i]; i++)
+		if (s[i] < '0' || s[i] > '9')
 			return 0;
 	return 1;
+}
+
+int str_to_int(char *s) {
+	int ret = 0;
+	for (int i = 0; s[i]; i++)
+		ret = ret * 10 + find_char("0123456789", s[i]);
+	return ret;
 }
 
 void merge_sort(move *arr, int16_t *val, unsigned int first, unsigned int last, int increasing) {

@@ -42,7 +42,9 @@ uint64_t log_2(uint64_t m);
 
 int find_char(char *s, char c);
 
-int string_is_int(char *s);
+int str_is_int(char *s);
+
+int str_to_int(char *s);
 
 void merge_sort(move *arr, int16_t *val, unsigned int start, unsigned int end, int increasing);
 
