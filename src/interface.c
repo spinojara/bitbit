@@ -31,6 +31,12 @@
 #include "version.h"
 #include "interrupt.h"
 
+#define DONE 0
+#define EXIT_LOOP 1
+#define ERR_MISS_ARG 2
+#define ERR_BAD_ARG 3
+#define ERR_MISS_FLAG 4
+
 struct func {
 	char *name;
 	int (*ptr)(struct arg *arg);
@@ -76,7 +82,7 @@ int interface_help(struct arg *arg) {
 	"print [-v]\n"
 	"tt [-es] [size]\n"
 	);
-	return 0;
+	return DONE;
 }
 
 int interface_domove(struct arg *arg) {
@@ -94,21 +100,21 @@ int interface_domove(struct arg *arg) {
 		}
 	}
 	else if (arg->argc < 2) {
-		return 2;
+		return ERR_MISS_ARG;
 	}
 	else {
 		if (string_to_move(pos, arg->argv[1]))
 			move_next(string_to_move(pos, arg->argv[1]));
 		else
-			return 3;
+			return ERR_BAD_ARG;
 	}
-	return 0;
+	return DONE;
 }
 
 int interface_perft(struct arg *arg) {
 	UNUSED(arg);
 	if (arg->argc < 2) {
-		return 2;
+		return ERR_MISS_ARG;
 	}
 	else {
 		if (string_is_int(arg->argv[1]) && atoi(arg->argv[1]) >= 0) {
@@ -125,10 +131,10 @@ int interface_perft(struct arg *arg) {
 			}
 		}
 		else {
-			return 3;
+			return ERR_BAD_ARG;
 		}
 	}
-	return 0;
+	return DONE;
 }
 
 int interface_setpos(struct arg *arg) {
@@ -144,7 +150,7 @@ int interface_setpos(struct arg *arg) {
 			move_previous();
 	}
 	else if (arg->argc < 2) {
-		return 2;
+		return ERR_MISS_ARG;
 	}
 	else {
 		if (fen_is_ok(arg->argc - 1, arg->argv + 1)) {
@@ -153,21 +159,21 @@ int interface_setpos(struct arg *arg) {
 				move_previous();
 		}
 		else {
-			return 3;
+			return ERR_BAD_ARG;
 		}
 	}
-	return 0;
+	return ERR_MISS_ARG;
 }
 
 int interface_clear(struct arg *arg) {
 	UNUSED(arg);
 	printf("\033[1;1H\033[2J");
-	return 0;
+	return DONE;
 }
 
 int interface_exit(struct arg *arg) {
 	UNUSED(arg);
-	return 1;
+	return EXIT_LOOP;
 }
 
 int interface_print(struct arg *arg) {
@@ -185,13 +191,13 @@ int interface_print(struct arg *arg) {
 		printf("\n");
 		printf("fen: %s\n", pos_to_fen(t, pos));
 	}
-	return 0;
+	return DONE;
 }
 
 int interface_eval(struct arg *arg) {
 	UNUSED(arg);
 	if (arg->argc < 2) {
-		return 2;
+		return ERR_MISS_ARG;
 	}
 	else {
 		if (string_is_int(arg->argv[1]) && atoi(arg->argv[1]) >= 0) {
@@ -210,10 +216,10 @@ int interface_eval(struct arg *arg) {
 			free(m);
 		}
 		else {
-			return 3;
+			return ERR_BAD_ARG;
 		}
 	}
-	return 0;
+	return DONE;
 }
 
 int interface_version(struct arg *arg) {
@@ -229,7 +235,7 @@ int interface_version(struct arg *arg) {
 	transposition_table_size_print(TT);
 	printf("\ntransposition entry size: %" PRIu64 "B\n", sizeof(struct transposition));
 
-	return 0;
+	return DONE;
 }
 
 int interface_tt(struct arg *arg) {
@@ -237,27 +243,27 @@ int interface_tt(struct arg *arg) {
 
 	if (arg->e) {
 		transposition_table_clear();
-		return 0;
+		return DONE;
 	}
 	if (arg->s) {
 		if (arg->argc < 2) {
 			transposition_table_size_print(log_2(transposition_table_size() *
 						sizeof(struct transposition)));
 			printf("\n%d%%\n", transposition_table_occupancy());
-			return 0;
+			return DONE;
 		}
 		else {
 			if (!string_is_int(arg->argv[1]))
-				return 3;
+				return ERR_BAD_ARG;
 			int ret = allocate_transposition_table(atoi(arg->argv[1]));
 			if (ret == 1)
-				return 3;
+				return ERR_BAD_ARG;
 			if (ret == 2)
-				return 1;
-			return 0;
+				return EXIT_LOOP;
+			return DONE;
 		}
 	}
-	return 4;
+	return ERR_MISS_FLAG;
 }
 
 struct func func_arr[] = {
@@ -279,7 +285,7 @@ int parse(int *argc, char ***argv) {
 	/* reset interrupt */
 	struct arg *arg = calloc(1, sizeof(struct arg));
 	if (!arg)
-		return 0;
+		return DONE;
 
 	int i, j, l;
 	int ret = -1;
@@ -482,11 +488,11 @@ int parse(int *argc, char ***argv) {
 		if (ret == -1)
 			printf("unknown command: %s\n", arg->argv[0]);
 	}
-	if (ret == 2)
+	if (ret == ERR_MISS_ARG)
 		printf("error: missing argument\n");
-	else if (ret == 3)
+	else if (ret == ERR_BAD_ARG)
 		printf("error: bad argument\n");
-	else if (ret == 4)
+	else if (ret == ERR_MISS_FLAG)
 		printf("error: missing flag\n");
 end_early:;
 	for (i = 0; i < arg->argc; i++)
