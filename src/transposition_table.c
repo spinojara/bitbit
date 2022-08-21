@@ -28,20 +28,7 @@
 struct transposition_table *transposition_table = NULL;
 
 void transposition_table_size_print(uint64_t t) {
-	/* 0 -> B
-	 * 1 -> K
-	 * 2 -> M
-	 * 3 -> G
-	 */
-	int s = 0;
-
-	if (t >= 12)
-		s++;
-	if (t >= 22)
-		s++;
-	if (t >= 32)
-		s++;
-
+	int s = MIN(t / 10, 3);
 	printf("%" PRIu64 "%c", power(2, t) / power(1024, s), "BKMG"[s]);
 }
 
