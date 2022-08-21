@@ -88,4 +88,8 @@ void copy_position(struct position *dest, struct position *src);
 
 int pos_are_equal(struct position *pos1, struct position *pos2);
 
+struct history;
+
+void print_history_pgn(struct history *history);
+
 #endif

@@ -178,6 +178,10 @@ int interface_exit(struct arg *arg) {
 
 int interface_print(struct arg *arg) {
 	UNUSED(arg);
+	if (arg->h) {
+		print_history_pgn(history);
+		return DONE;
+	}
 	print_position(pos);
 	if (arg->v) {
 		char t[128];
