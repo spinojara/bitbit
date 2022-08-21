@@ -96,6 +96,10 @@ static inline int castle(int source_square, int target_square, int castle) {
 	return castle_lookup[source_square + 64 * target_square + 64 * 64 * castle];
 }
 
+uint64_t file_calc(int square);
+
+uint64_t rank_calc(int square);
+
 extern const uint64_t FILE_H;
 extern const uint64_t FILE_G;
 extern const uint64_t FILE_F;

@@ -342,7 +342,6 @@ void pos_from_fen(struct position *pos, int argc, char **argv) {
 		pos->zobrist_key ^= zobrist_en_passant_key(pos->en_passant);
 }
 
-/* half and full move have to be specified */
 int fen_is_ok(int argc, char **argv) {
 	struct position *pos = NULL;
 	int ret = 1;
@@ -493,15 +492,16 @@ int fen_is_ok(int argc, char **argv) {
 			if (mailbox[t + 8] != white_pawn ||
 				mailbox[t] != empty ||
 				mailbox[t - 8] != empty ||
-				argv[2][0] != 'w')
+				argv[1][0] != 'w')
 				goto failure;
 		}
 		else if (t / 8 == 5) {
 			if (mailbox[t - 8] != black_pawn ||
 				mailbox[t] != empty ||
 				mailbox[t + 8] != empty ||
-				argv[2][0] != 'b')
+				argv[1][0] != 'b') {
 				goto failure;
+			}
 		}
 		else {
 			goto failure;
