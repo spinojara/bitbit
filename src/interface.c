@@ -162,7 +162,7 @@ int interface_setpos(struct arg *arg) {
 			return ERR_BAD_ARG;
 		}
 	}
-	return ERR_MISS_ARG;
+	return DONE;
 }
 
 int interface_clear(struct arg *arg) {
