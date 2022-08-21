@@ -438,7 +438,9 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int 
 			*m = *move_list;
 		if (interrupt)
 			break;
-		if (last_evaluation < -0x4000 || last_evaluation > 0x4000)
+		if (last_evaluation < -0x4000 && (0x8000 + last_evaluation) <= d)
+			break;
+		if (last_evaluation > 0x4000 && (0x7FFF - last_evaluation) <= d)
 			break;
 	}
 
