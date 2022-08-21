@@ -11,11 +11,7 @@ Run
 
 in the root directory. To choose a transposition table size, run
 
-	make TT={size}
+	make TT={n}
 
-size is by default specified in bytes. For a 128 MiB transposition
-table, run
-
-	make TT=128M
-
-K and G are also valid suffixes. The default size is 64 MiB.
+for a transposition table of 2^n bytes. The default value of n
+is 26 which corresponds to a 64MiB transposition table.
