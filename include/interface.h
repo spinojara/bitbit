@@ -21,16 +21,7 @@
 #include "move.h"
 
 struct arg {
-	int v;
-	int t;
-	int r;
-	int f;
-	int h;
-	int m;
-	int s;
-	int e;
-	int i;
-	int d;
+	int flag[256];
 	int argc;
 	char **argv;
 };

@@ -45,6 +45,10 @@ struct func {
 struct position *pos = NULL;
 struct history *history = NULL;
 
+int flag(struct arg *arg, char f) {
+	return arg->flag[(unsigned char)f];
+}
+
 void move_next(move m) {
 	struct history *t = history;
 	history = malloc(sizeof(struct history));
@@ -87,11 +91,11 @@ int interface_help(struct arg *arg) {
 
 int interface_domove(struct arg *arg) {
 	UNUSED(arg);
-	if (arg->f) {
+	if (flag(arg, 'f')) {
 		/* should check if king can now be captured */
 		swap_turn(pos);
 	}
-	else if (arg->r) {
+	else if (flag(arg, 'r')) {
 		if (history) {
 			move_previous();
 		}
@@ -119,11 +123,11 @@ int interface_perft(struct arg *arg) {
 	else {
 		if (str_is_int(arg->argv[1]) && str_to_int(arg->argv[1]) >= 0) {
 			clock_t t = clock();
-			uint64_t p = perft(pos, str_to_int(arg->argv[1]), arg->v);
+			uint64_t p = perft(pos, str_to_int(arg->argv[1]), flag(arg, 'v'));
 			t = clock() - t;
 			if (!interrupt)
 			printf("nodes: %" PRIu64 "\n", p);
-			if (arg->t && !interrupt) {
+			if (flag(arg, 't') && !interrupt) {
 				printf("time: %.2f\n", (double)t / CLOCKS_PER_SEC);
 				if (t != 0)
 					printf("mpns: %" PRIu64 "\n",
@@ -139,12 +143,12 @@ int interface_perft(struct arg *arg) {
 
 int interface_setpos(struct arg *arg) {
 	UNUSED(arg);
-	if (arg->i) {
+	if (flag(arg, 'i')) {
 		interactive_setpos(pos);
 		while(history)
 			move_previous();
 	}
-	else if (arg->r) {
+	else if (flag(arg, 'r')) {
 		random_pos(pos, 32);
 		while (history)
 			move_previous();
@@ -178,12 +182,12 @@ int interface_exit(struct arg *arg) {
 
 int interface_print(struct arg *arg) {
 	UNUSED(arg);
-	if (arg->h) {
+	if (flag(arg, 'h')) {
 		print_history_pgn(history);
 		return DONE;
 	}
 	print_position(pos);
-	if (arg->v) {
+	if (flag(arg, 'v')) {
 		char t[128];
 		printf("turn: %c\n", "bw"[pos->turn]);
 		printf("castling: %s\n", castle_string(t, pos->castle));
@@ -201,20 +205,20 @@ int interface_print(struct arg *arg) {
 int interface_eval(struct arg *arg) {
 	UNUSED(arg);
 	if (arg->argc < 2) {
-		evaluate(pos, 255, NULL, arg->v, -1, history);
+		evaluate(pos, 255, NULL, flag(arg, 'v'), -1, history);
 	}
 	else {
 		if (str_is_int(arg->argv[1]) && str_to_int(arg->argv[1]) >= 0) {
 			move *m = malloc(sizeof(move));
 			clock_t t = clock();
-			if (arg->d)
-				evaluate(pos, str_to_int(arg->argv[1]), m, arg->v, -1, history);
+			if (flag(arg, 'd'))
+				evaluate(pos, str_to_int(arg->argv[1]), m, flag(arg, 'v'), -1, history);
 			else
-				evaluate(pos, 255, m, arg->v, str_to_int(arg->argv[1]), history);
+				evaluate(pos, 255, m, flag(arg, 'v'), str_to_int(arg->argv[1]), history);
 			t = clock() - t;
-			if (arg->t)
+			if (flag(arg, 't'))
 				printf("time: %.2f\n", (double)t / CLOCKS_PER_SEC);
-			if (arg->m && *m && interrupt < 2) {
+			if (flag(arg, 'm') && *m && interrupt < 2) {
 				move_next(*m);
 			}
 			free(m);
@@ -245,11 +249,11 @@ int interface_version(struct arg *arg) {
 int interface_tt(struct arg *arg) {
 	UNUSED(arg);
 
-	if (arg->e) {
+	if (flag(arg, 'e')) {
 		transposition_table_clear();
 		return DONE;
 	}
-	if (arg->s) {
+	if (flag(arg, 's')) {
 		if (arg->argc < 2) {
 			transposition_table_size_print(log_2(transposition_table_size() *
 						sizeof(struct transposition)));
@@ -286,82 +290,42 @@ struct func func_arr[] = {
 void handler(int num);
 
 int parse(int *argc, char ***argv) {
-	struct arg *arg = calloc(1, sizeof(struct arg));
-	if (!arg)
-		return DONE;
-
-	int i, j, l;
-	int ret = -1;
+	int ret;
+	int i, j;
 	char *c;
+	struct arg *arg = malloc(sizeof(struct arg));
+	for (i = 0; i < 256; i++)
+		arg->flag[i] = 0;
+	arg->argv = malloc(8 * sizeof(char *));
+	for (i = 0; i < 8; i++)
+		arg->argv[i] = malloc(128 * sizeof(char));
+
+	arg->argc = 0;
 	if (*argc > 1) {
-		/* get arg->argc */
-		arg->argc = 0;
-		for (l = 1; l < *argc; l++) {
-			if ((*argv)[l][0] != '-' || find_char("0123456789", (*argv)[l][1]) != -1 || (*argv)[l][1] == '\0')
+		for (i = 1; i < *argc; i++) {
+			c = (*argv)[i];
+			/* skip */
+			if (c[0] == ',') {
+				break;
+			}
+			/* arg */
+			else if (c[0] != '-' || c[1] < 'a' || c[1] > 'z' || i == 1) {
 				arg->argc++;
-			if ((*argv)[l][0] == ',') {
-				arg->argc--;
-				break;
-			}
-		}
-
-		if (!arg->argc) {
-			*argc = 1;
-			goto end_early;
-		}
-
-		arg->argv = malloc(arg->argc * sizeof(char *));
-
-		/* get arg->argv */
-		for (i = 0, j = 1; i + j < *argc; ) {
-			if ((*argv)[i + j][0] == '-' && find_char("0123456789", (*argv)[i + j][1]) == -1 && (*argv)[i + j][1] != '\0') {
-				for (c = (*argv)[i + j] + 1; *c != '\0'; c++) {
-					switch (*c) {
-					case 'v':
-						arg->v = 1;
-						break;
-					case 't':
-						arg->t = 1;
-						break;
-					case 'r':
-						arg->r = 1;
-						break;
-					case 'f':
-						arg->f = 1;
-						break;
-					case 'm':
-						arg->m = 1;
-						break;
-					case 'h':
-						arg->h = 1;
-						break;
-					case 's':
-						arg->s = 1;
-						break;
-					case 'e':
-						arg->e = 1;
-						break;
-					case 'i':
-						arg->i = 1;
-						break;
-					case 'd':
-						arg->d = 1;
-						break;
-					}
+				if (arg->argc < 9) {
+					for (j = 0; j < 127 && c[j]; j++)
+						arg->argv[arg->argc - 1][j] = c[j];
+					arg->argv[arg->argc - 1][j] = '\0';
 				}
-				j++;
-				continue;
 			}
-			if (i >= arg->argc)
-				break;
-			/* strlen + 1 for null character */
-			arg->argv[i] = malloc((strlen((*argv)[i + j]) + 1) * sizeof(char));
-			strcpy(arg->argv[i], (*argv)[i + j]);
-			i++;
+			/* flag */
+			else {
+				for (j = 1; c[j]; j++)
+					arg->flag[(unsigned char)c[j]] = 1;
+			}
 		}
-
-		*argc -= l;
-		*argv += l;
+		
+		*argc -= i;
+		*argv += i;
 	}
 	else {
 		char line[BUFSIZ];
@@ -369,141 +333,35 @@ int parse(int *argc, char ***argv) {
 		printf("\r\33[2K> ");
 		if (!fgets(line, sizeof(line), stdin)) {
 			ret = 1;
-			goto end_early;
 		}
+		else {
+			c = line;
+			while (c[0] == ' ')
+				c = c + 1;
 
-		/* get arg->argc and flags */
-		arg->argc = 0;
-		for (i = 0, j = 0, c = line; *c != '\0'; c++) {
-			switch (*c) {
-			case '\n':
-				break;
-			case ' ':
-				i = 0;
-				j = 0;
-				break;
-			case '-':
-				if (!i) {
-					/* will not cause segmentation fault */
-					switch (c[1]) {
-					case '\0':
-					case '\n':
-					case ' ':
-					case '0':
-					case '1':
-					case '2':
-					case '3':
-					case '4':
-					case '5':
-					case '6':
-					case '7':
-					case '8':
-					case '9':
-						break;
-					default:
-						j = 1;
-					}
+			/* assumes always at start of word */
+			for (; *c && *c != '\n'; c++) {
+				/* flag */
+				if (c[0] == '-' && i != 0 && c[-1] == ' ' && c[1] >= 'a' && c[1] <= 'z') {
+					for (; c[0] && c[0] != ' ' && c[0] != '\n'; c++)
+						arg->flag[(unsigned char)c[0]] = 1;
 				}
-				if (j)
-					break;
-				/* fallthrough */
-			default:
-				if (!i && !j) {
-					i = 1;
+				/* arg */
+				else {
 					arg->argc++;
-				}
-				else if (j) {
-					switch (*c) {
-						case 'v':
-							arg->v = 1;
-							break;
-						case 't':
-							arg->t = 1;
-							break;
-						case 'r':
-							arg->r = 1;
-							break;
-						case 'f':
-							arg->f = 1;
-							break;
-						case 'm':
-							arg->m = 1;
-							break;
-						case 'h':
-							arg->h = 1;
-							break;
-						case 's':
-							arg->s = 1;
-							break;
-						case 'e':
-							arg->e = 1;
-							break;
-						case 'i':
-							arg->i = 1;
-							break;
-						case 'd':
-							arg->d = 1;
-							break;
+					if (arg->argc < 9) {
+						for (j = 0; j < 127 && c[0] && c[0] != ' ' && c[0] != '\n'; j++, c++)
+							arg->argv[arg->argc - 1][j] = c[0];
+						arg->argv[arg->argc - 1][j] = '\0';
 					}
 				}
-			}
-		}
-
-		if (!arg->argc)
-			goto end_early;
-
-		arg->argv = malloc(arg->argc * sizeof(char *));
-
-		/* get arg->argv */
-		for (i = 1, j = 0, c = line; *c != '\0'; c++) {
-			switch (*c) {
-			case '\n':
-				break;
-			case ' ':
-				i = 1;
-				break;
-			case '-':
-				if (i) {
-					/* will not cause segmentation fault */
-					switch (c[1]) {
-					case '\0':
-					case '\n':
-					case ' ':
-					case '0':
-					case '1':
-					case '2':
-					case '3':
-					case '4':
-					case '5':
-					case '6':
-					case '7':
-					case '8':
-					case '9':
-						break;
-					default:
-						i = 0;
-					}
-				}
-				/* fallthrough */
-			default:
-				if (i) {
-					int t = find_char(c, ' ');
-					if (t == -1)
-						t = find_char(c, '\n');
-					if (t == -1)
-						t = find_char(c, '\0');
-					arg->argv[j] = malloc((t + 1) * sizeof(char));
-					strncpy(arg->argv[j], c, t);
-					arg->argv[j][t] = '\0';
-					j++;
-				}
-				i = 0;
 			}
 		}
 	}
 
 	interrupt = 0;
-	ret = -1;
+	if (ret != 1)
+		ret = -1;
 	if (arg->argc) {
 		for (unsigned long k = 0; k < SIZE(func_arr); k++)
 			if (strcmp(func_arr[k].name, arg->argv[0]) == 0)
@@ -511,18 +369,20 @@ int parse(int *argc, char ***argv) {
 		if (ret == -1)
 			printf("unknown command: %s\n", arg->argv[0]);
 	}
-	if (ret == ERR_MISS_ARG)
+	switch(ret) {
+	case ERR_MISS_ARG:
 		printf("error: missing argument\n");
-	else if (ret == ERR_BAD_ARG)
+		break;
+	case ERR_BAD_ARG:
 		printf("error: bad argument\n");
-	else if (ret == ERR_MISS_FLAG)
+		break;
+	case ERR_MISS_FLAG:
 		printf("error: missing flag\n");
-end_early:;
-	for (i = 0; i < arg->argc; i++)
-		if (arg->argv[i])
-			free(arg->argv[i]);
-	if (arg->argv)
-		free(arg->argv);
+		break;
+	}
+	for (i = 0; i < 8; i++)
+		free(arg->argv[i]);
+	free(arg->argv);
 	free(arg);
 	return ret;
 }
