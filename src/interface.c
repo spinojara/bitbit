@@ -36,6 +36,7 @@
 #define ERR_MISS_ARG 2
 #define ERR_BAD_ARG 3
 #define ERR_MISS_FLAG 4
+#define ERR_BAD_FLAG 5
 
 struct func {
 	char *name;
@@ -95,7 +96,7 @@ int interface_domove(struct arg *arg) {
 		if(!generate_checkers(pos))
 			swap_turn(pos);
 		else
-			printf("error: illegal to swap move\n");
+			return ERR_BAD_FLAG;
 	}
 	else if (flag(arg, 'r')) {
 		if (history) {
@@ -378,6 +379,9 @@ int parse(int *argc, char ***argv) {
 			break;
 		case ERR_MISS_FLAG:
 			printf("error: missing flag\n");
+			break;
+		case ERR_BAD_FLAG:
+			printf("error: bad flag\n");
 			break;
 		}
 	}
