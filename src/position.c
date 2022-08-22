@@ -29,25 +29,28 @@
 #include "move_gen.h"
 #include "interface.h"
 
-void print_position(struct position *pos) {
-	int t;
-#ifdef UNICODE
-	char *u = " \u2659\u2658\u2657\u2656\u2655\u2654\u265F\u265E\u265D\u265C\u265B\u265A";
-#else
-	char *u = " PNBRQKpnbrqk";
-#endif
+void print_position(struct position *pos, int flip) {
+	int i, j, t;
+	/* " \u2659\u2658\u2657\u2656\u2655\u2654\u265F\u265E\u265D\u265C\u265B\u265A" */
+	char pieces[] = " PNBRQKpnbrqk";
+	char letters[] = "abcdefgh";
 
-	printf("\n      a   b   c   d   e   f   g   h\n");
-	for (int i = 0; i < 8; i++) {
-		printf("    +---+---+---+---+---+---+---+---+\n  %i |", 8 - i);
-		for (int j = 0; j < 8; j++) {
-			t = 8 * (7 - i) + j;
-			printf(" %c |", u[pos->mailbox[t]]);
+	printf("\n   ");
+	for (i = 0; i < 8; i++)
+		printf("   %c", letters[flip ? 7 - i : i]);
+	printf("\n");
+	for (i = 0; i < 8; i++) {
+		printf("    +---+---+---+---+---+---+---+---+\n  %i |", flip ? 1 + i : 8 - i);
+		for (j = 0; j < 8; j++) {
+			t = flip ? 8 * i + (7 - j) : 8 * (7 - i) + j;
+			printf(" %c |", pieces[pos->mailbox[t]]);
 		}
-		printf(" %i\n", 8 - i);
+		printf(" %i\n", flip ? 1 + i : 8 - i);
 	}
-	printf("    +---+---+---+---+---+---+---+---+\n");
-	printf("      a   b   c   d   e   f   g   h\n\n");
+	printf("    +---+---+---+---+---+---+---+---+\n   ");
+	for (i = 0; i < 8; i++)
+		printf("   %c", letters[flip ? 7 - i : i]);
+	printf("\n\n");
 }
 
 uint64_t generate_checkers(struct position *pos) {

@@ -188,7 +188,7 @@ int interface_print(struct arg *arg) {
 		print_history_pgn(history);
 		return DONE;
 	}
-	print_position(pos);
+	print_position(pos, flag(arg, 'f'));
 	if (flag(arg, 'v')) {
 		char t[128];
 		printf("turn: %c\n", "bw"[pos->turn]);
