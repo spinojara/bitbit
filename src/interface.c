@@ -92,8 +92,10 @@ int interface_help(struct arg *arg) {
 int interface_domove(struct arg *arg) {
 	UNUSED(arg);
 	if (flag(arg, 'f')) {
-		/* should check if king can now be captured */
-		swap_turn(pos);
+		if(!generate_checkers(pos))
+			swap_turn(pos);
+		else
+			printf("error: illegal to swap move\n");
 	}
 	else if (flag(arg, 'r')) {
 		if (history) {
