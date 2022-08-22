@@ -605,7 +605,7 @@ char *pos_to_fen(char *fen, struct position *pos) {
 	return fen;
 }
 
-void interactive_setpos(struct position *pos) {
+int interactive_setpos(struct position *pos) {
 	char *u = " PNBRQKpnbrqk";
 	char turn[2];
 	char en_passant[3];
@@ -635,7 +635,7 @@ void interactive_setpos(struct position *pos) {
 		printf("\033[1;1H\033[%iB\033[%iC", 3 + 2 * y, 6 + 4 * x);
 
 		if(!fgets(line, sizeof(line), stdin))
-			return;
+			return DONE;
 		switch (line[0]) {
 		case 's':
 			quit = 1;
@@ -700,7 +700,7 @@ void interactive_setpos(struct position *pos) {
 	while (1) {
 		printf("\033[22;1H\033[2Kturn: ");
 		if (!fgets(line, sizeof(line), stdin))
-			return;
+			return DONE;
 		if (line[0] == 'w' || line[0] == 'b')
 			turn[0] = line[0];
 
@@ -713,7 +713,7 @@ void interactive_setpos(struct position *pos) {
 	while (1) {
 		printf("\033[23;1H\033[2Kcastling: ");
 		if (!fgets(line, sizeof(line), stdin))
-			return;
+			return DONE;
 
 		for (t = 0; t < 4; t++) {
 			if (find_char("KQkq", line[t]) != -1) {
@@ -738,7 +738,7 @@ void interactive_setpos(struct position *pos) {
 	while (1) {
 		printf("\033[24;1H\033[2Ken passant: ");
 		if (!fgets(line, sizeof(line), stdin))
-			return;
+			return DONE;
 		if (find_char("abcdefgh", line[0]) != -1) {
 			if (find_char("12345678", line[1]) != -1) {
 				break;
@@ -784,8 +784,10 @@ void interactive_setpos(struct position *pos) {
 	argv[2] = castling;
 	argv[3] = en_passant;
 
-	if (fen_is_ok(argc, argv))
-		pos_from_fen(pos, argc, argv);
+	if (!fen_is_ok(argc, argv))
+		return ERR_BAD_ARG;
+	pos_from_fen(pos, argc, argv);
+	return DONE;
 }
 
 void copy_position(struct position *dest, struct position *src) {

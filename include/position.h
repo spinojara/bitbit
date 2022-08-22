@@ -82,7 +82,7 @@ int fen_is_ok(int argc, char **argv);
 
 void print_position(struct position *pos, int flip);
 
-void interactive_setpos(struct position *pos);
+int interactive_setpos(struct position *pos);
 
 void copy_position(struct position *dest, struct position *src);
 

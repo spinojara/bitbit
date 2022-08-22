@@ -20,6 +20,13 @@
 
 #include "move.h"
 
+#define DONE 0
+#define EXIT_LOOP 1
+#define ERR_MISS_ARG 2
+#define ERR_BAD_ARG 3
+#define ERR_MISS_FLAG 4
+#define ERR_BAD_FLAG 5
+
 struct arg {
 	int flag[256];
 	int argc;
