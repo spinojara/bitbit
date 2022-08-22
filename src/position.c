@@ -604,7 +604,6 @@ char *pos_to_fen(char *fen, struct position *pos) {
 
 void interactive_setpos(struct position *pos) {
 	char *u = " PNBRQKpnbrqk";
-	char c, b = '\0';
 	char turn[2];
 	char en_passant[3];
 	char castling[5];
@@ -632,8 +631,9 @@ void interactive_setpos(struct position *pos) {
 		printf("      a   b   c   d   e   f   g   h\n\n");
 		printf("\033[1;1H\033[%iB\033[%iC", 3 + 2 * y, 6 + 4 * x);
 
-		c = getc(stdin);
-		switch (c) {
+		if(!fgets(line, sizeof(line), stdin))
+			return;
+		switch (line[0]) {
 		case 's':
 			quit = 1;
 			break;
@@ -645,14 +645,13 @@ void interactive_setpos(struct position *pos) {
 		case 'f':
 		case 'g':
 		case 'h':
-			t = find_char("abcdefgh", c);
-			b = getc(stdin);
-			if (find_char("12345678", b) != -1) {
+			t = find_char("abcdefgh", line[0]);
+			if (find_char("12345678", line[1]) != -1) {
 				x = t;
-				y = 7 - find_char("12345678", b);
+				y = 7 - find_char("12345678", line[1]);
 				break;
 			}
-			if (c != 'b') {
+			if (line[0] != 'b') {
 				break;
 			}
 			/* fallthrough */
@@ -669,7 +668,7 @@ void interactive_setpos(struct position *pos) {
 		case 'q':
 		case 'k':
 		case 'x':
-			mailbox[x + 8 * y] = find_char("xPNBRQKpnbrqk", c);
+			mailbox[x + 8 * y] = find_char("xPNBRQKpnbrqk", line[0]);
 			/* fallthrough */
 		case '\n':
 			x++;
@@ -680,12 +679,6 @@ void interactive_setpos(struct position *pos) {
 			if (y == 8)
 				y = 0;
 		}
-
-		/* clear buffer */
-		if (c == 'b' && b == '\n')
-			c = '\n';
-		while (c != '\n')
-			c = getc(stdin);
 	}
 	printf("\033[1;1H\033[2J");
 	printf("\n      a   b   c   d   e   f   g   h\n");
@@ -703,14 +696,13 @@ void interactive_setpos(struct position *pos) {
 	turn[0] = turn[1] = '\0';
 	while (1) {
 		printf("\033[22;1H\033[2Kturn: ");
-		c = getc(stdin);
-		if (c == 'w' || c == 'b')
-			turn[0] = c;
+		if (!fgets(line, sizeof(line), stdin))
+			return;
+		if (line[0] == 'w' || line[0] == 'b')
+			turn[0] = line[0];
 
-		/* clear buffer */
-		while (c != '\n')
-			c = getc(stdin);
-
+		if (line[0] == '\n')
+			turn[0] = 'w';
 		if (turn[0] != '\0')
 			break;
 	}
@@ -724,7 +716,7 @@ void interactive_setpos(struct position *pos) {
 			if (find_char("KQkq", line[t]) != -1) {
 				castling[t] = line[t];
 			}
-			else if (line[t] == '-' && t == 0) {
+			else if ((line[t] == '\n' || line[t] == '-') && t == 0) {
 				castling[0] = '-';
 				castling[1] = '\0';
 				break;
@@ -748,6 +740,10 @@ void interactive_setpos(struct position *pos) {
 			if (find_char("12345678", line[1]) != -1) {
 				break;
 			}
+		}
+		else if (line[0] == '\n') {
+			line[0] = '-';
+			break;
 		}
 		else if (line[0] == '-') {
 			break;
