@@ -331,10 +331,7 @@ int parse(int *argc, char ***argv) {
 		char line[BUFSIZ];
 		/* prompt */
 		printf("\r\33[2K> ");
-		if (!fgets(line, sizeof(line), stdin)) {
-			ret = 1;
-		}
-		else {
+		if (fgets(line, sizeof(line), stdin)) {
 			c = line;
 			while (c[0] == ' ')
 				c = c + 1;
@@ -357,29 +354,32 @@ int parse(int *argc, char ***argv) {
 				}
 			}
 		}
+		else {
+			printf("\r\33[2K>\n");
+		}
 	}
 
 	interrupt = 0;
-	if (ret != 1)
-		ret = -1;
+	ret = -1;
 	if (arg->argc) {
 		for (unsigned long k = 0; k < SIZE(func_arr); k++)
 			if (strcmp(func_arr[k].name, arg->argv[0]) == 0)
 				ret = func_arr[k].ptr(arg);
 		if (ret == -1)
 			printf("unknown command: %s\n", arg->argv[0]);
+		switch(ret) {
+		case ERR_MISS_ARG:
+			printf("error: missing argument\n");
+			break;
+		case ERR_BAD_ARG:
+			printf("error: bad argument\n");
+			break;
+		case ERR_MISS_FLAG:
+			printf("error: missing flag\n");
+			break;
+		}
 	}
-	switch(ret) {
-	case ERR_MISS_ARG:
-		printf("error: missing argument\n");
-		break;
-	case ERR_BAD_ARG:
-		printf("error: bad argument\n");
-		break;
-	case ERR_MISS_FLAG:
-		printf("error: missing flag\n");
-		break;
-	}
+
 	for (i = 0; i < 8; i++)
 		free(arg->argv[i]);
 	free(arg->argv);
