@@ -603,7 +603,7 @@ char *move_str_pgn(char *str, struct position *pos, move *m) {
 			str[i++] = "12345678"[y];
 		}
 	}
-	else if (popcount(attackers & rank_calc(move_from(m))) > 1) {
+	else if (popcount(attackers) > 1) {
 		str[i++] = "abcdefgh"[x];
 	}
 
