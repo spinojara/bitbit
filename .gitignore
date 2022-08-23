@@ -8,6 +8,7 @@ results/
 
 # executable files
 bitbit
+uci
 *.exe
 
 # vim swp files
