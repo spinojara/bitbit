@@ -208,16 +208,20 @@ int interface_eval(struct arg *arg) {
 		if (str_is_int(arg->argv[1]) && str_to_int(arg->argv[1]) >= 0) {
 			move *m = malloc(sizeof(move));
 			clock_t t = clock();
+			int16_t eval;
 			if (flag(arg, 'd'))
-				evaluate(pos, str_to_int(arg->argv[1]), m, flag(arg, 'v'), -1, history);
+				eval = evaluate(pos, str_to_int(arg->argv[1]), m, flag(arg, 'v'), -1, history);
 			else
-				evaluate(pos, 255, m, flag(arg, 'v'), str_to_int(arg->argv[1]), history);
+				eval = evaluate(pos, 255, m, flag(arg, 'v'), str_to_int(arg->argv[1]), history);
 			t = clock() - t;
+			if (!flag(arg, 'v')) {
+				char str[8];
+				printf("%+.2f %s\n", (double)eval / 100, move_str_pgn(str, pos, m));
+			}
 			if (flag(arg, 't'))
 				printf("time: %.2f\n", (double)t / CLOCKS_PER_SEC);
-			if (flag(arg, 'm') && *m && interrupt < 2) {
+			if (flag(arg, 'm') && *m && interrupt < 2)
 				move_next(*m);
-			}
 			free(m);
 		}
 		else {

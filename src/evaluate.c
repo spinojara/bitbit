@@ -29,9 +29,7 @@
 #include "position.h"
 #include "interrupt.h"
 
-uint64_t nodes_since_clock_check = 0;
-
-clock_t eval_stop_time;
+unsigned int nodes = 0;
 
 int eval_table[13][64];
 
@@ -96,19 +94,6 @@ int white_side_eval_table[6][64] = {
 
 };
 
-void eval_clock_set(int max_duration) {
-	if (max_duration >= 0)
-		eval_stop_time = clock() + CLOCKS_PER_SEC * max_duration;
-	else
-		eval_stop_time = 0;
-}
-
-void eval_clock_check() {
-	nodes_since_clock_check = 0;
-	if (eval_stop_time && clock() > eval_stop_time)
-		interrupt = 1;
-}
-
 void evaluate_init() {
 	for (int i = 0; i < 13; i++) {
 		for (int j  = 0; j < 64; j++) {
@@ -143,12 +128,13 @@ int16_t count_position(struct position *pos) {
 	return eval;
 }
 
-int16_t quiescence(struct position *pos, int16_t alpha, int16_t beta) {
+int16_t quiescence(struct position *pos, int16_t alpha, int16_t beta, clock_t clock_stop) {
 	if (interrupt)
 		return 0;
-	if (nodes_since_clock_check > 4096)
-		eval_clock_check();
-	nodes_since_clock_check++;
+	if (nodes % 4096 == 0)
+		if (clock_stop && clock() > clock_stop)
+			interrupt = 1;
+	nodes++;
 
 	int16_t evaluation, t;
 	evaluation = mate(pos);
@@ -180,7 +166,7 @@ int16_t quiescence(struct position *pos, int16_t alpha, int16_t beta) {
 		evaluation = -0x8000;
 		for (move *move_ptr = move_list; *move_ptr; move_ptr++) {
 			do_move(pos, move_ptr);
-			t = quiescence(pos, alpha, beta);
+			t = quiescence(pos, alpha, beta, clock_stop);
 			undo_move(pos, move_ptr);
 			if (t < -0x4000)
 				t++;
@@ -204,7 +190,7 @@ int16_t quiescence(struct position *pos, int16_t alpha, int16_t beta) {
 		evaluation = 0x7FFF;
 		for (move *move_ptr = move_list; *move_ptr; move_ptr++) {
 			do_move(pos, move_ptr);
-			t = quiescence(pos, alpha, beta);
+			t = quiescence(pos, alpha, beta, clock_stop);
 			undo_move(pos, move_ptr);
 			if (t < -0x4000)
 				t++;
@@ -219,12 +205,13 @@ int16_t quiescence(struct position *pos, int16_t alpha, int16_t beta) {
 	return evaluation;
 }
 
-int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, int16_t beta) {
+int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, int16_t beta, clock_t clock_stop) {
 	if (interrupt)
 		return 0;
-	if (nodes_since_clock_check > 4096)
-		eval_clock_check();
-	nodes_since_clock_check++;
+	if (nodes % 4096 == 0)
+		if (clock_stop && clock() > clock_stop)
+			interrupt = 1;
+	nodes++;
 
 	struct transposition *e = attempt_get(pos);
 	if (e && transposition_open(e))
@@ -232,7 +219,7 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, i
 	if (e && transposition_depth(e) >= depth && transposition_type(e) == 0)
 		return transposition_evaluation(e);
 	if (depth <= 0)
-		return quiescence(pos, alpha, beta);
+		return quiescence(pos, alpha, beta, clock_stop);
 
 	int16_t evaluation, evaluation_list[256], t;
 	move move_list[256];
@@ -268,7 +255,7 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, i
 		evaluation = -0x8000;
 		for (move *move_ptr = move_list; *move_ptr; move_ptr++) {
 			do_move(pos, move_ptr);
-			t = evaluate_recursive(pos, depth - 1, alpha, beta);
+			t = evaluate_recursive(pos, depth - 1, alpha, beta, clock_stop);
 			undo_move(pos, move_ptr);
 			if (t < -0x4000)
 				t++;
@@ -292,7 +279,7 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, i
 		evaluation = 0x7FFF;
 		for (move *move_ptr = move_list; *move_ptr; move_ptr++) {
 			do_move(pos, move_ptr);
-			t = evaluate_recursive(pos, depth - 1, alpha, beta);
+			t = evaluate_recursive(pos, depth - 1, alpha, beta, clock_stop);
 			undo_move(pos, move_ptr);
 			if (t < -0x4000)
 				t++;
@@ -339,12 +326,6 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int 
 			else
 				printf("\33[2K[%i/%i] s\n", depth, depth);
 		}
-		else {
-			if (evaluation)
-				printf("%cm\n", pos->turn ? '-' : '+');
-			else
-				printf("s\n");
-		}
 		return evaluation;
 	}
 
@@ -352,15 +333,18 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int 
 		evaluation = count_position(pos);
 		if (verbose)
 			printf("\33[2K[0/0] %+.2f\n", (double)evaluation / 100);
-		else
-			printf("%+.2f\n", (double)evaluation / 100);
 		if (m)
 			*m = 0;
 		return evaluation;
 	}
 
-	eval_clock_set(max_duration);
+	clock_t clock_stop;
+	if (max_duration >= 0)
+		clock_stop = clock() + CLOCKS_PER_SEC * max_duration;
+	else
+		clock_stop = 0;
 
+	char str[8];
 	int i;
 	int16_t alpha, beta;
 	for (int d = 1; d <= depth; d++) {
@@ -370,7 +354,7 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int 
 			evaluation = -0x8000;
 			for (i = 0; move_list[i]; i++) {
 				do_move(pos, move_list + i);
-				evaluation_list[i] = evaluate_recursive(pos, d - 1, alpha, beta);
+				evaluation_list[i] = evaluate_recursive(pos, d - 1, alpha, beta, clock_stop);
 				if (is_threefold(pos, history))
 					evaluation_list[i] = 0;
 				undo_move(pos, move_list + i);
@@ -396,7 +380,7 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int 
 			evaluation = 0x7FFF;
 			for (i = 0; move_list[i]; i++) {
 				do_move(pos, move_list + i);
-				evaluation_list[i] = evaluate_recursive(pos, d - 1, alpha, beta);
+				evaluation_list[i] = evaluate_recursive(pos, d - 1, alpha, beta, clock_stop);
 				if (is_threefold(pos, history))
 					evaluation_list[i] = 0;
 				undo_move(pos, move_list + i);
@@ -421,17 +405,13 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int 
 		if (interrupt)
 			d--;
 		if (verbose) {
-			if (last_evaluation < -0x4000) {
+			if (last_evaluation < -0x4000)
 				printf("\r\33[2K[%i/%i] -m%i ", d, depth, ((0x8000 + last_evaluation) + 1) / 2);
-			}
-			else if (last_evaluation > 0x4000) {
+			else if (last_evaluation > 0x4000)
 				printf("\r\33[2K[%i/%i] +m%i ", d, depth, ((0x7FFF - last_evaluation) + 1) / 2);
-			}
-			else {
+			else
 				printf("\r\33[2K[%i/%i] %+.2f ", d, depth, (double)last_evaluation / 100);
-			}
-			print_move(move_list);
-			printf("\r");
+			printf("%s\r", move_str_pgn(str, pos, move_list));
 			fflush(stdout);
 		}
 		if (!interrupt && m)
@@ -444,13 +424,7 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int 
 			break;
 	}
 
-	if (verbose) {
+	if (verbose)
 		printf("\n");
-	}
-	else {
-		printf("%+.2f ", (double)last_evaluation / 100);
-		print_move(move_list);
-		printf("\n");
-	}
 	return last_evaluation;
 }
