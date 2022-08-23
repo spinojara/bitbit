@@ -12,7 +12,7 @@ VERSION = -DVERSION=$(MAJOR).$(MINOR)
 SOURCE_DIR = src
 INCLUDE_DIR = include
 BUILD_DIR = build
-SRC = bitbit.c bitboard.c magic_bitboard.c attack_gen.c move.c util.c position.c move_gen.c perft.c evaluate.c interface.c transposition_table.c init.c interrupt.c
+SRC = bitboard.c magic_bitboard.c attack_gen.c move.c util.c position.c move_gen.c perft.c evaluate.c interface.c transposition_table.c init.c interrupt.c
 
 OBJ = $(addprefix $(BUILD_DIR)/,$(SRC:.c=.o))
 
@@ -23,12 +23,18 @@ ifneq ($(TT), )
 	SIZE = -DTT=$(TT)
 endif
 
-all: build bitbit
+all: bitbit uci
 
-bitbit: $(OBJ)
-	$(CC) $(CFLAGS) $^ -o $@
+bitbit: build $(OBJ) $(BUILD_DIR)/bitbit.o
+	$(CC) $(CFLAGS) $(OBJ) $(BUILD_DIR)/bitbit.o -o $@
+
+uci: build $(OBJ) $(BUILD_DIR)/uci.o
+	$(CC) $(CFLAGS) $(OBJ) $(BUILD_DIR)/uci.o -o $@
 
 $(BUILD_DIR)/bitbit.o: $(SOURCE_DIR)/bitbit.c
+	$(CC) $(CFLAGS) -I$(INCLUDE_DIR) -c $^ -o $@
+
+$(BUILD_DIR)/uci.o: $(SOURCE_DIR)/uci.c
 	$(CC) $(CFLAGS) -I$(INCLUDE_DIR) -c $^ -o $@
 
 $(BUILD_DIR)/bitboard.o: $(SOURCE_DIR)/bitboard.c
