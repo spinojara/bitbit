@@ -80,6 +80,8 @@ uint64_t zobrist_castle_key(int castle) {
 }
 
 uint64_t zobrist_en_passant_key(int square) {
+	if (square == 0)
+		return 0;
 	return transposition_table->zobrist_key[12 * 64 + 1 + 16 + square % 8];
 }
 

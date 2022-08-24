@@ -272,7 +272,7 @@ void do_move(struct position *pos, move *m) {
 		if (pos->mailbox[source_square] == white_pawn) {
 			pos->mailbox[target_square] = white_pawn;
 			if (source_square + 16 == target_square) {
-				pos->zobrist_key ^= zobrist_en_passant_key(target_square);
+				pos->zobrist_key ^= zobrist_en_passant_key(target_square - 8);
 				pos->en_passant = target_square - 8;
 			}
 			else if (move_flag(m) == 1) {
@@ -344,7 +344,7 @@ void do_move(struct position *pos, move *m) {
 			pos->mailbox[target_square] = black_pawn;
 			if (source_square - 16 == target_square) {
 				pos->en_passant = target_square + 8;
-				pos->zobrist_key ^= zobrist_en_passant_key(target_square);
+				pos->zobrist_key ^= zobrist_en_passant_key(target_square + 8);
 			}
 			else if (move_flag(m) == 1) {
 				pos->white_pieces[pawn] ^= bitboard(target_square + 8);
@@ -618,7 +618,7 @@ char *move_str_pgn(char *str, struct position *pos, move *m) {
 		str[i++] = '=';
 		str[i++] = "NBRQ"[move_promote(m)];
 	}
-
+	
 	do_move(pos, m);
 	uint64_t checkers = generate_checkers(pos);
 	undo_move(pos, m);
