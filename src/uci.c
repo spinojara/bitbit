@@ -30,9 +30,13 @@
 #include "interface.h"
 
 int main() {
+	setbuf(stdin, NULL);
+	setbuf(stdout, NULL);
+
 	int i, j;
-	char line[BUFSIZ];
+	char line[10 * BUFSIZ];
 	struct position *pos = malloc(sizeof(struct position));
+	char *fen[] = { "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR", "w", "KQkq", "-", "0", "1", };
 	printf("id name bitbit\n");
 	printf("id author Isak Ellmer\n");
 	printf("uciok\n");
@@ -49,32 +53,32 @@ int main() {
 		if (!fgets(line, sizeof(line), stdin))
 			continue;
 
+		interrupt = 0;
 		if (strncmp(line, "isready", 7) == 0) {
 			printf("readyok\n");
 		}
 		else if (strncmp(line, "position fen", 12) == 0) {
-			char *fen[6];
+			char *ptr[6];
 			for (i = 0, j = 12; line[j]; j++) {
 				if (line[j] == ' ') {
 					if (i < 6)
-						fen[i] = line + j + 1;
+						ptr[i] = line + j + 1;
 					line[j] = '\0';
 					i++;
 				}
 				if (line[j] == '\n')
 					line[j] = '\0';
 			}
-			pos_from_fen(pos, i, fen);
-			print_position(pos, 0);
+			pos_from_fen(pos, i, ptr);
 		}
 		else if (strncmp(line, "position startpos", 17) == 0) {
-			char *fen[] = { "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR", "w", "KQkq", "-", "0", "1", };
+			transposition_table_clear();
 			pos_from_fen(pos, SIZE(fen), fen);
 			if (strncmp(line + 18, "moves", 5) == 0) {
 				char str[6];
 				move *m = malloc(sizeof(move));
 				for (i = 23; line[i]; i++) {
-					if (line[i] == ' ' && i + 6 < BUFSIZ) {
+					if (line[i] == ' ' && i + 6 < 10 * BUFSIZ) {
 						memcpy(str, line + i + 1, 6);
 						for (j = 0; j < 6; j++)
 							if (str[j] == ' ' || str[j] == '\n')
@@ -87,19 +91,32 @@ int main() {
 			}
 		}
 		else if (strncmp(line, "ucinewgame", 10) == 0) {
-			char *fen[] = { "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR", "w", "KQkq", "-", "0", "1", };
 			pos_from_fen(pos, SIZE(fen), fen);
 		}
 		else if (strncmp(line, "go", 2) == 0) {
-			char *ptr;
+			char str[16], *ptr;
 			int depth = 255;
-			if ((ptr = strstr(line, "depth")))
-				depth = atoi(ptr + 6);
+			int t = 5;
+			if ((ptr = strstr(line, "depth"))) {
+				memcpy(str, ptr + 6, 16);
+				for (i = 0; i < 16; i++)
+					if (str[i] == ' ' || str[i] == '\n')
+						str[i] = '\0';
+				depth = str_to_int(str);
+			}
+			if ((ptr = strstr(line, pos->turn ? "wtime" : "btime"))) {
+				memcpy(str, ptr + 6, 16);
+				for (i = 0; i < 16; i++)
+					if (str[i] == ' ' || str[i] == '\n')
+						str[i] = '\0';
+				t = MIN(t, str_to_int(str) / 1000);
+			}
 			move *m = malloc(sizeof(move));
-			evaluate(pos, depth, m, 0, 3, NULL);
+			evaluate(pos, depth, m, 0, t, NULL);
 			printf("bestmove ");
 			print_move(m);
 			printf("\n");
+			free(m);
 		}
 		else if (strncmp(line, "quit", 4) == 0) {
 			quit = 1;

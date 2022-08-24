@@ -23,10 +23,10 @@ ifneq ($(TT), )
 	SIZE = -DTT=$(TT)
 endif
 
-all: bitbit uci
-
 bitbit: build $(OBJ) $(BUILD_DIR)/bitbit.o
 	$(CC) $(CFLAGS) $(OBJ) $(BUILD_DIR)/bitbit.o -o $@
+
+all: bitbit uci
 
 uci: build $(OBJ) $(BUILD_DIR)/uci.o
 	$(CC) $(CFLAGS) $(OBJ) $(BUILD_DIR)/uci.o -o $@
