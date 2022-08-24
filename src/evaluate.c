@@ -134,6 +134,11 @@ int pawn_structure(struct position *pos) {
 			if (popcount(t) > 1)
 				eval += 70;
 	}
+
+	/* isolated pawns */
+
+	/* passed pawns */
+
 	return eval;
 }
 
