@@ -1951,20 +1951,20 @@ int mobility_white(struct position *pos) {
 	king_square = ctz(pos->white_pieces[king]);
 
 	attacks = white_king_attacks(king_square, pos->white_pieces[all]) & ~attacked;
-	moves += popcount(attacks);
+	moves += (t = popcount(attacks)) ? t : 0;
 
 	if (!checkers) {
 		piece = white_pawn_push(pos->white_pieces[pawn], pos->pieces) & ~pinned;
-		moves += popcount(piece);
+		moves += (t = popcount(piece)) ? t : 0;
 
 		piece = white_pawn_double_push(pos->white_pieces[pawn], pos->pieces) & ~pinned;
-		moves += popcount(piece);
+		moves += (t = popcount(piece)) ? t : 0;
 
 		piece = white_pawn_capture_e(pos->white_pieces[pawn], pos->black_pieces[all]) & ~pinned;
-		moves += popcount(piece);
+		moves += (t = popcount(piece)) ? t : 0;
 
 		piece = white_pawn_capture_w(pos->white_pieces[pawn], pos->black_pieces[all]) & ~pinned;
-		moves += popcount(piece);
+		moves += (t = popcount(piece)) ? t : 0;
 
 		piece = pos->white_pieces[knight] & ~pinned;
 		while (piece) {
@@ -2002,16 +2002,16 @@ int mobility_white(struct position *pos) {
 		source_square = ctz(checkers);
 		pinned_squares = between_lookup[source_square + 64 * king_square] | checkers;
 		piece = white_pawn_push(pos->white_pieces[pawn], pos->pieces) & shift_south(pinned_squares) & ~pinned;
-		moves += popcount(piece);
+		moves += (t = popcount(piece)) ? t : 0;
 
 		piece = white_pawn_double_push(pos->white_pieces[pawn], pos->pieces) & shift_south_south(pinned_squares) & ~pinned;
-		moves += popcount(piece);
+		moves += (t = popcount(piece)) ? t : 0;
 
 		piece = white_pawn_capture_e(pos->white_pieces[pawn], checkers) & ~pinned;
-		moves += popcount(piece);
+		moves += (t = popcount(piece)) ? t : 0;
 
 		piece = white_pawn_capture_w(pos->white_pieces[pawn], checkers) & ~pinned;
-		moves += popcount(piece);
+		moves += (t = popcount(piece)) ? t : 0;
 
 		piece = pos->white_pieces[knight] & ~pinned;
 		while (piece) {
@@ -2065,20 +2065,20 @@ int mobility_black(struct position *pos) {
 	king_square = ctz(pos->black_pieces[king]);
 
 	attacks = black_king_attacks(king_square, pos->black_pieces[all]) & ~attacked;
-	moves += popcount(attacks);
+	moves += (t = popcount(attacks)) ? t : 0;
 	
 	if (!checkers) {
 		piece = black_pawn_push(pos->black_pieces[pawn], pos->pieces) & ~pinned;
-		moves += popcount(piece);
+		moves += (t = popcount(piece)) ? t : 0;
 
 		piece = black_pawn_double_push(pos->black_pieces[pawn], pos->pieces) & ~pinned;
-		moves += popcount(piece);
+		moves += (t = popcount(piece)) ? t : 0;
 
 		piece = black_pawn_capture_e(pos->black_pieces[pawn], pos->white_pieces[all]) & ~pinned;
-		moves += popcount(piece);
+		moves += (t = popcount(piece)) ? t : 0;
 
 		piece = black_pawn_capture_w(pos->black_pieces[pawn], pos->white_pieces[all]) & ~pinned;
-		moves += popcount(piece);
+		moves += (t = popcount(piece)) ? t : 0;
 
 		piece = pos->black_pieces[knight] & ~pinned;
 		while (piece) {
@@ -2116,16 +2116,16 @@ int mobility_black(struct position *pos) {
 		source_square = ctz(checkers);
 		pinned_squares = between_lookup[source_square + 64 * king_square] | checkers;
 		piece = black_pawn_push(pos->black_pieces[pawn], pos->pieces) & shift_north(pinned_squares) & ~pinned;
-		moves += popcount(piece);
+		moves += (t = popcount(piece)) ? t : 0;
 
 		piece = black_pawn_double_push(pos->black_pieces[pawn], pos->pieces) & shift_north_north(pinned_squares) & ~pinned;
-		moves += popcount(piece);
+		moves += (t = popcount(piece)) ? t : 0;
 
 		piece = black_pawn_capture_e(pos->black_pieces[pawn], checkers) & ~pinned;
-		moves += popcount(piece);
+		moves += (t = popcount(piece)) ? t : 0;
 
 		piece = black_pawn_capture_w(pos->black_pieces[pawn], checkers) & ~pinned;
-		moves += popcount(piece);
+		moves += (t = popcount(piece)) ? t : 0;
 
 		piece = pos->black_pieces[knight] & ~pinned;
 		while (piece) {
