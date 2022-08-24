@@ -125,6 +125,7 @@ int16_t count_position(struct position *pos) {
 	for (i = 0, eval = 0; i < 64; i++) {
 		eval += eval_table[pos->mailbox[i]][i];
 	}
+	eval += 3 * (mobility_white(pos) - mobility_black(pos)) / 2;
 	return eval;
 }
 
