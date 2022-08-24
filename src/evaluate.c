@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <time.h>
 
+#include "bitboard.h"
 #include "move_gen.h"
 #include "move.h"
 #include "util.h"
@@ -120,12 +121,29 @@ int is_threefold(struct position *pos, struct history *history) {
 	return count >= 2;
 }
 
+int pawn_structure(struct position *pos) {
+	int eval = 0, i;
+	uint64_t t;
+
+	/* doubled pawns */
+	for (i = 0; i < 8; i++) {
+		if ((t = pos->white_pieces[pawn] & file(i)))
+			if (popcount(t) > 1)
+				eval -= 70;
+		if ((t = pos->black_pieces[pawn] & file(i)))
+			if (popcount(t) > 1)
+				eval += 70;
+	}
+	return eval;
+}
+
 int16_t count_position(struct position *pos) {
-	int eval, i;
-	for (i = 0, eval = 0; i < 64; i++) {
+	int eval = 0, i;
+	for (i = 0; i < 64; i++) {
 		eval += eval_table[pos->mailbox[i]][i];
 	}
 	eval += 3 * (mobility_white(pos) - mobility_black(pos)) / 2;
+	eval += pawn_structure(pos);
 	return eval;
 }
 
