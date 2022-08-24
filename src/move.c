@@ -559,7 +559,7 @@ char *move_str_pgn(char *str, struct position *pos, move *m) {
 	switch((pos->mailbox[move_from(m)] - 1) % 6) {
 	case 0:
 		if (pos->mailbox[move_to(m)])
-			attackers = rank_calc(move_from(m));
+			attackers = rank(move_from(m));
 		break;
 	case 1:
 		str[i++] = 'N';
@@ -594,8 +594,8 @@ char *move_str_pgn(char *str, struct position *pos, move *m) {
 			str[i++] = 'K';
 		}
 	}
-	if (popcount(attackers & file_calc(move_from(m))) > 1) {
-		if (popcount(attackers & rank_calc(move_from(m))) > 1) {
+	if (popcount(attackers & file(move_from(m))) > 1) {
+		if (popcount(attackers & rank(move_from(m))) > 1) {
 			str[i++] = "abcdefgh"[x];
 			str[i++] = "12345678"[y];
 		}

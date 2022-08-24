@@ -90,15 +90,29 @@ static inline uint64_t insert_zero(uint64_t b, int i) {
 
 extern uint64_t between_lookup[64 * 64];
 extern uint64_t line_lookup[64 * 64];
+extern uint64_t file_lookup[64];
+extern uint64_t rank_lookup[64];
 extern int castle_lookup[64 * 64 * 16];
+
+static inline uint64_t between(int source_square, int target_square) {
+	return between_lookup[source_square + target_square * 64];
+}
+
+static inline uint64_t line(int source_square, int target_square) {
+	return line_lookup[source_square + target_square * 64];
+}
+
+static inline uint64_t file(int square) {
+	return file_lookup[square];
+}
+
+static inline uint64_t rank(int square) {
+	return rank_lookup[square];
+}
 
 static inline int castle(int source_square, int target_square, int castle) {
 	return castle_lookup[source_square + 64 * target_square + 64 * 64 * castle];
 }
-
-uint64_t file_calc(int square);
-
-uint64_t rank_calc(int square);
 
 extern const uint64_t FILE_H;
 extern const uint64_t FILE_G;

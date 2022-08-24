@@ -25,6 +25,8 @@
 
 uint64_t between_lookup[64 * 64];
 uint64_t line_lookup[64 * 64];
+uint64_t file_lookup[64];
+uint64_t rank_lookup[64];
 int castle_lookup[64 * 64 * 16];
 
 void print_bitboard(uint64_t b) {
@@ -109,25 +111,6 @@ int castle_calc(int source_square, int target_square, int castle) {
 	return castle;
 }
 
-void bitboard_init() {
-	for (int i = 0; i < 64; i++) {
-		for (int j = 0; j < 64; j++) {
-			between_lookup[i + 64 * j] = between_calc(i, j);
-			line_lookup[i + 64 * j] = line_calc(i, j);
-			init_status("populating bitboard lookup table");
-		}
-	}
-
-	for (int source_square = 0; source_square < 64; source_square++) {
-		for (int target_square = 0; target_square < 64; target_square++) {
-			for (int castle = 0; castle < 16; castle++) {
-				castle_lookup[source_square + 64 * target_square + 64 * 64 * castle] = castle_calc(source_square, target_square, castle);
-				init_status("populating castling lookup table");
-			}
-		}
-	}
-}
-
 uint64_t file_calc(int square) {
 	int x = square % 8;
 	uint64_t ret = FILE_A;
@@ -144,6 +127,27 @@ uint64_t rank_calc(int square) {
 	for (int i = 0; i < y; i++)
 		ret = shift_north(ret);
 	return ret;
+}
+
+void bitboard_init() {
+	for (int i = 0; i < 64; i++) {
+		file_lookup[i] = file_calc(i);
+		rank_lookup[i] = rank_calc(i);
+		for (int j = 0; j < 64; j++) {
+			between_lookup[i + 64 * j] = between_calc(i, j);
+			line_lookup[i + 64 * j] = line_calc(i, j);
+			init_status("populating bitboard lookup table");
+		}
+	}
+
+	for (int source_square = 0; source_square < 64; source_square++) {
+		for (int target_square = 0; target_square < 64; target_square++) {
+			for (int castle = 0; castle < 16; castle++) {
+				castle_lookup[source_square + 64 * target_square + 64 * 64 * castle] = castle_calc(source_square, target_square, castle);
+				init_status("populating castling lookup table");
+			}
+		}
+	}
 }
 
 const uint64_t FILE_H = 0x8080808080808080;
