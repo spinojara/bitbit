@@ -558,7 +558,7 @@ char *move_str_pgn(char *str, struct position *pos, move *m) {
 	str[i] = '\0';
 	switch((pos->mailbox[move_from(m)] - 1) % 6) {
 	case 0:
-		if (pos->mailbox[move_to(m)])
+		if (pos->mailbox[move_to(m)] || move_flag(m) == 1)
 			attackers = rank(move_from(m));
 		break;
 	case 1:
@@ -607,7 +607,7 @@ char *move_str_pgn(char *str, struct position *pos, move *m) {
 		str[i++] = "abcdefgh"[x];
 	}
 
-	if (pos->mailbox[move_to(m)])
+	if (pos->mailbox[move_to(m)] || move_flag(m) == 1)
 		str[i++] = 'x';
 	if (str[0] != 'O') {
 		algebraic(str + i, move_to(m));
