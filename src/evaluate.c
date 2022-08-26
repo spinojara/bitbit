@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
+#include <string.h>
 
 #include "bitboard.h"
 #include "move_gen.h"
@@ -31,6 +32,8 @@
 #include "interrupt.h"
 
 unsigned int nodes = 0;
+
+uint32_t mvv_lva_lookup[13 * 13];
 
 int eval_table[13][64];
 
@@ -95,6 +98,20 @@ int white_side_eval_table[6][64] = {
 
 };
 
+uint32_t mvv_lva_calc(int attacker, int victim) {
+	int a = (attacker - 1) % 6;
+	int v = (victim - 1) % 6;
+	int lookup_t[6 * 6] = {
+		10, 18, 19, 20, 24,  0,
+		 6, 11, 15, 17, 23,  0,
+		 5,  9, 12, 16, 22,  0,
+		 4,  7,  8, 13, 21,  0,
+		 0,  1,  2,  3, 14,  0,
+		 0,  0,  0, 25, 26,  0,
+	};
+	return lookup_t[v + 6 * a] + ((uint64_t)1 << 31);
+}
+
 void evaluate_init() {
 	for (int i = 0; i < 13; i++) {
 		for (int j  = 0; j < 64; j++) {
@@ -109,6 +126,10 @@ void evaluate_init() {
 						   piece_value[i];
 			init_status("populating evaluation lookup table");
 		}
+		for (int j = 0; j < 13; j++) {
+			mvv_lva_lookup[j + 13 * i] = mvv_lva_calc(i, j);
+			init_status("populating mvv lva lookup table");
+		}
 	}
 }
 
@@ -119,6 +140,63 @@ int is_threefold(struct position *pos, struct history *history) {
 		if (pos_are_equal(pos, t->pos))
 			count++;
 	return count >= 2;
+}
+
+static inline uint32_t mvv_lva(int attacker, int victim) {
+	return mvv_lva_lookup[victim + 13 * attacker];
+}
+
+static inline void store_killer_move(move *m, uint8_t depth, move killer_moves[][2]) {
+	killer_moves[depth][1] = killer_moves[depth][0];
+	killer_moves[depth][0] = *m & 0xFFFF;
+}
+
+static inline void store_history_move(struct position *pos, move *m, uint8_t depth, uint64_t history_moves[13][64]) {
+	history_moves[pos->mailbox[move_from(m)]][move_to(m)] += (uint64_t)1 << depth;
+}
+
+uint32_t evaluate_move(struct position *pos, move *m, uint8_t depth, struct transposition *e, move killer_moves[][2], uint64_t history_moves[13][64]) {
+	/* transposition table */
+	if (e && (*m & 0xFFF) == transposition_move(e))
+		return (((uint64_t)1 << 32) - 1);
+
+	/* attack */
+	if (pos->mailbox[move_to(m)])
+		return mvv_lva(pos->mailbox[move_from(m)], pos->mailbox[move_to(m)]);
+
+	/* killer */
+	if (killer_moves) {
+		if (killer_moves[depth][0] == *m)
+			return (((uint64_t)1 << 31) - 1);
+		if (killer_moves[depth][1] == *m)
+			return (((uint64_t)1 << 31) - 2);
+	}
+
+	/* history */
+	if (history_moves)
+		return history_moves[pos->mailbox[move_from(m)]][move_to(m)];
+	return 0;
+}
+
+void evaluate_moves(struct position *pos, move *move_list, uint8_t depth, struct transposition *e, move killer_moves[][2], uint64_t history_moves[13][64]) {
+	uint32_t evaluation_list[256];
+	int i;
+	for (i = 0; move_list[i]; i++)
+		evaluation_list[i] = evaluate_move(pos, move_list + i, depth, e, killer_moves, history_moves);
+
+	for (int j = 0; j < i; j++) {
+		for (int k = j + 1; k < i; k++) {
+			if (evaluation_list[j] < evaluation_list[k]) {
+				uint32_t t = evaluation_list[j];
+				evaluation_list[j] = evaluation_list[k];
+				evaluation_list[k] = t;
+
+				move m = move_list[j];
+				move_list[j] = move_list[k];
+				move_list[k] = m;
+			}
+		}
+	}
 }
 
 int pawn_structure(struct position *pos) {
@@ -143,13 +221,14 @@ int pawn_structure(struct position *pos) {
 }
 
 int16_t count_position(struct position *pos) {
+	nodes++;
 	int eval = 0, i;
 	for (i = 0; i < 64; i++) {
 		eval += eval_table[pos->mailbox[i]][i];
 	}
-	eval += 3 * (mobility_white(pos) - mobility_black(pos)) / 2;
-	eval += pawn_structure(pos);
-	return eval;
+/* 	eval += 3 * (mobility_white(pos) - mobility_black(pos)) / 2; */
+/* 	eval += pawn_structure(pos); */
+	return pos->turn ? eval : -eval;
 }
 
 int16_t quiescence(struct position *pos, int16_t alpha, int16_t beta, clock_t clock_stop) {
@@ -158,94 +237,57 @@ int16_t quiescence(struct position *pos, int16_t alpha, int16_t beta, clock_t cl
 	if (nodes % 4096 == 0)
 		if (clock_stop && clock() > clock_stop)
 			interrupt = 1;
-	nodes++;
 
-	int16_t evaluation, t;
-	evaluation = mate(pos);
-
-	/* stalemate */
-	if (evaluation == 1)
-		return 0;
-	/* checkmate */
-	if (evaluation == 2)
-		return pos->turn ? -0x8000 : 0x7FFF;
+	int16_t evaluation;
+	evaluation = count_position(pos);
+	if (evaluation >= beta)
+		return beta;
+	if (evaluation > alpha)
+		alpha = evaluation;
 
 	move move_list[256];
-	int16_t evaluation_list[256];
 	generate_quiescence(pos, move_list);
-
-	evaluation = count_position(pos);
 	if (!move_list[0])
 		return evaluation;
 
-	if (pos->turn) {
-		alpha = MAX(evaluation, alpha);
-		if (beta < alpha)
-			return evaluation;
-		for (t = 0; move_list[t]; t++) {
-			evaluation_list[t] = eval_table[pos->mailbox[move_to(move_list + t)]][move_to(move_list + t)] +
-				eval_table[pos->mailbox[move_from(move_list + t)]][move_from(move_list + t)];
-		}
-		merge_sort(move_list, evaluation_list, 0, t - 1, 1);
-		evaluation = -0x8000;
-		for (move *move_ptr = move_list; *move_ptr; move_ptr++) {
-			do_move(pos, move_ptr);
-			t = quiescence(pos, alpha, beta, clock_stop);
-			undo_move(pos, move_ptr);
-			if (t < -0x4000)
-				t++;
-			else if (t > 0x4000)
-				t--;
-			evaluation = MAX(evaluation, t);
-			alpha = MAX(evaluation, alpha);
-			if (beta < alpha)
-				break;
-		}
+	evaluate_moves(pos, move_list, 0, NULL, NULL, NULL);
+	for (move *ptr = move_list; *ptr; ptr++) {
+		do_move(pos, ptr);
+		evaluation = -quiescence(pos, -beta, -alpha, clock_stop);
+		undo_move(pos, ptr);
+		if (evaluation >= beta)
+			return beta;
+		if (evaluation > alpha)
+			alpha = evaluation;
 	}
-	else {
-		beta = MIN(evaluation, beta);
-		if (beta < alpha)
-			return evaluation;
-		for (t = 0; move_list[t]; t++) {
-			evaluation_list[t] = eval_table[pos->mailbox[move_to(move_list + t)]][move_to(move_list + t)] +
-				eval_table[pos->mailbox[move_from(move_list + t)]][move_from(move_list + t)];
-		}
-		merge_sort(move_list, evaluation_list, 0, t - 1, 0);
-		evaluation = 0x7FFF;
-		for (move *move_ptr = move_list; *move_ptr; move_ptr++) {
-			do_move(pos, move_ptr);
-			t = quiescence(pos, alpha, beta, clock_stop);
-			undo_move(pos, move_ptr);
-			if (t < -0x4000)
-				t++;
-			else if (t > 0x4000)
-				t--;
-			evaluation = MIN(evaluation, t),
-			beta = MIN(evaluation, beta);
-			if (beta < alpha)
-				break;
-		}
-	}
-	return evaluation;
+	return alpha;
 }
 
-int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, int16_t beta, clock_t clock_stop) {
+int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, int16_t beta, clock_t clock_stop, move killer_moves[][2], uint64_t history_moves[13][64]) {
 	if (interrupt)
 		return 0;
 	if (nodes % 4096 == 0)
 		if (clock_stop && clock() > clock_stop)
 			interrupt = 1;
-	nodes++;
 
 	struct transposition *e = attempt_get(pos);
 	if (e && transposition_open(e))
 		return 0;
 	if (e && transposition_depth(e) >= depth && transposition_type(e) == 0)
 		return transposition_evaluation(e);
-	if (depth <= 0)
-		return quiescence(pos, alpha, beta, clock_stop);
 
-	int16_t evaluation, evaluation_list[256], t;
+	int16_t evaluation;
+	if (depth <= 0) {
+		evaluation = mate(pos);
+		/* stalemate */
+		if (evaluation == 1)
+			return 0;
+		/* checkmate */
+		if (evaluation == 2)
+			return -0x7FFE;
+		return quiescence(pos, alpha, beta, clock_stop);
+	}
+
 	move move_list[256];
 	generate_all(pos, move_list);
 
@@ -253,85 +295,49 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, i
 		uint64_t checkers = generate_checkers(pos);
 		if (!checkers)
 			return 0;
-		return pos->turn ? -0x8000 : 0x7FFF;
+		return -0x7FFE;
 	}
+
+	evaluate_moves(pos, move_list, depth, e, killer_moves, history_moves);
 
 	if (pos->halfmove >= 100)
 		return 0;
-
-	for (t = 0; move_list[t]; t++) {
-		if (pos->mailbox[move_to(move_list + t)])
-			evaluation_list[t] = eval_table[pos->mailbox[move_to(move_list + t)]][move_to(move_list + t)] * 10 +
-				eval_table[pos->mailbox[move_from(move_list + t)]][move_from(move_list + t)] * 10;
-		else
-			evaluation_list[t] = eval_table[pos->mailbox[move_from(move_list + t)]][move_from(move_list + t)];
-	}
-	merge_sort(move_list, evaluation_list, 0, t - 1, pos->turn);
-	if (e) {
-		reorder_moves(move_list, transposition_move(e));
+	
+	if (e)
 		transposition_set_open(e);
-	}
 
-	/* type all */
-	uint8_t type = 2;
 	uint16_t m = 0;
-	if (pos->turn) {
-		evaluation = -0x8000;
-		for (move *move_ptr = move_list; *move_ptr; move_ptr++) {
-			do_move(pos, move_ptr);
-			t = evaluate_recursive(pos, depth - 1, alpha, beta, clock_stop);
-			undo_move(pos, move_ptr);
-			if (t < -0x4000)
-				t++;
-			else if (t > 0x4000)
-				t--;
-			if (evaluation < t) {
-				m = *move_ptr & 0xFFF;
-				evaluation = t;
-				/* type pv */
-				type = 0;
-			}
-			alpha = MAX(evaluation, alpha);
-			if (beta < alpha) {
-				/* type cut */
-				type = 1;
-				break;
-			}
+	for (move *ptr = move_list; *ptr; ptr++) {
+		do_move(pos, ptr);
+		evaluation = -evaluate_recursive(pos, depth - 1, -beta, -alpha, clock_stop, killer_moves, history_moves);
+		undo_move(pos, ptr);
+		if (evaluation >= beta) {
+			/* quiet */
+			if (!pos->mailbox[move_to(ptr)])
+				store_killer_move(ptr, depth, killer_moves);
+			if (e)
+				transposition_set_closed(e);
+			/* type cut */
+			attempt_store(pos, beta, depth, 1, *ptr);
+			return beta;
 		}
-	}
-	else {
-		evaluation = 0x7FFF;
-		for (move *move_ptr = move_list; *move_ptr; move_ptr++) {
-			do_move(pos, move_ptr);
-			t = evaluate_recursive(pos, depth - 1, alpha, beta, clock_stop);
-			undo_move(pos, move_ptr);
-			if (t < -0x4000)
-				t++;
-			else if (t > 0x4000)
-				t--;
-			if (evaluation > t) {
-				m = *move_ptr & 0xFFF;
-				evaluation = t;
-				/* type pv */
-				type = 0;
-			}
-			beta = MIN(evaluation, beta);
-			if (beta < alpha) {
-				/* type cut */
-				type = 1;
-				break;
-			}
+		if (evaluation > alpha) {
+			/* quiet */
+			if (!pos->mailbox[move_to(ptr)])
+				store_history_move(pos, ptr, depth, history_moves);
+			alpha = evaluation;
+			m = *ptr;
 		}
 	}
 	if (e)
 		transposition_set_closed(e);
-	attempt_store(pos, evaluation, depth, type, m);
-	return evaluation;
+	/* type pv or all */
+	attempt_store(pos, alpha, depth, m ? 0 : 2, m);
+	return alpha;
 }
 
 int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int max_duration, struct history *history) {
-	int16_t evaluation, last_evaluation = 0;
-	int16_t evaluation_list[256];
+	int16_t evaluation = 0, last_evaluation;
 	move move_list[256];
 	generate_all(pos, move_list);
 
@@ -340,7 +346,7 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int 
 		if (!checkers)
 			evaluation = 0;
 		else 
-			evaluation = pos->turn ? -0x8000 : 0x7FFF;
+			evaluation = pos->turn ? -0x7FFE : 0x7FFE;
 		if (m)
 			*m = 0;
 		if (verbose) {
@@ -355,6 +361,8 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int 
 
 	if (depth == 0) {
 		evaluation = count_position(pos);
+		if (!pos->turn)
+			evaluation = -evaluation;
 		if (verbose)
 			printf("\33[2K[0/0] %+.2f\n", (double)evaluation / 100);
 		if (m)
@@ -368,87 +376,54 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int 
 	else
 		clock_stop = 0;
 
+	move killer_moves[depth][2];
+	uint64_t history_moves[13][64];
+	memset(killer_moves, 0, sizeof(killer_moves));
+	memset(history_moves, 0, sizeof(history_moves));
+
+	move last_move = 0, best_move;
 	char str[8];
 	int i;
 	int16_t alpha, beta;
 	for (int d = 1; d <= depth; d++) {
-		alpha = -0x8000;
+		nodes = 0;
+		alpha = -0x7FFF;
 		beta = 0x7FFF;
-		if (pos->turn) {
-			evaluation = -0x8000;
-			for (i = 0; move_list[i]; i++) {
-				do_move(pos, move_list + i);
-				evaluation_list[i] = evaluate_recursive(pos, d - 1, alpha, beta, clock_stop);
-				if (is_threefold(pos, history))
-					evaluation_list[i] = 0;
-				undo_move(pos, move_list + i);
-
-				if (evaluation_list[i] < -0x4000)
-					evaluation_list[i]++;
-				else if (evaluation_list[i] > 0x4000)
-					evaluation_list[i]--;
-
-				evaluation = MAX(evaluation, evaluation_list[i]);
-				alpha = MAX(evaluation, alpha);
-				if (beta < alpha) {
-					i++;
-					break;
-				}
-			}
-			if (!interrupt) {
-				last_evaluation = evaluation;
-				merge_sort(move_list, evaluation_list, 0, i - 1, 0);
+		for (i = 0; move_list[i]; i++) {
+			do_move(pos, move_list + i);
+			last_evaluation = -evaluate_recursive(pos, d - 1, -beta, -alpha, clock_stop, killer_moves, history_moves);
+			if (is_threefold(pos, history))
+				evaluation = 0;
+			undo_move(pos, move_list + i);
+			if (last_evaluation > alpha) {
+				alpha = last_evaluation, last_move = move_list[i];
 			}
 		}
-		else {
-			evaluation = 0x7FFF;
-			for (i = 0; move_list[i]; i++) {
-				do_move(pos, move_list + i);
-				evaluation_list[i] = evaluate_recursive(pos, d - 1, alpha, beta, clock_stop);
-				if (is_threefold(pos, history))
-					evaluation_list[i] = 0;
-				undo_move(pos, move_list + i);
-
-				if (evaluation_list[i] < -0x4000)
-					evaluation_list[i]++;
-				else if (evaluation_list[i] > 0x4000)
-					evaluation_list[i]--;
-
-				evaluation = MIN(evaluation, evaluation_list[i]);
-				beta = MIN(evaluation, beta);
-				if (beta < alpha) {
-					i++;
-					break;
-				}
-			}
-			if (!interrupt) {
-				last_evaluation = evaluation;
-				merge_sort(move_list, evaluation_list, 0, i - 1, 1);
-			}
-		}
-		if (interrupt)
+		if (!interrupt)
+			evaluation = pos->turn ? alpha : -alpha, best_move = last_move;
+		else
 			d--;
 		if (verbose) {
-			if (last_evaluation < -0x4000)
-				printf("\r\33[2K[%i/%i] -m%i ", d, depth, ((0x8000 + last_evaluation) + 1) / 2);
-			else if (last_evaluation > 0x4000)
-				printf("\r\33[2K[%i/%i] +m%i ", d, depth, ((0x7FFF - last_evaluation) + 1) / 2);
+			if (evaluation < -0x4000)
+				printf("\r\33[2K[%i/%i] -m%i ", d, depth, 0x7FFE + evaluation);
+			else if (evaluation > 0x4000)
+				printf("\r\33[2K[%i/%i] +m%i ", d, depth, 0x7FFE - evaluation);
 			else
-				printf("\r\33[2K[%i/%i] %+.2f ", d, depth, (double)last_evaluation / 100);
-			printf("%s\r", move_str_pgn(str, pos, move_list));
+				printf("\r\33[2K[%i/%i] %+.2f ", d, depth, (double)evaluation / 100);
+			printf("%s %i\r", move_str_pgn(str, pos, &best_move), nodes);
 			fflush(stdout);
 		}
 		if (!interrupt && m)
-			*m = *move_list;
+			*m = best_move;
 		if (interrupt)
 			break;
-		if (last_evaluation < -0x4000 && (0x8000 + last_evaluation) <= d)
+		/* if (evaluation < -0x4000 && (0x7FFE + evaluation) <= d)
 			break;
-		if (last_evaluation > 0x4000 && (0x7FFF - last_evaluation) <= d)
-			break;
+		if (evaluation > 0x4000 && (0x7FFE - evaluation) <= d)
+			break; */
 	}
 
 	if (verbose)
 		printf("\n");
-	return last_evaluation;
+	return evaluation;
 }
