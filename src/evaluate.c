@@ -222,7 +222,6 @@ int pawn_structure(struct position *pos) {
 
 int16_t count_position(struct position *pos) {
 	nodes++;
-	return 0;
 	int eval = 0, i;
 	for (i = 0; i < 64; i++)
 		eval += eval_table[pos->mailbox[i]][i];
@@ -271,7 +270,6 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, i
 			interrupt = 1;
 
 	struct transposition *e = attempt_get(pos);
-	e = NULL;
 	if (e && transposition_open(e))
 		return 0;
 	if (e && transposition_depth(e) >= depth && transposition_type(e) == 0)
@@ -285,7 +283,7 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, i
 			return 0;
 		/* checkmate */
 		if (evaluation == 2)
-			return -0x7FFF;
+			return -0x7F00;
 		return quiescence(pos, alpha, beta, clock_stop);
 	}
 
@@ -296,7 +294,7 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, i
 		uint64_t checkers = generate_checkers(pos);
 		if (!checkers)
 			return 0;
-		return -0x7FFF;
+		return -0x7F00;
 	}
 
 	evaluate_moves(pos, move_list, depth, e, killer_moves, history_moves);
@@ -310,7 +308,8 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, int16_t alpha, i
 	uint16_t m = 0;
 	for (move *ptr = move_list; *ptr; ptr++) {
 		do_move(pos, ptr);
-		evaluation = -evaluate_recursive(pos, depth - 1, -beta, -alpha, clock_stop, killer_moves, history_moves);
+		/* -beta - 1 to open the window and search for mate in n */
+		evaluation = -evaluate_recursive(pos, depth - 1, -beta - 1, -alpha, clock_stop, killer_moves, history_moves);
 		evaluation -= (evaluation > 0x4000);
 		undo_move(pos, ptr);
 		if (evaluation >= beta) {
@@ -348,7 +347,7 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int 
 		if (!checkers)
 			evaluation = 0;
 		else 
-			evaluation = pos->turn ? -0x7FFF : 0x7FFF;
+			evaluation = pos->turn ? -0x7F00 : 0x7F00;
 		if (m)
 			*m = 0;
 		if (verbose) {
@@ -389,14 +388,14 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int 
 	int16_t alpha, beta;
 	for (int d = 1; d <= depth; d++) {
 		nodes = 0;
-		alpha = -0x7FFF;
-		beta = 0x7FFF;
+		alpha = -0x7F00;
+		beta = 0x7F00;
 		for (i = 0; move_list[i]; i++) {
 			do_move(pos, move_list + i);
 			last_evaluation = -evaluate_recursive(pos, d - 1, -beta, -alpha, clock_stop, killer_moves, history_moves);
 			last_evaluation -= (last_evaluation > 0x4000);
 			if (is_threefold(pos, history))
-				evaluation = 0;
+				last_evaluation = 0;
 			undo_move(pos, move_list + i);
 			if (last_evaluation > alpha)
 				alpha = last_evaluation, last_move = move_list[i];
@@ -407,9 +406,9 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int 
 			d--;
 		if (verbose) {
 			if (evaluation < -0x4000)
-				printf("\r\33[2K[%i/%i] -m%i ", d, depth, 0x7FFF + evaluation);
+				printf("\r\33[2K[%i/%i] -m%i ", d, depth, 0x7F00 + evaluation);
 			else if (evaluation > 0x4000)
-				printf("\r\33[2K[%i/%i] +m%i ", d, depth, 0x7FFF - evaluation);
+				printf("\r\33[2K[%i/%i] +m%i ", d, depth, 0x7F00 - evaluation);
 			else
 				printf("\r\33[2K[%i/%i] %+.2f ", d, depth, (double)evaluation / 100);
 			printf("%s %i\r", move_str_pgn(str, pos, &best_move), nodes);
