@@ -33,7 +33,7 @@
 
 unsigned int nodes = 0;
 
-uint32_t mvv_lva_lookup[13 * 13];
+uint64_t mvv_lva_lookup[13 * 13];
 
 int eval_table[13][64];
 
@@ -98,18 +98,20 @@ int white_side_eval_table[6][64] = {
 
 };
 
-uint32_t mvv_lva_calc(int attacker, int victim) {
+uint64_t mvv_lva_calc(int attacker, int victim) {
 	int a = (attacker - 1) % 6;
 	int v = (victim - 1) % 6;
 	int lookup_t[6 * 6] = {
-		10, 18, 19, 20, 24,  0,
-		 6, 11, 15, 17, 23,  0,
-		 5,  9, 12, 16, 22,  0,
-		 4,  7,  8, 13, 21,  0,
-		 0,  1,  2,  3, 14,  0,
-		 0,  0,  0, 25, 26,  0,
+		 2, 15, 16, 17, 21,  0,
+		 0,  3,  7, 14, 20,  0,
+		 0,  1,  4, 13, 19,  0,
+		 0,  0,  0,  5, 18,  0,
+		 0,  0,  0,  0,  6,  0,
+		 8,  9, 10, 11, 12,  0,
 	};
-	return lookup_t[v + 6 * a] + ((uint64_t)1 << 31);
+	if (!lookup_t[v + 6 * a])
+		return 0;
+	return lookup_t[v + 6 * a] + 0xFFFFFFFFFFFFFF00;
 }
 
 void evaluate_init() {
@@ -142,7 +144,7 @@ int is_threefold(struct position *pos, struct history *history) {
 	return count >= 2;
 }
 
-static inline uint32_t mvv_lva(int attacker, int victim) {
+static inline uint64_t mvv_lva(int attacker, int victim) {
 	return mvv_lva_lookup[victim + 13 * attacker];
 }
 
@@ -155,10 +157,10 @@ static inline void store_history_move(struct position *pos, move *m, uint8_t dep
 	history_moves[pos->mailbox[move_from(m)]][move_to(m)] += (uint64_t)1 << depth;
 }
 
-uint32_t evaluate_move(struct position *pos, move *m, uint8_t depth, struct transposition *e, move killer_moves[][2], uint64_t history_moves[13][64]) {
+uint64_t evaluate_move(struct position *pos, move *m, uint8_t depth, struct transposition *e, move killer_moves[][2], uint64_t history_moves[13][64]) {
 	/* transposition table */
 	if (e && (*m & 0xFFF) == transposition_move(e))
-		return (((uint64_t)1 << 32) - 1);
+		return 0xFFFFFFFFFFFFFFFF;
 
 	/* attack */
 	if (pos->mailbox[move_to(m)])
@@ -166,14 +168,14 @@ uint32_t evaluate_move(struct position *pos, move *m, uint8_t depth, struct tran
 
 	/* promotions */
 	if (move_flag(m) == 2)
-		return ((uint64_t)1 << 31) - 4 + move_promote(m);
+		return 0xFFFFFFFFFFFFF000 + move_promote(m);
 
 	/* killer */
 	if (killer_moves) {
 		if (killer_moves[depth][0] == *m)
-			return ((uint64_t)1 << 31) - 5;
+			return 0xFFFFFFFFFFFF0001;
 		if (killer_moves[depth][1] == *m)
-			return ((uint64_t)1 << 31) - 6;
+			return 0xFFFFFFFFFFFF0000;
 	}
 
 	/* history */
@@ -189,7 +191,7 @@ uint32_t evaluate_move(struct position *pos, move *m, uint8_t depth, struct tran
  * 5. history
  */
 void evaluate_moves(struct position *pos, move *move_list, uint8_t depth, struct transposition *e, move killer_moves[][2], uint64_t history_moves[13][64]) {
-	uint32_t evaluation_list[256];
+	uint64_t evaluation_list[256];
 	int i;
 	for (i = 0; move_list[i]; i++)
 		evaluation_list[i] = evaluate_move(pos, move_list + i, depth, e, killer_moves, history_moves);

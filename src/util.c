@@ -63,12 +63,12 @@ int str_to_int(char *s) {
 	return ret;
 }
 
-void merge(move *arr, uint32_t *val, unsigned int first, unsigned int last, int increasing) {
+void merge(move *arr, uint64_t *val, unsigned int first, unsigned int last, int increasing) {
 	if (!(first < last))
 		return;
 	unsigned int middle = (first + last) / 2;
 	move temp_arr[256];
-	uint32_t temp_val[256];
+	uint64_t temp_val[256];
 
 	unsigned int i = first, j = middle + 1, k = 0;
 
@@ -107,7 +107,7 @@ void merge(move *arr, uint32_t *val, unsigned int first, unsigned int last, int 
 	}
 }
 
-void merge_sort(move *arr, uint32_t *val, unsigned int first, unsigned int last, int increasing) {
+void merge_sort(move *arr, uint64_t *val, unsigned int first, unsigned int last, int increasing) {
 	if (first < last) {
 		unsigned int middle = (first + last) / 2;
 		merge_sort(arr, val, first, middle, increasing);

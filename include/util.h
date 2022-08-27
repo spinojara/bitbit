@@ -48,7 +48,7 @@ int str_is_int(char *s);
 
 int str_to_int(char *s);
 
-void merge_sort(move *arr, uint32_t *val, unsigned int first, unsigned int last, int increasing);
+void merge_sort(move *arr, uint64_t *val, unsigned int first, unsigned int last, int increasing);
 
 void util_init();
 
