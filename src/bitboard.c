@@ -45,11 +45,6 @@ void print_bitboard(uint64_t b) {
 	printf("       a   b   c   d   e   f   g   h\n\n");
 }
 
-void print_binary(uint64_t b) {
-	for (int i = 0; i < 64; i++)
-		printf("%i", get_bit(b, 63 - i) ? 1 : 0);
-}
-
 uint64_t between_calc(int x, int y) {
 	int a_x = x % 8;
 	int b_x = x / 8;

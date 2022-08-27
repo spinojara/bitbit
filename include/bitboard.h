@@ -78,8 +78,6 @@ static inline uint64_t clear_ls1b(uint64_t b) {
 
 void print_bitboard(uint64_t b);
 
-void print_binary(uint64_t b);
-
 static inline uint64_t single(uint64_t b) {
 	return !(b & (b - 1));
 }

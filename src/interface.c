@@ -191,9 +191,7 @@ int interface_print(struct arg *arg) {
 		printf("en passant: %s\n", pos->en_passant ? algebraic(t, pos->en_passant) : "-");
 		printf("halfmove: %i\n", pos->halfmove);
 		printf("fullmove: %i\n", pos->fullmove);
-		printf("zobrist key: ");
-		print_binary(pos->zobrist_key);
-		printf("\n");
+		printf("zobrist key: 0x%" PRIX64 "\n", pos->zobrist_key);
 		printf("fen: %s\n", pos_to_fen(t, pos));
 	}
 	return DONE;
