@@ -164,12 +164,16 @@ uint32_t evaluate_move(struct position *pos, move *m, uint8_t depth, struct tran
 	if (pos->mailbox[move_to(m)])
 		return mvv_lva(pos->mailbox[move_from(m)], pos->mailbox[move_to(m)]);
 
+	/* promotions */
+	if (move_flag(m) == 2)
+		return ((uint64_t)1 << 31) - 4 + move_promote(m);
+
 	/* killer */
 	if (killer_moves) {
 		if (killer_moves[depth][0] == *m)
-			return (((uint64_t)1 << 31) - 1);
+			return ((uint64_t)1 << 31) - 5;
 		if (killer_moves[depth][1] == *m)
-			return (((uint64_t)1 << 31) - 2);
+			return ((uint64_t)1 << 31) - 6;
 	}
 
 	/* history */
@@ -178,6 +182,12 @@ uint32_t evaluate_move(struct position *pos, move *m, uint8_t depth, struct tran
 	return 0;
 }
 
+/* 1. tt move
+ * 2. mvv lva
+ * 3. promotions
+ * 4. killer
+ * 5. history
+ */
 void evaluate_moves(struct position *pos, move *move_list, uint8_t depth, struct transposition *e, move killer_moves[][2], uint64_t history_moves[13][64]) {
 	uint32_t evaluation_list[256];
 	int i;
