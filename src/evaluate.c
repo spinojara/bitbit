@@ -194,19 +194,7 @@ void evaluate_moves(struct position *pos, move *move_list, uint8_t depth, struct
 	for (i = 0; move_list[i]; i++)
 		evaluation_list[i] = evaluate_move(pos, move_list + i, depth, e, killer_moves, history_moves);
 
-	for (int j = 0; j < i; j++) {
-		for (int k = j + 1; k < i; k++) {
-			if (evaluation_list[j] < evaluation_list[k]) {
-				uint32_t t = evaluation_list[j];
-				evaluation_list[j] = evaluation_list[k];
-				evaluation_list[k] = t;
-
-				move m = move_list[j];
-				move_list[j] = move_list[k];
-				move_list[k] = m;
-			}
-		}
-	}
+	merge_sort(move_list, evaluation_list, 0, i - 1, 0);
 }
 
 int pawn_structure(struct position *pos) {

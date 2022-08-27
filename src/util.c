@@ -63,6 +63,59 @@ int str_to_int(char *s) {
 	return ret;
 }
 
+void merge(move *arr, uint32_t *val, unsigned int first, unsigned int last, int increasing) {
+	if (!(first < last))
+		return;
+	unsigned int middle = (first + last) / 2;
+	move temp_arr[256];
+	uint32_t temp_val[256];
+
+	unsigned int i = first, j = middle + 1, k = 0;
+
+	while (i <= middle && j <= last) {
+		/* xnor */
+		if ((val[i] <= val[j]) == increasing) {
+			temp_arr[k] = arr[i];
+			temp_val[k] = val[i];
+			i++;
+		}
+		else {
+			temp_arr[k] = arr[j];
+			temp_val[k] = val[j];
+			j++;
+		}
+		k++;
+	}
+
+	while (i <= middle) {
+		temp_arr[k] = arr[i];
+		temp_val[k] = val[i];
+		i++;
+		k++;
+	}
+
+	while (j <= last) {
+		temp_arr[k] = arr[j];
+		temp_val[k] = val[j];
+		j++;
+		k++;
+	}
+
+	for (i = 0; i < k; i++) {
+		arr[i + first] = temp_arr[i];
+		val[i + first] = temp_val[i];
+	}
+}
+
+void merge_sort(move *arr, uint32_t *val, unsigned int first, unsigned int last, int increasing) {
+	if (first < last) {
+		unsigned int middle = (first + last) / 2;
+		merge_sort(arr, val, first, middle, increasing);
+		merge_sort(arr, val, middle + 1, last, increasing);
+		merge(arr, val, first, last, increasing);
+	}
+}
+
 void util_init() {
 	srand(0);
 	init_status("setting seed");
