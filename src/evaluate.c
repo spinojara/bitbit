@@ -110,7 +110,7 @@ uint64_t mvv_lva_calc(int attacker, int victim) {
 		 8,  9, 10, 11, 12,  0,
 	};
 	if (!lookup_t[v + 6 * a])
-		return 0;
+		return 0xFFFFFFFFFFFF0000;
 	return lookup_t[v + 6 * a] + 0xFFFFFFFFFFFFFF00;
 }
 
@@ -173,9 +173,9 @@ uint64_t evaluate_move(struct position *pos, move *m, uint8_t depth, struct tran
 	/* killer */
 	if (killer_moves) {
 		if (killer_moves[depth][0] == *m)
-			return 0xFFFFFFFFFFFF0001;
+			return 0xFFFFFFFFFFFF0002;
 		if (killer_moves[depth][1] == *m)
-			return 0xFFFFFFFFFFFF0000;
+			return 0xFFFFFFFFFFFF0001;
 	}
 
 	/* history */
