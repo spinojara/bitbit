@@ -29,7 +29,7 @@ struct transposition_table *transposition_table = NULL;
 
 void transposition_table_size_print(uint64_t t) {
 	int s = MIN(t / 10, 3);
-	printf("%" PRIu64 "%c", power(2, t) / power(1024, s), "BKMG"[s]);
+	printf("%" PRIu64 "%c", ((uint64_t)1 << t) / ((uint64_t)1 << 10 * s), "BKMG"[s]);
 }
 
 struct transposition *get(struct position *pos) {
@@ -86,7 +86,7 @@ uint64_t zobrist_en_passant_key(int square) {
 }
 
 int allocate_transposition_table(uint64_t t) {
-	uint64_t size = power(2, t);
+	uint64_t size = (uint64_t)1 << t;
 	if (size < sizeof(struct transposition))
 		return 1;
 	transposition_table->size = size / sizeof(struct transposition);
