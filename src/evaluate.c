@@ -225,8 +225,8 @@ int16_t count_position(struct position *pos) {
 	int eval = 0, i;
 	for (i = 0; i < 64; i++)
 		eval += eval_table[pos->mailbox[i]][i];
-/* 	eval += 3 * (mobility_white(pos) - mobility_black(pos)) / 2; */
-/* 	eval += pawn_structure(pos); */
+	eval += 3 * (mobility_white(pos) - mobility_black(pos)) / 2;
+	eval += pawn_structure(pos);
 	return pos->turn ? eval : -eval;
 }
 
@@ -342,14 +342,15 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int 
 	move move_list[256];
 	generate_all(pos, move_list);
 
+	if (m)
+		*m = 0;
+
 	if (!move_list[0]) {
 		uint64_t checkers = generate_checkers(pos);
 		if (!checkers)
 			evaluation = 0;
 		else 
 			evaluation = pos->turn ? -0x7F00 : 0x7F00;
-		if (m)
-			*m = 0;
 		if (verbose) {
 			if (evaluation)
 				printf("\33[2K[%i/%i] %cm\n", depth, depth,
@@ -366,8 +367,6 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int 
 			evaluation = -evaluation;
 		if (verbose)
 			printf("\33[2K[0/0] %+.2f\n", (double)evaluation / 100);
-		if (m)
-			*m = 0;
 		return evaluation;
 	}
 
@@ -418,10 +417,11 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int 
 			*m = best_move;
 		if (interrupt)
 			break;
-		/* if (evaluation < -0x4000 && (0x7FFE + evaluation) <= d)
+		/* stop searching if mate is found */
+		if (evaluation < -0x4000 && 2 * (0x7F00 + evaluation) + pos->turn - 1 <= d)
 			break;
-		if (evaluation > 0x4000 && (0x7FFE - evaluation) <= d)
-			break; */
+		if (evaluation > 0x4000 && 2 * (0x7F00 - evaluation) - pos->turn <= d)
+			break;
 	}
 
 	if (verbose)
