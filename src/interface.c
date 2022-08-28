@@ -216,7 +216,7 @@ int interface_eval(struct arg *arg) {
 	}
 	else {
 		if (str_is_int(arg->argv[1]) && str_to_int(arg->argv[1]) >= 0) {
-			move *m = malloc(sizeof(move));
+			move m[1];
 			clock_t t = clock();
 			int16_t eval;
 			if (flag(arg, 'd'))
@@ -232,7 +232,6 @@ int interface_eval(struct arg *arg) {
 				printf("time: %.2f\n", (double)t / CLOCKS_PER_SEC);
 			if (flag(arg, 'm') && *m && interrupt < 2)
 				move_next(*m);
-			free(m);
 		}
 		else {
 			return ERR_BAD_ARG;
@@ -350,7 +349,7 @@ int parse(int *argc, char ***argv) {
 			/* assumes always at start of word */
 			for (; *c && *c != '\n'; c++) {
 				/* flag */
-				if (c[0] == '-' && i != 0 && c[-1] == ' ' && c[1] >= 'a' && c[1] <= 'z') {
+				if (c[0] == '-' && c != line && c[-1] == ' ' && c[1] >= 'a' && c[1] <= 'z') {
 					for (; c[0] && c[0] != ' ' && c[0] != '\n'; c++)
 						arg->flag[(unsigned char)c[0]] = 1;
 				}
