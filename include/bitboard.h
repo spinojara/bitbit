@@ -31,28 +31,28 @@ static inline uint64_t popcount(uint64_t b) {
 	return __builtin_popcountll(b);
 }
 #elif _MSC_VER
-#include <nmmintrin.h>
-#if _WIN64
+#include <intrin.h>
+#if 0
 static inline uint64_t ctz(uint64_t b) {
-	uint64_t ret;
+	unsigned long ret;
 	_BitScanForward64(&ret, b);
 	return ret;
 }
 #else
 static inline uint64_t ctz(uint64_t b) {
-	uint64_t ret;
-	if (b && 0xFFFFFFFF) {
+	unsigned long ret;
+	if (b & 0xFFFFFFFF) {
 		_BitScanForward(&ret, b);
 		return ret;
 	}
 	else {
-		_BitScanForward(&ret, b >> 32));
+		_BitScanForward(&ret, b >> 32);
 		return ret + 32;
 	}
 }
 #endif
 static inline uint64_t popcount(uint64_t b) {
-	return _mm_popcnt_u64(b);
+	return __popcnt64(b);
 }
 #endif
 
