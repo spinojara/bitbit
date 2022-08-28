@@ -141,7 +141,10 @@ void print_pv(struct position *pos, move pv_moves[256][256]) {
 	struct position pos_copy[1];
 	copy_position(pos_copy, pos);
 	for (i = 0; i < 256 && pv_moves[0][i]; i++) {
-		printf("%s", move_str_pgn(str[i], pos_copy, &(pv_moves[0][i])));
+		move_str_pgn(str[i], pos_copy, &(pv_moves[0][i]));
+		if (!string_to_move(pos_copy, str[i]))
+			break;
+		printf("%s", str[i]);
 		do_move(pos_copy, &(pv_moves[0][i]));
 		if (i != 255 && pv_moves[0][i + 1])
 			printf(" ");
@@ -172,10 +175,22 @@ static inline void store_history_move(struct position *pos, move *m, uint8_t dep
 	history_moves[pos->mailbox[move_from(m)]][move_to(m)] += (uint64_t)1 << depth;
 }
 
-uint64_t evaluate_move(struct position *pos, move *m, uint8_t ply, struct transposition *e, move killer_moves[][2], uint64_t history_moves[13][64]) {
+static inline void store_pv_move(move *m, uint8_t ply, move pv_moves[256][256]) {
+	if (!pv_moves)
+		return;
+	pv_moves[ply][ply] = *m & 0xFFFF;
+	for (int i = ply + 1; i < 256 && pv_moves[ply + 1][i]; i++)
+		pv_moves[ply][i] = pv_moves[ply + 1][i];
+}
+
+uint64_t evaluate_move(struct position *pos, move *m, uint8_t ply, struct transposition *e, move pv_moves[256][256], move killer_moves[][2], uint64_t history_moves[13][64]) {
+	/* pv */
+	if (pv_moves && pv_moves[0][ply] == *m)
+		return 0xFFFFFFFFFFFFFFFF;
+
 	/* transposition table */
 	if (e && *m == transposition_move(e))
-		return 0xFFFFFFFFFFFFFFFF;
+		return 0xFFFFFFFFFFFFFFFE;
 
 	/* attack */
 	if (pos->mailbox[move_to(m)])
@@ -205,11 +220,11 @@ uint64_t evaluate_move(struct position *pos, move *m, uint8_t ply, struct transp
  * 4. killer
  * 5. history
  */
-void evaluate_moves(struct position *pos, move *move_list, uint8_t depth, struct transposition *e, move killer_moves[][2], uint64_t history_moves[13][64]) {
+void evaluate_moves(struct position *pos, move *move_list, uint8_t depth, struct transposition *e, move pv_moves[256][256], move killer_moves[][2], uint64_t history_moves[13][64]) {
 	uint64_t evaluation_list[256];
 	int i;
 	for (i = 0; move_list[i]; i++)
-		evaluation_list[i] = evaluate_move(pos, move_list + i, depth, e, killer_moves, history_moves);
+		evaluation_list[i] = evaluate_move(pos, move_list + i, depth, e, pv_moves, killer_moves, history_moves);
 
 	merge_sort(move_list, evaluation_list, 0, i - 1, 0);
 }
@@ -264,7 +279,7 @@ int16_t quiescence(struct position *pos, int16_t alpha, int16_t beta, clock_t cl
 	if (!move_list[0])
 		return evaluation;
 
-	evaluate_moves(pos, move_list, 0, NULL, NULL, NULL);
+	evaluate_moves(pos, move_list, 0, NULL, NULL, NULL, NULL);
 	for (move *ptr = move_list; *ptr; ptr++) {
 		do_move(pos, ptr);
 		evaluation = -quiescence(pos, -beta, -alpha, clock_stop);
@@ -321,7 +336,7 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int
 		return -0x7F00;
 	}
 
-	evaluate_moves(pos, move_list, depth, e, killer_moves, history_moves);
+	evaluate_moves(pos, move_list, depth, e, pv_moves, killer_moves, history_moves);
 
 	if (pos->halfmove >= 100)
 		return 0;
@@ -351,11 +366,7 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int
 			if (!pos->mailbox[move_to(ptr)])
 				store_history_move(pos, ptr, depth, history_moves);
 			alpha = evaluation;
-			if (pv_moves) {
-				pv_moves[ply][ply] = *ptr & 0xFFFF;
-				for (int i = ply + 1; i < 256 && pv_moves[ply + 1][i]; i++)
-					pv_moves[ply][i] = pv_moves[ply + 1][i];
-			}
+			store_pv_move(ptr, ply, pv_moves);
 			m = *ptr & 0xFFFF;
 		}
 	}
@@ -427,9 +438,7 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int 
 				evaluation = 0;
 			undo_move(pos, move_list + i);
 			if (evaluation > alpha) {
-				pv_moves[0][0] = move_list[i] & 0xFFFF;
-				for (int j = 1; j < 256 && pv_moves[1][j]; j++)
-					pv_moves[0][j] = pv_moves[1][j];
+				store_pv_move(move_list + i, 0, pv_moves);
 				alpha = evaluation;
 			}
 		}
