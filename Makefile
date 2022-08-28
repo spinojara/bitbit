@@ -1,5 +1,5 @@
 MAJOR = 0
-MINOR = 2
+MINOR = 3
 
 CC = cc
 CSTANDARD = -std=c99
