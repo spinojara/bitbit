@@ -33,6 +33,8 @@
 
 uint64_t nodes = 0;
 
+int pv_flag = 0;
+
 uint64_t mvv_lva_lookup[13 * 13];
 
 int eval_table[13][64];
@@ -146,6 +148,7 @@ void print_pv(struct position *pos, move pv_moves[256][256]) {
 			break;
 		printf("%s", str[i]);
 		do_move(pos_copy, &(pv_moves[0][i]));
+		pv_moves[0][i] = pv_moves[0][i] & 0xFFFF;
 		if (i != 255 && pv_moves[0][i + 1])
 			printf(" ");
 	}
@@ -183,9 +186,18 @@ static inline void store_pv_move(move *m, uint8_t ply, move pv_moves[256][256]) 
 		pv_moves[ply][i] = pv_moves[ply + 1][i];
 }
 
+int contains_pv_move(move *move_list, uint8_t ply, move pv_moves[256][256]) {
+	if (!pv_moves)
+		return 0;
+	for (move *ptr = move_list; *ptr; ptr++)
+		if ((*ptr & 0xFFFF) == (pv_moves[0][ply] & 0xFFFF))
+			return 1;
+	return 0;
+}
+
 uint64_t evaluate_move(struct position *pos, move *m, uint8_t ply, struct transposition *e, move pv_moves[256][256], move killer_moves[][2], uint64_t history_moves[13][64]) {
 	/* pv */
-	if (pv_moves && pv_moves[0][ply] == *m)
+	if (pv_flag && pv_moves && (pv_moves[0][ply] & 0xFFFF) == (*m & 0xFFFF))
 		return 0xFFFFFFFFFFFFFFFF;
 
 	/* transposition table */
@@ -319,8 +331,9 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int
 		return quiescence(pos, alpha, beta, clock_stop);
 	}
 
+	/* null move pruning */
 	uint64_t checkers = generate_checkers(pos);
-	if (!null_move && !checkers && depth >= 3 && has_big_piece(pos)) {
+	if (!null_move && !pv_flag && !checkers && depth >= 3 && has_big_piece(pos)) {
 		int t = pos->en_passant;
 		do_null_move(pos, 0);
 		evaluation = -evaluate_recursive(pos, depth - 3, ply + 1, -beta, -beta + 1, 1, clock_stop, NULL, NULL, history_moves);
@@ -337,6 +350,9 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int
 			return 0;
 		return -0x7F00;
 	}
+
+	if (pv_flag && !contains_pv_move(move_list, ply, pv_moves))
+		pv_flag = 0;
 
 	evaluate_moves(pos, move_list, depth, e, pv_moves, killer_moves, history_moves);
 
@@ -430,8 +446,12 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int 
 	int16_t alpha, beta;
 	for (int d = 1; d <= depth; d++) {
 		nodes = 0;
+		pv_flag = 1;
 		alpha = -0x7F00;
 		beta = 0x7F00;
+		
+		evaluate_moves(pos, move_list, 0, NULL, pv_moves, killer_moves, history_moves);
+
 		for (i = 0; move_list[i]; i++) {
 			do_move(pos, move_list + i);
 			evaluation = -evaluate_recursive(pos, d - 1, 1, -beta, -alpha, 0, clock_stop, pv_moves, killer_moves, history_moves);
