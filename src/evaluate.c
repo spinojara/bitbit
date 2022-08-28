@@ -214,11 +214,13 @@ uint64_t evaluate_move(struct position *pos, move *m, uint8_t ply, struct transp
 	return 0;
 }
 
-/* 1. tt move
- * 2. mvv lva
- * 3. promotions
- * 4. killer
- * 5. history
+/* 1. pv
+ * 2. tt
+ * 3. mvv lva winning
+ * 4. promotions
+ * 5. killer
+ * 6. mvv lva losing
+ * 7. history
  */
 void evaluate_moves(struct position *pos, move *move_list, uint8_t depth, struct transposition *e, move pv_moves[256][256], move killer_moves[][2], uint64_t history_moves[13][64]) {
 	uint64_t evaluation_list[256];
