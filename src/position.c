@@ -816,6 +816,16 @@ int pos_are_equal(struct position *pos1, struct position *pos2) {
 	for (int i = 0; i < 64; i++)
 		if (pos1->mailbox[i] != pos2->mailbox[i])
 			return 0;
+	for (int i = 0; i < 7; i++) {
+		if (pos1->white_pieces[i] != pos2->white_pieces[i])
+			return 0;
+		if (pos1->black_pieces[i] != pos2->black_pieces[i])
+			return 0;
+	}
+	if (pos1->pieces != pos2->pieces)
+		return 0;
+	if (pos1->zobrist_key != pos2->zobrist_key)
+		return 0;
 	return 1;
 }
 
@@ -841,4 +851,9 @@ void print_history_pgn(struct history *history) {
 		if (!t->pos->turn)
 			printf("\n");
 	}
+}
+
+int has_big_piece(struct position *pos) {
+	return pos->turn ? pos->white_pieces[knight] || pos->white_pieces[bishop] || pos->white_pieces[rook] || pos->white_pieces[queen] :
+		pos->black_pieces[knight] || pos->black_pieces[bishop] || pos->black_pieces[rook] || pos->black_pieces[queen];
 }

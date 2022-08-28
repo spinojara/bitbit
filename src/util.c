@@ -36,12 +36,6 @@ int rand_int(int i) {
 	return rand() % i;
 }
 
-uint64_t power(uint64_t m, uint64_t n) {
-	if (n == 0)
-		return 1;
-	return m * power(m, n - 1);
-}
-
 uint64_t log_2(uint64_t m) {
 	if (m <= 2)
 		return 1;
@@ -69,22 +63,12 @@ int str_to_int(char *s) {
 	return ret;
 }
 
-void merge_sort(move *arr, int16_t *val, unsigned int first, unsigned int last, int increasing) {
-	if (first < last) {
-		unsigned int middle = (first + last) / 2;
-		merge_sort(arr, val, first, middle, increasing);
-		merge_sort(arr, val, middle + 1, last, increasing);
-		merge(arr, val, first, last, increasing);
-	}
-}
-
-void merge(move *arr, int16_t *val, unsigned int first, unsigned int last, int increasing) {
+void merge(move *arr, uint64_t *val, unsigned int first, unsigned int last, int increasing) {
 	if (!(first < last))
 		return;
 	unsigned int middle = (first + last) / 2;
-	unsigned int length = last - first + 1;
-	move *temp_arr = malloc(length * sizeof(move));
-	int16_t *temp_val = malloc(length * sizeof(int16_t));
+	move temp_arr[256];
+	uint64_t temp_val[256];
 
 	unsigned int i = first, j = middle + 1, k = 0;
 
@@ -121,19 +105,14 @@ void merge(move *arr, int16_t *val, unsigned int first, unsigned int last, int i
 		arr[i + first] = temp_arr[i];
 		val[i + first] = temp_val[i];
 	}
-
-	free(temp_arr);
-	free(temp_val);
 }
 
-void reorder_moves(move *arr, uint16_t m) {
-	for (int i = 0; arr[i]; i++) {
-		if ((arr[i] & 0xFFF) == m) {
-			move t = arr[0];
-			arr[0] = arr[i];
-			arr[i] = t;
-			return;
-		}
+void merge_sort(move *arr, uint64_t *val, unsigned int first, unsigned int last, int increasing) {
+	if (first < last) {
+		unsigned int middle = (first + last) / 2;
+		merge_sort(arr, val, first, middle, increasing);
+		merge_sort(arr, val, middle + 1, last, increasing);
+		merge(arr, val, first, last, increasing);
 	}
 }
 

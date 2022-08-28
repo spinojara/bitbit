@@ -48,11 +48,7 @@ int str_is_int(char *s);
 
 int str_to_int(char *s);
 
-void merge_sort(move *arr, int16_t *val, unsigned int start, unsigned int end, int increasing);
-
-void merge(move *arr, int16_t *val, unsigned int first, unsigned int last, int increasing);
-
-void reorder_moves(move *arr, uint16_t m);
+void merge_sort(move *arr, uint64_t *val, unsigned int first, unsigned int last, int increasing);
 
 void util_init();
 

@@ -272,7 +272,7 @@ void do_move(struct position *pos, move *m) {
 		if (pos->mailbox[source_square] == white_pawn) {
 			pos->mailbox[target_square] = white_pawn;
 			if (source_square + 16 == target_square) {
-				pos->zobrist_key ^= zobrist_en_passant_key(target_square);
+				pos->zobrist_key ^= zobrist_en_passant_key(target_square - 8);
 				pos->en_passant = target_square - 8;
 			}
 			else if (move_flag(m) == 1) {
@@ -344,7 +344,7 @@ void do_move(struct position *pos, move *m) {
 			pos->mailbox[target_square] = black_pawn;
 			if (source_square - 16 == target_square) {
 				pos->en_passant = target_square + 8;
-				pos->zobrist_key ^= zobrist_en_passant_key(target_square);
+				pos->zobrist_key ^= zobrist_en_passant_key(target_square + 8);
 			}
 			else if (move_flag(m) == 1) {
 				pos->white_pieces[pawn] ^= bitboard(target_square + 8);
@@ -558,8 +558,8 @@ char *move_str_pgn(char *str, struct position *pos, move *m) {
 	str[i] = '\0';
 	switch((pos->mailbox[move_from(m)] - 1) % 6) {
 	case 0:
-		if (pos->mailbox[move_to(m)])
-			attackers = rank_calc(move_from(m));
+		if (pos->mailbox[move_to(m)] || move_flag(m) == 1)
+			attackers = rank(move_from(m));
 		break;
 	case 1:
 		str[i++] = 'N';
@@ -594,8 +594,8 @@ char *move_str_pgn(char *str, struct position *pos, move *m) {
 			str[i++] = 'K';
 		}
 	}
-	if (popcount(attackers & file_calc(move_from(m))) > 1) {
-		if (popcount(attackers & rank_calc(move_from(m))) > 1) {
+	if (popcount(attackers & file(move_from(m))) > 1) {
+		if (popcount(attackers & rank(move_from(m))) > 1) {
 			str[i++] = "abcdefgh"[x];
 			str[i++] = "12345678"[y];
 		}
@@ -607,7 +607,7 @@ char *move_str_pgn(char *str, struct position *pos, move *m) {
 		str[i++] = "abcdefgh"[x];
 	}
 
-	if (pos->mailbox[move_to(m)])
+	if (pos->mailbox[move_to(m)] || move_flag(m) == 1)
 		str[i++] = 'x';
 	if (str[0] != 'O') {
 		algebraic(str + i, move_to(m));
@@ -618,11 +618,16 @@ char *move_str_pgn(char *str, struct position *pos, move *m) {
 		str[i++] = '=';
 		str[i++] = "NBRQ"[move_promote(m)];
 	}
-
+	
 	do_move(pos, m);
+	int ma = mate(pos);
 	uint64_t checkers = generate_checkers(pos);
 	undo_move(pos, m);
-	if (checkers)
+	if (ma == 2)
+		str[i++] = '#';
+	else if (ma == 1)
+		str[i++] = '*';
+	else if (checkers)
 		str[i++] = '+';
 	str[i++] = '\0';
 	return str;
@@ -641,4 +646,13 @@ move string_to_move(struct position *pos, char *str) {
 			return *move_ptr;
 	}
 	return 0;
+}
+
+void do_null_move(struct position *pos, int en_passant) {
+	pos->zobrist_key ^= zobrist_en_passant_key(pos->en_passant);
+	pos->zobrist_key ^= zobrist_en_passant_key(en_passant);
+	pos->en_passant = en_passant;
+
+	pos->turn = 1 - pos->turn;
+	pos->zobrist_key ^= zobrist_turn_key();
 }

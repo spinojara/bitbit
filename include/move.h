@@ -68,4 +68,6 @@ char *move_str_pgn(char *str, struct position *pos, move *m);
 
 move string_to_move(struct position *pos, char *str);
 
+void do_null_move(struct position *pos, int en_passant);
+
 #endif

@@ -65,6 +65,16 @@ void move_previous() {
 	free(t);
 }
 
+void delete_history() {
+	while (history) {
+		struct history *t = history;
+		history = history->previous;
+		free(t->move);
+		free(t->pos);
+		free(t);
+	}
+}
+
 int interface_help(struct arg *arg) {
 	UNUSED(arg);
 	printf(
@@ -86,10 +96,13 @@ int interface_help(struct arg *arg) {
 int interface_domove(struct arg *arg) {
 	UNUSED(arg);
 	if (flag(arg, 'f')) {
-		if(!generate_checkers(pos))
-			swap_turn(pos);
-		else
+		if(!generate_checkers(pos)) {
+			delete_history();
+			do_null_move(pos, 0);
+		}
+		else {
 			return ERR_BAD_FLAG;
+		}
 	}
 	else if (flag(arg, 'r')) {
 		if (history) {
@@ -141,14 +154,12 @@ int interface_setpos(struct arg *arg) {
 	UNUSED(arg);
 	if (flag(arg, 'i')) {
 		int ret = interactive_setpos(pos);
-		while(history)
-			move_previous();
+		delete_history();
 		return ret;
 	}
 	else if (flag(arg, 'r')) {
 		random_pos(pos, 32);
-		while (history)
-			move_previous();
+		delete_history();
 	}
 	else if (arg->argc < 2) {
 		return ERR_MISS_ARG;
@@ -156,8 +167,7 @@ int interface_setpos(struct arg *arg) {
 	else {
 		if (fen_is_ok(arg->argc - 1, arg->argv + 1)) {
 			pos_from_fen(pos, arg->argc - 1, arg->argv + 1);
-			while (history)
-				move_previous();
+			delete_history();
 		}
 		else {
 			return ERR_BAD_ARG;
@@ -204,7 +214,7 @@ int interface_eval(struct arg *arg) {
 	}
 	else {
 		if (str_is_int(arg->argv[1]) && str_to_int(arg->argv[1]) >= 0) {
-			move *m = malloc(sizeof(move));
+			move m[1];
 			clock_t t = clock();
 			int16_t eval;
 			if (flag(arg, 'd'))
@@ -220,7 +230,6 @@ int interface_eval(struct arg *arg) {
 				printf("time: %.2f\n", (double)t / CLOCKS_PER_SEC);
 			if (flag(arg, 'm') && *m && interrupt < 2)
 				move_next(*m);
-			free(m);
 		}
 		else {
 			return ERR_BAD_ARG;
@@ -338,7 +347,7 @@ int parse(int *argc, char ***argv) {
 			/* assumes always at start of word */
 			for (; *c && *c != '\n'; c++) {
 				/* flag */
-				if (c[0] == '-' && i != 0 && c[-1] == ' ' && c[1] >= 'a' && c[1] <= 'z') {
+				if (c[0] == '-' && c != line && c[-1] == ' ' && c[1] >= 'a' && c[1] <= 'z') {
 					for (; c[0] && c[0] != ' ' && c[0] != '\n'; c++)
 						arg->flag[(unsigned char)c[0]] = 1;
 				}
@@ -402,6 +411,5 @@ void interface_init() {
 
 void interface_term() {
 	free(pos);
-	while (history)
-		move_previous();
+	delete_history();
 }

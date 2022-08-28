@@ -41,4 +41,8 @@ move *generate_quiescence_white(struct position *pos, move *move_list);
 
 move *generate_quiescence_black(struct position *pos, move *move_list);
 
+int mobility_white(struct position *pos);
+
+int mobility_black(struct position *pos);
+
 #endif
