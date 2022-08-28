@@ -365,8 +365,30 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int
 	uint16_t m = 0;
 	for (move *ptr = move_list; *ptr; ptr++) {
 		do_move(pos, ptr);
-		/* -beta - 1 to open the window and search for mate in n */
-		evaluation = -evaluate_recursive(pos, depth - 1, ply + 1, -beta - 1, -alpha, 0, clock_stop, pv_moves, killer_moves, history_moves);
+		if (ptr == move_list || pv_flag) {
+			/* -beta - 1 to open the window and search for mate in n */
+			evaluation = -evaluate_recursive(pos, depth - 1, ply + 1, -beta - 1, -alpha, 0, clock_stop, pv_moves, killer_moves, history_moves);
+		}
+		else {
+			/* late move reduction */
+			if (depth >= 3 && !checkers && ptr - move_list >= 2 && move_flag(ptr) != 2) {
+				uint8_t r;
+				if (ptr - move_list >= 4)
+					r = depth / 3;
+				else
+					r = 1;
+				r = MIN(r, depth - 1);
+				evaluation = -evaluate_recursive(pos, depth - 1 - r, ply + 1, -alpha - 1, -alpha, 0, clock_stop, pv_moves, killer_moves, history_moves);
+			}
+			else {
+				evaluation = alpha + 1;
+			}
+			if (evaluation > alpha) {
+				evaluation = -evaluate_recursive(pos, depth - 1, ply + 1, -alpha - 1, -alpha, 0, clock_stop, pv_moves, killer_moves, history_moves);
+				if (evaluation > alpha && evaluation < beta)
+					evaluation = -evaluate_recursive(pos, depth - 1, ply + 1, -beta - 1, -alpha, 0, clock_stop, pv_moves, killer_moves, history_moves);
+			}
+		}
 		evaluation -= (evaluation > 0x4000);
 		undo_move(pos, ptr);
 		if (evaluation >= beta) {
@@ -449,7 +471,7 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int 
 		pv_flag = 1;
 		alpha = -0x7F00;
 		beta = 0x7F00;
-		
+
 		evaluate_moves(pos, move_list, 0, NULL, pv_moves, killer_moves, history_moves);
 
 		for (i = 0; move_list[i]; i++) {
