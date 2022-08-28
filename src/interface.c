@@ -65,6 +65,16 @@ void move_previous() {
 	free(t);
 }
 
+void delete_history() {
+	while (history) {
+		struct history *t = history;
+		history = history->previous;
+		free(t->move);
+		free(t->pos);
+		free(t);
+	}
+}
+
 int interface_help(struct arg *arg) {
 	UNUSED(arg);
 	printf(
@@ -86,10 +96,13 @@ int interface_help(struct arg *arg) {
 int interface_domove(struct arg *arg) {
 	UNUSED(arg);
 	if (flag(arg, 'f')) {
-		if(!generate_checkers(pos))
+		if(!generate_checkers(pos)) {
+			delete_history();
 			do_null_move(pos, 0);
-		else
+		}
+		else {
 			return ERR_BAD_FLAG;
+		}
 	}
 	else if (flag(arg, 'r')) {
 		if (history) {
@@ -141,14 +154,12 @@ int interface_setpos(struct arg *arg) {
 	UNUSED(arg);
 	if (flag(arg, 'i')) {
 		int ret = interactive_setpos(pos);
-		while(history)
-			move_previous();
+		delete_history();
 		return ret;
 	}
 	else if (flag(arg, 'r')) {
 		random_pos(pos, 32);
-		while (history)
-			move_previous();
+		delete_history();
 	}
 	else if (arg->argc < 2) {
 		return ERR_MISS_ARG;
@@ -156,8 +167,7 @@ int interface_setpos(struct arg *arg) {
 	else {
 		if (fen_is_ok(arg->argc - 1, arg->argv + 1)) {
 			pos_from_fen(pos, arg->argc - 1, arg->argv + 1);
-			while (history)
-				move_previous();
+			delete_history();
 		}
 		else {
 			return ERR_BAD_ARG;
@@ -404,6 +414,5 @@ void interface_init() {
 
 void interface_term() {
 	free(pos);
-	while (history)
-		move_previous();
+	delete_history();
 }
