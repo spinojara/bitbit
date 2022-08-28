@@ -620,9 +620,14 @@ char *move_str_pgn(char *str, struct position *pos, move *m) {
 	}
 	
 	do_move(pos, m);
+	int ma = mate(pos);
 	uint64_t checkers = generate_checkers(pos);
 	undo_move(pos, m);
-	if (checkers)
+	if (ma == 2)
+		str[i++] = '#';
+	else if (ma == 1)
+		str[i++] = '*';
+	else if (checkers)
 		str[i++] = '+';
 	str[i++] = '\0';
 	return str;
