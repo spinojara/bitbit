@@ -31,7 +31,7 @@
 #include "position.h"
 #include "interrupt.h"
 
-unsigned int nodes = 0;
+uint64_t nodes = 0;
 
 uint64_t mvv_lva_lookup[13 * 13];
 
@@ -135,6 +135,19 @@ void evaluate_init() {
 	}
 }
 
+void print_pv(struct position *pos, move pv_moves[256][256]) {
+	int i;
+	char str[256][8];
+	struct position pos_copy[1];
+	copy_position(pos_copy, pos);
+	for (i = 0; i < 256 && pv_moves[0][i]; i++) {
+		printf("%s", move_str_pgn(str[i], pos_copy, &(pv_moves[0][i])));
+		do_move(pos_copy, &(pv_moves[0][i]));
+		if (i != 255 && pv_moves[0][i + 1])
+			printf(" ");
+	}
+}
+
 int is_threefold(struct position *pos, struct history *history) {
 	int count;
 	struct history *t;
@@ -161,7 +174,7 @@ static inline void store_history_move(struct position *pos, move *m, uint8_t dep
 
 uint64_t evaluate_move(struct position *pos, move *m, uint8_t ply, struct transposition *e, move killer_moves[][2], uint64_t history_moves[13][64]) {
 	/* transposition table */
-	if (e && (*m & 0xFFF) == transposition_move(e))
+	if (e && *m == transposition_move(e))
 		return 0xFFFFFFFFFFFFFFFF;
 
 	/* attack */
@@ -264,7 +277,7 @@ int16_t quiescence(struct position *pos, int16_t alpha, int16_t beta, clock_t cl
 	return alpha;
 }
 
-int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int16_t alpha, int16_t beta, int null_move, clock_t clock_stop, move killer_moves[][2], uint64_t history_moves[13][64]) {
+int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int16_t alpha, int16_t beta, int null_move, clock_t clock_stop, move pv_moves[][256], move killer_moves[][2], uint64_t history_moves[13][64]) {
 	if (interrupt)
 		return 0;
 	if (nodes % 4096 == 0)
@@ -293,7 +306,7 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int
 	if (!null_move && !checkers && depth >= 3 && has_big_piece(pos)) {
 		int t = pos->en_passant;
 		do_null_move(pos, 0);
-		evaluation = -evaluate_recursive(pos, depth - 3, ply + 1, -beta, -beta + 1, 1, clock_stop, NULL, history_moves);
+		evaluation = -evaluate_recursive(pos, depth - 3, ply + 1, -beta, -beta + 1, 1, clock_stop, NULL, NULL, history_moves);
 		do_null_move(pos, t);
 		if (evaluation >= beta)
 			return beta;
@@ -320,7 +333,7 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int
 	for (move *ptr = move_list; *ptr; ptr++) {
 		do_move(pos, ptr);
 		/* -beta - 1 to open the window and search for mate in n */
-		evaluation = -evaluate_recursive(pos, depth - 1, ply + 1, -beta - 1, -alpha, 0, clock_stop, killer_moves, history_moves);
+		evaluation = -evaluate_recursive(pos, depth - 1, ply + 1, -beta - 1, -alpha, 0, clock_stop, pv_moves, killer_moves, history_moves);
 		evaluation -= (evaluation > 0x4000);
 		undo_move(pos, ptr);
 		if (evaluation >= beta) {
@@ -338,7 +351,12 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int
 			if (!pos->mailbox[move_to(ptr)])
 				store_history_move(pos, ptr, depth, history_moves);
 			alpha = evaluation;
-			m = *ptr;
+			if (pv_moves) {
+				pv_moves[ply][ply] = *ptr & 0xFFFF;
+				for (int i = ply + 1; i < 256 && pv_moves[ply + 1][i]; i++)
+					pv_moves[ply][i] = pv_moves[ply + 1][i];
+			}
+			m = *ptr & 0xFFFF;
 		}
 	}
 	if (e)
@@ -364,10 +382,10 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int 
 			evaluation = pos->turn ? -0x7F00 : 0x7F00;
 		if (verbose) {
 			if (evaluation)
-				printf("\33[2K[%i/%i] %cm\n", depth, depth,
+				printf("%i %cm\n", depth,
 						pos->turn ? '-' : '+');
 			else
-				printf("\33[2K[%i/%i] s\n", depth, depth);
+				printf("%i s\n", depth);
 		}
 		return evaluation;
 	}
@@ -377,7 +395,7 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int 
 		if (!pos->turn)
 			evaluation = -evaluation;
 		if (verbose)
-			printf("\33[2K[0/0] %+.2f\n", (double)evaluation / 100);
+			printf("0 %+.2f\n", (double)evaluation / 100);
 		return evaluation;
 	}
 
@@ -387,14 +405,14 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int 
 	else
 		clock_stop = 0;
 
-	move killer_moves[depth][2];
+	move pv_moves[256][256];
+	move killer_moves[256][2];
 	uint64_t history_moves[13][64];
+	memset(pv_moves, 0, sizeof(pv_moves));
 	memset(killer_moves, 0, sizeof(killer_moves));
 	memset(history_moves, 0, sizeof(history_moves));
 
-	move best_move = 0;
 	saved_evaluation = 0;
-	char str[8];
 	int i;
 	int16_t alpha, beta;
 	for (int d = 1; d <= depth; d++) {
@@ -403,13 +421,17 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int 
 		beta = 0x7F00;
 		for (i = 0; move_list[i]; i++) {
 			do_move(pos, move_list + i);
-			evaluation = -evaluate_recursive(pos, d - 1, 1, -beta, -alpha, 0, clock_stop, killer_moves, history_moves);
+			evaluation = -evaluate_recursive(pos, d - 1, 1, -beta, -alpha, 0, clock_stop, pv_moves, killer_moves, history_moves);
 			evaluation -= (evaluation > 0x4000);
 			if (is_threefold(pos, history))
 				evaluation = 0;
 			undo_move(pos, move_list + i);
-			if (evaluation > alpha)
-				alpha = evaluation, best_move = move_list[i];
+			if (evaluation > alpha) {
+				pv_moves[0][0] = move_list[i] & 0xFFFF;
+				for (int j = 1; j < 256 && pv_moves[1][j]; j++)
+					pv_moves[0][j] = pv_moves[1][j];
+				alpha = evaluation;
+			}
 		}
 		if (interrupt)
 			break;
@@ -417,23 +439,23 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int 
 		saved_evaluation = evaluation;
 		if (verbose) {
 			if (evaluation < -0x4000)
-				printf("\r\33[2K[%i/%i] -m%i ", d, depth, 0x7F00 + evaluation);
+				printf("%i -m%i", d, 0x7F00 + evaluation);
 			else if (evaluation > 0x4000)
-				printf("\r\33[2K[%i/%i] +m%i ", d, depth, 0x7F00 - evaluation);
+				printf("%i +m%i", d, 0x7F00 - evaluation);
 			else
-				printf("\r\33[2K[%i/%i] %+.2f ", d, depth, (double)evaluation / 100);
-			printf("%s %i\r", move_str_pgn(str, pos, &best_move), nodes);
+				printf("%i %+.2f", d, (double)evaluation / 100);
+			printf(" nodes %" PRIu64 " pv ", nodes);
+			print_pv(pos, pv_moves);
+			printf("\n");
 			fflush(stdout);
 		}
-		*m = best_move;
+		if (m)
+			*m = pv_moves[0][0];
 		/* stop searching if mate is found */
 		if (evaluation < -0x4000 && 2 * (0x7F00 + evaluation) + pos->turn - 1 <= d)
 			break;
 		if (evaluation > 0x4000 && 2 * (0x7F00 - evaluation) - pos->turn <= d)
 			break;
 	}
-
-	if (verbose)
-		printf("\n");
 	return saved_evaluation;
 }
