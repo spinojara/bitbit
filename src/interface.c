@@ -87,7 +87,7 @@ int interface_domove(struct arg *arg) {
 	UNUSED(arg);
 	if (flag(arg, 'f')) {
 		if(!generate_checkers(pos))
-			swap_turn(pos);
+			do_null_move(pos, 0);
 		else
 			return ERR_BAD_FLAG;
 	}

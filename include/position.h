@@ -92,4 +92,6 @@ struct history;
 
 void print_history_pgn(struct history *history);
 
+int has_big_piece(struct position *pos);
+
 #endif

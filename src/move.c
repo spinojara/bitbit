@@ -642,3 +642,12 @@ move string_to_move(struct position *pos, char *str) {
 	}
 	return 0;
 }
+
+void do_null_move(struct position *pos, int en_passant) {
+	pos->zobrist_key ^= zobrist_en_passant_key(pos->en_passant);
+	pos->zobrist_key ^= zobrist_en_passant_key(en_passant);
+	pos->en_passant = en_passant;
+
+	pos->turn = 1 - pos->turn;
+	pos->zobrist_key ^= zobrist_turn_key();
+}
