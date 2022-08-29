@@ -251,10 +251,10 @@ int pawn_structure(struct position *pos) {
 	for (i = 0; i < 8; i++) {
 		if ((t = pos->white_pieces[pawn] & file(i)))
 			if (popcount(t) > 1)
-				eval -= 70;
+				eval -= 40;
 		if ((t = pos->black_pieces[pawn] & file(i)))
 			if (popcount(t) > 1)
-				eval += 70;
+				eval += 40;
 	}
 
 	/* isolated pawns */
