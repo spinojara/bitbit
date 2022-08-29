@@ -22,10 +22,14 @@
 #include "magic_bitboard.h"
 #include "attack_gen.h"
 #include "init.h"
+#include "position.h"
 
 uint64_t between_lookup[64 * 64];
 uint64_t line_lookup[64 * 64];
 uint64_t file_lookup[64];
+uint64_t adjacent_files_lookup[64];
+uint64_t passed_files_white_lookup[64];
+uint64_t passed_files_black_lookup[64];
 uint64_t rank_lookup[64];
 int castle_lookup[64 * 64 * 16];
 
@@ -48,6 +52,8 @@ void print_bitboard(uint64_t b) {
 }
 
 uint64_t between_calc(int x, int y) {
+	if (x == y)
+		return 0;
 	int a_x = x % 8;
 	int b_x = x / 8;
 	int a_y = y % 8;
@@ -62,6 +68,8 @@ uint64_t between_calc(int x, int y) {
 }
 
 uint64_t line_calc(int x, int y) {
+	if (x == y)
+		return 0;
 	if (x % 8 == y % 8 || x / 8 == y / 8) {
 		return rook_full_mask[x] & rook_full_mask[y];
 	}
@@ -115,6 +123,41 @@ uint64_t file_calc(int square) {
 	return ret;
 }
 
+uint64_t adjacent_files_calc(int square) {
+	uint64_t r = 0;
+	int x = square % 8;
+	
+	if (x > 0)
+		r |= line_calc(x - 1, x + 7) | bitboard(x - 1) | bitboard(x + 7);
+	if (x < 7)
+		r |= line_calc(x + 1, x + 9) | bitboard(x + 1) | bitboard(x + 9);
+	return r;
+}
+
+uint64_t passed_files_white_calc(int square) {
+	uint64_t r = 0;
+	int x = square % 8;
+	
+	if (x > 0)
+		r |= between_calc(square - 1, 55 + x);
+	r |= between_calc(square, 56 + x);
+	if (x < 7)
+		r |= between_calc(square + 1, 57 + x);
+	return r;
+}
+
+uint64_t passed_files_black_calc(int square) {
+	uint64_t r = 0;
+	int x = square % 8;
+	
+	if (x > 0)
+		r |= between_calc(square - 1, x - 1);
+	r |= between_calc(square, x);
+	if (x < 7)
+		r |= between_calc(square + 1, x + 1);
+	return r;
+}
+
 uint64_t rank_calc(int square) {
 	int y = square / 8;
 	uint64_t ret = RANK_1;
@@ -128,6 +171,9 @@ void bitboard_init() {
 	for (int i = 0; i < 64; i++) {
 		file_lookup[i] = file_calc(i);
 		rank_lookup[i] = rank_calc(i);
+		adjacent_files_lookup[i] = adjacent_files_calc(i);
+		passed_files_white_lookup[i] = passed_files_white_calc(i);
+		passed_files_black_lookup[i] = passed_files_black_calc(i);
 		for (int j = 0; j < 64; j++) {
 			between_lookup[i + 64 * j] = between_calc(i, j);
 			line_lookup[i + 64 * j] = line_calc(i, j);

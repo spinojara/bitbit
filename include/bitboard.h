@@ -89,6 +89,9 @@ static inline uint64_t insert_zero(uint64_t b, int i) {
 extern uint64_t between_lookup[64 * 64];
 extern uint64_t line_lookup[64 * 64];
 extern uint64_t file_lookup[64];
+extern uint64_t adjacent_files_lookup[64];
+extern uint64_t passed_files_white_lookup[64];
+extern uint64_t passed_files_black_lookup[64];
 extern uint64_t rank_lookup[64];
 extern int castle_lookup[64 * 64 * 16];
 
@@ -106,6 +109,18 @@ static inline uint64_t file(int square) {
 
 static inline uint64_t rank(int square) {
 	return rank_lookup[square];
+}
+
+static inline uint64_t adjacent_files(int square) {
+	return adjacent_files_lookup[square];
+}
+
+static inline uint64_t passed_files_white(int square) {
+	return passed_files_white_lookup[square];
+}
+
+static inline uint64_t passed_files_black(int square) {
+	return passed_files_black_lookup[square];
 }
 
 static inline int castle(int source_square, int target_square, int castle) {

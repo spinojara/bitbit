@@ -258,8 +258,36 @@ int pawn_structure(struct position *pos) {
 	}
 
 	/* isolated pawns */
+	for (i = 0; i < 8; i++) {
+		if ((pos->white_pieces[pawn] & file(i)) &&
+				!(pos->white_pieces[pawn] & adjacent_files(i)))
+			eval -= 25;
+		if ((pos->black_pieces[pawn] & file(i)) &&
+				!(pos->black_pieces[pawn] & adjacent_files(i)))
+			eval += 25;
+	}
 
 	/* passed pawns */
+	int square;
+	uint64_t b;
+	for (i = 0; i < 8; i++) {
+		/* asymetric because of bit scan */
+		b = pos->white_pieces[pawn] & file(i);
+		if (b) {
+			while (b) {
+				square = ctz(b);
+				b = clear_ls1b(b);
+			}
+			if (!(pos->black_pieces[pawn] & passed_files_white(square)))
+				eval += 20 * (square / 8);
+		}
+		b = pos->black_pieces[pawn] & file(i);
+		if (b) {
+			square = ctz(b);
+			if (!(pos->white_pieces[pawn] & passed_files_black(square)))
+				eval -= 20 * (7 - square / 8);
+		}
+	}
 
 	return eval;
 }
