@@ -371,14 +371,9 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int
 		}
 		else {
 			/* late move reduction */
-			if (depth >= 3 && !checkers && ptr - move_list >= 2 && move_flag(ptr) != 2) {
-				uint8_t r;
-				if (ptr - move_list >= 4)
-					r = depth / 3;
-				else
-					r = 1;
-				r = MIN(r, depth - 1);
-				evaluation = -evaluate_recursive(pos, depth - 1 - r, ply + 1, -alpha - 1, -alpha, 0, clock_stop, pv_moves, killer_moves, history_moves);
+			if (depth >= 3 && !checkers && ptr - move_list >= 3 && move_flag(ptr) != 2 && !move_capture(ptr)) {
+				uint8_t r = ptr - move_list >= 4 ? depth / 3 : 1;
+				evaluation = -evaluate_recursive(pos, depth - 1 - MIN(r, depth - 1), ply + 1, -alpha - 1, -alpha, 0, clock_stop, pv_moves, killer_moves, history_moves);
 			}
 			else {
 				evaluation = alpha + 1;
