@@ -32,7 +32,7 @@ static inline uint64_t popcount(uint64_t b) {
 }
 #elif _MSC_VER
 #include <intrin.h>
-#if 0
+#if _WIN64
 static inline uint64_t ctz(uint64_t b) {
 	unsigned long ret;
 	_BitScanForward64(&ret, b);
