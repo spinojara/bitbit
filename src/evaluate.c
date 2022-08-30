@@ -430,13 +430,13 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int
 				store_history_move(pos, ptr, depth, history_moves);
 			alpha = evaluation;
 			store_pv_move(ptr, ply, pv_moves);
-			m = *ptr & 0xFFFF;
+			m = *ptr;
 		}
 	}
 	if (e)
 		transposition_set_closed(e);
 	/* type pv or all */
-	attempt_store(pos, alpha, depth, m ? 0 : 2, m);
+	attempt_store(pos, alpha, depth, m ? 0 : 2, m & 0xFFFF);
 	return alpha;
 }
 
