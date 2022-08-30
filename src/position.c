@@ -854,6 +854,6 @@ void print_history_pgn(struct history *history) {
 }
 
 int has_big_piece(struct position *pos) {
-	return pos->turn ? pos->white_pieces[knight] || pos->white_pieces[bishop] || pos->white_pieces[rook] || pos->white_pieces[queen] :
-		pos->black_pieces[knight] || pos->black_pieces[bishop] || pos->black_pieces[rook] || pos->black_pieces[queen];
+	return pos->turn ? pos->white_pieces[bishop] || pos->white_pieces[rook] || pos->white_pieces[queen] :
+		pos->black_pieces[bishop] || pos->black_pieces[rook] || pos->black_pieces[queen];
 }
