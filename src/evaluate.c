@@ -42,7 +42,7 @@ int eval_table[2][13][64];
 int piece_value[13] = { 0, 100, 300, 315, 500, 900, 0, -100, -300, -315, -500, -900, 0 };
 
 /* <https://www.chessprogramming.org/Simplified_Evaluation_Function> */
-int white_side_eval_table[2][6][64] = { {
+int white_side_eval_table[2][6][64] = { { /* early game */
 	{
 		  0,   0,   0,   0,   0,   0,   0,   0,
 		 50,  50,  50,  50,  50,  50,  50,  50,
@@ -97,7 +97,7 @@ int white_side_eval_table[2][6][64] = { {
 		-10, -20, -20, -20, -20, -20, -20, -10,
 		 20,  20,   0,   0,   0,   0,  20,  20,
 		 20,  30,  10,   0,   0,  10,  30,  20
-	} }, { {
+	} }, /* end game */ { {
 		  0,   0,   0,   0,   0,   0,   0,   0,
 		 50,  50,  50,  50,  50,  50,  50,  50,
 		 10,  10,  20,  30,  30,  20,  10,  10,
@@ -238,8 +238,7 @@ static inline void store_pv_move(move *m, uint8_t ply, move pv_moves[256][256]) 
 	if (!pv_moves)
 		return;
 	pv_moves[ply][ply] = *m & 0xFFFF;
-	for (int i = ply + 1; i < 256 && pv_moves[ply + 1][i]; i++)
-		pv_moves[ply][i] = pv_moves[ply + 1][i];
+	memcpy(pv_moves[ply] + ply + 1, pv_moves[ply + 1] + ply + 1, sizeof(move) * (255 - ply));
 }
 
 int contains_pv_move(move *move_list, uint8_t ply, move pv_moves[256][256]) {
@@ -349,7 +348,25 @@ int pawn_structure(struct position *pos) {
 }
 
 int king_safety(struct position *pos) {
-	return 0;
+	int king_square;
+	int eval = 0;
+	/* half open files near king is bad */
+	king_square = ctz(pos->white_pieces[king]);
+	if (file_left(king_square) && !(file_left(king_square) & pos->white_pieces[pawn]))
+		eval -= 30;
+	if (!(file(king_square) & pos->white_pieces[pawn]))
+		eval -= 30;
+	if (file_right(king_square) && !(file_right(king_square) & pos->white_pieces[pawn]))
+		eval -= 30;
+
+	king_square = ctz(pos->black_pieces[king]);
+	if (file_left(king_square) && !(file_left(king_square) & pos->black_pieces[pawn]))
+		eval += 30;
+	if (!(file(king_square) & pos->black_pieces[pawn]))
+		eval += 30;
+	if (file_right(king_square) && !(file_right(king_square) & pos->black_pieces[pawn]))
+		eval += 30;
+	return eval;
 }
 
 int16_t evaluate_static(struct position *pos) {

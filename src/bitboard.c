@@ -27,10 +27,12 @@
 uint64_t between_lookup[64 * 64];
 uint64_t line_lookup[64 * 64];
 uint64_t file_lookup[64];
+uint64_t rank_lookup[64];
+uint64_t file_left_lookup[64];
+uint64_t file_right_lookup[64];
 uint64_t adjacent_files_lookup[64];
 uint64_t passed_files_white_lookup[64];
 uint64_t passed_files_black_lookup[64];
-uint64_t rank_lookup[64];
 int castle_lookup[64 * 64 * 16];
 
 void print_bitboard(uint64_t b) {
@@ -123,6 +125,29 @@ uint64_t file_calc(int square) {
 	return ret;
 }
 
+uint64_t rank_calc(int square) {
+	int y = square / 8;
+	uint64_t ret = RANK_1;
+
+	for (int i = 0; i < y; i++)
+		ret = shift_north(ret);
+	return ret;
+}
+
+uint64_t file_left_calc(int square) {
+	int x = square % 8;
+	if (x == 0)
+		return 0;
+	return file_calc(square - 1);
+}
+
+uint64_t file_right_calc(int square) {
+	int x = square % 8;
+	if (x == 7)
+		return 0;
+	return file_calc(square + 1);
+}
+
 uint64_t adjacent_files_calc(int square) {
 	uint64_t r = 0;
 	int x = square % 8;
@@ -158,19 +183,12 @@ uint64_t passed_files_black_calc(int square) {
 	return r;
 }
 
-uint64_t rank_calc(int square) {
-	int y = square / 8;
-	uint64_t ret = RANK_1;
-
-	for (int i = 0; i < y; i++)
-		ret = shift_north(ret);
-	return ret;
-}
-
 void bitboard_init() {
 	for (int i = 0; i < 64; i++) {
 		file_lookup[i] = file_calc(i);
 		rank_lookup[i] = rank_calc(i);
+		file_left_lookup[i] = file_left_calc(i);
+		file_right_lookup[i] = file_right_calc(i);
 		adjacent_files_lookup[i] = adjacent_files_calc(i);
 		passed_files_white_lookup[i] = passed_files_white_calc(i);
 		passed_files_black_lookup[i] = passed_files_black_calc(i);
