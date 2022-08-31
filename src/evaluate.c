@@ -37,11 +37,12 @@ int pv_flag = 0;
 
 uint64_t mvv_lva_lookup[13 * 13];
 
-int eval_table[13][64];
+int eval_table[2][13][64];
 
 int piece_value[13] = { 0, 100, 300, 315, 500, 900, 0, -100, -300, -315, -500, -900, 0 };
 
-int white_side_eval_table[6][64] = {
+/* <https://www.chessprogramming.org/Simplified_Evaluation_Function> */
+int white_side_eval_table[2][6][64] = { { /* early game */
 	{
 		  0,   0,   0,   0,   0,   0,   0,   0,
 		 50,  50,  50,  50,  50,  50,  50,  50,
@@ -96,8 +97,61 @@ int white_side_eval_table[6][64] = {
 		-10, -20, -20, -20, -20, -20, -20, -10,
 		 20,  20,   0,   0,   0,   0,  20,  20,
 		 20,  30,  10,   0,   0,  10,  30,  20
-	}
-
+	} }, /* end game */ { {
+		  0,   0,   0,   0,   0,   0,   0,   0,
+		 50,  50,  50,  50,  50,  50,  50,  50,
+		 10,  10,  20,  30,  30,  20,  10,  10,
+		  5,   5,  10,  25,  25,  10,   5,   5,
+		  0,   0,   0,  20,  20,   0,   0,   0,
+		  5,  -5, -10,   0,   0, -10,  -5,   5,
+		  5,  10,  10, -20, -20,  10,  10,   5,
+		  0,   0,   0,   0,   0,   0,   0,   0
+	}, {
+		-50, -40, -30, -30, -30, -30, -40, -50,
+		-40, -20,   0,   0,   0,   0, -20, -40,
+		-30,   0,  10,  15,  15,  10,   0, -30,
+		-30,   5,  15,  20,  20,  15,   5, -30,
+		-30,   0,  15,  20,  20,  15,   0, -30,
+		-30,   5,  10,  15,  15,  10,   5, -30,
+		-40, -20,   0,   5,   5,   0, -20, -40,
+		-50, -40, -30, -30, -30, -30, -40, -50
+	}, {
+		-20, -10, -10, -10, -10, -10, -10, -20,
+		-10,   0,   0,   0,   0,   0,   0, -10,
+		-10,   0,   5,  10,  10,   5,   0, -10,
+		-10,   5,   5,  10,  10,   5,   5, -10,
+		-10,   0,  10,  10,  10,  10,   0, -10,
+		-10,  10,  10,  10,  10,  10,  10, -10,
+		-10,   5,   0,   0,   0,   0,   5, -10,
+		-20, -10, -10, -10, -10, -10, -10, -20
+	}, {
+		  0,   0,   0,   0,   0,   0,   0,   0,
+		  5,  10,  10,  10,  10,  10,  10,   5,
+		 -5,   0,   0,   0,   0,   0,   0,  -5,
+		 -5,   0,   0,   0,   0,   0,   0,  -5,
+		 -5,   0,   0,   0,   0,   0,   0,  -5,
+		 -5,   0,   0,   0,   0,   0,   0,  -5,
+		 -5,   0,   0,   0,   0,   0,   0,  -5,
+		  0,   0,   0,   5,   5,   0,   0,   0
+	}, {
+		-20, -10, -10,  -5,  -5, -10, -10, -20,
+		-10,   0,   0,   0,   0,   0,   0, -10,
+		-10,   0,   5,   5,   5,   5,   0, -10,
+		 -5,   0,   5,   5,   5,   5,   0,  -5,
+		  0,   0,   5,   5,   5,   5,   0,  -5,
+		-10,   5,   5,   5,   5,   5,   0, -10,
+		-10,   0,   5,   0,   0,   0,   0, -10,
+		-20, -10, -10,  -5,  -5, -10, -10, -20
+	}, {
+		-50, -40, -30, -20, -20, -30, -40, -50,
+		-30, -20, -10,   0,   0, -10, -20, -30,
+		-30, -10,  20,  30,  30,  20, -10, -30,
+		-30, -10,  30,  40,  40,  30, -10, -30,
+		-30, -10,  30,  40,  40,  30, -10, -30,
+		-30, -10,  20,  30,  30,  20, -10, -30,
+		-30, -30,   0,   0,   0,   0, -30, -30,
+		-50, -30, -30, -30, -30, -30, -30, -50
+	} }
 };
 
 uint64_t mvv_lva_calc(int attacker, int victim) {
@@ -117,18 +171,20 @@ uint64_t mvv_lva_calc(int attacker, int victim) {
 }
 
 void evaluate_init() {
+	memset(eval_table, 0, sizeof(eval_table));
 	for (int i = 0; i < 13; i++) {
 		for (int j  = 0; j < 64; j++) {
-			if (i == 0)
-				eval_table[i][j] = 0;
-			else if (i < 7) {
-				eval_table[i][j] = white_side_eval_table[i - 1][(7 - j / 8) * 8 + (j % 8)] +
-					           piece_value[i];
+			for (int k = 0; k < 2; k++) {
+				if (i == 0)
+					eval_table[k][i][j] = 0;
+				else if (i < 7)
+					eval_table[k][i][j] = white_side_eval_table[k][i - 1][(7 - j / 8) * 8 + (j % 8)] +
+						           piece_value[i];
+				else
+					eval_table[k][i][j] = -white_side_eval_table[k][i - 7][j] +
+							   piece_value[i];
+				init_status("populating evaluation lookup table");
 			}
-			else
-				eval_table[i][j] = -white_side_eval_table[i - 7][j] +
-						   piece_value[i];
-			init_status("populating evaluation lookup table");
 		}
 		for (int j = 0; j < 13; j++) {
 			mvv_lva_lookup[j + 13 * i] = mvv_lva_calc(i, j);
@@ -182,8 +238,7 @@ static inline void store_pv_move(move *m, uint8_t ply, move pv_moves[256][256]) 
 	if (!pv_moves)
 		return;
 	pv_moves[ply][ply] = *m & 0xFFFF;
-	for (int i = ply + 1; i < 256 && pv_moves[ply + 1][i]; i++)
-		pv_moves[ply][i] = pv_moves[ply + 1][i];
+	memcpy(pv_moves[ply] + ply + 1, pv_moves[ply + 1] + ply + 1, sizeof(move) * (255 - ply));
 }
 
 int contains_pv_move(move *move_list, uint8_t ply, move pv_moves[256][256]) {
@@ -251,26 +306,100 @@ int pawn_structure(struct position *pos) {
 	for (i = 0; i < 8; i++) {
 		if ((t = pos->white_pieces[pawn] & file(i)))
 			if (popcount(t) > 1)
-				eval -= 70;
+				eval -= 40;
 		if ((t = pos->black_pieces[pawn] & file(i)))
 			if (popcount(t) > 1)
-				eval += 70;
+				eval += 40;
 	}
 
 	/* isolated pawns */
+	for (i = 0; i < 8; i++) {
+		if ((pos->white_pieces[pawn] & file(i)) &&
+				!(pos->white_pieces[pawn] & adjacent_files(i)))
+			eval -= 25;
+		if ((pos->black_pieces[pawn] & file(i)) &&
+				!(pos->black_pieces[pawn] & adjacent_files(i)))
+			eval += 25;
+	}
 
 	/* passed pawns */
+	int square;
+	uint64_t b;
+	for (i = 0; i < 8; i++) {
+		/* asymetric because of bit scan */
+		b = pos->white_pieces[pawn] & file(i);
+		if (b) {
+			while (b) {
+				square = ctz(b);
+				b = clear_ls1b(b);
+			}
+			if (!(pos->black_pieces[pawn] & passed_files_white(square)))
+				eval += 20 * (square / 8);
+		}
+		b = pos->black_pieces[pawn] & file(i);
+		if (b) {
+			square = ctz(b);
+			if (!(pos->white_pieces[pawn] & passed_files_black(square)))
+				eval -= 20 * (7 - square / 8);
+		}
+	}
 
 	return eval;
 }
 
-int16_t count_position(struct position *pos) {
+int king_safety(struct position *pos) {
+	int king_square;
+	int eval = 0;
+	/* half open files near king is bad */
+	king_square = ctz(pos->white_pieces[king]);
+	if (file_left(king_square) && !(file_left(king_square) & pos->white_pieces[pawn]))
+		eval -= 30;
+	if (!(file(king_square) & pos->white_pieces[pawn]))
+		eval -= 30;
+	if (file_right(king_square) && !(file_right(king_square) & pos->white_pieces[pawn]))
+		eval -= 30;
+
+	king_square = ctz(pos->black_pieces[king]);
+	if (file_left(king_square) && !(file_left(king_square) & pos->black_pieces[pawn]))
+		eval += 30;
+	if (!(file(king_square) & pos->black_pieces[pawn]))
+		eval += 30;
+	if (file_right(king_square) && !(file_right(king_square) & pos->black_pieces[pawn]))
+		eval += 30;
+	return eval;
+}
+
+int16_t evaluate_static(struct position *pos) {
 	nodes++;
 	int eval = 0, i;
+	int total_piece_count[] = { 0, 0, 3, 3, 5, 9, 0, 0, 3, 3, 5, 9, 0 };
+
+	double early_game = 0;
 	for (i = 0; i < 64; i++)
-		eval += eval_table[pos->mailbox[i]][i];
-	eval += 3 * (mobility_white(pos) - mobility_black(pos)) / 2;
+		early_game += total_piece_count[pos->mailbox[i]];
+	early_game = MIN(early_game / 40, 1);
+
+	/* piece square tables */
+	for (i = 0; i < 64; i++)
+		eval += early_game * eval_table[0][pos->mailbox[i]][i] + (1 - early_game) * eval_table[1][pos->mailbox[i]][i];
+	/* encourage trading when ahead, discourage when behind */
+	eval *= 0.99 + 0.01 / (early_game + 0.1);
+
+	/* bishop pair */
+	if (pos->white_pieces[bishop] && clear_ls1b(pos->white_pieces[bishop]))
+		eval += 30;
+	if (pos->black_pieces[bishop] && clear_ls1b(pos->black_pieces[bishop]))
+		eval -= 30;
+
+	/* king safety */
+	eval += early_game * king_safety(pos);
+
+	/* piece mobility */
+	eval += 1.5 * (mobility_white(pos) - mobility_black(pos));
+
+	/* pawn structure */
 	eval += pawn_structure(pos);
+
 	return pos->turn ? eval : -eval;
 }
 
@@ -282,7 +411,7 @@ int16_t quiescence(struct position *pos, int16_t alpha, int16_t beta, clock_t cl
 			interrupt = 1;
 
 	int16_t evaluation;
-	evaluation = count_position(pos);
+	evaluation = evaluate_static(pos);
 	if (evaluation >= beta)
 		return beta;
 	if (evaluation > alpha)
@@ -316,8 +445,14 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int
 	struct transposition *e = attempt_get(pos);
 	if (e && transposition_open(e))
 		return 0;
-	if (e && transposition_depth(e) >= depth && transposition_type(e) == 0)
-		return transposition_evaluation(e);
+	if (e && transposition_depth(e) >= depth) {
+		if (transposition_type(e) == 0)
+			return transposition_evaluation(e);
+		else if (transposition_type(e) == 1)
+			alpha = transposition_evaluation(e);
+		else
+			beta = transposition_evaluation(e);
+	}
 
 	int16_t evaluation;
 	if (depth <= 0) {
@@ -365,8 +500,25 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int
 	uint16_t m = 0;
 	for (move *ptr = move_list; *ptr; ptr++) {
 		do_move(pos, ptr);
-		/* -beta - 1 to open the window and search for mate in n */
-		evaluation = -evaluate_recursive(pos, depth - 1, ply + 1, -beta - 1, -alpha, 0, clock_stop, pv_moves, killer_moves, history_moves);
+		if (ptr == move_list || pv_flag) {
+			/* -beta - 1 to open the window and search for mate in n */
+			evaluation = -evaluate_recursive(pos, depth - 1, ply + 1, -beta - 1, -alpha, 0, clock_stop, pv_moves, killer_moves, history_moves);
+		}
+		else {
+			/* late move reduction */
+			if (depth >= 3 && !checkers && ptr - move_list >= 3 && move_flag(ptr) != 2 && !move_capture(ptr)) {
+				uint8_t r = ptr - move_list >= 4 ? depth / 3 : 1;
+				evaluation = -evaluate_recursive(pos, depth - 1 - MIN(r, depth - 1), ply + 1, -alpha - 1, -alpha, 0, clock_stop, pv_moves, killer_moves, history_moves);
+			}
+			else {
+				evaluation = alpha + 1;
+			}
+			if (evaluation > alpha) {
+				evaluation = -evaluate_recursive(pos, depth - 1, ply + 1, -alpha - 1, -alpha, 0, clock_stop, pv_moves, killer_moves, history_moves);
+				if (evaluation > alpha && evaluation < beta)
+					evaluation = -evaluate_recursive(pos, depth - 1, ply + 1, -beta - 1, -alpha, 0, clock_stop, pv_moves, killer_moves, history_moves);
+			}
+		}
 		evaluation -= (evaluation > 0x4000);
 		undo_move(pos, ptr);
 		if (evaluation >= beta) {
@@ -385,13 +537,13 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int
 				store_history_move(pos, ptr, depth, history_moves);
 			alpha = evaluation;
 			store_pv_move(ptr, ply, pv_moves);
-			m = *ptr & 0xFFFF;
+			m = *ptr;
 		}
 	}
 	if (e)
 		transposition_set_closed(e);
 	/* type pv or all */
-	attempt_store(pos, alpha, depth, m ? 0 : 2, m);
+	attempt_store(pos, alpha, depth, m ? 0 : 2, m & 0xFFFF);
 	return alpha;
 }
 
@@ -411,16 +563,15 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int 
 			evaluation = pos->turn ? -0x7F00 : 0x7F00;
 		if (verbose) {
 			if (evaluation)
-				printf("%i %cm\n", depth,
-						pos->turn ? '-' : '+');
+				printf("%c#\n", pos->turn ? '-' : '+');
 			else
-				printf("%i s\n", depth);
+				printf("=\n");
 		}
 		return evaluation;
 	}
 
 	if (depth == 0) {
-		evaluation = count_position(pos);
+		evaluation = evaluate_static(pos);
 		if (!pos->turn)
 			evaluation = -evaluation;
 		if (verbose)
@@ -442,25 +593,24 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int 
 	memset(history_moves, 0, sizeof(history_moves));
 
 	saved_evaluation = 0;
-	int i;
 	int16_t alpha, beta;
 	for (int d = 1; d <= depth; d++) {
 		nodes = 0;
 		pv_flag = 1;
 		alpha = -0x7F00;
 		beta = 0x7F00;
-		
+
 		evaluate_moves(pos, move_list, 0, NULL, pv_moves, killer_moves, history_moves);
 
-		for (i = 0; move_list[i]; i++) {
-			do_move(pos, move_list + i);
+		for (move *ptr = move_list; *ptr; ptr++) {
+			do_move(pos, ptr);
 			evaluation = -evaluate_recursive(pos, d - 1, 1, -beta, -alpha, 0, clock_stop, pv_moves, killer_moves, history_moves);
 			evaluation -= (evaluation > 0x4000);
 			if (is_threefold(pos, history))
 				evaluation = 0;
-			undo_move(pos, move_list + i);
+			undo_move(pos, ptr);
 			if (evaluation > alpha) {
-				store_pv_move(move_list + i, 0, pv_moves);
+				store_pv_move(ptr, 0, pv_moves);
 				alpha = evaluation;
 			}
 		}
