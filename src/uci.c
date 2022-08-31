@@ -29,7 +29,7 @@
 #include "transposition_table.h"
 #include "interface.h"
 
-int main() {
+int main(int argc, char **argv) {
 	setbuf(stdin, NULL);
 	setbuf(stdout, NULL);
 
@@ -100,7 +100,9 @@ int main() {
 		else if (strncmp(line, "go", 2) == 0) {
 			char str[16], *ptr;
 			int depth = 255;
-			int t = 5;
+			int t = 2;
+			if (argc > 1)
+				t = str_to_int(argv[1]);
 			if ((ptr = strstr(line, "depth"))) {
 				memcpy(str, ptr + 6, 16);
 				for (i = 0; i < 16; i++)
@@ -116,7 +118,7 @@ int main() {
 				t = MIN(t, str_to_int(str) / 1000);
 			}
 			move *m = malloc(sizeof(move));
-			evaluate(pos, depth, m, 0, t, NULL);
+			evaluate(pos, depth, m, 0, t, history);
 			printf("bestmove ");
 			print_move(m);
 			printf("\n");
