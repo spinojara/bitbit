@@ -36,6 +36,7 @@ int main() {
 	int i, j;
 	char line[10 * BUFSIZ];
 	struct position *pos = malloc(sizeof(struct position));
+	struct history *history = NULL;
 	char *fen[] = { "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR", "w", "KQkq", "-", "0", "1", };
 	printf("id name bitbit\n");
 	printf("id author Isak Ellmer\n");
@@ -58,6 +59,8 @@ int main() {
 			printf("readyok\n");
 		}
 		else if (strncmp(line, "position fen", 12) == 0) {
+			delete_history(&history);
+			transposition_table_clear();
 			char *ptr[6];
 			for (i = 0, j = 12; line[j]; j++) {
 				if (line[j] == ' ') {
@@ -72,25 +75,26 @@ int main() {
 			pos_from_fen(pos, i, ptr);
 		}
 		else if (strncmp(line, "position startpos", 17) == 0) {
-			transposition_table_clear();
+			delete_history(&history);
 			pos_from_fen(pos, SIZE(fen), fen);
 			if (strncmp(line + 18, "moves", 5) == 0) {
 				char str[6];
-				move *m = malloc(sizeof(move));
+				move m;
 				for (i = 23; line[i]; i++) {
 					if (line[i] == ' ' && i + 6 < 10 * BUFSIZ) {
 						memcpy(str, line + i + 1, 6);
 						for (j = 0; j < 6; j++)
 							if (str[j] == ' ' || str[j] == '\n')
 								str[j] = '\0';
-						*m = string_to_move(pos, str);
-						do_move(pos, m);
+						m = string_to_move(pos, str);
+						move_next(&pos, &history, m);
 					}
 				}
-				free(m);
 			}
 		}
 		else if (strncmp(line, "ucinewgame", 10) == 0) {
+			delete_history(&history);
+			transposition_table_clear();
 			pos_from_fen(pos, SIZE(fen), fen);
 		}
 		else if (strncmp(line, "go", 2) == 0) {
@@ -128,6 +132,6 @@ int main() {
 		}
 	}
 	free(pos);
-
+	delete_history(&history);
 	transposition_table_term();
 }

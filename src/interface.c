@@ -43,32 +43,32 @@ int flag(struct arg *arg, char f) {
 	return arg->flag[(unsigned char)f];
 }
 
-void move_next(move m) {
-	struct history *t = history;
-	history = malloc(sizeof(struct history));
-	history->previous = t;
-	history->move = malloc(sizeof(move));
-	history->pos = malloc(sizeof(struct position));
-	copy_position(history->pos, pos);
-	*(history->move) = m;
-	do_move(pos, history->move);
+void move_next(struct position **p, struct history **h, move m) {
+	struct history *t = *h;
+	(*h) = malloc(sizeof(struct history));
+	(*h)->previous = t;
+	(*h)->move = malloc(sizeof(move));
+	(*h)->pos = malloc(sizeof(struct position));
+	copy_position((*h)->pos, *p);
+	*((*h)->move) = m;
+	do_move(*p, (*h)->move);
 }
 
-void move_previous() {
-	if (!history)
+void move_previous(struct position **p, struct history **h) {
+	if (!(*h))
 		return;
-	undo_move(pos, history->move);
-	struct history *t = history;
-	history = history->previous;
+	undo_move(*p, (*h)->move);
+	struct history *t = *h;
+	(*h) = (*h)->previous;
 	free(t->move);
 	free(t->pos);
 	free(t);
 }
 
-void delete_history() {
-	while (history) {
-		struct history *t = history;
-		history = history->previous;
+void delete_history(struct history **h) {
+	while (*h) {
+		struct history *t = *h;
+		(*h) = (*h)->previous;
 		free(t->move);
 		free(t->pos);
 		free(t);
@@ -97,7 +97,7 @@ int interface_domove(struct arg *arg) {
 	UNUSED(arg);
 	if (flag(arg, 'f')) {
 		if(!generate_checkers(pos)) {
-			delete_history();
+			delete_history(&history);
 			do_null_move(pos, 0);
 		}
 		else {
@@ -106,7 +106,7 @@ int interface_domove(struct arg *arg) {
 	}
 	else if (flag(arg, 'r')) {
 		if (history) {
-			move_previous();
+			move_previous(&pos, &history);
 		}
 		else {
 			printf("error: no move to undo\n");
@@ -117,7 +117,7 @@ int interface_domove(struct arg *arg) {
 	}
 	else {
 		if (string_to_move(pos, arg->argv[1]))
-			move_next(string_to_move(pos, arg->argv[1]));
+			move_next(&pos, &history, string_to_move(pos, arg->argv[1]));
 		else
 			return ERR_BAD_ARG;
 	}
@@ -154,12 +154,12 @@ int interface_setpos(struct arg *arg) {
 	UNUSED(arg);
 	if (flag(arg, 'i')) {
 		int ret = interactive_setpos(pos);
-		delete_history();
+		delete_history(&history);
 		return ret;
 	}
 	else if (flag(arg, 'r')) {
 		random_pos(pos, 32);
-		delete_history();
+		delete_history(&history);
 	}
 	else if (arg->argc < 2) {
 		return ERR_MISS_ARG;
@@ -167,7 +167,7 @@ int interface_setpos(struct arg *arg) {
 	else {
 		if (fen_is_ok(arg->argc - 1, arg->argv + 1)) {
 			pos_from_fen(pos, arg->argc - 1, arg->argv + 1);
-			delete_history();
+			delete_history(&history);
 		}
 		else {
 			return ERR_BAD_ARG;
@@ -229,7 +229,7 @@ int interface_eval(struct arg *arg) {
 			if (flag(arg, 't'))
 				printf("time: %.2f\n", (double)t / CLOCKS_PER_SEC);
 			if (flag(arg, 'm') && *m && interrupt < 2)
-				move_next(*m);
+				move_next(&pos, &history, *m);
 		}
 		else {
 			return ERR_BAD_ARG;
@@ -411,5 +411,5 @@ void interface_init() {
 
 void interface_term() {
 	free(pos);
-	delete_history();
+	delete_history(&history);
 }

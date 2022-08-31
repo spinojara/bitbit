@@ -47,4 +47,8 @@ void interface_term();
 
 int interface_version(struct arg *arg);
 
+void delete_history(struct history **h);
+
+void move_next(struct position **p, struct history **h, move m);
+
 #endif
