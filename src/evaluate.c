@@ -546,10 +546,9 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int 
 			evaluation = pos->turn ? -0x7F00 : 0x7F00;
 		if (verbose) {
 			if (evaluation)
-				printf("%c#\n", depth,
-						pos->turn ? '-' : '+');
+				printf("%c#\n", pos->turn ? '-' : '+');
 			else
-				printf("=\n", depth);
+				printf("=\n");
 		}
 		return evaluation;
 	}
