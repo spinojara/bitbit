@@ -445,11 +445,14 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int
 	struct transposition *e = attempt_get(pos);
 	if (e && transposition_open(e))
 		return 0;
-	if (e && transposition_depth(e) >= depth) {
+	if (e && transposition_depth(e) >= depth && !pv_flag) {
+		/* pv */
 		if (transposition_type(e) == 0)
 			return transposition_evaluation(e);
+		/* cut */
 		else if (transposition_type(e) == 1)
 			alpha = transposition_evaluation(e);
+		/* all */
 		else
 			beta = transposition_evaluation(e);
 	}
