@@ -387,12 +387,16 @@ int parse(int *argc, char ***argv) {
 	interrupt = 0;
 	ret = -1;
 	if (arg->argc) {
+		struct func *f = NULL;
 		for (unsigned long k = 0; k < SIZE(func_arr); k++)
 			if (strcmp(func_arr[k].name, arg->argv[0]) == 0)
-				ret = func_arr[k].ptr(arg);
-		if (ret == -1)
-			printf("unknown command: %s\n", arg->argv[0]);
+				f = func_arr + k;
+		if (f)
+			ret = f->ptr(arg);
 		switch(ret) {
+		case -1:
+			printf("unknown command: %s\nTry 'help'.\n", arg->argv[0]);
+			break;
 		case ERR_MISS_ARG:
 			printf("error: missing argument\n");
 			break;
@@ -406,6 +410,8 @@ int parse(int *argc, char ***argv) {
 			printf("error: bad flag\n");
 			break;
 		}
+		if (ret != -1 && ret != DONE)
+			printf("Try 'help %s'.\n", f->name);
 	}
 
 	for (i = 0; i < 8; i++)
