@@ -30,10 +30,36 @@
 #include "transposition_table.h"
 #include "version.h"
 #include "interrupt.h"
+#include "help.h"
 
 struct func {
 	char *name;
 	int (*ptr)(struct arg *arg);
+	char *help;
+};
+
+int interface_help(struct arg *arg);
+int interface_domove(struct arg *arg);
+int interface_perft(struct arg *arg);
+int interface_setpos(struct arg *arg);
+int interface_clear(struct arg *arg);
+int interface_exit(struct arg *arg);
+int interface_board(struct arg *arg);
+int interface_eval(struct arg *arg);
+int interface_version(struct arg *arg);
+int interface_tt(struct arg *arg);
+
+struct func func_arr[] = {
+	{ "help",    interface_help,    help_help,    },
+	{ "domove",  interface_domove,  help_domove,  },
+	{ "perft",   interface_perft,   help_perft,   },
+	{ "setpos",  interface_setpos,  help_setpos,  },
+	{ "clear",   interface_clear,   help_clear,   },
+	{ "exit",    interface_exit,    help_exit,    },
+	{ "board",   interface_board,   help_board,   },
+	{ "eval",    interface_eval,    help_eval,    },
+	{ "version", interface_version, help_version, },
+	{ "tt",      interface_tt,      help_tt,      },
 };
 
 struct position *pos = NULL;
@@ -77,19 +103,16 @@ void delete_history(struct history **h) {
 
 int interface_help(struct arg *arg) {
 	UNUSED(arg);
-	printf(
-	"The following commands are available in bitbit:\n"
-	"exit\n"
-	"help\n"
-	"version\n"
-	"clear\n"
-	"setpos [-r] [fen]\n"
-	"domove [-fr] [move]\n"
-	"perft [-tv] [depth]\n"
-	"eval [-dmtv] [depth]\n"
-	"print [-v]\n"
-	"tt [-es] [size]\n"
-	);
+	if (arg->argc > 1) {
+		for (unsigned long k = 0; k < SIZE(func_arr); k++)
+			if (strcmp(func_arr[k].name, arg->argv[1]) == 0)
+				printf("%s", func_arr[k].help);
+	}
+	else {
+		printf("The following commands are available in bitbit:\n");
+		for (unsigned long k = 0; k < SIZE(func_arr); k++)
+			printf("%s\n", func_arr[k].name);
+	}
 	return DONE;
 }
 
@@ -157,8 +180,13 @@ int interface_setpos(struct arg *arg) {
 		delete_history(&history);
 		return ret;
 	}
+	else if (flag(arg, 's')) {
+		char *fen[] = { "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR", "w", "KQkq", "-", "0", "1", };
+		pos_from_fen(pos, SIZE(fen), fen);
+		delete_history(&history);
+	}
 	else if (flag(arg, 'r')) {
-		random_pos(pos, 32);
+		random_pos(pos, 20 + rand_int(80));
 		delete_history(&history);
 	}
 	else if (arg->argc < 2) {
@@ -187,7 +215,7 @@ int interface_exit(struct arg *arg) {
 	return EXIT_LOOP;
 }
 
-int interface_print(struct arg *arg) {
+int interface_board(struct arg *arg) {
 	UNUSED(arg);
 	if (flag(arg, 'h')) {
 		print_history_pgn(history);
@@ -243,13 +271,15 @@ int interface_version(struct arg *arg) {
 
 	printf("bitbit " MACRO_VALUE(VERSION) "\n");
 	printf("Copyright (C) 2022 Isak Ellmer  \n");
-	printf("c compiler: %s\n", compiler);
-	printf("environment: %s\n", environment);
-	char t[8];
-	printf("compilation date: %s\n", date(t));
-	printf("transposition table size: ");
-	transposition_table_size_print(TT);
-	printf("\ntransposition entry size: %" PRIu64 "B\n", sizeof(struct transposition));
+	if (arg && flag(arg, 'd')) {
+		printf("c compiler: %s\n", compiler);
+		printf("environment: %s\n", environment);
+		char t[8];
+		printf("compilation date: %s\n", date(t));
+		printf("transposition table size: ");
+		transposition_table_size_print(TT);
+		printf("\ntransposition entry size: %" PRIu64 "B\n", sizeof(struct transposition));
+	}
 
 	return DONE;
 }
@@ -281,19 +311,6 @@ int interface_tt(struct arg *arg) {
 	}
 	return ERR_MISS_FLAG;
 }
-
-struct func func_arr[] = {
-	{ "help",    interface_help,    },
-	{ "domove",  interface_domove,  },
-	{ "perft",   interface_perft,   },
-	{ "setpos",  interface_setpos,  },
-	{ "clear",   interface_clear,   },
-	{ "exit",    interface_exit,    },
-	{ "print",   interface_print,   },
-	{ "eval",    interface_eval,    },
-	{ "version", interface_version, },
-	{ "tt",      interface_tt,      },
-};
 
 void handler(int num);
 
