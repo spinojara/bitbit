@@ -42,6 +42,8 @@ uint64_t power(uint64_t m, uint64_t n);
 
 uint64_t log_2(uint64_t m);
 
+int nearint(double f);
+
 int find_char(char *s, char c);
 
 int str_is_int(char *s);

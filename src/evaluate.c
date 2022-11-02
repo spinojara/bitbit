@@ -383,7 +383,7 @@ int16_t evaluate_static(struct position *pos) {
 	for (i = 0; i < 64; i++)
 		eval += early_game * eval_table[0][pos->mailbox[i]][i] + (1 - early_game) * eval_table[1][pos->mailbox[i]][i];
 	/* encourage trading when ahead, discourage when behind */
-	eval *= 0.99 + 0.01 / (early_game + 0.1);
+	eval = nearint((double)(eval) * 0.99 + 0.01 / (early_game + 0.1));
 
 	/* bishop pair */
 	if (pos->white_pieces[bishop] && clear_ls1b(pos->white_pieces[bishop]))
