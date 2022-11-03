@@ -410,7 +410,7 @@ int parse(int *argc, char ***argv) {
 			printf("error: bad flag\n");
 			break;
 		}
-		if (ret != -1 && ret != DONE)
+		if (ret > 1)
 			printf("Try 'help %s'.\n", f->name);
 	}
 
