@@ -31,7 +31,6 @@
 
 void print_position(struct position *pos, int flip) {
 	int i, j, t;
-	/* " \u2659\u2658\u2657\u2656\u2655\u2654\u265F\u265E\u265D\u265C\u265B\u265A" */
 	char pieces[] = " PNBRQKpnbrqk";
 	char letters[] = "abcdefgh";
 
@@ -261,6 +260,45 @@ char *castle_string(char *str, int castle) {
 		str[counter++] = '-';
 	str[counter] = '\0';
 	return str;
+}
+
+void setpos(struct position *pos, uint8_t turn, int8_t en_passant, uint8_t castle,
+		uint16_t halfmove, uint16_t fullmove, uint8_t *mailbox) {
+	int i;
+
+	pos->turn = turn;
+	pos->en_passant = en_passant;
+	pos->castle = castle;
+	pos->halfmove = halfmove;
+	pos->fullmove = fullmove;
+
+	memcpy(pos->mailbox, mailbox, 64);
+	for (i = all; i <= king; i++) {
+		pos->white_pieces[i] = 0;
+		pos->black_pieces[i] = 0;
+	}
+
+	for (i = 0; i < 64; i++) {
+		if (0 < mailbox[i] && mailbox[i] < 7) {
+			pos->white_pieces[mailbox[i]] = set_bit(pos->white_pieces[mailbox[i]], i);
+			pos->white_pieces[all] = set_bit(pos->white_pieces[all], i);
+		}
+		else if (6 < mailbox[i]) {
+			pos->black_pieces[mailbox[i] - 6] = set_bit(pos->black_pieces[mailbox[i] - 6], i);
+			pos->black_pieces[all] = set_bit(pos->black_pieces[all], i);
+		}
+	}
+	pos->pieces = pos->white_pieces[all] | pos->black_pieces[all];
+
+	pos->zobrist_key = 0;
+	for (i = 0; i < 64; i++)
+		if (pos->mailbox[i])
+			pos->zobrist_key ^= zobrist_piece_key(pos->mailbox[i] - 1, i);
+	if (pos->turn)
+		pos->zobrist_key ^= zobrist_turn_key();
+	pos->zobrist_key ^= zobrist_castle_key(pos->castle);
+	if (pos->en_passant)
+		pos->zobrist_key ^= zobrist_en_passant_key(pos->en_passant);
 }
 
 /* assumes that fen is ok */
@@ -788,6 +826,92 @@ int interactive_setpos(struct position *pos) {
 		return ERR_BAD_ARG;
 	pos_from_fen(pos, argc, argv);
 	return DONE;
+}
+
+void fischer_pos(struct position *pos) {
+	uint8_t mailbox[64];
+	memset(mailbox, 0, 64);
+	int i, j;
+	for (i = 0; i < 8; i++) {
+		mailbox[8 + i] = white_pawn;
+		mailbox[48 + i] = black_pawn;
+	}
+
+	/* first bishop */
+	i = rand_int(4);
+	mailbox[2 * i] = white_bishop;
+	mailbox[56 + 2 * i] = black_bishop;
+
+	/* second bishop */
+	i = rand_int(4);
+	mailbox[2 * i + 1] = white_bishop;
+	mailbox[56 + 2 * i + 1] = black_bishop;
+
+	/* queen */
+	i = rand_int(6);
+	j = 0;
+	while (1) {
+		if (mailbox[j]) {
+			j++;
+		}
+		else if (0 < i) {
+			i--;
+			j++;
+		}
+		else {
+			break;
+		}
+	}
+	mailbox[j] = white_queen;
+	mailbox[56 + j] = black_queen;
+
+	/* first knight */
+	i = rand_int(5);
+	j = 0;
+	while (1) {
+		if (mailbox[j]) {
+			j++;
+		}
+		else if (0 < i) {
+			i--;
+			j++;
+		}
+		else {
+			break;
+		}
+	}
+	mailbox[j] = white_knight;
+	mailbox[56 + j] = black_knight;
+
+	/* second knight */
+	i = rand_int(4);
+	j = 0;
+	while (1) {
+		if (mailbox[j]) {
+			j++;
+		}
+		else if (0 < i) {
+			i--;
+			j++;
+		}
+		else {
+			break;
+		}
+	}
+	mailbox[j] = white_knight;
+	mailbox[56 + j] = black_knight;
+
+	/* rook, king, rook */
+	j = 0;
+	for (i = 0; i < 8; i++) {
+		if (!mailbox[i]) {
+			mailbox[i] = j ? white_king : white_rook;
+			mailbox[56 + i] = j ? black_king : black_rook;
+			j = 1 - j;
+		}
+	}
+
+	setpos(pos, 1, 0, 0, 0, 1, mailbox);
 }
 
 void copy_position(struct position *dest, struct position *src) {
