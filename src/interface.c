@@ -44,22 +44,22 @@ int interface_perft(struct arg *arg);
 int interface_setpos(struct arg *arg);
 int interface_clear(struct arg *arg);
 int interface_exit(struct arg *arg);
-int interface_board(struct arg *arg);
+int interface_pos(struct arg *arg);
 int interface_eval(struct arg *arg);
 int interface_version(struct arg *arg);
 int interface_tt(struct arg *arg);
 
 struct func func_arr[] = {
-	{ "help",    interface_help,    help_help,    },
-	{ "domove",  interface_domove,  help_domove,  },
-	{ "perft",   interface_perft,   help_perft,   },
-	{ "setpos",  interface_setpos,  help_setpos,  },
-	{ "clear",   interface_clear,   help_clear,   },
-	{ "exit",    interface_exit,    help_exit,    },
-	{ "board",   interface_board,   help_board,   },
-	{ "eval",    interface_eval,    help_eval,    },
+	{ "help"   , interface_help   , help_help   , },
+	{ "domove" , interface_domove , help_domove , },
+	{ "perft"  , interface_perft  , help_perft  , },
+	{ "setpos" , interface_setpos , help_setpos , },
+	{ "clear"  , interface_clear  , help_clear  , },
+	{ "exit"   , interface_exit   , help_exit   , },
+	{ "pos"    , interface_pos    , help_pos    , },
+	{ "eval"   , interface_eval   , help_eval   , },
 	{ "version", interface_version, help_version, },
-	{ "tt",      interface_tt,      help_tt,      },
+	{ "tt"     , interface_tt     , help_tt     , },
 };
 
 struct position *pos = NULL;
@@ -219,7 +219,7 @@ int interface_exit(struct arg *arg) {
 	return EXIT_LOOP;
 }
 
-int interface_board(struct arg *arg) {
+int interface_pos(struct arg *arg) {
 	UNUSED(arg);
 	if (flag(arg, 'h')) {
 		print_history_pgn(history);

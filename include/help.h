@@ -68,9 +68,9 @@ char help_eval[] =
 "\t-v\tshows verbose output\n"
 ;
 
-char help_board[] =
+char help_pos[] =
 "Shows the position.\n\n"
-"board [OPTION]\n\n"
+"pos [OPTION]\n\n"
 "\t-f\tflips the output\n"
 "\t-h\tshows the history\n"
 "\t-v\tshows verbose output\n"
