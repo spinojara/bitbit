@@ -189,6 +189,10 @@ int interface_setpos(struct arg *arg) {
 		random_pos(pos, 20 + rand_int(80));
 		delete_history(&history);
 	}
+	else if (flag(arg, 'f')) {
+		fischer_pos(pos);
+		delete_history(&history);
+	}
 	else if (arg->argc < 2) {
 		return ERR_MISS_ARG;
 	}

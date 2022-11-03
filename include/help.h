@@ -39,6 +39,7 @@ char help_clear[] =
 char help_setpos[] =
 "Sets a position.\n\n"
 "setpos [OPTION] [FEN]\n\n"
+"\t-f\tsets a fischer random position\n"
 "\t-i\tuses interactive mode\n"
 "\t-r\tsets a random position\n"
 "\t-s\tsets the starting position\n"
