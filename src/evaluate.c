@@ -383,7 +383,7 @@ int16_t evaluate_static(struct position *pos) {
 	for (i = 0; i < 64; i++)
 		eval += early_game * eval_table[0][pos->mailbox[i]][i] + (1 - early_game) * eval_table[1][pos->mailbox[i]][i];
 	/* encourage trading when ahead, discourage when behind */
-	eval *= 0.99 + 0.01 / (early_game + 0.1);
+	eval = nearint((double)(eval) * 0.99 + 0.01 / (early_game + 0.1));
 
 	/* bishop pair */
 	if (pos->white_pieces[bishop] && clear_ls1b(pos->white_pieces[bishop]))
@@ -445,11 +445,14 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int
 	struct transposition *e = attempt_get(pos);
 	if (e && transposition_open(e))
 		return 0;
-	if (e && transposition_depth(e) >= depth) {
+	if (e && transposition_depth(e) >= depth && !pv_flag) {
+		/* pv */
 		if (transposition_type(e) == 0)
 			return transposition_evaluation(e);
+		/* cut */
 		else if (transposition_type(e) == 1)
 			alpha = transposition_evaluation(e);
+		/* all */
 		else
 			beta = transposition_evaluation(e);
 	}

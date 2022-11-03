@@ -42,6 +42,13 @@ uint64_t log_2(uint64_t m) {
 	return 1 + log_2(m / 2);
 }
 
+int nearint(double f) {
+	int ret = (int)f;
+	if (f - ret >= 0.5)
+		return ret + 1;
+	return ret;
+}
+
 int find_char(char *s, char c) {
 	for (int i = 0; s[i]; i++)
 		if (s[i] == c)
