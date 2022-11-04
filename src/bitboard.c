@@ -23,6 +23,7 @@
 #include "attack_gen.h"
 #include "init.h"
 #include "position.h"
+#include "util.h"
 
 uint64_t between_lookup[64 * 64];
 uint64_t line_lookup[64 * 64];
@@ -34,6 +35,7 @@ uint64_t adjacent_files_lookup[64];
 uint64_t passed_files_white_lookup[64];
 uint64_t passed_files_black_lookup[64];
 int castle_lookup[64 * 64 * 16];
+uint64_t king_squares_lookup[64 * 2];
 
 void print_bitboard(uint64_t b) {
 	printf("\n       a   b   c   d   e   f   g   h\n");
@@ -183,6 +185,13 @@ uint64_t passed_files_black_calc(int square) {
 	return r;
 }
 
+uint64_t king_squares_calc(int square, int turn) {
+	uint64_t ret = king_attacks(square) | bitboard(square);
+	for (int i = 0; i < 3; i++)
+		ret = ret | (turn ? shift_north(ret) : shift_south(ret));
+	return ret;
+}
+
 void bitboard_init() {
 	for (int i = 0; i < 64; i++) {
 		file_lookup[i] = file_calc(i);
@@ -192,6 +201,8 @@ void bitboard_init() {
 		adjacent_files_lookup[i] = adjacent_files_calc(i);
 		passed_files_white_lookup[i] = passed_files_white_calc(i);
 		passed_files_black_lookup[i] = passed_files_black_calc(i);
+		king_squares_lookup[i] = king_squares_calc(i, 1);
+		king_squares_lookup[i + 64] = king_squares_calc(i, 0);
 		for (int j = 0; j < 64; j++) {
 			between_lookup[i + 64 * j] = between_calc(i, j);
 			line_lookup[i + 64 * j] = line_calc(i, j);
