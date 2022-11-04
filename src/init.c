@@ -42,7 +42,7 @@ int init(int argc, char **argv) {
 		}
 	}
 	counter = malloc(sizeof(struct counter));
-	counter->total = 365869;
+	counter->total = 366701;
 	counter->done = 0;
 	counter->time = clock();
 	init_status("init");
