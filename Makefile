@@ -13,6 +13,7 @@ SOURCE_DIR = src
 INCLUDE_DIR = include
 BUILD_DIR = build
 SRC = bitboard.c magic_bitboard.c attack_gen.c move.c util.c position.c move_gen.c perft.c evaluate.c interface.c transposition_table.c init.c interrupt.c
+HEADERS = bitboard.h magic_bitboard.h attack_gen.h move.h util.h position.h move_gen.h perft.h evaluate.h interface.h transposition_table.h init.h interrupt.h version.h help.h
 
 OBJ = $(addprefix $(BUILD_DIR)/,$(SRC:.c=.o))
 
