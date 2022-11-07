@@ -281,7 +281,7 @@ int interface_version(struct arg *arg) {
 		char t[8];
 		printf("compilation date: %s\n", date(t));
 		printf("transposition table size: ");
-		transposition_table_size_print(TT);
+		transposition_table_size_print(log_2(sizeof(struct transposition) * transposition_table_size()));
 		printf("\ntransposition entry size: %" PRIu64 "B\n", sizeof(struct transposition));
 	}
 
