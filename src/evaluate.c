@@ -317,22 +317,20 @@ int pawn_structure(struct position *pos) {
 
 	/* doubled pawns */
 	for (i = 0; i < 8; i++) {
-		if ((t = pos->white_pieces[pawn] & file(i)))
-			if (popcount(t) > 1)
-				eval -= 40;
-		if ((t = pos->black_pieces[pawn] & file(i)))
-			if (popcount(t) > 1)
-				eval += 40;
+		if ((t = (pos->white_pieces[pawn] & file(i))))
+			eval -= (popcount(t) - 1) * 50;
+		if ((t = (pos->black_pieces[pawn] & file(i))))
+			eval += (popcount(t) - 1) * 50;
 	}
 
 	/* isolated pawns */
 	for (i = 0; i < 8; i++) {
 		if ((pos->white_pieces[pawn] & file(i)) &&
 				!(pos->white_pieces[pawn] & adjacent_files(i)))
-			eval -= 25;
+			eval -= 35;
 		if ((pos->black_pieces[pawn] & file(i)) &&
 				!(pos->black_pieces[pawn] & adjacent_files(i)))
-			eval += 25;
+			eval += 35;
 	}
 
 	/* passed pawns */
@@ -340,8 +338,7 @@ int pawn_structure(struct position *pos) {
 	uint64_t b;
 	for (i = 0; i < 8; i++) {
 		/* asymmetric because of bit scan */
-		b = pos->white_pieces[pawn] & file(i);
-		if (b) {
+		if ((b = (pos->white_pieces[pawn] & file(i)))) {
 			while (b) {
 				square = ctz(b);
 				b = clear_ls1b(b);
@@ -349,8 +346,7 @@ int pawn_structure(struct position *pos) {
 			if (!(pos->black_pieces[pawn] & passed_files_white(square)))
 				eval += 20 * (square / 8);
 		}
-		b = pos->black_pieces[pawn] & file(i);
-		if (b) {
+		if ((b = (pos->black_pieces[pawn] & file(i)))) {
 			square = ctz(b);
 			if (!(pos->white_pieces[pawn] & passed_files_black(square)))
 				eval -= 20 * (7 - square / 8);
