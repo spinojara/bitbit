@@ -1,10 +1,7 @@
-# build files
-build/
+# obj files
 *.o
 *.obj
-
-# benchmark results
-results/
+*.d
 
 # executable files
 bitbit
