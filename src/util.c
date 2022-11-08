@@ -43,10 +43,10 @@ uint64_t log_2(uint64_t m) {
 }
 
 int nearint(double f) {
+	if (f < 0)
+		return -nearint(-f);
 	int ret = (int)f;
-	if (f - ret >= 0.5)
-		return ret + 1;
-	return ret;
+	return ret + (f - ret >= 0.5);
 }
 
 int find_char(char *s, char c) {
@@ -124,6 +124,6 @@ void merge_sort(move *arr, uint64_t *val, unsigned int first, unsigned int last,
 }
 
 void util_init() {
-	srand(0);
+	srand(time(NULL));
 	init_status("setting seed");
 }
