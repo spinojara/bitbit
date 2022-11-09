@@ -157,9 +157,10 @@ int interface_perft(struct arg *arg) {
 			clock_t t = clock();
 			uint64_t p = perft(pos, str_to_int(arg->argv[1]), flag(arg, 'v'));
 			t = clock() - t;
-			if (!interrupt)
+			if (interrupt)
+				return DONE;
 			printf("nodes: %" PRIu64 "\n", p);
-			if (flag(arg, 't') && !interrupt) {
+			if (flag(arg, 't')) {
 				printf("time: %.2f\n", (double)t / CLOCKS_PER_SEC);
 				if (t != 0)
 					printf("mpns: %" PRIu64 "\n",
@@ -254,6 +255,8 @@ int interface_eval(struct arg *arg) {
 			else
 				eval = evaluate(pos, 255, m, flag(arg, 'v'), str_to_int(arg->argv[1]), history);
 			t = clock() - t;
+			if (interrupt)
+				return DONE;
 			if (!flag(arg, 'v')) {
 				char str[8];
 				printf("%+.2f %s\n", (double)eval / 100, move_str_pgn(str, pos, m));
@@ -319,7 +322,8 @@ int interface_tt(struct arg *arg) {
 void handler(int num);
 
 int parse(int *argc, char ***argv) {
-	int ret;
+	interrupt = 0;
+	int ret = -1;
 	int i, j;
 	char *c;
 	struct arg *arg = malloc(sizeof(struct arg));
@@ -388,9 +392,10 @@ int parse(int *argc, char ***argv) {
 		}
 	}
 
-	interrupt = 0;
-	ret = -1;
-	if (arg->argc) {
+	if (interrupt) {
+		ret = EXIT_LOOP;
+	}
+	else if (arg->argc) {
 		struct func *f = NULL;
 		for (unsigned long k = 0; k < SIZE(func_arr); k++)
 			if (strcmp(func_arr[k].name, arg->argv[0]) == 0)
