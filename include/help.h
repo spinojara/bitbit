@@ -53,7 +53,7 @@ char help_domove[] =
 ;
 
 char help_perft[] =
-"Does a performance test.\n\n"
+"Executes a performance test.\n\n"
 "perft [OPTION] [DEPTH]\n\n"
 "\t-t\ttimes the performance test\n"
 "\t-v\tshows verbose output\n"
@@ -69,7 +69,7 @@ char help_eval[] =
 ;
 
 char help_pos[] =
-"Shows the position.\n\n"
+"Shows information about the position.\n\n"
 "pos [OPTION]\n\n"
 "\t-f\tflips the output\n"
 "\t-h\tshows the history\n"
