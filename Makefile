@@ -1,5 +1,6 @@
 MAJOR = 0
 MINOR = 3
+VERSION = $(MAJOR).$(MINOR)
 
 CC = cc
 CSTANDARD = -std=c99
@@ -8,12 +9,13 @@ COPTIMIZE = -O2 -march=native -flto
 CFLAGS = $(CSTANDARD) $(CWARNINGS) $(COPTIMIZE)
 LDFLAGS = $(CFLAGS)
 
-VERSION = -DVERSION=$(MAJOR).$(MINOR)
+DVERSION = -DVERSION=$(VERSION)
 
 SRC_DIR = src
 INC_DIR = include
 OBJ_DIR = obj
 DEP_DIR = dep
+MAN_DIR = man
 
 SRC = bitboard.c magic_bitboard.c attack_gen.c \
       move.c util.c position.c move_gen.c perft.c \
@@ -34,6 +36,9 @@ OBJ_UCI = $(addprefix $(OBJ_DIR)/,$(SRC_UCI:.c=.o))
 
 PREFIX = /usr/local
 BINDIR = $(PREFIX)/bin
+MANPREFIX = $(PREFIX)/share
+MANDIR = $(MANPREFIX)/man
+MAN1DIR = $(MANDIR)/man1
 
 ifneq ($(TT), )
 	SIZE = -DTT=$(TT)
@@ -49,7 +54,7 @@ uci: $(OBJ_UCI)
 
 $(OBJ_DIR)/interface.o: $(SRC_DIR)/interface.c
 	@mkdir -p $(OBJ_DIR)
-	$(CC) $(CFLAGS) -I$(INC_DIR) -DVERSION=$(MAJOR).$(MINOR) -c $< -o $@
+	$(CC) $(CFLAGS) -I$(INC_DIR) $(DVERSION) -c $< -o $@
 
 $(OBJ_DIR)/transposition_table.o: $(SRC_DIR)/transposition_table.c
 	@mkdir -p $(OBJ_DIR)
@@ -65,17 +70,19 @@ $(DEP_DIR)/%.d: $(SRC_DIR)/%.c
 	@mkdir -p $(DEP_DIR)
 	@$(CC) -MM -MT "$@ $(<:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)" $(CFLAGS) -I$(INC_DIR) $< -o $@
 
-install: bitbit
+install: all
 	mkdir -p $(DESTDIR)$(BINDIR)
-	cp -f bitbit $(DESTDIR)$(BINDIR)
+	cp -f bitbit $(DESTDIR)$(BINDIR)/bitbit
 	chmod 755 $(DESTDIR)$(BINDIR)/bitbit
+	mkdir -p $(DESTDIR)$(MAN1DIR)
+	sed "s/VERSION/$(VERSION)/g" < $(MAN_DIR)/bitbit.1 > $(DESTDIR)$(MAN1DIR)/bitbit.1
+	chmod 644 $(DESTDIR)$(MAN1DIR)/bitbit.1
 
 uninstall:
-	rm -f $(DESTDIR)$(BINDIR)/bitbit
+	rm -f $(DESTDIR)$(BINDIR)/bitbit $(DESTDIR)$(MAN1DIR)/bitbit.1
 
 clean:
-	rm -rf $(OBJ_DIR)
-	rm -rf $(DEP_DIR)
+	rm -rf $(OBJ_DIR) $(DEP_DIR)
 
 options:
 	@echo "CC      = $(CC)"

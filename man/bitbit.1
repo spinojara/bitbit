@@ -1,0 +1,47 @@
+.TH BITBIT 1 "2022-11-08" "bitbit VERSION" bitbit
+.SH NAME
+bitbit - a bitboard based chess engine written in c
+.SH SYNOPSIS
+.B bitbit
+[\fICOMMAND\fR]...
+.SH DESCRIPTION
+\fBbitbit\fR, a bitboard based chess engine written in c. It uses a
+hand-crafted evaluation function and implements alpha beta pruning,
+a hash table, late move reductions and null move pruning.
+
+\fBbitbit\fR implements commands for viewing, executing a perft
+on and evaluating a position. It is possible to cancel all
+calculations with \fBSIGINT\fR.
+.SH COMMANDS
+.TP
+.BR help \ [\fICOMMAND\fR]
+Displays a general help page. If a command is specified, \fBhelp\fR
+displays the help page for that command.
+.TP
+.BR exit\ \ \  
+Exits bitbit.
+.TP
+.BR clear\ \ \ 
+Clears the screen.
+.TP
+.BR domove \ [\fIOPTION\fR]\ [\fIMOVE\fR]
+Does a move.
+.TP
+.BR perft \ [\fIOPTION\fR]\ [\fIDEPTH\fR]
+Executes a performance test.
+.TP
+.BR setpos \ [\fIOPTION\fR]\ [\fIFEN\fR]
+Sets a position.
+.TP
+.BR pos \ [\fIOPTION\fR]
+Shows information about the position.
+.TP
+.BR eval \ [\fIOPTION\fR]\ [\fITIME\fR]
+Evaluates the position.
+.TP
+.BR tt \ [\fIOPTION\fR]\ [\fISIZE\fR]
+Sets the transposition table.
+.SH SEE ALSO
+See \fBbitbit help\fR [\fICOMMAND\fR].
+.SH AUTHOR
+Written by Isak Ellmer.
