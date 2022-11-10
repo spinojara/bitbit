@@ -1,9 +1,9 @@
-.TH BITBIT 1 "2022-11-08" "bitbit VERSION" bitbit
+.TH BITBIT 6 "2022-11-08" "bitbit VERSION" bitbit
 .SH NAME
 bitbit - a bitboard based chess engine written in c
 .SH SYNOPSIS
 .B bitbit
-[\fICOMMAND\fR]...
+[\fIOPTION\fR]...
 .SH DESCRIPTION
 \fBbitbit\fR, a bitboard based chess engine written in c. It uses a
 hand-crafted evaluation function and implements alpha beta pruning,
@@ -12,9 +12,12 @@ a hash table, late move reductions and null move pruning.
 \fBbitbit\fR implements commands for viewing, executing a perft
 on and evaluating a position. It is possible to cancel all
 calculations with \fBSIGINT\fR.
-.SH COMMANDS
+
+Many commands can be given to \fBbitbit\fR at startup by separating
+them with two spaces and a comma. See examples.
+.SH OPTIONS
 .TP
-.BR help \ [\fICOMMAND\fR]
+.BR help \ [\fIOPTION\fR]
 Displays a general help page. If a command is specified, \fBhelp\fR
 displays the help page for that command.
 .TP
@@ -41,7 +44,20 @@ Evaluates the position.
 .TP
 .BR tt \ [\fIOPTION\fR]\ [\fISIZE\fR]
 Sets the transposition table.
+.SH EXAMPLES
+Evaluate the starting position to depth 12 and then exit.
+.PP
+.in +4n
+\fBbitbit eval -vtd 12 , exit\fR
+.PP
+Set a position and do a performance test to depth 6, then exit.
+.PP
+.in +4n
+\fBbitbit setpos 8/6pk/5b1p/8/2P3qP/6P1/R6K/8 w - - , perft 6 -tv , exit\fR
+.PP
+View the help page for \fBsetpos\fR, then exit.
+.PP
+.in +4n
+\fBbitbit help setpos , exit\fR
 .SH SEE ALSO
-See \fBbitbit help\fR [\fICOMMAND\fR].
-.SH AUTHOR
-Written by Isak Ellmer.
+See \fBbitbit help\fR [\fIOPTION\fR].

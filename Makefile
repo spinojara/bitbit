@@ -38,7 +38,7 @@ PREFIX = /usr/local
 BINDIR = $(PREFIX)/bin
 MANPREFIX = $(PREFIX)/share
 MANDIR = $(MANPREFIX)/man
-MAN1DIR = $(MANDIR)/man1
+MAN6DIR = $(MANDIR)/man6
 
 ifneq ($(TT), )
 	SIZE = -DTT=$(TT)
@@ -74,12 +74,12 @@ install: all
 	mkdir -p $(DESTDIR)$(BINDIR)
 	cp -f bitbit $(DESTDIR)$(BINDIR)/bitbit
 	chmod 755 $(DESTDIR)$(BINDIR)/bitbit
-	mkdir -p $(DESTDIR)$(MAN1DIR)
-	sed "s/VERSION/$(VERSION)/g" < $(MAN_DIR)/bitbit.1 > $(DESTDIR)$(MAN1DIR)/bitbit.1
-	chmod 644 $(DESTDIR)$(MAN1DIR)/bitbit.1
+	mkdir -p $(DESTDIR)$(MAN6DIR)
+	sed "s/VERSION/$(VERSION)/g" < $(MAN_DIR)/bitbit.6 > $(DESTDIR)$(MAN6DIR)/bitbit.6
+	chmod 644 $(DESTDIR)$(MAN6DIR)/bitbit.6
 
 uninstall:
-	rm -f $(DESTDIR)$(BINDIR)/bitbit $(DESTDIR)$(MAN1DIR)/bitbit.1
+	rm -f $(DESTDIR)$(BINDIR)/bitbit $(DESTDIR)$(MAN6DIR)/bitbit.6
 
 clean:
 	rm -rf $(OBJ_DIR) $(DEP_DIR)
