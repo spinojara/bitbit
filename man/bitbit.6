@@ -1,63 +1,153 @@
-.TH BITBIT 6 "2022-11-08" "bitbit VERSION" bitbit
+.TH BITBIT 6 "2022-11-11" "bitbit VERSION" "Games Manual"
 .SH NAME
-bitbit - a bitboard based chess engine written in c
+bitbit \- a bitboard based chess engine written in c
 .SH SYNOPSIS
 .B bitbit
 [\fIOPTION\fR]...
 .SH DESCRIPTION
-\fBbitbit\fR, a bitboard based chess engine written in c. It uses a
-hand-crafted evaluation function and implements alpha beta pruning,
-a hash table, late move reductions and null move pruning.
-
+\fBbitbit\fR, a bitboard based chess engine written in c.
+It uses a hand-crafted evaluation function and implements alpha beta
+pruning, a hash table, late move reductions and null move pruning.
+.PP
 \fBbitbit\fR implements commands for viewing, executing a perft
-on and evaluating a position. It is possible to cancel all
-calculations with \fBSIGINT\fR.
-
+on and evaluating a position.
+It is possible to cancel all calculations with \fBSIGINT\fR.
+.PP
 Many commands can be given to \fBbitbit\fR at startup by separating
-them with two spaces and a comma. See examples.
+them with two spaces and a comma.
+See examples.
 .SH OPTIONS
 .TP
-.BR help \ [\fIOPTION\fR]
-Displays a general help page. If a command is specified, \fBhelp\fR
-displays the help page for that command.
+\fB--version\fR
+Shows bitbit's version, then exits.
 .TP
-.BR exit\ \ \  
+\fBhelp\fR [\fIOPTION\fR]
+.br
+Displays a general help page.
+If a command is specified, \fBhelp\fR displays the help page for that
+command.
+.TP
+\fBversion\fR [\fIOPTION\fR]
+.br
+Shows bitbit's version.
+.in +2n
+\fB-d\fR shows extra debug information
+.TP
+\fBexit\fR
+.br
 Exits bitbit.
 .TP
-.BR clear\ \ \ 
+\fBclear\fR
+.br
 Clears the screen.
 .TP
-.BR domove \ [\fIOPTION\fR]\ [\fIMOVE\fR]
+\fBdomove\fR [\fIOPTION\fR] [\fIMOVE\fR]
+.br
 Does a move.
+.in +2n
+\fB-f\fR flips the move
+.br
+\fB-r\fR reverses the last move
 .TP
-.BR perft \ [\fIOPTION\fR]\ [\fIDEPTH\fR]
+\fBperft\fR [\fIOPTION\fR] [\fIDEPTH\fR]
+.br
 Executes a performance test.
+.in +2n
+\fB-t\fR times the performance test
+.br
+\fB-v\fR shows verbose output
 .TP
-.BR setpos \ [\fIOPTION\fR]\ [\fIFEN\fR]
+\fBsetpos\fR [\fIOPTION\fR] [\fIFEN\fR]
+.br
 Sets a position.
+.in +2n
+\fB-f\fR sets a fischer random position
+.br
+\fB-i\fR uses interactive mode
+.br
+\fB-r\fR sets a random position
+.br
+\fB-s\fR sets the starting position
 .TP
-.BR pos \ [\fIOPTION\fR]
+\fBpos\fR [\fIOPTION\fR]
+.br
 Shows information about the position.
+.in +2n
+\fB-f\fR flips the output
+.br
+\fB-h\fR shows the history
+.br
+\fB-v\fR shows verbose output
 .TP
-.BR eval \ [\fIOPTION\fR]\ [\fITIME\fR]
+\fBeval\fR [\fIOPTION\fR] [\fITIME\fR]
+.br
 Evaluates the position.
+.in +2n
+\fB-d\fR argument is depth instead of time
+.br
+\fB-m\fR does the best move when the evaluation is done
+.br
+\fB-t\fR times the evaluation
+.br
+\fB-v\fR shows verbose output
 .TP
-.BR tt \ [\fIOPTION\fR]\ [\fISIZE\fR]
+\fBtt\fR [\fIOPTION\fR] [\fISIZE\fR]
+.br
 Sets the transposition table.
+.in +2n
+\fB-e\fR empties the transposition table
+.br
+\fB-s\fR displays or sets the transposition table size
+.SH EXIT STATUS
+.PP
+If \fBbitbit\fR was killed by a signal it returns the signal + 128.
+If \fBbitbit\fR exits successfully it returns 0.
+.PP
+If an error was encountered \fBbitbit\fR returns:
+.PP
+1
+.in +4n
+\fBbitbit\fR failed to find magic number.
+.PP
+2
+.in +4n
+\fBbitbit\fR failed to allocate transposition table because size was
+too small.
+.PP
+3
+.in +4n
+\fBbitbit\fR failed to allocate transposition table due to malloc.
 .SH EXAMPLES
 Evaluate the starting position to depth 12 and then exit.
 .PP
 .in +4n
-\fBbitbit eval -vtd 12 , exit\fR
+.EX
+$ \fBbitbit eval -vd 12 , exit\fR
+.EE
 .PP
-Set a position and do a performance test to depth 6, then exit.
-.PP
-.in +4n
-\fBbitbit setpos 8/6pk/5b1p/8/2P3qP/6P1/R6K/8 w - - , perft 6 -tv , exit\fR
-.PP
-View the help page for \fBsetpos\fR, then exit.
+Show the help page for \fBsetpos\fR then exit.
 .PP
 .in +4n
-\fBbitbit help setpos , exit\fR
+.EX
+$ \fBbitbit help setpos , exit\fR
+.EE
+.PP
+Set a position, do a performance test to depth 6 and then exit.
+.PP
+.in +4n
+.EX
+$ \fBbitbit\fR
+bitbit Copyright (C) 2022 Isak Ellmer
+> \fBsetpos r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1\fR
+> \fBperft 6 -v\fR
+g1h1: 149335005
+c4c5: 92063670
+d2d4: 124002076
+f3d4: 129579089
+b4c5: 87986826
+f1f2: 123078367
+nodes: 706045033
+> \fBexit\fR
+.EE
 .SH SEE ALSO
 See \fBbitbit help\fR [\fIOPTION\fR].
