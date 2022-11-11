@@ -367,11 +367,14 @@ int parse(int *argc, char ***argv) {
 		printf("\r\33[2K> ");
 		if (fgets(line, sizeof(line), stdin)) {
 			c = line;
-			while (c[0] == ' ')
-				c = c + 1;
-
 			/* assumes always at start of word */
 			for (; *c && *c != '\n'; c++) {
+				/* jump to start of word */
+				while (c[0] == ' ')
+					c = c + 1;
+				/* break at end of line */
+				if (c[0] == '\0' || c[0] == '\n')
+					break;
 				/* flag */
 				if (c[0] == '-' && c != line && c[-1] == ' ' && c[1] >= 'a' && c[1] <= 'z') {
 					for (; c[0] && c[0] != ' ' && c[0] != '\n'; c++)
