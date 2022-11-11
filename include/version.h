@@ -65,22 +65,22 @@ char *date(char *str) {
 	str[0] = __DATE__[9];
 	str[1] = __DATE__[10];
 	/* first digit of month */
-	/* oct nov dev */
-	str[2] = (__DATE__[0] == 'o' || __DATE__[0] == 'n' || __DATE__[0] == 'd') ? '1' : '0';
+	/* Oct Nov Dev */
+	str[2] = (__DATE__[0] == 'O' || __DATE__[0] == 'N' || __DATE__[0] == 'D') ? '1' : '0';
 	/* second digit of month */
 	str[3] =
-	(__DATE__[2] == 'l') ? '7' : /* jul */
-	(__DATE__[2] == 'g') ? '8' : /* aug */
-	(__DATE__[1] == 'u') ? '6' : /* jun */
-	(__DATE__[2] == 'n') ? '1' : /* jan */
-	(__DATE__[2] == 'y') ? '5' : /* may */
-	(__DATE__[1] == 'a') ? '3' : /* mar */
-	(__DATE__[2] == 'b') ? '2' : /* feb */
-	(__DATE__[0] == 'a') ? '4' : /* apr */
-	(__DATE__[2] == 'p') ? '9' : /* sep */
-	(__DATE__[2] == 't') ? '0' : /* oct */
-	(__DATE__[2] == 'v') ? '1' : /* nov */
-	'2'; /* dec */
+	(__DATE__[2] == 'l') ? '7' : /* Jul */
+	(__DATE__[2] == 'g') ? '8' : /* Aug */
+	(__DATE__[1] == 'u') ? '6' : /* Jun */
+	(__DATE__[2] == 'n') ? '1' : /* Jan */
+	(__DATE__[2] == 'y') ? '5' : /* May */
+	(__DATE__[1] == 'a') ? '3' : /* Mar */
+	(__DATE__[2] == 'b') ? '2' : /* Feb */
+	(__DATE__[0] == 'A') ? '4' : /* Apr */
+	(__DATE__[2] == 'p') ? '9' : /* Sep */
+	(__DATE__[2] == 't') ? '0' : /* Oct */
+	(__DATE__[2] == 'v') ? '1' : /* Nov */
+	'2'; /* Dec */
 
 	/* first digit of day */
 	str[4] = (__DATE__[4] == ' ') ? '0' : __DATE__[4];
