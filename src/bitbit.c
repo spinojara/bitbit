@@ -26,24 +26,26 @@
 #include "interrupt.h"
 
 int main(int argc, char **argv) {
+	int ret = 0;
 	/* --version */
 	if (init(argc, argv))
 		goto term;
 	interrupt_init();
 	util_init();
 	/* no magic found */
-	if (magic_bitboard_init())
+	if ((ret = magic_bitboard_init()))
 		goto term;
 	attack_gen_init();
 	bitboard_init();
 	evaluate_init();
 	/* transposition table size == 0 */
-	if (transposition_table_init())
+	if ((ret = transposition_table_init()))
 		goto term;
 	interface_init();
-	interface(argc, argv);
+	ret = interface(argc, argv);
 term:;
 	interface_term();
 	transposition_table_term();
 	term();
+	return ret;
 }

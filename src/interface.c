@@ -21,6 +21,7 @@
 #include <inttypes.h>
 #include <time.h>
 #include <string.h>
+#include <signal.h>
 
 #include "bitboard.h"
 #include "util.h"
@@ -430,9 +431,12 @@ int parse(int *argc, char ***argv) {
 	return ret;
 }
 
-void interface(int argc, char **argv) {
+int interface(int argc, char **argv) {
 	printf("\33[2Kbitbit Copyright (C) 2022 Isak Ellmer\n");
 	while (parse(&argc, &argv) != 1);
+	if (interrupt)
+		return 128 + SIGINT;
+	return 0;
 }
 
 void interface_init() {

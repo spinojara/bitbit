@@ -88,14 +88,12 @@ uint64_t zobrist_en_passant_key(int square) {
 int allocate_transposition_table(uint64_t t) {
 	uint64_t size = (uint64_t)1 << t;
 	if (size < sizeof(struct transposition))
-		return 1;
+		return 2;
 	transposition_table->size = size / sizeof(struct transposition);
 	free(transposition_table->table);
 	transposition_table->table = malloc(transposition_table->size * sizeof(struct transposition));
-	if (!transposition_table->table) {
-		printf("\33[2Kfatal error: could not allocate transposition table\n");
-		return 2;
-	}
+	if (!transposition_table->table)
+		return 3;
 	transposition_table->index = transposition_table->size - 1;
 	transposition_table_clear();
 	return 0;
@@ -114,9 +112,8 @@ int transposition_table_init() {
 	transposition_table->table = NULL;
 	int ret = allocate_transposition_table(TT);
 	if (ret) {
-		if (ret == 1)
-			printf("\33[2Kfatal error: could not allocate transposition table\n");
-		return 1;
+		printf("\33[2Kfatal error: could not allocate transposition table\n");
+		return ret;
 	}
 
 	transposition_table->zobrist_key = malloc((12 * 64 + 1 + 16 + 8) * sizeof(uint64_t));

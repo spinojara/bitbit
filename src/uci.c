@@ -136,4 +136,5 @@ int main(int argc, char **argv) {
 	free(pos);
 	delete_history(&history);
 	transposition_table_term();
+	return 0;
 }

@@ -39,7 +39,7 @@ struct history {
 	struct history *previous;
 };
 
-void interface(int argc, char **argv);
+int interface(int argc, char **argv);
 
 void interface_init();
 
