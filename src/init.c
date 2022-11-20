@@ -49,7 +49,7 @@ int init(int argc, char **argv) {
 	return 0;
 }
 
-void term() {
+void term(void) {
 	free(counter);
 }
 

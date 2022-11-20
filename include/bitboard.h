@@ -20,7 +20,7 @@
 
 #include <stdint.h>
 
-void bitboard_init();
+void bitboard_init(void);
 
 #if __GNUC__
 static inline uint64_t ctz(uint64_t b) {

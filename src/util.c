@@ -23,7 +23,7 @@
 
 #include "init.h"
 
-uint64_t rand_uint64() {
+uint64_t rand_uint64(void) {
 	uint64_t ret = 0;
 	for (int i = 0; i < 4; i++) {
 		ret ^= (uint64_t)(rand() & 0xFFFF) << 16 * i;
@@ -123,7 +123,7 @@ void merge_sort(move *arr, uint64_t *val, unsigned int first, unsigned int last,
 	}
 }
 
-void util_init() {
+void util_init(void) {
 	srand(time(NULL));
 	init_status("setting seed");
 }

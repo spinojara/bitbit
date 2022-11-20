@@ -192,7 +192,7 @@ uint64_t king_squares_calc(int square, int turn) {
 	return ret;
 }
 
-void bitboard_init() {
+void bitboard_init(void) {
 	for (int i = 0; i < 64; i++) {
 		file_lookup[i] = file_calc(i);
 		rank_lookup[i] = rank_calc(i);

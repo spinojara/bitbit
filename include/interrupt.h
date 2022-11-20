@@ -18,7 +18,7 @@
 #ifndef INTERRUPT_H
 #define INTERRUPT_H
 
-void interrupt_init();
+void interrupt_init(void);
 
 extern int interrupt;
 

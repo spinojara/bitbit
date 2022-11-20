@@ -442,13 +442,13 @@ int interface(int argc, char **argv) {
 	return 0;
 }
 
-void interface_init() {
+void interface_init(void) {
 	char *fen[] = { "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR", "w", "KQkq", "-", "0", "1", };
 	pos = malloc(sizeof(struct position));
 	pos_from_fen(pos, SIZE(fen), fen);
 }
 
-void interface_term() {
+void interface_term(void) {
 	free(pos);
 	delete_history(&history);
 }

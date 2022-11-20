@@ -59,11 +59,11 @@ void attempt_store(struct position *pos, int16_t evaluation, uint8_t depth, uint
 		store(get(pos), pos, evaluation, depth, type, m);
 }
 
-uint64_t transposition_table_size() {
+uint64_t transposition_table_size(void) {
 	return transposition_table->size;
 }
 
-void transposition_table_clear() {
+void transposition_table_clear(void) {
 	memset(transposition_table->table, 0, transposition_table->size * sizeof(struct transposition));
 }
 
@@ -71,7 +71,7 @@ uint64_t zobrist_piece_key(int piece, int square) {
 	return transposition_table->zobrist_key[piece + 12 * square];
 }
 
-uint64_t zobrist_turn_key() {
+uint64_t zobrist_turn_key(void) {
 	return transposition_table->zobrist_key[12 * 64];
 }
 
@@ -99,7 +99,7 @@ int allocate_transposition_table(uint64_t t) {
 	return 0;
 }
 
-int transposition_table_occupancy() {
+int transposition_table_occupancy(void) {
 	uint64_t occupied = 0;
 	for (uint64_t i = 0; i < transposition_table->size; i++)
 		if ((transposition_table->table + i)->zobrist_key)
@@ -107,7 +107,7 @@ int transposition_table_occupancy() {
 	return 100 * occupied / transposition_table->size;
 }
 
-int transposition_table_init() {
+int transposition_table_init(void) {
 	transposition_table = malloc(sizeof(struct transposition_table));
 	transposition_table->table = NULL;
 	int ret = allocate_transposition_table(TT);
@@ -125,7 +125,7 @@ int transposition_table_init() {
 	return 0;
 }
 
-void transposition_table_term() {
+void transposition_table_term(void) {
 	if (transposition_table) {
 		free(transposition_table->zobrist_key);
 		free(transposition_table->table);

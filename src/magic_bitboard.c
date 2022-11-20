@@ -290,7 +290,7 @@ uint64_t rook_magic_calc(int square) {
 	return 0;
 }
 
-int magic_bitboard_init() {
+int magic_bitboard_init(void) {
 	int square, i;
 	uint64_t b;
 	char str[3];

@@ -20,9 +20,9 @@
 
 #include <inttypes.h>
 
-int init();
+int init(int argc, char **argv);
 
-void term();
+void term(void);
 
 void init_status(char *str);
 

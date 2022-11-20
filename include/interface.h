@@ -41,9 +41,9 @@ struct history {
 
 int interface(int argc, char **argv);
 
-void interface_init();
+void interface_init(void);
 
-void interface_term();
+void interface_term(void);
 
 int interface_version(struct arg *arg);
 

@@ -183,7 +183,7 @@ uint64_t mvv_lva_calc(int attacker, int victim) {
 	return lookup_t[v + 6 * a] + 0xFFFFFFFFFFFFFF00;
 }
 
-void evaluate_init() {
+void evaluate_init(void) {
 	memset(eval_table, 0, sizeof(eval_table));
 	for (int i = 0; i < 13; i++) {
 		for (int j  = 0; j < 64; j++) {

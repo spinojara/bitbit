@@ -24,6 +24,6 @@
 
 int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int max_duration, struct history *history);
 
-void evaluate_init();
+void evaluate_init(void);
 
 #endif

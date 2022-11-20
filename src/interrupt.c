@@ -30,7 +30,7 @@ void sigint_handler(int num) {
 	signal(SIGINT, sigint_handler);
 }
 
-void interrupt_init() {
+void interrupt_init(void) {
 	signal(SIGINT, sigint_handler);
 	init_status("setting signal handler");
 }

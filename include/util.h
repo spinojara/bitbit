@@ -34,7 +34,7 @@
 #define MACRO_NAME(x) #x
 #define MACRO_VALUE(x) MACRO_NAME(x)
 
-uint64_t rand_uint64();
+uint64_t rand_uint64(void);
 
 int rand_int(int i);
 
@@ -52,6 +52,6 @@ int str_to_int(char *s);
 
 void merge_sort(move *arr, uint64_t *val, unsigned int first, unsigned int last, int increasing);
 
-void util_init();
+void util_init(void);
 
 #endif

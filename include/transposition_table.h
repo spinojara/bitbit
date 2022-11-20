@@ -72,13 +72,13 @@ struct transposition *attempt_get(struct position *pos);
 
 void attempt_store(struct position *pos, int16_t evaluation, uint8_t depth, uint8_t type, uint16_t m);
 
-uint64_t transposition_table_size();
+uint64_t transposition_table_size(void);
 
-void transposition_table_clear();
+void transposition_table_clear(void);
 
 uint64_t zobrist_piece_key(int piece, int square);
 
-uint64_t zobrist_turn_key();
+uint64_t zobrist_turn_key(void);
 
 uint64_t zobrist_castle_key(int castle);
 
@@ -86,10 +86,10 @@ uint64_t zobrist_en_passant_key(int square);
 
 int allocate_transposition_table(uint64_t t);
 
-int transposition_table_occupancy();
+int transposition_table_occupancy(void);
 
-int transposition_table_init();
+int transposition_table_init(void);
 
-void transposition_table_term();
+void transposition_table_term(void);
 
 #endif
