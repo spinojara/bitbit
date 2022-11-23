@@ -74,8 +74,8 @@ void merge(move *arr, uint64_t *val, unsigned int first, unsigned int last, int 
 	if (!(first < last))
 		return;
 	unsigned int middle = (first + last) / 2;
-	move temp_arr[256];
-	uint64_t temp_val[256];
+	move temp_arr[MOVES_MAX];
+	uint64_t temp_val[MOVES_MAX];
 
 	unsigned int i = first, j = middle + 1, k = 0;
 

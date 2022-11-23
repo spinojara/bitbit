@@ -582,7 +582,7 @@ no_failure:;
 void random_pos(struct position *pos, int n) {
 	char *fen[] = { "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR", "w", "KQkq", "-", "0", "1", };
 	pos_from_fen(pos, SIZE(fen), fen);
-	move m[256];
+	move m[MOVES_MAX];
 
 	for (int i = 0; i < n; i++) {
 		generate_all(pos, m);

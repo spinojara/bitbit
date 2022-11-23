@@ -50,6 +50,8 @@ static inline void move_set_en_passant(move *m, uint64_t i) { *m |= (i << 0x18);
 static inline void move_set_halfmove(move *m, uint64_t i) { *m |= (i << 0x1E); }
 static inline void move_set_fullmove(move *m, uint64_t i) { *m |= (i << 0x25); }
 
+#define MOVES_MAX 256
+
 void do_move_perft(struct position *pos, move *m);
 
 void undo_move_perft(struct position *pos, move *m);

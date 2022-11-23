@@ -35,7 +35,7 @@ uint64_t perft(struct position *pos, int depth, int verbose) {
 uint64_t perft_white(struct position *pos, int depth, int verbose) {
 	if (interrupt)
 		return 0;
-	move move_list[256];
+	move move_list[MOVES_MAX];
 	generate_white(pos, move_list);
 	uint64_t nodes = 0, count;
 
@@ -61,7 +61,7 @@ uint64_t perft_white(struct position *pos, int depth, int verbose) {
 uint64_t perft_black(struct position *pos, int depth, int verbose) {
 	if (interrupt)
 		return 0;
-	move move_list[256];
+	move move_list[MOVES_MAX];
 	generate_black(pos, move_list);
 	uint64_t nodes = 0, count;
 

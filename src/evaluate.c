@@ -303,7 +303,7 @@ uint64_t evaluate_move(struct position *pos, move *m, uint8_t ply, struct transp
  * 7. history
  */
 void evaluate_moves(struct position *pos, move *move_list, uint8_t depth, struct transposition *e, int pv_flag, move pv_moves[256][256], move killer_moves[][2], uint64_t history_moves[13][64]) {
-	uint64_t evaluation_list[256];
+	uint64_t evaluation_list[MOVES_MAX];
 	int i;
 	for (i = 0; move_list[i]; i++)
 		evaluation_list[i] = evaluate_move(pos, move_list + i, depth, e, pv_flag, pv_moves, killer_moves, history_moves);
@@ -470,7 +470,7 @@ int16_t quiescence(struct position *pos, int16_t alpha, int16_t beta, clock_t cl
 	if (evaluation > alpha)
 		alpha = evaluation;
 
-	move move_list[256];
+	move move_list[MOVES_MAX];
 	generate_quiescence(pos, move_list);
 	if (!move_list[0])
 		return evaluation;
@@ -533,7 +533,7 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int
 			return beta;
 	}
 
-	move move_list[256];
+	move move_list[MOVES_MAX];
 	generate_all(pos, move_list);
 
 	if (!move_list[0]) {
@@ -605,7 +605,7 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int
 
 int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int max_duration, struct history *history) {
 	int16_t evaluation = 0, saved_evaluation;
-	move move_list[256];
+	move move_list[MOVES_MAX];
 	generate_all(pos, move_list);
 
 	if (m)

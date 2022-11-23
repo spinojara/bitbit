@@ -634,7 +634,7 @@ char *move_str_pgn(char *str, struct position *pos, move *m) {
 }
 
 move string_to_move(struct position *pos, char *str) {
-	move move_list[256];
+	move move_list[MOVES_MAX];
 	generate_all(pos, move_list);
 	char str_t[8];
 	for (move *move_ptr = move_list; *move_ptr; move_ptr++) {

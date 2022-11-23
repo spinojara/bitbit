@@ -871,10 +871,9 @@ move *generate_black(struct position *pos, move *move_list) {
 }
 
 int move_count(move *m) {
-	for (int i = 0; i < 256; i++)
-		if (!m[i])
-			return i;
-	return 256;
+	move *n;
+	for (n = m; *n; n++);
+	return n - m;
 }
 
 int mate(struct position *pos) {
