@@ -56,7 +56,7 @@ void attempt_store(struct position *pos, int16_t evaluation, uint8_t depth, uint
 	if (transposition_type(e) == 0 ||
 			transposition_zobrist_key(e) != pos->zobrist_key ||
 			depth >= transposition_depth(e))
-		store(get(pos), pos, evaluation, depth, type, m);
+		store(e, pos, evaluation, depth, type, m);
 }
 
 uint64_t transposition_table_size(void) {
