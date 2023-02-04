@@ -52,21 +52,21 @@ enum color { black, white };
 
 enum colored_piece { empty, white_pawn, white_knight, white_bishop, white_rook, white_queen, white_king, black_pawn, black_knight, black_bishop, black_rook, black_queen, black_king };
 
-uint64_t generate_checkers(struct position *pos);
-uint64_t generate_checkers_white(struct position *pos);
-uint64_t generate_checkers_black(struct position *pos);
-uint64_t generate_attacked(struct position *pos);
-uint64_t generate_attacked_white(struct position *pos);
-uint64_t generate_attacked_black(struct position *pos);
-uint64_t generate_pinned(struct position *pos);
-uint64_t generate_pinned_white(struct position *pos);
-uint64_t generate_pinned_black(struct position *pos);
+uint64_t generate_checkers(const struct position *pos);
+uint64_t generate_checkers_white(const struct position *pos);
+uint64_t generate_checkers_black(const struct position *pos);
+uint64_t generate_attacked(const struct position *pos);
+uint64_t generate_attacked_white(const struct position *pos);
+uint64_t generate_attacked_black(const struct position *pos);
+uint64_t generate_pinned(const struct position *pos);
+uint64_t generate_pinned_white(const struct position *pos);
+uint64_t generate_pinned_black(const struct position *pos);
 
 static inline void swap_turn(struct position *pos) {
 	pos->turn = 1 - pos->turn;
 }
 
-int square(char *algebraic);
+int square(const char *algebraic);
 
 char *algebraic(char *str, int square);
 
@@ -76,24 +76,24 @@ void pos_from_fen(struct position *pos, int argc, char **argv);
 
 void random_pos(struct position *pos, int n);
 
-char *pos_to_fen(char *fen, struct position *pos);
+char *pos_to_fen(char *fen, const struct position *pos);
 
 int fen_is_ok(int argc, char **argv);
 
-void print_position(struct position *pos, int flip);
+void print_position(const struct position *pos, int flip);
 
 int interactive_setpos(struct position *pos);
 
 void fischer_pos(struct position *pos);
 
-void copy_position(struct position *dest, struct position *src);
+void copy_position(struct position *dest, const struct position *src);
 
-int pos_are_equal(struct position *pos1, struct position *pos2);
+int pos_are_equal(const struct position *pos1, const struct position *pos2);
 
 struct history;
 
-void print_history_pgn(struct history *history);
+void print_history_pgn(const struct history *history);
 
-int has_big_piece(struct position *pos);
+int has_big_piece(const struct position *pos);
 
 #endif

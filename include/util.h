@@ -44,11 +44,11 @@ uint64_t log_2(uint64_t m);
 
 int nearint(double f);
 
-int find_char(char *s, char c);
+int find_char(const char *s, char c);
 
-int str_is_int(char *s);
+int str_is_int(const char *s);
 
-int str_to_int(char *s);
+int str_to_int(const char *s);
 
 void merge_sort(move *arr, uint64_t *val, unsigned int first, unsigned int last, int increasing);
 

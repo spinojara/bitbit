@@ -49,21 +49,21 @@ int nearint(double f) {
 	return ret + (f - ret >= 0.5);
 }
 
-int find_char(char *s, char c) {
+int find_char(const char *s, char c) {
 	for (int i = 0; s[i]; i++)
 		if (s[i] == c)
 			return i;
 	return -1;
 }
 
-int str_is_int(char *s) {
+int str_is_int(const char *s) {
 	for (int i = 0; s[i]; i++)
 		if (s[i] < '0' || s[i] > '9')
 			return 0;
 	return 1;
 }
 
-int str_to_int(char *s) {
+int str_to_int(const char *s) {
 	int ret = 0;
 	for (int i = 0; s[i]; i++)
 		ret = ret * 10 + s[i] - '0';

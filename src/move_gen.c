@@ -20,11 +20,11 @@
 #include "bitboard.h"
 #include "attack_gen.h"
 
-move *generate_all(struct position *pos, move *move_list) {
+move *generate_all(const struct position *pos, move *move_list) {
 	return pos->turn ? generate_white(pos, move_list) : generate_black(pos, move_list);
 }
 
-move *generate_white(struct position *pos, move *move_list) {
+move *generate_white(const struct position *pos, move *move_list) {
 	move *move_ptr = move_list;
 	uint8_t i;
 
@@ -441,7 +441,7 @@ move *generate_white(struct position *pos, move *move_list) {
 	return move_ptr;
 }
 
-move *generate_black(struct position *pos, move *move_list) {
+move *generate_black(const struct position *pos, move *move_list) {
 	move *move_ptr = move_list;
 	uint8_t i;
 
@@ -862,18 +862,18 @@ move *generate_black(struct position *pos, move *move_list) {
 	return move_ptr;
 }
 
-int move_count(move *m) {
-	move *n;
+int move_count(const move *m) {
+	const move *n;
 	for (n = m; *n; n++);
 	return n - m;
 }
 
-int mate(struct position *pos) {
+int mate(const struct position *pos) {
 	/* no need to check for castling moves */
 	return pos->turn ? mate_white(pos) : mate_black(pos);
 }
 
-int mate_white(struct position *pos) {
+int mate_white(const struct position *pos) {
 	uint64_t temp;
 	uint64_t piece;
 	uint64_t attacks;
@@ -1120,7 +1120,7 @@ int mate_white(struct position *pos) {
 	return checkers ? 2 : 1;
 }
 
-int mate_black(struct position *pos) {
+int mate_black(const struct position *pos) {
 	uint64_t temp;
 	uint64_t piece;
 	uint64_t attacks;
@@ -1365,11 +1365,11 @@ int mate_black(struct position *pos) {
 	return checkers ? 2 : 1;
 }
 
-move *generate_quiescence(struct position *pos, move *move_list) {
+move *generate_quiescence(const struct position *pos, move *move_list) {
 	return pos->turn ? generate_quiescence_white(pos, move_list) : generate_quiescence_black(pos, move_list);
 }
 
-move *generate_quiescence_white(struct position *pos, move *move_list) {
+move *generate_quiescence_white(const struct position *pos, move *move_list) {
 	move *move_ptr = move_list;
 
 	uint64_t piece;
@@ -1642,7 +1642,7 @@ move *generate_quiescence_white(struct position *pos, move *move_list) {
 	return move_ptr;
 }
 
-move *generate_quiescence_black(struct position *pos, move *move_list) {
+move *generate_quiescence_black(const struct position *pos, move *move_list) {
 	move *move_ptr = move_list;
 
 	uint64_t piece;
@@ -1916,7 +1916,7 @@ move *generate_quiescence_black(struct position *pos, move *move_list) {
 	return move_ptr;
 }
 
-int mobility_white(struct position *pos) {
+int mobility_white(const struct position *pos) {
 	int moves = 0, t;
 
 	uint64_t piece;
@@ -2030,7 +2030,7 @@ int mobility_white(struct position *pos) {
 	return moves;
 }
 
-int mobility_black(struct position *pos) {
+int mobility_black(const struct position *pos) {
 	int moves = 0, t;
 
 	uint64_t piece;

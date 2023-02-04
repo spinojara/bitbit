@@ -29,7 +29,7 @@
 #include "move_gen.h"
 #include "interface.h"
 
-void print_position(struct position *pos, int flip) {
+void print_position(const struct position *pos, int flip) {
 	int i, j, t;
 	char pieces[] = " PNBRQKpnbrqk";
 	char letters[] = "abcdefgh";
@@ -52,11 +52,11 @@ void print_position(struct position *pos, int flip) {
 	printf("\n\n");
 }
 
-uint64_t generate_checkers(struct position *pos) {
+uint64_t generate_checkers(const struct position *pos) {
 	return pos->turn ? generate_checkers_white(pos) : generate_checkers_black(pos);
 }
 
-uint64_t generate_checkers_white(struct position *pos) {
+uint64_t generate_checkers_white(const struct position *pos) {
 	uint64_t checkers = 0;
 	int square;
 
@@ -69,7 +69,7 @@ uint64_t generate_checkers_white(struct position *pos) {
 	return checkers;
 }
 
-uint64_t generate_checkers_black(struct position *pos) {
+uint64_t generate_checkers_black(const struct position *pos) {
 	uint64_t checkers = 0;
 	int square;
 
@@ -82,11 +82,11 @@ uint64_t generate_checkers_black(struct position *pos) {
 	return checkers;
 }
 
-uint64_t generate_attacked(struct position *pos) {
+uint64_t generate_attacked(const struct position *pos) {
 	return pos->turn ? generate_attacked_white(pos) : generate_attacked_black(pos);
 }
 
-uint64_t generate_attacked_white(struct position *pos) {
+uint64_t generate_attacked_white(const struct position *pos) {
 	uint64_t attacked = 0;
 	uint64_t piece;
 	int square;
@@ -121,7 +121,7 @@ uint64_t generate_attacked_white(struct position *pos) {
 	return attacked;
 }
 
-uint64_t generate_attacked_black(struct position *pos) {
+uint64_t generate_attacked_black(const struct position *pos) {
 	uint64_t attacked = 0;
 	uint64_t piece;
 	int square;
@@ -156,7 +156,7 @@ uint64_t generate_attacked_black(struct position *pos) {
 	return attacked;
 }
 
-uint64_t generate_pinned_white(struct position *pos) {
+uint64_t generate_pinned_white(const struct position *pos) {
 	uint64_t pinned_all = 0;
 	int king_square;
 	int square;
@@ -193,7 +193,7 @@ uint64_t generate_pinned_white(struct position *pos) {
 	return pinned_all;
 }
 
-uint64_t generate_pinned_black(struct position *pos) {
+uint64_t generate_pinned_black(const struct position *pos) {
 	uint64_t pinned_all = 0;
 	int king_square;
 	int square;
@@ -229,7 +229,7 @@ uint64_t generate_pinned_black(struct position *pos) {
 	
 	return pinned_all;
 }
-int square(char *algebraic) {
+int square(const char *algebraic) {
 	if (strlen(algebraic) != 2) {
 		return -1;
 	}
@@ -590,7 +590,7 @@ void random_pos(struct position *pos, int n) {
 	}
 }
 
-char *pos_to_fen(char *fen, struct position *pos) {
+char *pos_to_fen(char *fen, const struct position *pos) {
 	int k = 0;
 	char tmp[128];
 
@@ -912,7 +912,7 @@ void fischer_pos(struct position *pos) {
 	setpos(pos, 1, 0, 0, 0, 1, mailbox);
 }
 
-void copy_position(struct position *dest, struct position *src) {
+void copy_position(struct position *dest, const struct position *src) {
 	for (int j = 0; j < 2; j++)
 		for (int i = 0; i < 7; i++)
 			dest->piece[j][i] = src->piece[j][i];
@@ -925,7 +925,7 @@ void copy_position(struct position *dest, struct position *src) {
 		dest->mailbox[i] = src->mailbox[i];
 }
 
-int pos_are_equal(struct position *pos1, struct position *pos2) {
+int pos_are_equal(const struct position *pos1, const struct position *pos2) {
 	if (pos1->turn != pos2->turn)
 		return 0;
 	if (pos1->en_passant != pos2->en_passant)
@@ -946,10 +946,10 @@ int pos_are_equal(struct position *pos1, struct position *pos2) {
 	return 1;
 }
 
-void print_history_pgn(struct history *history) {
+void print_history_pgn(const struct history *history) {
 	if (!history)
 		return;
-	struct history *t, *t_last = NULL;
+	const struct history *t, *t_last = NULL;
 	char str[8];
 	while (1) {
 		for (t = history; t->previous != t_last; t = t->previous);
@@ -970,7 +970,7 @@ void print_history_pgn(struct history *history) {
 	}
 }
 
-int has_big_piece(struct position *pos) {
+int has_big_piece(const struct position *pos) {
 	return pos->turn ? pos->piece[white][bishop] || pos->piece[white][rook] || pos->piece[white][queen] :
 		pos->piece[black][bishop] || pos->piece[black][rook] || pos->piece[black][queen];
 }

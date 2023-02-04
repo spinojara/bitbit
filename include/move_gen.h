@@ -21,28 +21,28 @@
 #include "position.h"
 #include "move.h"
 
-move *generate_all(struct position *pos, move *move_list);
+move *generate_all(const struct position *pos, move *move_list);
 
-move *generate_white(struct position *pos, move *move_list);
+move *generate_white(const struct position *pos, move *move_list);
 
-move *generate_black(struct position *pos, move *move_list);
+move *generate_black(const struct position *pos, move *move_list);
 
-int move_count(move *m);
+int move_count(const move *m);
 
-int mate(struct position *pos);
+int mate(const struct position *pos);
 
-int mate_white(struct position *pos);
+int mate_white(const struct position *pos);
 
-int mate_black(struct position *pos);
+int mate_black(const struct position *pos);
 
-move *generate_quiescence(struct position *pos, move *move_list);
+move *generate_quiescence(const struct position *pos, move *move_list);
 
-move *generate_quiescence_white(struct position *pos, move *move_list);
+move *generate_quiescence_white(const struct position *pos, move *move_list);
 
-move *generate_quiescence_black(struct position *pos, move *move_list);
+move *generate_quiescence_black(const struct position *pos, move *move_list);
 
-int mobility_white(struct position *pos);
+int mobility_white(const struct position *pos);
 
-int mobility_black(struct position *pos);
+int mobility_black(const struct position *pos);
 
 #endif

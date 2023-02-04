@@ -256,6 +256,10 @@ int interface_eval(struct arg *arg) {
 			else
 				eval = evaluate(pos, 255, m, flag(arg, 'v'), str_to_int(arg->argv[1]), history);
 			t = clock() - t;
+			if (flag(arg, 't'))
+				printf("\rtime: %.2f\n", (double)t / CLOCKS_PER_SEC);
+			if (flag(arg, 'm') && *m && (interrupt < 2 || t >= CLOCKS_PER_SEC * (str_to_int(arg->argv[1]))))
+				move_next(&pos, &history, *m);
 			if (interrupt)
 				return DONE;
 			if (!flag(arg, 'v')) {
@@ -263,10 +267,6 @@ int interface_eval(struct arg *arg) {
 				if (is_legal(pos, m))
 					printf("%+.2f %s\n", (double)eval / 100, move_str_pgn(str, pos, m));
 			}
-			if (flag(arg, 't'))
-				printf("time: %.2f\n", (double)t / CLOCKS_PER_SEC);
-			if (flag(arg, 'm') && *m && interrupt < 2)
-				move_next(&pos, &history, *m);
 		}
 		else {
 			return ERR_BAD_ARG;
