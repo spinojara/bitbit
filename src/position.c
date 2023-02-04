@@ -100,11 +100,7 @@ uint64_t generate_attacked(const struct position *pos, int color) {
 	return attacked;
 }
 
-uint64_t generate_pinned(const struct position *pos) {
-	return pos->turn ? generate_pinned_white(pos) : generate_pinned_black(pos);
-}
-
-uint64_t generate_pinned_white(const struct position *pos) {
+uint64_t generate_pinned(const struct position *pos, int color) {
 	uint64_t pinned_all = 0;
 	int king_square;
 	int square;
@@ -112,14 +108,14 @@ uint64_t generate_pinned_white(const struct position *pos) {
 	uint64_t bishop_pinners;
 	uint64_t pinned;
 
-	king_square = ctz(pos->piece[white][king]);
-	rook_pinners = rook_attacks(king_square, 0, pos->piece[black][all]) & (pos->piece[black][rook] | pos->piece[black][queen]);
-	bishop_pinners = bishop_attacks(king_square, 0, pos->piece[black][all]) & (pos->piece[black][bishop] | pos->piece[black][queen]);
+	king_square = ctz(pos->piece[color][king]);
+	rook_pinners = rook_attacks(king_square, 0, pos->piece[1 - color][all]) & (pos->piece[1 - color][rook] | pos->piece[1 - color][queen]);
+	bishop_pinners = bishop_attacks(king_square, 0, pos->piece[1 - color][all]) & (pos->piece[1 - color][bishop] | pos->piece[1 - color][queen]);
 
 	while (rook_pinners) {
 		square = ctz(rook_pinners);
 
-		pinned = between_lookup[square + 64 * king_square] & pos->piece[white][all];
+		pinned = between_lookup[square + 64 * king_square] & pos->piece[color][all];
 		if (single(pinned)) {
 			pinned_all |= pinned;
 		}
@@ -129,7 +125,7 @@ uint64_t generate_pinned_white(const struct position *pos) {
 
 	while (bishop_pinners) {
 		square = ctz(bishop_pinners);
-		pinned = between_lookup[square + 64 * king_square] & pos->piece[white][all];
+		pinned = between_lookup[square + 64 * king_square] & pos->piece[color][all];
 
 		if (single(pinned)) {
 			pinned_all |= pinned;
@@ -141,42 +137,6 @@ uint64_t generate_pinned_white(const struct position *pos) {
 	return pinned_all;
 }
 
-uint64_t generate_pinned_black(const struct position *pos) {
-	uint64_t pinned_all = 0;
-	int king_square;
-	int square;
-	uint64_t rook_pinners;
-	uint64_t bishop_pinners;
-	uint64_t pinned;
-
-	king_square = ctz(pos->piece[black][king]);
-	rook_pinners = rook_attacks(king_square, 0, pos->piece[white][all]) & (pos->piece[white][rook] | pos->piece[white][queen]);
-	bishop_pinners = bishop_attacks(king_square, 0, pos->piece[white][all]) & (pos->piece[white][bishop] | pos->piece[white][queen]);
-
-	while (rook_pinners) {
-		square = ctz(rook_pinners);
-
-		pinned = between_lookup[square + 64 * king_square] & pos->piece[black][all];
-		if (single(pinned)) {
-			pinned_all |= pinned;
-		}
-
-		rook_pinners = clear_ls1b(rook_pinners);
-	}
-
-	while (bishop_pinners) {
-		square = ctz(bishop_pinners);
-
-		pinned = between_lookup[square + 64 * king_square] & pos->piece[black][all];
-		if (single(pinned)) {
-			pinned_all |= pinned;
-		}
-
-		bishop_pinners = clear_ls1b(bishop_pinners);
-	}
-	
-	return pinned_all;
-}
 int square(const char *algebraic) {
 	if (strlen(algebraic) != 2) {
 		return -1;

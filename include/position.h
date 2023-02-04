@@ -58,7 +58,7 @@ uint64_t generate_checkers_black(const struct position *pos);
 uint64_t generate_attacked(const struct position *pos, int color);
 uint64_t generate_attacked_white(const struct position *pos);
 uint64_t generate_attacked_black(const struct position *pos);
-uint64_t generate_pinned(const struct position *pos);
+uint64_t generate_pinned(const struct position *pos, int color);
 uint64_t generate_pinned_white(const struct position *pos);
 uint64_t generate_pinned_black(const struct position *pos);
 
