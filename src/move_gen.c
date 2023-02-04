@@ -108,7 +108,7 @@ move *generate_all(const struct position *pos, move *move_list) {
 		piece = pawn_capture_e(pos->piece[pos->turn][pawn], pos->piece[1 - pos->turn][all], pos->turn) & pinned;
 		while (piece) {
 			source_square = ctz(piece);
-			if (source_square % 8 > king_square % 8 && source_square / 8 > king_square / 8) {
+			if (source_square % 8 > king_square % 8 && pawn_sign * source_square / 8 > pawn_sign * king_square / 8) {
 				if (56 <= source_square + 8 * pawn_sign || source_square + 8 * pawn_sign < 7) {
 					for (i = 0; i < 4; i++) {
 						*move_ptr++ = new_move(source_square, source_square + 1 + 8 * pawn_sign, 2, i);
@@ -138,7 +138,7 @@ move *generate_all(const struct position *pos, move *move_list) {
 		piece = pawn_capture_w(pos->piece[pos->turn][pawn], pos->piece[1 - pos->turn][all], pos->turn) & pinned;
 		while (piece) {
 			source_square = ctz(piece);
-			if (source_square % 8 < king_square % 8 && source_square / 8 > king_square / 8) {
+			if (source_square % 8 < king_square % 8 && pawn_sign * source_square / 8 > pawn_sign * king_square / 8) {
 				if (56 <= source_square + 8 * pawn_sign || source_square + 8 * pawn_sign < 7) {
 					for (i = 0; i < 4; i++) {
 						*move_ptr++ = new_move(source_square, source_square - 1 + 8 * pawn_sign, 2, i);
