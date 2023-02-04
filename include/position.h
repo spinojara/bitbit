@@ -22,7 +22,6 @@
 
 struct position {
 	uint64_t piece[2][7];
-	uint64_t piece_all;
 
 	uint8_t turn;
 	int8_t en_passant;

@@ -144,7 +144,6 @@ void do_move_perft(struct position *pos, move *m) {
 		pos->piece[black][all] ^= from_to;
 		pos->mailbox[source_square] = empty;
 	}
-	pos->piece_all = pos->piece[white][all] | pos->piece[black][all];
 
 	pos->turn = 1 - pos->turn;
 }
@@ -237,7 +236,6 @@ void undo_move_perft(struct position *pos, move *m) {
 	}
 
 	pos->turn = 1 - pos->turn;
-	pos->piece_all = pos->piece[white][all] | pos->piece[black][all];
 }
 
 void do_move(struct position *pos, move *m) {
@@ -399,7 +397,6 @@ void do_move(struct position *pos, move *m) {
 		pos->piece[black][all] ^= from_to;
 		pos->mailbox[source_square] = empty;
 	}
-	pos->piece_all = pos->piece[white][all] | pos->piece[black][all];
 
 	pos->turn = 1 - pos->turn;
 	pos->zobrist_key ^= zobrist_turn_key();
@@ -524,7 +521,6 @@ void undo_move(struct position *pos, move *m) {
 	}
 
 	pos->turn = 1 - pos->turn;
-	pos->piece_all = pos->piece[white][all] | pos->piece[black][all];
 	pos->zobrist_key ^= zobrist_turn_key();
 }
 
@@ -571,17 +567,17 @@ char *move_str_pgn(char *str, struct position *pos, move *m) {
 		break;
 	case 2:
 		str[i++] = 'B';
-		attackers = bishop_attacks(move_to(m), pos->piece_all) &
+		attackers = bishop_attacks(move_to(m), pos->piece[white][all] | pos->piece[black][all]) &
 			(pos->turn ? pos->piece[white][bishop] : pos->piece[black][bishop]);
 		break;
 	case 3:
 		str[i++] = 'R';
-		attackers = rook_attacks(move_to(m), pos->piece_all) &
+		attackers = rook_attacks(move_to(m), pos->piece[white][all] | pos->piece[black][all]) &
 			(pos->turn ? pos->piece[white][rook] : pos->piece[black][rook]);
 		break;
 	case 4:
 		str[i++] = 'Q';
-		attackers = queen_attacks(move_to(m), pos->piece_all) &
+		attackers = queen_attacks(move_to(m), pos->piece[white][all] | pos->piece[black][all]) &
 			(pos->turn ? pos->piece[white][queen] : pos->piece[black][queen]);
 		break;
 	case 5:
