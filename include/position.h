@@ -55,7 +55,7 @@ enum colored_piece { empty, white_pawn, white_knight, white_bishop, white_rook, 
 uint64_t generate_checkers(const struct position *pos, int color);
 uint64_t generate_checkers_white(const struct position *pos);
 uint64_t generate_checkers_black(const struct position *pos);
-uint64_t generate_attacked(const struct position *pos);
+uint64_t generate_attacked(const struct position *pos, int color);
 uint64_t generate_attacked_white(const struct position *pos);
 uint64_t generate_attacked_black(const struct position *pos);
 uint64_t generate_pinned(const struct position *pos);

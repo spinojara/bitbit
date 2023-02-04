@@ -31,7 +31,7 @@ move *generate_all(const struct position *pos, move *move_list) {
 	uint64_t all_pieces = pos->piece[white][all] | pos->piece[black][all];
 
 	uint64_t checkers = generate_checkers(pos, pos->turn);
-	uint64_t attacked = generate_attacked(pos);
+	uint64_t attacked = generate_attacked(pos, pos->turn);
 	uint64_t pinned = generate_pinned(pos);
 
 	uint8_t target_square;

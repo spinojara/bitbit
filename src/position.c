@@ -65,74 +65,35 @@ uint64_t generate_checkers(const struct position *pos, int color) {
 	return checkers;
 }
 
-uint64_t generate_attacked(const struct position *pos) {
-	return pos->turn ? generate_attacked_white(pos) : generate_attacked_black(pos);
-}
-
-uint64_t generate_attacked_white(const struct position *pos) {
+uint64_t generate_attacked(const struct position *pos, int color) {
 	uint64_t attacked = 0;
 	uint64_t piece;
 	int square;
 
-	square = ctz(pos->piece[black][king]);
+	square = ctz(pos->piece[1 - color][king]);
 
 	attacked = king_attacks(square, 0);
-	attacked |= shift_south_west(pos->piece[black][pawn]);
-	attacked |= shift_south_east(pos->piece[black][pawn]);
+	attacked |= shift_color_west(pos->piece[1 - color][pawn], 1 - color);
+	attacked |= shift_color_east(pos->piece[1 - color][pawn], 1 - color);
 
-	piece = pos->piece[black][knight];
+	piece = pos->piece[1 - color][knight];
 	while (piece) {
 		square = ctz(piece);
 		attacked |= knight_attacks(square, 0);
 		piece = clear_ls1b(piece);
 	}
 
-	piece = pos->piece[black][bishop] | pos->piece[black][queen];
+	piece = pos->piece[1 - color][bishop] | pos->piece[1 - color][queen];
 	while (piece) {
 		square = ctz(piece);
-		attacked |= bishop_attacks(square, 0, (pos->piece[white][all] | pos->piece[black][all]) ^ pos->piece[white][king]);
+		attacked |= bishop_attacks(square, 0, (pos->piece[white][all] | pos->piece[black][all]) ^ pos->piece[color][king]);
 		piece = clear_ls1b(piece);
 	}
 
-	piece = pos->piece[black][rook] | pos->piece[black][queen];
+	piece = pos->piece[1 - color][rook] | pos->piece[1 - color][queen];
 	while (piece) {
 		square = ctz(piece);
-		attacked |= rook_attacks(square, 0, (pos->piece[white][all] | pos->piece[black][all]) ^ pos->piece[white][king]);
-		piece = clear_ls1b(piece);
-	}
-
-	return attacked;
-}
-
-uint64_t generate_attacked_black(const struct position *pos) {
-	uint64_t attacked = 0;
-	uint64_t piece;
-	int square;
-
-	square = ctz(pos->piece[white][king]);
-
-	attacked = king_attacks(square, 0);
-	attacked |= shift_north_west(pos->piece[white][pawn]);
-	attacked |= shift_north_east(pos->piece[white][pawn]);
-
-	piece = pos->piece[white][knight];
-	while (piece) {
-		square = ctz(piece);
-		attacked |= knight_attacks(square, 0);
-		piece = clear_ls1b(piece);
-	}
-
-	piece = pos->piece[white][bishop] | pos->piece[white][queen];
-	while (piece) {
-		square = ctz(piece);
-		attacked |= bishop_attacks(square, 0, (pos->piece[white][all] | pos->piece[black][all]) ^ pos->piece[black][king]);
-		piece = clear_ls1b(piece);
-	}
-
-	piece = pos->piece[white][rook] | pos->piece[white][queen];
-	while (piece) {
-		square = ctz(piece);
-		attacked |= rook_attacks(square, 0, (pos->piece[white][all] | pos->piece[black][all]) ^ pos->piece[black][king]);
+		attacked |= rook_attacks(square, 0, (pos->piece[white][all] | pos->piece[black][all]) ^ pos->piece[color][king]);
 		piece = clear_ls1b(piece);
 	}
 
@@ -544,7 +505,7 @@ int fen_is_ok(int argc, char **argv) {
 	pos = malloc(sizeof(struct position));
 	pos_from_fen(pos, argc, argv);
 	swap_turn(pos);
-	uint64_t attacked = generate_attacked(pos);
+	uint64_t attacked = generate_attacked(pos, pos->turn);
 	swap_turn(pos);
 	if (pos->turn) {
 		if (attacked & pos->piece[black][king])
