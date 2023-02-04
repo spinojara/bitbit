@@ -124,6 +124,6 @@ void merge_sort(move *arr, uint64_t *val, unsigned int first, unsigned int last,
 }
 
 void util_init(void) {
-	srand(time(NULL));
+	srand(0);
 	init_status("setting seed");
 }

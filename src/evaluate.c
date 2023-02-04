@@ -206,21 +206,15 @@ void evaluate_init(void) {
 	}
 }
 
-void print_pv(struct position *pos, move pv_moves[256][256]) {
-	int i;
-	char str[256][8];
-	struct position pos_copy[1];
-	copy_position(pos_copy, pos);
-	for (i = 0; i < 256 && pv_moves[0][i]; i++) {
-		move_str_pgn(str[i], pos_copy, &(pv_moves[0][i]));
-		if (!string_to_move(pos_copy, str[i]))
-			break;
-		printf("%s", str[i]);
-		do_move(pos_copy, &(pv_moves[0][i]));
-		pv_moves[0][i] = pv_moves[0][i] & 0xFFFF;
-		if (i != 255 && pv_moves[0][i + 1])
-			printf(" ");
-	}
+void print_pv(struct position *pos, move *pv_move, int ply) {
+	char str[8];
+	if (ply > 255 || !move_str_pgn(str, pos, pv_move))
+		return;
+	printf(" %s", str);
+	do_move(pos, pv_move);
+	print_pv(pos, pv_move + 1, ply + 1);
+	undo_move(pos, pv_move);
+	*pv_move = *pv_move & 0xFFFF;
 }
 
 int is_threefold(struct position *pos, struct history *history) {
@@ -317,19 +311,19 @@ int pawn_structure(struct position *pos) {
 
 	/* doubled pawns */
 	for (i = 0; i < 8; i++) {
-		if ((t = (pos->white_pieces[pawn] & file(i))))
+		if ((t = (pos->piece[white][pawn] & file(i))))
 			eval -= (popcount(t) - 1) * 50;
-		if ((t = (pos->black_pieces[pawn] & file(i))))
+		if ((t = (pos->piece[black][pawn] & file(i))))
 			eval += (popcount(t) - 1) * 50;
 	}
 
 	/* isolated pawns */
 	for (i = 0; i < 8; i++) {
-		if ((pos->white_pieces[pawn] & file(i)) &&
-				!(pos->white_pieces[pawn] & adjacent_files(i)))
+		if ((pos->piece[white][pawn] & file(i)) &&
+				!(pos->piece[white][pawn] & adjacent_files(i)))
 			eval -= 35;
-		if ((pos->black_pieces[pawn] & file(i)) &&
-				!(pos->black_pieces[pawn] & adjacent_files(i)))
+		if ((pos->piece[black][pawn] & file(i)) &&
+				!(pos->piece[black][pawn] & adjacent_files(i)))
 			eval += 35;
 	}
 
@@ -338,17 +332,17 @@ int pawn_structure(struct position *pos) {
 	uint64_t b;
 	for (i = 0; i < 8; i++) {
 		/* asymmetric because of bit scan */
-		if ((b = (pos->white_pieces[pawn] & file(i)))) {
+		if ((b = (pos->piece[white][pawn] & file(i)))) {
 			while (b) {
 				square = ctz(b);
 				b = clear_ls1b(b);
 			}
-			if (!(pos->black_pieces[pawn] & passed_files_white(square)))
+			if (!(pos->piece[black][pawn] & passed_files_white(square)))
 				eval += 20 * (square / 8);
 		}
-		if ((b = (pos->black_pieces[pawn] & file(i)))) {
+		if ((b = (pos->piece[black][pawn] & file(i)))) {
 			square = ctz(b);
-			if (!(pos->white_pieces[pawn] & passed_files_black(square)))
+			if (!(pos->piece[white][pawn] & passed_files_black(square)))
 				eval -= 20 * (7 - square / 8);
 		}
 	}
@@ -359,8 +353,8 @@ int pawn_structure(struct position *pos) {
 int center_control(struct position *pos) {
 	int eval = 0;
 	uint64_t center = 0x3C3C000000;
-	eval += 15 * popcount((shift_west(shift_north(pos->white_pieces[pawn])) | shift_east(shift_north(pos->white_pieces[pawn]))) & center);
-	eval -= 15 * popcount((shift_west(shift_south(pos->black_pieces[pawn])) | shift_east(shift_south(pos->black_pieces[pawn]))) & center);
+	eval += 15 * popcount((shift_west(shift_north(pos->piece[white][pawn])) | shift_east(shift_north(pos->piece[white][pawn]))) & center);
+	eval -= 15 * popcount((shift_west(shift_south(pos->piece[black][pawn])) | shift_east(shift_south(pos->piece[black][pawn]))) & center);
 	return eval;
 }
 
@@ -369,40 +363,40 @@ int king_safety(struct position *pos) {
 	int king_black;
 	int eval = 0;
 	/* half open files near king are bad */
-	king_white = ctz(pos->white_pieces[king]);
-	if (file_left(king_white) && !(file_left(king_white) & pos->white_pieces[pawn]))
+	king_white = ctz(pos->piece[white][king]);
+	if (file_left(king_white) && !(file_left(king_white) & pos->piece[white][pawn]))
 		eval -= 30;
-	if (!(file(king_white) & pos->white_pieces[pawn]))
+	if (!(file(king_white) & pos->piece[white][pawn]))
 		eval -= 30;
-	if (file_right(king_white) && !(file_right(king_white) & pos->white_pieces[pawn]))
+	if (file_right(king_white) && !(file_right(king_white) & pos->piece[white][pawn]))
 		eval -= 30;
-	king_black = ctz(pos->black_pieces[king]);
-	if (file_left(king_black) && !(file_left(king_black) & pos->black_pieces[pawn]))
+	king_black = ctz(pos->piece[black][king]);
+	if (file_left(king_black) && !(file_left(king_black) & pos->piece[black][pawn]))
 		eval += 30;
-	if (!(file(king_black) & pos->black_pieces[pawn]))
+	if (!(file(king_black) & pos->piece[black][pawn]))
 		eval += 30;
-	if (file_right(king_black) && !(file_right(king_black) & pos->black_pieces[pawn]))
+	if (file_right(king_black) && !(file_right(king_black) & pos->piece[black][pawn]))
 		eval += 30;
 
 	/* safety table */
 	int attack_units;
 	uint64_t squares;
 	attack_units = 0;
-	squares = king_squares(ctz(pos->white_pieces[king]), 1);
-	attack_units += 5 * popcount(squares & pos->black_pieces[queen]);
-	attack_units += 3 * popcount(squares & pos->black_pieces[rook]);
-	attack_units += 2 * popcount(squares & (pos->black_pieces[bishop] | pos->black_pieces[knight]));
+	squares = king_squares(ctz(pos->piece[white][king]), 1);
+	attack_units += 5 * popcount(squares & pos->piece[black][queen]);
+	attack_units += 3 * popcount(squares & pos->piece[black][rook]);
+	attack_units += 2 * popcount(squares & (pos->piece[black][bishop] | pos->piece[black][knight]));
 	eval -= safety_table[MIN(attack_units, 99)];
 	attack_units = 0;
-	squares = king_squares(ctz(pos->black_pieces[king]), 0);
-	attack_units += 5 * popcount(squares & pos->white_pieces[queen]);
-	attack_units += 3 * popcount(squares & pos->white_pieces[rook]);
-	attack_units += 2 * popcount(squares & (pos->white_pieces[bishop] | pos->white_pieces[knight]));
+	squares = king_squares(ctz(pos->piece[black][king]), 0);
+	attack_units += 5 * popcount(squares & pos->piece[white][queen]);
+	attack_units += 3 * popcount(squares & pos->piece[white][rook]);
+	attack_units += 2 * popcount(squares & (pos->piece[white][bishop] | pos->piece[white][knight]));
 	eval += safety_table[MIN(attack_units, 99)];
 
 	/* pawns close to king */
-	eval += 15 * popcount(king_attacks(king_white) & pos->white_pieces[pawn]);
-	eval -= 15 * popcount(king_attacks(king_black) & pos->black_pieces[pawn]);
+	eval += 15 * popcount(king_attacks(king_white) & pos->piece[white][pawn]);
+	eval -= 15 * popcount(king_attacks(king_black) & pos->piece[black][pawn]);
 	return eval;
 }
 
@@ -436,9 +430,9 @@ int16_t evaluate_static(struct position *pos) {
 	eval = nearint((0.99 + 0.011 / (early_game + 0.1)) * eval);
 
 	/* bishop pair */
-	if (pos->white_pieces[bishop] && clear_ls1b(pos->white_pieces[bishop]))
+	if (pos->piece[white][bishop] && clear_ls1b(pos->piece[white][bishop]))
 		eval += 30;
-	if (pos->black_pieces[bishop] && clear_ls1b(pos->black_pieces[bishop]))
+	if (pos->piece[black][bishop] && clear_ls1b(pos->piece[black][bishop]))
 		eval -= 30;
 
 	/* king safety */
@@ -682,8 +676,8 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int 
 				printf("%i +m%i", d, 0x7F00 - evaluation);
 			else
 				printf("%i %+.2f", d, (double)evaluation / 100);
-			printf(" nodes %" PRIu64 " pv ", nodes);
-			print_pv(pos, pv_moves);
+			printf(" nodes %" PRIu64 " pv", nodes);
+			print_pv(pos, pv_moves[0], 0);
 			printf("\n");
 			fflush(stdout);
 		}

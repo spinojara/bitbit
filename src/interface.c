@@ -260,7 +260,8 @@ int interface_eval(struct arg *arg) {
 				return DONE;
 			if (!flag(arg, 'v')) {
 				char str[8];
-				printf("%+.2f %s\n", (double)eval / 100, move_str_pgn(str, pos, m));
+				if (is_legal(pos, m))
+					printf("%+.2f %s\n", (double)eval / 100, move_str_pgn(str, pos, m));
 			}
 			if (flag(arg, 't'))
 				printf("time: %.2f\n", (double)t / CLOCKS_PER_SEC);

@@ -45,9 +45,9 @@ void do_move_perft(struct position *pos, move *m) {
 
 	if (pos->turn) {
 		if (pos->mailbox[target_square]) {
-			pos->black_pieces[pos->mailbox[target_square] - 6] ^= to;
+			pos->piece[black][pos->mailbox[target_square] - 6] ^= to;
 			move_set_captured(m, pos->mailbox[target_square] - 6);
-			pos->black_pieces[all] ^= to;
+			pos->piece[black][all] ^= to;
 		}
 
 		if (pos->mailbox[source_square] == white_pawn) {
@@ -56,30 +56,30 @@ void do_move_perft(struct position *pos, move *m) {
 				pos->en_passant = target_square - 8;
 			}
 			else if (move_flag(m) == 1) {
-				pos->black_pieces[pawn] ^= bitboard(target_square - 8);
-				pos->black_pieces[all] ^= bitboard(target_square - 8);
+				pos->piece[black][pawn] ^= bitboard(target_square - 8);
+				pos->piece[black][all] ^= bitboard(target_square - 8);
 				pos->mailbox[target_square - 8] = empty;
 
 			}
 			else if (move_flag(m) == 2) {
-				pos->white_pieces[pawn] ^= to;
-				pos->white_pieces[move_promote(m) + 2] ^= to;
+				pos->piece[white][pawn] ^= to;
+				pos->piece[white][move_promote(m) + 2] ^= to;
 				pos->mailbox[target_square] = move_promote(m) + 2;
 			}
-			pos->white_pieces[pawn] ^= from_to;
+			pos->piece[white][pawn] ^= from_to;
 		}
 		else if (pos->mailbox[source_square] == white_king) {
-			pos->white_pieces[king] ^= from_to;
+			pos->piece[white][king] ^= from_to;
 			if (move_flag(m) == 3) {
 				if (target_square == 6) {
-					pos->white_pieces[rook] ^= 0xA0;
-					pos->white_pieces[all] ^= 0xA0;
+					pos->piece[white][rook] ^= 0xA0;
+					pos->piece[white][all] ^= 0xA0;
 					pos->mailbox[h1] = empty;
 					pos->mailbox[f1] = white_rook;
 				}
 				else if (target_square == 2) {
-					pos->white_pieces[rook] ^= 0x9;
-					pos->white_pieces[all] ^= 0x9;
+					pos->piece[white][rook] ^= 0x9;
+					pos->piece[white][all] ^= 0x9;
 					pos->mailbox[a1] = empty;
 					pos->mailbox[d1] = white_rook;
 				}
@@ -87,18 +87,18 @@ void do_move_perft(struct position *pos, move *m) {
 			pos->mailbox[target_square] = white_king;
 		}
 		else {
-			pos->white_pieces[pos->mailbox[source_square]] ^= from_to;
+			pos->piece[white][pos->mailbox[source_square]] ^= from_to;
 			pos->mailbox[target_square] = pos->mailbox[source_square];
 		}
 
-		pos->white_pieces[all] ^= from_to;
+		pos->piece[white][all] ^= from_to;
 		pos->mailbox[source_square] = empty;
 	}
 	else {
 		if (pos->mailbox[target_square]) {
-			pos->white_pieces[pos->mailbox[target_square]] ^= to;
+			pos->piece[white][pos->mailbox[target_square]] ^= to;
 			move_set_captured(m, pos->mailbox[target_square]);
-			pos->white_pieces[all] ^= to;
+			pos->piece[white][all] ^= to;
 		}
 
 		if (pos->mailbox[source_square] == black_pawn) {
@@ -107,29 +107,29 @@ void do_move_perft(struct position *pos, move *m) {
 				pos->en_passant = target_square + 8;
 			}
 			else if (move_flag(m) == 1) {
-				pos->white_pieces[pawn] ^= bitboard(target_square + 8);
-				pos->white_pieces[all] ^= bitboard(target_square + 8);
+				pos->piece[white][pawn] ^= bitboard(target_square + 8);
+				pos->piece[white][all] ^= bitboard(target_square + 8);
 				pos->mailbox[target_square + 8] = 0;
 			}
 			else if (move_flag(m) == 2) {
-				pos->black_pieces[pawn] ^= to;
-				pos->black_pieces[move_promote(m) + 2] ^= to;
+				pos->piece[black][pawn] ^= to;
+				pos->piece[black][move_promote(m) + 2] ^= to;
 				pos->mailbox[target_square] = move_promote(m) + 8;
 			}
-			pos->black_pieces[pawn] ^= from_to;
+			pos->piece[black][pawn] ^= from_to;
 		}
 		else if (pos->mailbox[source_square] == black_king) {
-			pos->black_pieces[king] ^= from_to;
+			pos->piece[black][king] ^= from_to;
 			if (move_flag(m) == 3) {
 				if (target_square == 62) {
-					pos->black_pieces[rook] ^= 0xA000000000000000;
-					pos->black_pieces[all] ^= 0xA000000000000000;
+					pos->piece[black][rook] ^= 0xA000000000000000;
+					pos->piece[black][all] ^= 0xA000000000000000;
 					pos->mailbox[h8] = empty;
 					pos->mailbox[f8] = black_rook;
 				}
 				else if (target_square == 58) {
-					pos->black_pieces[rook] ^= 0x900000000000000;
-					pos->black_pieces[all] ^= 0x900000000000000;
+					pos->piece[black][rook] ^= 0x900000000000000;
+					pos->piece[black][all] ^= 0x900000000000000;
 					pos->mailbox[a8] = empty;
 					pos->mailbox[d8] = black_rook;
 				}
@@ -137,14 +137,14 @@ void do_move_perft(struct position *pos, move *m) {
 			pos->mailbox[target_square] = black_king;
 		}
 		else {
-			pos->black_pieces[pos->mailbox[source_square] - 6] ^= from_to;
+			pos->piece[black][pos->mailbox[source_square] - 6] ^= from_to;
 			pos->mailbox[target_square] = pos->mailbox[source_square];
 		}
 
-		pos->black_pieces[all] ^= from_to;
+		pos->piece[black][all] ^= from_to;
 		pos->mailbox[source_square] = empty;
 	}
-	pos->pieces = pos->white_pieces[all] | pos->black_pieces[all];
+	pos->piece_all = pos->piece[white][all] | pos->piece[black][all];
 
 	pos->turn = 1 - pos->turn;
 }
@@ -162,27 +162,27 @@ void undo_move_perft(struct position *pos, move *m) {
 	pos->en_passant = move_en_passant(m);
 
 	if (pos->turn) {
-		pos->black_pieces[pos->mailbox[target_square] - 6] ^= from_to;
+		pos->piece[black][pos->mailbox[target_square] - 6] ^= from_to;
 		if (move_flag(m) == 1) {
-			pos->white_pieces[pawn] |= bitboard(target_square + 8);
-			pos->white_pieces[all] |= pos->white_pieces[pawn];
+			pos->piece[white][pawn] |= bitboard(target_square + 8);
+			pos->piece[white][all] |= pos->piece[white][pawn];
 			pos->mailbox[target_square + 8] = white_pawn;
 		}
 		else if (move_flag(m) == 2) {
-			pos->black_pieces[pawn] ^= from;
-			pos->black_pieces[pos->mailbox[target_square] - 6] ^= from;
+			pos->piece[black][pawn] ^= from;
+			pos->piece[black][pos->mailbox[target_square] - 6] ^= from;
 			pos->mailbox[target_square] = black_pawn;
 		}
 		else if (move_flag(m) == 3) {
 			if (target_square == 62) {
-				pos->black_pieces[rook] ^= 0xA000000000000000;
-				pos->black_pieces[all] ^= 0xA000000000000000;
+				pos->piece[black][rook] ^= 0xA000000000000000;
+				pos->piece[black][all] ^= 0xA000000000000000;
 				pos->mailbox[h8] = black_rook;
 				pos->mailbox[f8] = empty;
 			}
 			else if (target_square == 58) {
-				pos->black_pieces[rook] ^= 0x900000000000000;
-				pos->black_pieces[all] ^= 0x900000000000000;
+				pos->piece[black][rook] ^= 0x900000000000000;
+				pos->piece[black][all] ^= 0x900000000000000;
 				pos->mailbox[a8] = black_rook;
 				pos->mailbox[d8] = empty;
 			}
@@ -192,34 +192,34 @@ void undo_move_perft(struct position *pos, move *m) {
 		pos->mailbox[target_square] = empty;
 
 		if (move_capture(m)) {
-			pos->white_pieces[move_capture(m)] ^= to;
-			pos->white_pieces[all] ^= to;
+			pos->piece[white][move_capture(m)] ^= to;
+			pos->piece[white][all] ^= to;
 			pos->mailbox[target_square] = move_capture(m);
 		}
-		pos->black_pieces[all] ^= from_to;
+		pos->piece[black][all] ^= from_to;
 	}
 	else {
-		pos->white_pieces[pos->mailbox[target_square]] ^= from_to;
+		pos->piece[white][pos->mailbox[target_square]] ^= from_to;
 		if (move_flag(m) == 1) {
-			pos->black_pieces[pawn] |= bitboard(target_square - 8);
-			pos->black_pieces[all] |= pos->black_pieces[pawn];
+			pos->piece[black][pawn] |= bitboard(target_square - 8);
+			pos->piece[black][all] |= pos->piece[black][pawn];
 			pos->mailbox[target_square - 8] = black_pawn;
 		}
 		else if (move_flag(m) == 2) {
-			pos->white_pieces[pawn] ^= from;
-			pos->white_pieces[pos->mailbox[target_square]] ^= from;
+			pos->piece[white][pawn] ^= from;
+			pos->piece[white][pos->mailbox[target_square]] ^= from;
 			pos->mailbox[target_square] = white_pawn;
 		}
 		else if (move_flag(m) == 3) {
 			if (target_square == 6) {
-				pos->white_pieces[rook] ^= 0xA0;
-				pos->white_pieces[all] ^= 0xA0;
+				pos->piece[white][rook] ^= 0xA0;
+				pos->piece[white][all] ^= 0xA0;
 				pos->mailbox[h1] = white_rook;
 				pos->mailbox[f1] = empty;
 			}
 			else if (target_square == 2) {
-				pos->white_pieces[rook] ^= 0x9;
-				pos->white_pieces[all] ^= 0x9;
+				pos->piece[white][rook] ^= 0x9;
+				pos->piece[white][all] ^= 0x9;
 				pos->mailbox[a1] = white_rook;
 				pos->mailbox[d1] = empty;
 			}
@@ -229,15 +229,15 @@ void undo_move_perft(struct position *pos, move *m) {
 		pos->mailbox[target_square] = empty;
 
 		if (move_capture(m)) {
-			pos->black_pieces[move_capture(m)] ^= to;
-			pos->black_pieces[all] ^= to;
+			pos->piece[black][move_capture(m)] ^= to;
+			pos->piece[black][all] ^= to;
 			pos->mailbox[target_square] = move_capture(m) + 6;
 		}
-		pos->white_pieces[all] ^= from_to;
+		pos->piece[white][all] ^= from_to;
 	}
 
 	pos->turn = 1 - pos->turn;
-	pos->pieces = pos->white_pieces[all] | pos->black_pieces[all];
+	pos->piece_all = pos->piece[white][all] | pos->piece[black][all];
 }
 
 void do_move(struct position *pos, move *m) {
@@ -261,9 +261,9 @@ void do_move(struct position *pos, move *m) {
 
 	if (pos->turn) {
 		if (pos->mailbox[target_square]) {
-			pos->black_pieces[pos->mailbox[target_square] - 6] ^= to;
+			pos->piece[black][pos->mailbox[target_square] - 6] ^= to;
 			move_set_captured(m, pos->mailbox[target_square] - 6);
-			pos->black_pieces[all] ^= to;
+			pos->piece[black][all] ^= to;
 			pos->zobrist_key ^= zobrist_piece_key(pos->mailbox[target_square] - 1, target_square);
 
 			pos->halfmove = 0;
@@ -276,39 +276,39 @@ void do_move(struct position *pos, move *m) {
 				pos->en_passant = target_square - 8;
 			}
 			else if (move_flag(m) == 1) {
-				pos->black_pieces[pawn] ^= bitboard(target_square - 8);
-				pos->black_pieces[all] ^= bitboard(target_square - 8);
+				pos->piece[black][pawn] ^= bitboard(target_square - 8);
+				pos->piece[black][all] ^= bitboard(target_square - 8);
 				pos->mailbox[target_square - 8] = empty;
 				pos->zobrist_key ^= zobrist_piece_key(black_pawn - 1, target_square - 8);
 
 			}
 			else if (move_flag(m) == 2) {
-				pos->white_pieces[pawn] ^= to;
-				pos->white_pieces[move_promote(m) + 2] ^= to;
+				pos->piece[white][pawn] ^= to;
+				pos->piece[white][move_promote(m) + 2] ^= to;
 				pos->mailbox[target_square] = move_promote(m) + 2;
 				pos->zobrist_key ^= zobrist_piece_key(white_pawn - 1, target_square);
 				pos->zobrist_key ^= zobrist_piece_key(move_promote(m) + 1, target_square);
 			}
-			pos->white_pieces[pawn] ^= from_to;
+			pos->piece[white][pawn] ^= from_to;
 			pos->zobrist_key ^= zobrist_piece_key(white_pawn - 1, source_square);
 			pos->zobrist_key ^= zobrist_piece_key(white_pawn - 1, target_square);
 
 			pos->halfmove = 0;
 		}
 		else if (pos->mailbox[source_square] == white_king) {
-			pos->white_pieces[king] ^= from_to;
+			pos->piece[white][king] ^= from_to;
 			if (move_flag(m) == 3) {
 				if (target_square == 6) {
-					pos->white_pieces[rook] ^= 0xA0;
-					pos->white_pieces[all] ^= 0xA0;
+					pos->piece[white][rook] ^= 0xA0;
+					pos->piece[white][all] ^= 0xA0;
 					pos->mailbox[h1] = empty;
 					pos->mailbox[f1] = white_rook;
 					pos->zobrist_key ^= zobrist_piece_key(white_rook - 1, h1);
 					pos->zobrist_key ^= zobrist_piece_key(white_rook - 1, f1);
 				}
 				else if (target_square == 2) {
-					pos->white_pieces[rook] ^= 0x9;
-					pos->white_pieces[all] ^= 0x9;
+					pos->piece[white][rook] ^= 0x9;
+					pos->piece[white][all] ^= 0x9;
 					pos->mailbox[a1] = empty;
 					pos->mailbox[d1] = white_rook;
 					pos->zobrist_key ^= zobrist_piece_key(white_rook - 1, a1);
@@ -320,21 +320,21 @@ void do_move(struct position *pos, move *m) {
 			pos->zobrist_key ^= zobrist_piece_key(white_king - 1, target_square);
 		}
 		else {
-			pos->white_pieces[pos->mailbox[source_square]] ^= from_to;
+			pos->piece[white][pos->mailbox[source_square]] ^= from_to;
 			pos->mailbox[target_square] = pos->mailbox[source_square];
 			pos->zobrist_key ^= zobrist_piece_key(pos->mailbox[target_square] - 1, source_square);
 			pos->zobrist_key ^= zobrist_piece_key(pos->mailbox[target_square] - 1, target_square);
 		}
 
-		pos->white_pieces[all] ^= from_to;
+		pos->piece[white][all] ^= from_to;
 		pos->mailbox[source_square] = empty;
 	}
 	else {
 		pos->fullmove++;
 		if (pos->mailbox[target_square]) {
-			pos->white_pieces[pos->mailbox[target_square]] ^= to;
+			pos->piece[white][pos->mailbox[target_square]] ^= to;
 			move_set_captured(m, pos->mailbox[target_square]);
-			pos->white_pieces[all] ^= to;
+			pos->piece[white][all] ^= to;
 			pos->zobrist_key ^= zobrist_piece_key(pos->mailbox[target_square] - 1, target_square);
 
 			pos->halfmove = 0;
@@ -347,38 +347,38 @@ void do_move(struct position *pos, move *m) {
 				pos->zobrist_key ^= zobrist_en_passant_key(target_square + 8);
 			}
 			else if (move_flag(m) == 1) {
-				pos->white_pieces[pawn] ^= bitboard(target_square + 8);
-				pos->white_pieces[all] ^= bitboard(target_square + 8);
+				pos->piece[white][pawn] ^= bitboard(target_square + 8);
+				pos->piece[white][all] ^= bitboard(target_square + 8);
 				pos->mailbox[target_square + 8] = 0;
 				pos->zobrist_key ^= zobrist_piece_key(white_pawn - 1, target_square + 8);
 			}
 			else if (move_flag(m) == 2) {
-				pos->black_pieces[pawn] ^= to;
-				pos->black_pieces[move_promote(m) + 2] ^= to;
+				pos->piece[black][pawn] ^= to;
+				pos->piece[black][move_promote(m) + 2] ^= to;
 				pos->mailbox[target_square] = move_promote(m) + 8;
 				pos->zobrist_key ^= zobrist_piece_key(black_pawn - 1, target_square);
 				pos->zobrist_key ^= zobrist_piece_key(move_promote(m) + 7, target_square);
 			}
-			pos->black_pieces[pawn] ^= from_to;
+			pos->piece[black][pawn] ^= from_to;
 			pos->zobrist_key ^= zobrist_piece_key(black_pawn - 1, source_square);
 			pos->zobrist_key ^= zobrist_piece_key(black_pawn - 1, target_square);
 
 			pos->halfmove = 0;
 		}
 		else if (pos->mailbox[source_square] == black_king) {
-			pos->black_pieces[king] ^= from_to;
+			pos->piece[black][king] ^= from_to;
 			if (move_flag(m) == 3) {
 				if (target_square == 62) {
-					pos->black_pieces[rook] ^= 0xA000000000000000;
-					pos->black_pieces[all] ^= 0xA000000000000000;
+					pos->piece[black][rook] ^= 0xA000000000000000;
+					pos->piece[black][all] ^= 0xA000000000000000;
 					pos->mailbox[h8] = empty;
 					pos->mailbox[f8] = black_rook;
 					pos->zobrist_key ^= zobrist_piece_key(black_rook - 1, h8);
 					pos->zobrist_key ^= zobrist_piece_key(black_rook - 1, f8);
 				}
 				else if (target_square == 58) {
-					pos->black_pieces[rook] ^= 0x900000000000000;
-					pos->black_pieces[all] ^= 0x900000000000000;
+					pos->piece[black][rook] ^= 0x900000000000000;
+					pos->piece[black][all] ^= 0x900000000000000;
 					pos->mailbox[a8] = empty;
 					pos->mailbox[d8] = black_rook;
 					pos->zobrist_key ^= zobrist_piece_key(black_rook - 1, a8);
@@ -390,16 +390,16 @@ void do_move(struct position *pos, move *m) {
 			pos->zobrist_key ^= zobrist_piece_key(black_king - 1, target_square);
 		}
 		else {
-			pos->black_pieces[pos->mailbox[source_square] - 6] ^= from_to;
+			pos->piece[black][pos->mailbox[source_square] - 6] ^= from_to;
 			pos->mailbox[target_square] = pos->mailbox[source_square];
 			pos->zobrist_key ^= zobrist_piece_key(pos->mailbox[target_square] - 1, source_square);
 			pos->zobrist_key ^= zobrist_piece_key(pos->mailbox[target_square] - 1, target_square);
 		}
 
-		pos->black_pieces[all] ^= from_to;
+		pos->piece[black][all] ^= from_to;
 		pos->mailbox[source_square] = empty;
 	}
-	pos->pieces = pos->white_pieces[all] | pos->black_pieces[all];
+	pos->piece_all = pos->piece[white][all] | pos->piece[black][all];
 
 	pos->turn = 1 - pos->turn;
 	pos->zobrist_key ^= zobrist_turn_key();
@@ -429,32 +429,32 @@ void undo_move(struct position *pos, move *m) {
 
 	if (pos->turn) {
 		pos->fullmove--;
-		pos->black_pieces[pos->mailbox[target_square] - 6] ^= from_to;
+		pos->piece[black][pos->mailbox[target_square] - 6] ^= from_to;
 		if (move_flag(m) == 1) {
-			pos->white_pieces[pawn] |= bitboard(target_square + 8);
-			pos->white_pieces[all] |= pos->white_pieces[pawn];
+			pos->piece[white][pawn] |= bitboard(target_square + 8);
+			pos->piece[white][all] |= pos->piece[white][pawn];
 			pos->mailbox[target_square + 8] = white_pawn;
 			pos->zobrist_key ^= zobrist_piece_key(white_pawn - 1, target_square + 8);
 		}
 		else if (move_flag(m) == 2) {
 			pos->zobrist_key ^= zobrist_piece_key(pos->mailbox[target_square] - 1, target_square);
 			pos->zobrist_key ^= zobrist_piece_key(black_pawn - 1, target_square);
-			pos->black_pieces[pawn] ^= from;
-			pos->black_pieces[pos->mailbox[target_square] - 6] ^= from;
+			pos->piece[black][pawn] ^= from;
+			pos->piece[black][pos->mailbox[target_square] - 6] ^= from;
 			pos->mailbox[target_square] = black_pawn;
 		}
 		else if (move_flag(m) == 3) {
 			if (target_square == 62) {
-				pos->black_pieces[rook] ^= 0xA000000000000000;
-				pos->black_pieces[all] ^= 0xA000000000000000;
+				pos->piece[black][rook] ^= 0xA000000000000000;
+				pos->piece[black][all] ^= 0xA000000000000000;
 				pos->mailbox[h8] = black_rook;
 				pos->mailbox[f8] = empty;
 				pos->zobrist_key ^= zobrist_piece_key(black_rook - 1, h8);
 				pos->zobrist_key ^= zobrist_piece_key(black_rook - 1, f8);
 			}
 			else if (target_square == 58) {
-				pos->black_pieces[rook] ^= 0x900000000000000;
-				pos->black_pieces[all] ^= 0x900000000000000;
+				pos->piece[black][rook] ^= 0x900000000000000;
+				pos->piece[black][all] ^= 0x900000000000000;
 				pos->mailbox[a8] = black_rook;
 				pos->mailbox[d8] = empty;
 				pos->zobrist_key ^= zobrist_piece_key(black_rook - 1, a8);
@@ -468,40 +468,40 @@ void undo_move(struct position *pos, move *m) {
 		pos->mailbox[target_square] = empty;
 
 		if (move_capture(m)) {
-			pos->white_pieces[move_capture(m)] ^= to;
-			pos->white_pieces[all] ^= to;
+			pos->piece[white][move_capture(m)] ^= to;
+			pos->piece[white][all] ^= to;
 			pos->mailbox[target_square] = move_capture(m);
 			pos->zobrist_key ^= zobrist_piece_key(pos->mailbox[target_square] - 1, target_square);
 		}
-		pos->black_pieces[all] ^= from_to;
+		pos->piece[black][all] ^= from_to;
 	}
 	else {
-		pos->white_pieces[pos->mailbox[target_square]] ^= from_to;
+		pos->piece[white][pos->mailbox[target_square]] ^= from_to;
 		if (move_flag(m) == 1) {
-			pos->black_pieces[pawn] |= bitboard(target_square - 8);
-			pos->black_pieces[all] |= pos->black_pieces[pawn];
+			pos->piece[black][pawn] |= bitboard(target_square - 8);
+			pos->piece[black][all] |= pos->piece[black][pawn];
 			pos->mailbox[target_square - 8] = black_pawn;
 			pos->zobrist_key ^= zobrist_piece_key(black_pawn - 1, target_square - 8);
 		}
 		else if (move_flag(m) == 2) {
 			pos->zobrist_key ^= zobrist_piece_key(pos->mailbox[target_square] - 1, target_square);
 			pos->zobrist_key ^= zobrist_piece_key(white_pawn - 1, target_square);
-			pos->white_pieces[pawn] ^= from;
-			pos->white_pieces[pos->mailbox[target_square]] ^= from;
+			pos->piece[white][pawn] ^= from;
+			pos->piece[white][pos->mailbox[target_square]] ^= from;
 			pos->mailbox[target_square] = white_pawn;
 		}
 		else if (move_flag(m) == 3) {
 			if (target_square == 6) {
-				pos->white_pieces[rook] ^= 0xA0;
-				pos->white_pieces[all] ^= 0xA0;
+				pos->piece[white][rook] ^= 0xA0;
+				pos->piece[white][all] ^= 0xA0;
 				pos->mailbox[h1] = white_rook;
 				pos->mailbox[f1] = empty;
 				pos->zobrist_key ^= zobrist_piece_key(white_rook - 1, h1);
 				pos->zobrist_key ^= zobrist_piece_key(white_rook - 1, f1);
 			}
 			else if (target_square == 2) {
-				pos->white_pieces[rook] ^= 0x9;
-				pos->white_pieces[all] ^= 0x9;
+				pos->piece[white][rook] ^= 0x9;
+				pos->piece[white][all] ^= 0x9;
 				pos->mailbox[a1] = white_rook;
 				pos->mailbox[d1] = empty;
 				pos->zobrist_key ^= zobrist_piece_key(white_rook - 1, a1);
@@ -515,16 +515,16 @@ void undo_move(struct position *pos, move *m) {
 		pos->mailbox[target_square] = empty;
 
 		if (move_capture(m)) {
-			pos->black_pieces[move_capture(m)] ^= to;
-			pos->black_pieces[all] ^= to;
+			pos->piece[black][move_capture(m)] ^= to;
+			pos->piece[black][all] ^= to;
 			pos->mailbox[target_square] = move_capture(m) + 6;
 			pos->zobrist_key ^= zobrist_piece_key(pos->mailbox[target_square] - 1, target_square);
 		}
-		pos->white_pieces[all] ^= from_to;
+		pos->piece[white][all] ^= from_to;
 	}
 
 	pos->turn = 1 - pos->turn;
-	pos->pieces = pos->white_pieces[all] | pos->black_pieces[all];
+	pos->piece_all = pos->piece[white][all] | pos->piece[black][all];
 	pos->zobrist_key ^= zobrist_turn_key();
 }
 
@@ -549,7 +549,10 @@ char *move_str_algebraic(char *str, move *m) {
 }
 
 /* str needs to be at least 8 bytes */
+/* m can be illegal */
 char *move_str_pgn(char *str, struct position *pos, move *m) {
+	if (!is_legal(pos, m))
+		return NULL;
 	int x = move_from(m) % 8;
 	int y = move_from(m) / 8;
 	int i = 0;
@@ -564,22 +567,22 @@ char *move_str_pgn(char *str, struct position *pos, move *m) {
 	case 1:
 		str[i++] = 'N';
 		attackers = knight_attacks(move_to(m)) &
-			(pos->turn ? pos->white_pieces[knight] : pos->black_pieces[knight]);
+			(pos->turn ? pos->piece[white][knight] : pos->piece[black][knight]);
 		break;
 	case 2:
 		str[i++] = 'B';
-		attackers = bishop_attacks(move_to(m), pos->pieces) &
-			(pos->turn ? pos->white_pieces[bishop] : pos->black_pieces[bishop]);
+		attackers = bishop_attacks(move_to(m), pos->piece_all) &
+			(pos->turn ? pos->piece[white][bishop] : pos->piece[black][bishop]);
 		break;
 	case 3:
 		str[i++] = 'R';
-		attackers = rook_attacks(move_to(m), pos->pieces) &
-			(pos->turn ? pos->white_pieces[rook] : pos->black_pieces[rook]);
+		attackers = rook_attacks(move_to(m), pos->piece_all) &
+			(pos->turn ? pos->piece[white][rook] : pos->piece[black][rook]);
 		break;
 	case 4:
 		str[i++] = 'Q';
-		attackers = queen_attacks(move_to(m), pos->pieces) &
-			(pos->turn ? pos->white_pieces[queen] : pos->black_pieces[queen]);
+		attackers = queen_attacks(move_to(m), pos->piece_all) &
+			(pos->turn ? pos->piece[white][queen] : pos->piece[black][queen]);
 		break;
 	case 5:
 		if (x == 4 && move_to(m) % 8 == 6) {
@@ -629,10 +632,11 @@ char *move_str_pgn(char *str, struct position *pos, move *m) {
 		str[i++] = '=';
 	else if (checkers)
 		str[i++] = '+';
-	str[i++] = '\0';
+	str[i] = '\0';
 	return str;
 }
 
+/* str can be illegal */
 move string_to_move(struct position *pos, char *str) {
 	move move_list[MOVES_MAX];
 	generate_all(pos, move_list);
@@ -645,6 +649,15 @@ move string_to_move(struct position *pos, char *str) {
 		if (strcmp(str_t, str) == 0)
 			return *move_ptr;
 	}
+	return 0;
+}
+
+int is_legal(struct position *pos, move *m) {
+	move move_list[MOVES_MAX];
+	generate_all(pos, move_list);
+	for (move *move_ptr = move_list; *move_ptr; move_ptr++)
+		if ((*m & 0xFFFF) == (*move_ptr & 0xFFFF))
+			return 1;
 	return 0;
 }
 

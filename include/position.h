@@ -21,9 +21,8 @@
 #include <stdint.h>
 
 struct position {
-	uint64_t white_pieces[7];
-	uint64_t black_pieces[7];
-	uint64_t pieces;
+	uint64_t piece[2][7];
+	uint64_t piece_all;
 
 	uint8_t turn;
 	int8_t en_passant;
@@ -49,6 +48,8 @@ enum square {
 };
 
 enum piece { all, pawn, knight, bishop, rook, queen, king };
+
+enum color { black, white };
 
 enum colored_piece { empty, white_pawn, white_knight, white_bishop, white_rook, white_queen, white_king, black_pawn, black_knight, black_bishop, black_rook, black_queen, black_king };
 
