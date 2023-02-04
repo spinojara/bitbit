@@ -63,10 +63,10 @@ uint64_t between_calc(int x, int y) {
 	int a_y = y % 8;
 	int b_y = y / 8;
 	if (a_x == a_y || b_x == b_y) {
-		return rook_attacks(x, bitboard(y)) & rook_attacks(y, bitboard(x));
+		return rook_attacks(x, 0, bitboard(y)) & rook_attacks(y, 0, bitboard(x));
 	}
 	else if (a_x - a_y == b_x - b_y || a_x - a_y == b_y - b_x) {
-		return bishop_attacks(x, bitboard(y)) & bishop_attacks(y, bitboard(x));
+		return bishop_attacks(x, 0, bitboard(y)) & bishop_attacks(y, 0, bitboard(x));
 	}
 	return 0;
 }
@@ -186,7 +186,7 @@ uint64_t passed_files_black_calc(int square) {
 }
 
 uint64_t king_squares_calc(int square, int turn) {
-	uint64_t ret = king_attacks(square) | bitboard(square);
+	uint64_t ret = king_attacks(square, 0) | bitboard(square);
 	for (int i = 0; i < 3; i++)
 		ret = ret | (turn ? shift_north(ret) : shift_south(ret));
 	return ret;

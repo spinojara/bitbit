@@ -28,79 +28,37 @@ void attack_gen_init(void);
 extern uint64_t knight_attacks_lookup[64];
 extern uint64_t king_attacks_lookup[64];
 
-static inline uint64_t white_pawn_capture_e(uint64_t pawns, uint64_t black_pieces) {
-	return pawns & shift_south_west(black_pieces);
+static inline uint64_t pawn_capture_e(uint64_t pawns, uint64_t enemy, int color) {
+	return pawns & (color ? shift_south_west(enemy) : shift_north_west(enemy));
 }
-static inline uint64_t white_pawn_capture_w(uint64_t pawns, uint64_t black_pieces) {
-	return pawns & shift_south_east(black_pieces);
+static inline uint64_t pawn_capture_w(uint64_t pawns, uint64_t enemy, int color) {
+	return pawns & (color ? shift_south_east(enemy) : shift_north_east(enemy));
 }
-static inline uint64_t white_pawn_push(uint64_t pawns, uint64_t pieces) {
-	return pawns & ~shift_south(pieces);
+static inline uint64_t pawn_push(uint64_t pawns, uint64_t allb, int color) {
+	return pawns & (color ? ~shift_south(allb) : ~shift_north(allb));
 }
-static inline uint64_t white_pawn_double_push(uint64_t pawns, uint64_t pieces) {
-	return white_pawn_push(pawns, pieces) & ~shift_south_south(pieces) & RANK_2;
-}
-static inline uint64_t black_pawn_capture_e(uint64_t pawns, uint64_t white_pieces) {
-	return pawns & shift_north_west(white_pieces);
-}
-static inline uint64_t black_pawn_capture_w(uint64_t pawns, uint64_t white_pieces) {
-	return pawns & shift_north_east(white_pieces);
-}
-static inline uint64_t black_pawn_push(uint64_t pawns, uint64_t pieces) {
-	return pawns & ~shift_north(pieces);
-}
-static inline uint64_t black_pawn_double_push(uint64_t pawns, uint64_t pieces) {
-	return black_pawn_push(pawns, pieces) & ~shift_north_north(pieces) & RANK_7;
+static inline uint64_t pawn_double_push(uint64_t pawns, uint64_t allb, int color) {
+	return pawn_push(pawns, allb, color) &  (color ? ~shift_south_south(allb) & RANK_2 : ~shift_north_north(allb) & RANK_7);
 }
 
-static inline uint64_t knight_attacks(int square) {
-	return knight_attacks_lookup[square];
-}
-static inline uint64_t white_knight_attacks(int square, uint64_t white_pieces) {
-	return knight_attacks(square) & ~white_pieces;
-}
-static inline uint64_t black_knight_attacks(int square, uint64_t black_pieces) {
-	return knight_attacks(square) & ~black_pieces;
+static inline uint64_t knight_attacks(int square, uint64_t own_pieces) {
+	return knight_attacks_lookup[square] & ~own_pieces;
 }
 
-static inline uint64_t bishop_attacks(int square, uint64_t pieces) {
-	return bishop_attacks_lookup[bishop_index(square, pieces)];
-}
-static inline uint64_t white_bishop_attacks(int square, uint64_t white_pieces, uint64_t pieces) {
-	return bishop_attacks(square, pieces) & ~white_pieces;
-}
-static inline uint64_t black_bishop_attacks(int square, uint64_t black_pieces, uint64_t pieces) {
-	return bishop_attacks(square, pieces) & ~black_pieces;
+static inline uint64_t bishop_attacks(int square, uint64_t own, uint64_t allb) {
+	return bishop_attacks_lookup[bishop_index(square, allb)] & ~own;
 }
 
-static inline uint64_t rook_attacks(int square, uint64_t pieces) {
-	return rook_attacks_lookup[rook_index(square, pieces)];
-}
-static inline uint64_t white_rook_attacks(int square, uint64_t white_pieces, uint64_t pieces) {
-	return rook_attacks(square, pieces) & ~white_pieces;
-}
-static inline uint64_t black_rook_attacks(int square, uint64_t black_pieces, uint64_t pieces) {
-	return rook_attacks(square, pieces) & ~black_pieces;
+static inline uint64_t rook_attacks(int square, uint64_t own, uint64_t allb) {
+	return rook_attacks_lookup[rook_index(square, allb)] & ~own;
 }
 
-static inline uint64_t queen_attacks(int square, uint64_t pieces) {
-	return rook_attacks(square, pieces) | bishop_attacks(square, pieces);
-}
-static inline uint64_t white_queen_attacks(int square, uint64_t white_pieces, uint64_t pieces) {
-	return queen_attacks(square, pieces) & ~white_pieces;
-}
-static inline uint64_t black_queen_attacks(int square, uint64_t black_pieces, uint64_t pieces) {
-	return queen_attacks(square, pieces) & ~black_pieces;
+static inline uint64_t queen_attacks(int square, uint64_t own, uint64_t allb) {
+	return (bishop_attacks_lookup[bishop_index(square, allb)] | rook_attacks_lookup[rook_index(square, allb)]) & ~own;
 }
 
-static inline uint64_t king_attacks(int square) {
-	return king_attacks_lookup[square];
-}
-static inline uint64_t white_king_attacks(int square, uint64_t white_pieces) {
-	return king_attacks(square) & ~white_pieces;
-}
-static inline uint64_t black_king_attacks(int square, uint64_t black_pieces) {
-	return king_attacks(square) & ~black_pieces;
+static inline uint64_t king_attacks(int square, uint64_t own) {
+	return king_attacks_lookup[square] & ~own;
 }
 
 #endif

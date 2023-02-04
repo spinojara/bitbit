@@ -191,5 +191,17 @@ static inline uint64_t shift_north_north(uint64_t b) {
 static inline uint64_t shift_south_south(uint64_t b) {
 	return b >> 16;
 }
+static inline uint64_t shift_color(uint64_t b, int color) {
+	return color ? shift_north(b) : shift_south(b);
+}
+static inline uint64_t shift_color2(uint64_t b, int color) {
+	return color ? shift_north_north(b) : shift_south_south(b);
+}
+static inline uint64_t shift_color_east(uint64_t b, int color) {
+	return color ? shift_north_east(b) : shift_south_east(b);
+}
+static inline uint64_t shift_color_west(uint64_t b, int color) {
+	return color ? shift_north_west(b) : shift_south_west(b);
+}
 
 #endif

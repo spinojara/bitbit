@@ -62,9 +62,9 @@ uint64_t generate_checkers_white(const struct position *pos) {
 
 	square = ctz(pos->piece[white][king]);
 	checkers |= (shift_north_west(pos->piece[white][king]) | shift_north_east(pos->piece[white][king])) & pos->piece[black][pawn];
-	checkers |= rook_attacks(square, pos->piece[white][all] | pos->piece[black][all]) & (pos->piece[black][rook] | pos->piece[black][queen]);
-	checkers |= bishop_attacks(square, pos->piece[white][all] | pos->piece[black][all]) & (pos->piece[black][bishop] | pos->piece[black][queen]);
-	checkers |= knight_attacks(square) & pos->piece[black][knight];
+	checkers |= rook_attacks(square, 0, pos->piece[white][all] | pos->piece[black][all]) & (pos->piece[black][rook] | pos->piece[black][queen]);
+	checkers |= bishop_attacks(square, 0, pos->piece[white][all] | pos->piece[black][all]) & (pos->piece[black][bishop] | pos->piece[black][queen]);
+	checkers |= knight_attacks(square, 0) & pos->piece[black][knight];
 
 	return checkers;
 }
@@ -75,9 +75,9 @@ uint64_t generate_checkers_black(const struct position *pos) {
 
 	square = ctz(pos->piece[black][king]);
 	checkers |= (shift_south_west(pos->piece[black][king]) | shift_south_east(pos->piece[black][king])) & pos->piece[white][pawn];
-	checkers |= rook_attacks(square, pos->piece[white][all] | pos->piece[black][all]) & (pos->piece[white][rook] | pos->piece[white][queen]);
-	checkers |= bishop_attacks(square, pos->piece[white][all] | pos->piece[black][all]) & (pos->piece[white][bishop] | pos->piece[white][queen]);
-	checkers |= knight_attacks(square) & pos->piece[white][knight];
+	checkers |= rook_attacks(square, 0, pos->piece[white][all] | pos->piece[black][all]) & (pos->piece[white][rook] | pos->piece[white][queen]);
+	checkers |= bishop_attacks(square, 0, pos->piece[white][all] | pos->piece[black][all]) & (pos->piece[white][bishop] | pos->piece[white][queen]);
+	checkers |= knight_attacks(square, 0) & pos->piece[white][knight];
 
 	return checkers;
 }
@@ -93,28 +93,28 @@ uint64_t generate_attacked_white(const struct position *pos) {
 
 	square = ctz(pos->piece[black][king]);
 
-	attacked = king_attacks(square);
+	attacked = king_attacks(square, 0);
 	attacked |= shift_south_west(pos->piece[black][pawn]);
 	attacked |= shift_south_east(pos->piece[black][pawn]);
 
 	piece = pos->piece[black][knight];
 	while (piece) {
 		square = ctz(piece);
-		attacked |= knight_attacks(square);
+		attacked |= knight_attacks(square, 0);
 		piece = clear_ls1b(piece);
 	}
 
 	piece = pos->piece[black][bishop] | pos->piece[black][queen];
 	while (piece) {
 		square = ctz(piece);
-		attacked |= bishop_attacks(square, (pos->piece[white][all] | pos->piece[black][all]) ^ pos->piece[white][king]);
+		attacked |= bishop_attacks(square, 0, (pos->piece[white][all] | pos->piece[black][all]) ^ pos->piece[white][king]);
 		piece = clear_ls1b(piece);
 	}
 
 	piece = pos->piece[black][rook] | pos->piece[black][queen];
 	while (piece) {
 		square = ctz(piece);
-		attacked |= rook_attacks(square, (pos->piece[white][all] | pos->piece[black][all]) ^ pos->piece[white][king]);
+		attacked |= rook_attacks(square, 0, (pos->piece[white][all] | pos->piece[black][all]) ^ pos->piece[white][king]);
 		piece = clear_ls1b(piece);
 	}
 
@@ -128,32 +128,36 @@ uint64_t generate_attacked_black(const struct position *pos) {
 
 	square = ctz(pos->piece[white][king]);
 
-	attacked = king_attacks(square);
+	attacked = king_attacks(square, 0);
 	attacked |= shift_north_west(pos->piece[white][pawn]);
 	attacked |= shift_north_east(pos->piece[white][pawn]);
 
 	piece = pos->piece[white][knight];
 	while (piece) {
 		square = ctz(piece);
-		attacked |= knight_attacks(square);
+		attacked |= knight_attacks(square, 0);
 		piece = clear_ls1b(piece);
 	}
 
 	piece = pos->piece[white][bishop] | pos->piece[white][queen];
 	while (piece) {
 		square = ctz(piece);
-		attacked |= bishop_attacks(square, (pos->piece[white][all] | pos->piece[black][all]) ^ pos->piece[black][king]);
+		attacked |= bishop_attacks(square, 0, (pos->piece[white][all] | pos->piece[black][all]) ^ pos->piece[black][king]);
 		piece = clear_ls1b(piece);
 	}
 
 	piece = pos->piece[white][rook] | pos->piece[white][queen];
 	while (piece) {
 		square = ctz(piece);
-		attacked |= rook_attacks(square, (pos->piece[white][all] | pos->piece[black][all]) ^ pos->piece[black][king]);
+		attacked |= rook_attacks(square, 0, (pos->piece[white][all] | pos->piece[black][all]) ^ pos->piece[black][king]);
 		piece = clear_ls1b(piece);
 	}
 
 	return attacked;
+}
+
+uint64_t generate_pinned(const struct position *pos) {
+	return pos->turn ? generate_pinned_white(pos) : generate_pinned_black(pos);
 }
 
 uint64_t generate_pinned_white(const struct position *pos) {
@@ -165,8 +169,8 @@ uint64_t generate_pinned_white(const struct position *pos) {
 	uint64_t pinned;
 
 	king_square = ctz(pos->piece[white][king]);
-	rook_pinners = rook_attacks(king_square, pos->piece[black][all]) & (pos->piece[black][rook] | pos->piece[black][queen]);
-	bishop_pinners = bishop_attacks(king_square, pos->piece[black][all]) & (pos->piece[black][bishop] | pos->piece[black][queen]);
+	rook_pinners = rook_attacks(king_square, 0, pos->piece[black][all]) & (pos->piece[black][rook] | pos->piece[black][queen]);
+	bishop_pinners = bishop_attacks(king_square, 0, pos->piece[black][all]) & (pos->piece[black][bishop] | pos->piece[black][queen]);
 
 	while (rook_pinners) {
 		square = ctz(rook_pinners);
@@ -202,8 +206,8 @@ uint64_t generate_pinned_black(const struct position *pos) {
 	uint64_t pinned;
 
 	king_square = ctz(pos->piece[black][king]);
-	rook_pinners = rook_attacks(king_square, pos->piece[white][all]) & (pos->piece[white][rook] | pos->piece[white][queen]);
-	bishop_pinners = bishop_attacks(king_square, pos->piece[white][all]) & (pos->piece[white][bishop] | pos->piece[white][queen]);
+	rook_pinners = rook_attacks(king_square, 0, pos->piece[white][all]) & (pos->piece[white][rook] | pos->piece[white][queen]);
+	bishop_pinners = bishop_attacks(king_square, 0, pos->piece[white][all]) & (pos->piece[white][bishop] | pos->piece[white][queen]);
 
 	while (rook_pinners) {
 		square = ctz(rook_pinners);

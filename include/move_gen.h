@@ -23,26 +23,12 @@
 
 move *generate_all(const struct position *pos, move *move_list);
 
-move *generate_white(const struct position *pos, move *move_list);
-
-move *generate_black(const struct position *pos, move *move_list);
-
 int move_count(const move *m);
 
 int mate(const struct position *pos);
 
-int mate_white(const struct position *pos);
-
-int mate_black(const struct position *pos);
-
 move *generate_quiescence(const struct position *pos, move *move_list);
 
-move *generate_quiescence_white(const struct position *pos, move *move_list);
-
-move *generate_quiescence_black(const struct position *pos, move *move_list);
-
-int mobility_white(const struct position *pos);
-
-int mobility_black(const struct position *pos);
+int mobility(const struct position *pos, int color);
 
 #endif

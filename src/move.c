@@ -28,216 +28,6 @@
 #include "transposition_table.h"
 #include "attack_gen.h"
 
-void do_move_perft(struct position *pos, move *m) {
-	uint8_t source_square = move_from(m);
-	uint8_t target_square = move_to(m);
-
-	uint64_t from = bitboard(source_square);
-	uint64_t to = bitboard(target_square);
-	uint64_t from_to = from | to;
-
-	move_set_castle(m, pos->castle);
-	move_set_en_passant(m, pos->en_passant);
-
-	pos->en_passant = 0;
-
-	pos->castle = castle(source_square, target_square, pos->castle);
-
-	if (pos->turn) {
-		if (pos->mailbox[target_square]) {
-			pos->piece[black][pos->mailbox[target_square] - 6] ^= to;
-			move_set_captured(m, pos->mailbox[target_square] - 6);
-			pos->piece[black][all] ^= to;
-		}
-
-		if (pos->mailbox[source_square] == white_pawn) {
-			pos->mailbox[target_square] = white_pawn;
-			if (source_square + 16 == target_square) {
-				pos->en_passant = target_square - 8;
-			}
-			else if (move_flag(m) == 1) {
-				pos->piece[black][pawn] ^= bitboard(target_square - 8);
-				pos->piece[black][all] ^= bitboard(target_square - 8);
-				pos->mailbox[target_square - 8] = empty;
-
-			}
-			else if (move_flag(m) == 2) {
-				pos->piece[white][pawn] ^= to;
-				pos->piece[white][move_promote(m) + 2] ^= to;
-				pos->mailbox[target_square] = move_promote(m) + 2;
-			}
-			pos->piece[white][pawn] ^= from_to;
-		}
-		else if (pos->mailbox[source_square] == white_king) {
-			pos->piece[white][king] ^= from_to;
-			if (move_flag(m) == 3) {
-				if (target_square == 6) {
-					pos->piece[white][rook] ^= 0xA0;
-					pos->piece[white][all] ^= 0xA0;
-					pos->mailbox[h1] = empty;
-					pos->mailbox[f1] = white_rook;
-				}
-				else if (target_square == 2) {
-					pos->piece[white][rook] ^= 0x9;
-					pos->piece[white][all] ^= 0x9;
-					pos->mailbox[a1] = empty;
-					pos->mailbox[d1] = white_rook;
-				}
-			}
-			pos->mailbox[target_square] = white_king;
-		}
-		else {
-			pos->piece[white][pos->mailbox[source_square]] ^= from_to;
-			pos->mailbox[target_square] = pos->mailbox[source_square];
-		}
-
-		pos->piece[white][all] ^= from_to;
-		pos->mailbox[source_square] = empty;
-	}
-	else {
-		if (pos->mailbox[target_square]) {
-			pos->piece[white][pos->mailbox[target_square]] ^= to;
-			move_set_captured(m, pos->mailbox[target_square]);
-			pos->piece[white][all] ^= to;
-		}
-
-		if (pos->mailbox[source_square] == black_pawn) {
-			pos->mailbox[target_square] = black_pawn;
-			if (source_square - 16 == target_square) {
-				pos->en_passant = target_square + 8;
-			}
-			else if (move_flag(m) == 1) {
-				pos->piece[white][pawn] ^= bitboard(target_square + 8);
-				pos->piece[white][all] ^= bitboard(target_square + 8);
-				pos->mailbox[target_square + 8] = 0;
-			}
-			else if (move_flag(m) == 2) {
-				pos->piece[black][pawn] ^= to;
-				pos->piece[black][move_promote(m) + 2] ^= to;
-				pos->mailbox[target_square] = move_promote(m) + 8;
-			}
-			pos->piece[black][pawn] ^= from_to;
-		}
-		else if (pos->mailbox[source_square] == black_king) {
-			pos->piece[black][king] ^= from_to;
-			if (move_flag(m) == 3) {
-				if (target_square == 62) {
-					pos->piece[black][rook] ^= 0xA000000000000000;
-					pos->piece[black][all] ^= 0xA000000000000000;
-					pos->mailbox[h8] = empty;
-					pos->mailbox[f8] = black_rook;
-				}
-				else if (target_square == 58) {
-					pos->piece[black][rook] ^= 0x900000000000000;
-					pos->piece[black][all] ^= 0x900000000000000;
-					pos->mailbox[a8] = empty;
-					pos->mailbox[d8] = black_rook;
-				}
-			}
-			pos->mailbox[target_square] = black_king;
-		}
-		else {
-			pos->piece[black][pos->mailbox[source_square] - 6] ^= from_to;
-			pos->mailbox[target_square] = pos->mailbox[source_square];
-		}
-
-		pos->piece[black][all] ^= from_to;
-		pos->mailbox[source_square] = empty;
-	}
-
-	pos->turn = 1 - pos->turn;
-}
-
-void undo_move_perft(struct position *pos, move *m) {
-	uint8_t source_square = move_from(m);
-	uint8_t target_square = move_to(m);
-
-	uint64_t from = bitboard(source_square);
-	uint64_t to = bitboard(target_square);
-	uint64_t from_to = from | to;
-
-	pos->castle = move_castle(m);
-
-	pos->en_passant = move_en_passant(m);
-
-	if (pos->turn) {
-		pos->piece[black][pos->mailbox[target_square] - 6] ^= from_to;
-		if (move_flag(m) == 1) {
-			pos->piece[white][pawn] |= bitboard(target_square + 8);
-			pos->piece[white][all] |= pos->piece[white][pawn];
-			pos->mailbox[target_square + 8] = white_pawn;
-		}
-		else if (move_flag(m) == 2) {
-			pos->piece[black][pawn] ^= from;
-			pos->piece[black][pos->mailbox[target_square] - 6] ^= from;
-			pos->mailbox[target_square] = black_pawn;
-		}
-		else if (move_flag(m) == 3) {
-			if (target_square == 62) {
-				pos->piece[black][rook] ^= 0xA000000000000000;
-				pos->piece[black][all] ^= 0xA000000000000000;
-				pos->mailbox[h8] = black_rook;
-				pos->mailbox[f8] = empty;
-			}
-			else if (target_square == 58) {
-				pos->piece[black][rook] ^= 0x900000000000000;
-				pos->piece[black][all] ^= 0x900000000000000;
-				pos->mailbox[a8] = black_rook;
-				pos->mailbox[d8] = empty;
-			}
-		}
-
-		pos->mailbox[source_square] = pos->mailbox[target_square];
-		pos->mailbox[target_square] = empty;
-
-		if (move_capture(m)) {
-			pos->piece[white][move_capture(m)] ^= to;
-			pos->piece[white][all] ^= to;
-			pos->mailbox[target_square] = move_capture(m);
-		}
-		pos->piece[black][all] ^= from_to;
-	}
-	else {
-		pos->piece[white][pos->mailbox[target_square]] ^= from_to;
-		if (move_flag(m) == 1) {
-			pos->piece[black][pawn] |= bitboard(target_square - 8);
-			pos->piece[black][all] |= pos->piece[black][pawn];
-			pos->mailbox[target_square - 8] = black_pawn;
-		}
-		else if (move_flag(m) == 2) {
-			pos->piece[white][pawn] ^= from;
-			pos->piece[white][pos->mailbox[target_square]] ^= from;
-			pos->mailbox[target_square] = white_pawn;
-		}
-		else if (move_flag(m) == 3) {
-			if (target_square == 6) {
-				pos->piece[white][rook] ^= 0xA0;
-				pos->piece[white][all] ^= 0xA0;
-				pos->mailbox[h1] = white_rook;
-				pos->mailbox[f1] = empty;
-			}
-			else if (target_square == 2) {
-				pos->piece[white][rook] ^= 0x9;
-				pos->piece[white][all] ^= 0x9;
-				pos->mailbox[a1] = white_rook;
-				pos->mailbox[d1] = empty;
-			}
-		}
-
-		pos->mailbox[source_square] = pos->mailbox[target_square];
-		pos->mailbox[target_square] = empty;
-
-		if (move_capture(m)) {
-			pos->piece[black][move_capture(m)] ^= to;
-			pos->piece[black][all] ^= to;
-			pos->mailbox[target_square] = move_capture(m) + 6;
-		}
-		pos->piece[white][all] ^= from_to;
-	}
-
-	pos->turn = 1 - pos->turn;
-}
-
 void do_move(struct position *pos, move *m) {
 	uint8_t source_square = move_from(m);
 	uint8_t target_square = move_to(m);
@@ -562,22 +352,22 @@ char *move_str_pgn(char *str, const struct position *pos, const move *m) {
 		break;
 	case 1:
 		str[i++] = 'N';
-		attackers = knight_attacks(move_to(m)) &
+		attackers = knight_attacks(move_to(m), 0) &
 			(pos->turn ? pos->piece[white][knight] : pos->piece[black][knight]);
 		break;
 	case 2:
 		str[i++] = 'B';
-		attackers = bishop_attacks(move_to(m), pos->piece[white][all] | pos->piece[black][all]) &
+		attackers = bishop_attacks(move_to(m), 0, pos->piece[white][all] | pos->piece[black][all]) &
 			(pos->turn ? pos->piece[white][bishop] : pos->piece[black][bishop]);
 		break;
 	case 3:
 		str[i++] = 'R';
-		attackers = rook_attacks(move_to(m), pos->piece[white][all] | pos->piece[black][all]) &
+		attackers = rook_attacks(move_to(m), 0, pos->piece[white][all] | pos->piece[black][all]) &
 			(pos->turn ? pos->piece[white][rook] : pos->piece[black][rook]);
 		break;
 	case 4:
 		str[i++] = 'Q';
-		attackers = queen_attacks(move_to(m), pos->piece[white][all] | pos->piece[black][all]) &
+		attackers = queen_attacks(move_to(m), 0, pos->piece[white][all] | pos->piece[black][all]) &
 			(pos->turn ? pos->piece[white][queen] : pos->piece[black][queen]);
 		break;
 	case 5:

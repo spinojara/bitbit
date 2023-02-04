@@ -395,8 +395,8 @@ int king_safety(struct position *pos) {
 	eval += safety_table[MIN(attack_units, 99)];
 
 	/* pawns close to king */
-	eval += 15 * popcount(king_attacks(king_white) & pos->piece[white][pawn]);
-	eval -= 15 * popcount(king_attacks(king_black) & pos->piece[black][pawn]);
+	eval += 15 * popcount(king_attacks(king_white, 0) & pos->piece[white][pawn]);
+	eval -= 15 * popcount(king_attacks(king_black, 0) & pos->piece[black][pawn]);
 	return eval;
 }
 
@@ -442,7 +442,7 @@ int16_t evaluate_static(struct position *pos) {
 	eval += early_game * center_control(pos);
 
 	/* piece mobility */
-	eval += 8 * (mobility_white(pos) - mobility_black(pos));
+	eval += 8 * (mobility(pos, white) - mobility(pos, black));
 
 	/* pawn structure */
 	eval += pawn_structure(pos);

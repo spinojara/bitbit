@@ -27,16 +27,10 @@
 #include "interrupt.h"
 
 uint64_t perft(struct position *pos, int depth, int verbose) {
-	if (depth <= 0)
-		return 0;
-	return pos->turn ? perft_white(pos, depth, verbose) : perft_black(pos, depth, verbose);
-}
-
-uint64_t perft_white(struct position *pos, int depth, int verbose) {
-	if (interrupt)
+	if (depth <= 0 || interrupt)
 		return 0;
 	move move_list[MOVES_MAX];
-	generate_white(pos, move_list);
+	generate_all(pos, move_list);
 	uint64_t nodes = 0, count;
 
 	for (move *move_ptr = move_list; *move_ptr; move_ptr++){
@@ -46,33 +40,7 @@ uint64_t perft_white(struct position *pos, int depth, int verbose) {
 		}
 		else {
 			do_move(pos, move_ptr);
-			count = perft_black(pos, depth - 1, 0);
-			undo_move(pos, move_ptr);
-			nodes += count;
-		}
-		if (verbose && !interrupt) {
-			print_move(move_ptr);
-			printf(": %" PRIu64 "\n", count);
-		}
-	}
-	return nodes;
-}
-
-uint64_t perft_black(struct position *pos, int depth, int verbose) {
-	if (interrupt)
-		return 0;
-	move move_list[MOVES_MAX];
-	generate_black(pos, move_list);
-	uint64_t nodes = 0, count;
-
-	for (move *move_ptr = move_list; *move_ptr; move_ptr++){
-		if (depth == 1) {
-			count = 1;
-			nodes++;
-		}
-		else {
-			do_move(pos, move_ptr);
-			count = perft_white(pos, depth - 1, 0);
+			count = perft(pos, depth - 1, 0);
 			undo_move(pos, move_ptr);
 			nodes += count;
 		}
