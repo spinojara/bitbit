@@ -35,15 +35,15 @@
 typedef uint64_t move;
 
 /* uint32_t fastest? */
-static inline uint8_t move_from(move *m) { return *m & 0x3F; }
-static inline uint8_t move_to(move *m) { return (*m >> 0x6) & 0x3F; }
-static inline uint8_t move_flag(move *m) { return (*m >> 0xC) & 0x3; }
-static inline uint8_t move_promote(move *m) { return (*m >> 0xE) & 0x3; }
-static inline uint8_t move_capture(move *m) { return (*m >> 0x10) & 0x7; }
-static inline uint8_t move_castle(move *m) { return (*m >> 0x13) & 0xF; }
-static inline uint8_t move_en_passant(move *m) { return (*m >> 0x18) & 0x3F; }
-static inline uint16_t move_halfmove(move *m) { return (*m >> 0x1E) & 0x7F; }
-static inline uint32_t move_fullmove(move *m) { return (*m >> 0x25); }
+static inline uint8_t move_from(const move *m) { return *m & 0x3F; }
+static inline uint8_t move_to(const move *m) { return (*m >> 0x6) & 0x3F; }
+static inline uint8_t move_flag(const move *m) { return (*m >> 0xC) & 0x3; }
+static inline uint8_t move_promote(const move *m) { return (*m >> 0xE) & 0x3; }
+static inline uint8_t move_capture(const move *m) { return (*m >> 0x10) & 0x7; }
+static inline uint8_t move_castle(const move *m) { return (*m >> 0x13) & 0xF; }
+static inline uint8_t move_en_passant(const move *m) { return (*m >> 0x18) & 0x3F; }
+static inline uint16_t move_halfmove(const move *m) { return (*m >> 0x1E) & 0x7F; }
+static inline uint32_t move_fullmove(const move *m) { return (*m >> 0x25); }
 static inline void move_set_captured(move *m, uint64_t i) { *m |= (i << 0x10); }
 static inline void move_set_castle(move *m, uint64_t i) { *m |= (i << 0x13); }
 static inline void move_set_en_passant(move *m, uint64_t i) { *m |= (i << 0x18); }
@@ -52,26 +52,22 @@ static inline void move_set_fullmove(move *m, uint64_t i) { *m |= (i << 0x25); }
 
 #define MOVES_MAX 256
 
-void do_move_perft(struct position *pos, move *m);
-
-void undo_move_perft(struct position *pos, move *m);
-
 void do_move(struct position *pos, move *m);
 
-void undo_move(struct position *pos, move *m);
+void undo_move(struct position *pos, const move *m);
 
 static inline move new_move(uint8_t source_square, uint8_t target_square, uint8_t flag, uint8_t promotion) {
 	return source_square | (target_square << 0x6) | (flag << 0xC) | (promotion << 0xE);
 }
 
-void print_move(move *m);
+void print_move(const move *m);
 
-char *move_str_pgn(char *str, struct position *pos, move *m);
-char *move_str_algebraic(char *str, move *m);
+char *move_str_pgn(char *str, const struct position *pos, const move *m);
+char *move_str_algebraic(char *str, const move *m);
 
-move string_to_move(struct position *pos, char *str);
+move string_to_move(const struct position *pos, const char *str);
 
-int is_legal(struct position *pos, move *m);
+int is_legal(const struct position *pos, const move *m);
 
 void do_null_move(struct position *pos, int en_passant);
 

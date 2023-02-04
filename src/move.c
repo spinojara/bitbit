@@ -406,7 +406,7 @@ void do_move(struct position *pos, move *m) {
 		pos->halfmove = 0;
 }
 
-void undo_move(struct position *pos, move *m) {
+void undo_move(struct position *pos, const move *m) {
 	uint8_t source_square = move_from(m);
 	uint8_t target_square = move_to(m);
 
@@ -524,7 +524,7 @@ void undo_move(struct position *pos, move *m) {
 	pos->zobrist_key ^= zobrist_turn_key();
 }
 
-void print_move(move *m) {
+void print_move(const move *m) {
 	char move_from_str[3];
 	char move_to_str[3];
 	algebraic(move_from_str, move_from(m));
@@ -535,7 +535,7 @@ void print_move(move *m) {
 }
 
 /* str needs to be at least 6 bytes */
-char *move_str_algebraic(char *str, move *m) {
+char *move_str_algebraic(char *str, const move *m) {
 	algebraic(str, move_from(m));
 	algebraic(str + 2, move_to(m));
 	str[4] = str[5] = '\0';
@@ -546,7 +546,7 @@ char *move_str_algebraic(char *str, move *m) {
 
 /* str needs to be at least 8 bytes */
 /* m can be illegal */
-char *move_str_pgn(char *str, struct position *pos, move *m) {
+char *move_str_pgn(char *str, const struct position *pos, const move *m) {
 	if (!is_legal(pos, m))
 		return NULL;
 	int x = move_from(m) % 8;
@@ -618,10 +618,14 @@ char *move_str_pgn(char *str, struct position *pos, move *m) {
 		str[i++] = "NBRQ"[move_promote(m)];
 	}
 	
-	do_move(pos, m);
-	int ma = mate(pos);
-	uint64_t checkers = generate_checkers(pos);
-	undo_move(pos, m);
+	struct position pos_t[1];
+	move m_t[1];
+	*m_t = *m;
+	copy_position(pos_t, pos);
+	do_move(pos_t, m_t);
+	int ma = mate(pos_t);
+	uint64_t checkers = generate_checkers(pos_t);
+
 	if (ma == 2)
 		str[i++] = '#';
 	else if (ma == 1)
@@ -633,7 +637,7 @@ char *move_str_pgn(char *str, struct position *pos, move *m) {
 }
 
 /* str can be illegal */
-move string_to_move(struct position *pos, char *str) {
+move string_to_move(const struct position *pos, const char *str) {
 	move move_list[MOVES_MAX];
 	generate_all(pos, move_list);
 	char str_t[8];
@@ -648,7 +652,7 @@ move string_to_move(struct position *pos, char *str) {
 	return 0;
 }
 
-int is_legal(struct position *pos, move *m) {
+int is_legal(const struct position *pos, const move *m) {
 	move move_list[MOVES_MAX];
 	generate_all(pos, move_list);
 	for (move *move_ptr = move_list; *move_ptr; move_ptr++)

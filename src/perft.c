@@ -45,9 +45,9 @@ uint64_t perft_white(struct position *pos, int depth, int verbose) {
 			nodes++;
 		}
 		else {
-			do_move_perft(pos, move_ptr);
+			do_move(pos, move_ptr);
 			count = perft_black(pos, depth - 1, 0);
-			undo_move_perft(pos, move_ptr);
+			undo_move(pos, move_ptr);
 			nodes += count;
 		}
 		if (verbose && !interrupt) {
@@ -71,9 +71,9 @@ uint64_t perft_black(struct position *pos, int depth, int verbose) {
 			nodes++;
 		}
 		else {
-			do_move_perft(pos, move_ptr);
+			do_move(pos, move_ptr);
 			count = perft_white(pos, depth - 1, 0);
-			undo_move_perft(pos, move_ptr);
+			undo_move(pos, move_ptr);
 			nodes += count;
 		}
 		if (verbose && !interrupt) {
