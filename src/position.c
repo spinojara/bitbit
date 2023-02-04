@@ -52,32 +52,15 @@ void print_position(const struct position *pos, int flip) {
 	printf("\n\n");
 }
 
-uint64_t generate_checkers(const struct position *pos) {
-	return pos->turn ? generate_checkers_white(pos) : generate_checkers_black(pos);
-}
-
-uint64_t generate_checkers_white(const struct position *pos) {
+uint64_t generate_checkers(const struct position *pos, int color) {
 	uint64_t checkers = 0;
 	int square;
 
-	square = ctz(pos->piece[white][king]);
-	checkers |= (shift_north_west(pos->piece[white][king]) | shift_north_east(pos->piece[white][king])) & pos->piece[black][pawn];
-	checkers |= rook_attacks(square, 0, pos->piece[white][all] | pos->piece[black][all]) & (pos->piece[black][rook] | pos->piece[black][queen]);
-	checkers |= bishop_attacks(square, 0, pos->piece[white][all] | pos->piece[black][all]) & (pos->piece[black][bishop] | pos->piece[black][queen]);
-	checkers |= knight_attacks(square, 0) & pos->piece[black][knight];
-
-	return checkers;
-}
-
-uint64_t generate_checkers_black(const struct position *pos) {
-	uint64_t checkers = 0;
-	int square;
-
-	square = ctz(pos->piece[black][king]);
-	checkers |= (shift_south_west(pos->piece[black][king]) | shift_south_east(pos->piece[black][king])) & pos->piece[white][pawn];
-	checkers |= rook_attacks(square, 0, pos->piece[white][all] | pos->piece[black][all]) & (pos->piece[white][rook] | pos->piece[white][queen]);
-	checkers |= bishop_attacks(square, 0, pos->piece[white][all] | pos->piece[black][all]) & (pos->piece[white][bishop] | pos->piece[white][queen]);
-	checkers |= knight_attacks(square, 0) & pos->piece[white][knight];
+	square = ctz(pos->piece[color][king]);
+	checkers |= (shift_color_west(pos->piece[color][king], color) | shift_color_east(pos->piece[color][king], color)) & pos->piece[1 - color][pawn];
+	checkers |= rook_attacks(square, 0, pos->piece[white][all] | pos->piece[black][all]) & (pos->piece[1 - color][rook] | pos->piece[1 - color][queen]);
+	checkers |= bishop_attacks(square, 0, pos->piece[white][all] | pos->piece[black][all]) & (pos->piece[1 - color][bishop] | pos->piece[1 - color][queen]);
+	checkers |= knight_attacks(square, 0) & pos->piece[1 - color][knight];
 
 	return checkers;
 }

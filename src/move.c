@@ -414,7 +414,7 @@ char *move_str_pgn(char *str, const struct position *pos, const move *m) {
 	copy_position(pos_t, pos);
 	do_move(pos_t, m_t);
 	int ma = mate(pos_t);
-	uint64_t checkers = generate_checkers(pos_t);
+	uint64_t checkers = generate_checkers(pos_t, pos_t->turn);
 
 	if (ma == 2)
 		str[i++] = '#';

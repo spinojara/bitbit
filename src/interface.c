@@ -120,7 +120,7 @@ int interface_help(struct arg *arg) {
 int interface_domove(struct arg *arg) {
 	UNUSED(arg);
 	if (flag(arg, 'f')) {
-		if(!generate_checkers(pos)) {
+		if(!generate_checkers(pos, pos->turn)) {
 			delete_history(&history);
 			do_null_move(pos, 0);
 		}

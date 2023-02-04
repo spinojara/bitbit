@@ -517,7 +517,7 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int
 	}
 
 	/* null move pruning */
-	uint64_t checkers = generate_checkers(pos);
+	uint64_t checkers = generate_checkers(pos, pos->turn);
 	if (!null_move && !(*pv_flag) && !checkers && depth >= 3 && has_big_piece(pos)) {
 		int t = pos->en_passant;
 		do_null_move(pos, 0);
@@ -606,7 +606,7 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int 
 		*m = 0;
 
 	if (!move_list[0]) {
-		uint64_t checkers = generate_checkers(pos);
+		uint64_t checkers = generate_checkers(pos, pos->turn);
 		if (!checkers)
 			evaluation = 0;
 		else 
