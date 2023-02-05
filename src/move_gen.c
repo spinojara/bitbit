@@ -20,6 +20,12 @@
 #include "bitboard.h"
 #include "attack_gen.h"
 
+int move_count(const move *m) {
+	const move *n;
+	for (n = m; *n; n++);
+	return n - m;
+}
+
 move *generate_all(const struct position *pos, move *move_list) {
 	move *move_ptr = move_list;
 	uint8_t i;
@@ -710,16 +716,6 @@ int mate(const struct position *pos) {
 	return checkers ? 2 : 1;
 }
 
-int move_count(const move *m) {
-	const move *n;
-	for (n = m; *n; n++);
-	return n - m;
-}
-
-int mobility(const struct position *pos, int color) {
-	return 0;
-}
-
 move *generate_quiescence(const struct position *pos, move *move_list) {
 	//return pos->turn ? generate_quiescence_white(pos, move_list) : generate_quiescence_black(pos, move_list);
 	return move_list;
@@ -1272,230 +1268,94 @@ move *generate_quiescence(const struct position *pos, move *move_list) {
 //	return move_ptr;
 //}
 //
-//int mobility_white(const struct position *pos) {
-//	int moves = 0, t;
-//
-//	uint64_t piece;
-//	uint64_t attacks;
-//	uint64_t pinned_squares;
-//
-//	uint64_t checkers = generate_checkers_white(pos);
-//	uint64_t attacked = generate_attacked_white(pos);
-//	uint64_t pinned = generate_pinned_white(pos);
-//
-//	uint8_t source_square;
-//	uint8_t king_square;
-//
-//	king_square = ctz(pos->piece[white][king]);
-//
-//	attacks = white_king_attacks(king_square, pos->piece[white][all]) & ~attacked;
-//	moves += (t = popcount(attacks)) ? t : 0;
-//
-//	if (!checkers) {
-//		piece = white_pawn_push(pos->piece[white][pawn], all_pieces) & ~pinned;
-//		moves += (t = popcount(piece)) ? t : 0;
-//
-//		piece = white_pawn_double_push(pos->piece[white][pawn], all_pieces) & ~pinned;
-//		moves += (t = popcount(piece)) ? t : 0;
-//
-//		piece = white_pawn_capture_e(pos->piece[white][pawn], pos->piece[black][all]) & ~pinned;
-//		moves += (t = popcount(piece)) ? t : 0;
-//
-//		piece = white_pawn_capture_w(pos->piece[white][pawn], pos->piece[black][all]) & ~pinned;
-//		moves += (t = popcount(piece)) ? t : 0;
-//
-//		piece = pos->piece[white][knight] & ~pinned;
-//		while (piece) {
-//			source_square = ctz(piece);
-//			attacks = white_knight_attacks(source_square, pos->piece[white][all]);
-//			moves += (t = popcount(attacks)) ? t : -5;
-//			piece = clear_ls1b(piece);
-//		}
-//
-//		piece = pos->piece[white][bishop] & ~pinned;
-//		while (piece) {
-//			source_square = ctz(piece);
-//			attacks = white_bishop_attacks(source_square, pos->piece[white][all], all_pieces);
-//			moves += (t = popcount(attacks)) ? t : -5;
-//			piece = clear_ls1b(piece);
-//		}
-//
-//		piece = pos->piece[white][rook] & ~pinned;
-//		while (piece) {
-//			source_square = ctz(piece);
-//			attacks = white_rook_attacks(source_square, pos->piece[white][all], all_pieces);
-//			moves += (t = popcount(attacks)) ? t : -5;
-//			piece = clear_ls1b(piece);
-//		}
-//
-//		piece = pos->piece[white][queen] & ~pinned;
-//		while (piece) {
-//			source_square = ctz(piece);
-//			attacks = white_queen_attacks(source_square, pos->piece[white][all], all_pieces);
-//			moves += (t = popcount(attacks)) ? t : -5;
-//			piece = clear_ls1b(piece);
-//		}
-//	}
-//	else if (!(checkers & (checkers - 1))) {
-//		source_square = ctz(checkers);
-//		pinned_squares = between_lookup[source_square + 64 * king_square] | checkers;
-//		piece = white_pawn_push(pos->piece[white][pawn], all_pieces) & shift_south(pinned_squares) & ~pinned;
-//		moves += (t = popcount(piece)) ? t : 0;
-//
-//		piece = white_pawn_double_push(pos->piece[white][pawn], all_pieces) & shift_south_south(pinned_squares) & ~pinned;
-//		moves += (t = popcount(piece)) ? t : 0;
-//
-//		piece = white_pawn_capture_e(pos->piece[white][pawn], checkers) & ~pinned;
-//		moves += (t = popcount(piece)) ? t : 0;
-//
-//		piece = white_pawn_capture_w(pos->piece[white][pawn], checkers) & ~pinned;
-//		moves += (t = popcount(piece)) ? t : 0;
-//
-//		piece = pos->piece[white][knight] & ~pinned;
-//		while (piece) {
-//			source_square = ctz(piece);
-//			attacks = white_knight_attacks(source_square, pos->piece[white][all]) & pinned_squares;
-//			moves += (t = popcount(attacks)) ? t : -5;
-//			piece = clear_ls1b(piece);
-//		}
-//
-//		piece = pos->piece[white][bishop] & ~pinned;
-//		while (piece) {
-//			source_square = ctz(piece);
-//			attacks = white_bishop_attacks(source_square, pos->piece[white][all], all_pieces) & pinned_squares;
-//			moves += (t = popcount(attacks)) ? t : -5;
-//			piece = clear_ls1b(piece);
-//		}
-//
-//		piece = pos->piece[white][rook] & ~pinned;
-//		while (piece) {
-//			source_square = ctz(piece);
-//			attacks = white_rook_attacks(source_square, pos->piece[white][all], all_pieces) & pinned_squares;
-//			moves += (t = popcount(attacks)) ? t : -5;
-//			piece = clear_ls1b(piece);
-//		}
-//
-//		piece = pos->piece[white][queen] & ~pinned;
-//		while (piece) {
-//			source_square = ctz(piece);
-//			attacks = white_queen_attacks(source_square, pos->piece[white][all], all_pieces) & pinned_squares;
-//			moves += (t = popcount(attacks)) ? t : -5;
-//			piece = clear_ls1b(piece);
-//		}
-//	}
-//	return moves;
-//}
-//
-//int mobility_black(const struct position *pos) {
-//	int moves = 0, t;
-//
-//	uint64_t piece;
-//	uint64_t attacks;
-//	uint64_t pinned_squares;
-//
-//	uint64_t checkers = generate_checkers_black(pos);
-//	uint64_t attacked = generate_attacked_black(pos);
-//	uint64_t pinned = generate_pinned_black(pos);
-//
-//	uint8_t source_square;
-//	uint8_t king_square;
-//
-//	king_square = ctz(pos->piece[black][king]);
-//
-//	attacks = black_king_attacks(king_square, pos->piece[black][all]) & ~attacked;
-//	moves += (t = popcount(attacks)) ? t : 0;
-//	
-//	if (!checkers) {
-//		piece = black_pawn_push(pos->piece[black][pawn], all_pieces) & ~pinned;
-//		moves += (t = popcount(piece)) ? t : 0;
-//
-//		piece = black_pawn_double_push(pos->piece[black][pawn], all_pieces) & ~pinned;
-//		moves += (t = popcount(piece)) ? t : 0;
-//
-//		piece = black_pawn_capture_e(pos->piece[black][pawn], pos->piece[white][all]) & ~pinned;
-//		moves += (t = popcount(piece)) ? t : 0;
-//
-//		piece = black_pawn_capture_w(pos->piece[black][pawn], pos->piece[white][all]) & ~pinned;
-//		moves += (t = popcount(piece)) ? t : 0;
-//
-//		piece = pos->piece[black][knight] & ~pinned;
-//		while (piece) {
-//			source_square = ctz(piece);
-//			attacks = black_knight_attacks(source_square, pos->piece[black][all]);
-//			moves += (t = popcount(attacks)) ? t : -5;
-//			piece = clear_ls1b(piece);
-//		}
-//
-//		piece = pos->piece[black][bishop] & ~pinned;
-//		while (piece) {
-//			source_square = ctz(piece);
-//			attacks = black_bishop_attacks(source_square, pos->piece[black][all], all_pieces);
-//			moves += (t = popcount(attacks)) ? t : -5;
-//			piece = clear_ls1b(piece);
-//		}
-//
-//		piece = pos->piece[black][rook] & ~pinned;
-//		while (piece) {
-//			source_square = ctz(piece);
-//			attacks = black_rook_attacks(source_square, pos->piece[black][all], all_pieces);
-//			moves += (t = popcount(attacks)) ? t : -5;
-//			piece = clear_ls1b(piece);
-//		}
-//
-//		piece = pos->piece[black][queen] & ~pinned;
-//		while (piece) {
-//			source_square = ctz(piece);
-//			attacks = black_queen_attacks(source_square, pos->piece[black][all], all_pieces);
-//			moves += (t = popcount(attacks)) ? t : -5;
-//			piece = clear_ls1b(piece);
-//		}
-//	}
-//	else if (!(checkers & (checkers - 1))) {
-//		source_square = ctz(checkers);
-//		pinned_squares = between_lookup[source_square + 64 * king_square] | checkers;
-//		piece = black_pawn_push(pos->piece[black][pawn], all_pieces) & shift_north(pinned_squares) & ~pinned;
-//		moves += (t = popcount(piece)) ? t : 0;
-//
-//		piece = black_pawn_double_push(pos->piece[black][pawn], all_pieces) & shift_north_north(pinned_squares) & ~pinned;
-//		moves += (t = popcount(piece)) ? t : 0;
-//
-//		piece = black_pawn_capture_e(pos->piece[black][pawn], checkers) & ~pinned;
-//		moves += (t = popcount(piece)) ? t : 0;
-//
-//		piece = black_pawn_capture_w(pos->piece[black][pawn], checkers) & ~pinned;
-//		moves += (t = popcount(piece)) ? t : 0;
-//
-//		piece = pos->piece[black][knight] & ~pinned;
-//		while (piece) {
-//			source_square = ctz(piece);
-//			attacks = black_knight_attacks(source_square, pos->piece[black][all]) & pinned_squares;
-//			moves += (t = popcount(attacks)) ? t : -5;
-//			piece = clear_ls1b(piece);
-//		}
-//
-//		piece = pos->piece[black][bishop] & ~pinned;
-//		while (piece) {
-//			source_square = ctz(piece);
-//			attacks = black_bishop_attacks(source_square, pos->piece[black][all], all_pieces) & pinned_squares;
-//			moves += (t = popcount(attacks)) ? t : -5;
-//			piece = clear_ls1b(piece);
-//		}
-//
-//		piece = pos->piece[black][rook] & ~pinned;
-//		while (piece) {
-//			source_square = ctz(piece);
-//			attacks = black_rook_attacks(source_square, pos->piece[black][all], all_pieces) & pinned_squares;
-//			moves += (t = popcount(attacks)) ? t : -5;
-//			piece = clear_ls1b(piece);
-//		}
-//
-//		piece = pos->piece[black][queen] & ~pinned;
-//		while (piece) {
-//			source_square = ctz(piece);
-//			attacks = black_queen_attacks(source_square, pos->piece[black][all], all_pieces) & pinned_squares;
-//			moves += (t = popcount(attacks)) ? t : -5;
-//			piece = clear_ls1b(piece);
-//		}
-//	}
-//	return moves;
-//}
+
+int mobility(const struct position *pos, int color) {
+	int moves = 0, t;
+
+	uint64_t piece;
+	uint64_t attacks;
+	uint64_t pinned_squares;
+	uint64_t all_pieces = pos->piece[white][all] | pos->piece[black][all];
+
+	uint64_t checkers = generate_checkers(pos, color);
+	uint64_t attacked = generate_attacked(pos, color);
+	uint64_t pinned = generate_pinned(pos, color);
+
+	uint8_t source_square;
+	uint8_t king_square;
+
+	king_square = ctz(pos->piece[color][king]);
+
+	if (!checkers) {
+		piece = pos->piece[color][knight] & ~pinned;
+		while (piece) {
+			source_square = ctz(piece);
+			attacks = knight_attacks(source_square, pos->piece[color][all]);
+			moves += (t = popcount(attacks)) ? t : -5;
+			piece = clear_ls1b(piece);
+		}
+
+		piece = pos->piece[color][bishop] & ~pinned;
+		while (piece) {
+			source_square = ctz(piece);
+			attacks = bishop_attacks(source_square, pos->piece[color][all], all_pieces);
+			moves += (t = popcount(attacks)) ? t : -5;
+			piece = clear_ls1b(piece);
+		}
+
+		piece = pos->piece[color][rook] & ~pinned;
+		while (piece) {
+			source_square = ctz(piece);
+			attacks = rook_attacks(source_square, pos->piece[color][all], all_pieces);
+			moves += (t = popcount(attacks)) ? t : -5;
+			piece = clear_ls1b(piece);
+		}
+
+		piece = pos->piece[color][queen] & ~pinned;
+		while (piece) {
+			source_square = ctz(piece);
+			attacks = queen_attacks(source_square, pos->piece[color][all], all_pieces);
+			moves += (t = popcount(attacks)) ? t : -5;
+			piece = clear_ls1b(piece);
+		}
+
+	}
+	else if (!(checkers & (checkers - 1))) {
+		source_square = ctz(checkers);
+		pinned_squares = between_lookup[source_square + 64 * king_square] | checkers;
+
+		piece = pos->piece[color][knight] & ~pinned;
+		while (piece) {
+			source_square = ctz(piece);
+			attacks = knight_attacks(source_square, pos->piece[color][all]) & pinned_squares;
+			moves += (t = popcount(attacks)) ? t : -5;
+			piece = clear_ls1b(piece);
+		}
+
+		piece = pos->piece[color][bishop] & ~pinned;
+		while (piece) {
+			source_square = ctz(piece);
+			attacks = bishop_attacks(source_square, pos->piece[color][all], all_pieces) & pinned_squares;
+			moves += (t = popcount(attacks)) ? t : -5;
+			piece = clear_ls1b(piece);
+		}
+
+		piece = pos->piece[color][rook] & ~pinned;
+		while (piece) {
+			source_square = ctz(piece);
+			attacks = rook_attacks(source_square, pos->piece[color][all], all_pieces) & pinned_squares;
+			moves += (t = popcount(attacks)) ? t : -5;
+			piece = clear_ls1b(piece);
+		}
+
+		piece = pos->piece[color][queen] & ~pinned;
+		while (piece) {
+			source_square = ctz(piece);
+			attacks = queen_attacks(source_square, pos->piece[color][all], all_pieces) & pinned_squares;
+			moves += (t = popcount(attacks)) ? t : -5;
+			piece = clear_ls1b(piece);
+		}
+	}
+
+	return moves;
+}
