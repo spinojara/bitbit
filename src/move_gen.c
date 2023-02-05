@@ -890,6 +890,23 @@ move *generate_quiescence(const struct position *pos, move *move_list) {
 		source_square = ctz(checkers);
 		pinned_squares = between_lookup[source_square + 64 * king_square] | checkers;
 
+		piece = pawn_push(pos->piece[pos->turn][pawn], all_pieces, pos->turn) & shift_color(pinned_squares, 1 - pos->turn) & ~pinned;
+		while (piece) {
+			source_square = ctz(piece);
+			if (56 <= source_square + 8 * pawn_sign || source_square + 8 * pawn_sign < 7)
+					*move_ptr++ = new_move(source_square, source_square + 8 * pawn_sign, 2, 3);
+			else
+				*move_ptr++ = new_move(source_square, source_square + 8 * pawn_sign, 0, 0);
+			piece = clear_ls1b(piece);
+		}
+
+		piece = pawn_double_push(pos->piece[pos->turn][pawn], all_pieces, pos->turn) & shift_color2(pinned_squares, 1 - pos->turn) & ~pinned;
+		while (piece) {
+			source_square = ctz(piece);
+			*move_ptr++ = new_move(source_square, source_square + 16 * pawn_sign, 0, 0);
+			piece = clear_ls1b(piece);
+		}
+
 		piece = pawn_capture_e(pos->piece[pos->turn][pawn], checkers, pos->turn) & ~pinned;
 		while (piece) {
 			source_square = ctz(piece);
