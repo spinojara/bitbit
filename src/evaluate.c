@@ -483,6 +483,8 @@ int16_t quiescence(struct position *pos, int16_t alpha, int16_t beta, clock_t cl
 }
 
 int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int16_t alpha, int16_t beta, int null_move, clock_t clock_stop, int *pv_flag, move pv_moves[][256], move killer_moves[][2], uint64_t history_moves[13][64]) {
+	int16_t evaluation;
+
 	if (interrupt)
 		return 0;
 	if (nodes % 4096 == 0)
@@ -504,7 +506,6 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int
 			beta = transposition_evaluation(e);
 	}
 
-	int16_t evaluation;
 	if (depth <= 0) {
 		evaluation = mate(pos);
 		/* stalemate */
@@ -530,11 +531,8 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int
 	move move_list[MOVES_MAX];
 	generate_all(pos, move_list);
 
-	if (!move_list[0]) {
-		if (!checkers)
-			return 0;
-		return -0x7F00;
-	}
+	if (!move_list[0])
+		return checkers ? -0x7F00 : 0;
 
 	if (*pv_flag && !contains_pv_move(move_list, ply, pv_moves))
 		*pv_flag = 0;
