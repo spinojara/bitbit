@@ -403,25 +403,14 @@ int king_safety(struct position *pos) {
 int16_t evaluate_static(struct position *pos) {
 	nodes++;
 	int eval = 0, i;
-	int total_piece_count[] = { 0, 0, 3, 3, 5, 9, 0, 0, 3, 3, 5, 9, 0 };
-
+	int piece_value_total[] = { 0, 0, 3, 3, 5, 9 };
 	double early_game = 0;
-	int queen_flag = 0;
-	for (i = 0; i < 64; i++) {
-		/* don't count queens from promotion */
-		if (queen_flag == 2 && total_piece_count[pos->mailbox[i]] == 9)
-			continue;
-		if (total_piece_count[pos->mailbox[i]] == 9)
-			queen_flag++;
-		early_game += total_piece_count[pos->mailbox[i]];
-	}
 
-	if (early_game > 40)
-		early_game = 1;
-	else if (early_game < 10)
-		early_game = 0;
-	else
-		early_game = (early_game - 10) / 40;
+	for (i = knight; i < king; i++) {
+		early_game += piece_value_total[i] * popcount(pos->white_pieces[i]);
+		early_game += piece_value_total[i] * popcount(pos->black_pieces[i]);
+	}
+ 	early_game = CLAMP((early_game - 10) / 40, 0, 1);
 
 	/* piece square tables */
 	for (i = 0; i < 64; i++)

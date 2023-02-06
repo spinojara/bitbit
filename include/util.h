@@ -25,6 +25,8 @@
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define MAX(a, b) (((a) < (b)) ? (b) : (a))
 
+#define CLAMP(a, b, c) MAX((b), MIN((a), (c)))
+
 #define ABS(a) (((a) > 0) ? (a) : -(a))
 
 #define SIZE(x) (sizeof(x) / sizeof (*(x)))
