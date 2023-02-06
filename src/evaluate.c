@@ -407,8 +407,8 @@ int16_t evaluate_static(struct position *pos) {
 	double early_game = 0;
 
 	for (i = knight; i < king; i++) {
-		early_game += piece_value_total[i] * popcount(pos->white_pieces[i]);
-		early_game += piece_value_total[i] * popcount(pos->black_pieces[i]);
+		early_game += piece_value_total[i] * popcount(pos->piece[white][i]);
+		early_game += piece_value_total[i] * popcount(pos->piece[black][i]);
 	}
  	early_game = CLAMP((early_game - 10) / 40, 0, 1);
 
