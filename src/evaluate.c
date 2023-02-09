@@ -618,7 +618,7 @@ int16_t evaluate(struct position *pos, uint8_t depth, move *m, int verbose, int 
 
 	clock_t clock_stop;
 	if (max_duration >= 0)
-		clock_stop = clock() + CLOCKS_PER_SEC * max_duration;
+		clock_stop = clock() + (CLOCKS_PER_SEC * max_duration) / 1000;
 	else
 		clock_stop = 0;
 

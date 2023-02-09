@@ -254,7 +254,7 @@ int interface_eval(struct arg *arg) {
 			if (flag(arg, 'd'))
 				eval = evaluate(pos, str_to_int(arg->argv[1]), m, flag(arg, 'v'), -1, history);
 			else
-				eval = evaluate(pos, 255, m, flag(arg, 'v'), str_to_int(arg->argv[1]), history);
+				eval = evaluate(pos, 255, m, flag(arg, 'v'), str_to_int(arg->argv[1]) * 1000, history);
 			t = clock() - t;
 			if (flag(arg, 't'))
 				printf("\rtime: %.2f\n", (double)t / CLOCKS_PER_SEC);
