@@ -21,19 +21,14 @@ LOCAL_MANDIR = man
 SRC = bitboard.c magic_bitboard.c attack_gen.c \
       move.c util.c position.c move_gen.c perft.c \
       evaluate.c interface.c transposition_table.c \
-      init.c interrupt.c bitbit.c uci.c
+      init.c interrupt.c bitbit.c
 SRC_BITBIT = bitboard.c magic_bitboard.c attack_gen.c \
 	     move.c util.c position.c move_gen.c perft.c \
 	     evaluate.c interface.c transposition_table.c \
 	     init.c interrupt.c bitbit.c
-SRC_UCI = bitboard.c magic_bitboard.c attack_gen.c \
-	  move.c util.c position.c move_gen.c perft.c \
-	  evaluate.c interface.c transposition_table.c \
-	  init.c interrupt.c uci.c
 
 OBJ = $(addprefix $(LOCAL_OBJDIR)/,$(SRC:.c=.o))
 OBJ_BITBIT = $(addprefix $(LOCAL_OBJDIR)/,$(SRC_BITBIT:.c=.o))
-OBJ_UCI = $(addprefix $(LOCAL_OBJDIR)/,$(SRC_UCI:.c=.o))
 
 PREFIX = /usr/local
 BINDIR = $(PREFIX)/bin
@@ -48,9 +43,6 @@ endif
 all: bitbit
 
 bitbit: $(OBJ_BITBIT)
-	$(CC) $(LDFLAGS) $^ -o $@
-
-uci: $(OBJ_UCI)
 	$(CC) $(LDFLAGS) $^ -o $@
 
 $(LOCAL_OBJDIR)/interface.o: $(LOCAL_SRCDIR)/interface.c
