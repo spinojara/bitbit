@@ -21,11 +21,11 @@ LOCAL_MANDIR = man
 SRC = bitboard.c magic_bitboard.c attack_gen.c \
       move.c util.c position.c move_gen.c perft.c \
       evaluate.c interface.c transposition_table.c \
-      init.c interrupt.c bitbit.c
+      init.c time_man.c interrupt.c bitbit.c
 SRC_BITBIT = bitboard.c magic_bitboard.c attack_gen.c \
 	     move.c util.c position.c move_gen.c perft.c \
 	     evaluate.c interface.c transposition_table.c \
-	     init.c interrupt.c bitbit.c
+	     init.c time_man.c interrupt.c bitbit.c
 
 OBJ = $(addprefix $(LOCAL_OBJDIR)/,$(SRC:.c=.o))
 OBJ_BITBIT = $(addprefix $(LOCAL_OBJDIR)/,$(SRC_BITBIT:.c=.o))

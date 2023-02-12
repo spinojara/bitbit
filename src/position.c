@@ -440,14 +440,14 @@ int fen_is_ok(int argc, char **argv) {
 			if (mailbox[t + 8] != white_pawn ||
 				mailbox[t] != empty ||
 				mailbox[t - 8] != empty ||
-				argv[1][0] != 'w')
+				argv[1][0] != 'b')
 				goto failure;
 		}
 		else if (t / 8 == 5) {
 			if (mailbox[t - 8] != black_pawn ||
 				mailbox[t] != empty ||
 				mailbox[t + 8] != empty ||
-				argv[1][0] != 'b') {
+				argv[1][0] != 'w') {
 				goto failure;
 			}
 		}

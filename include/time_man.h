@@ -15,39 +15,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "perft.h"
+#ifndef TIME_MAN_H
+#define TIME_MAN_H
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <inttypes.h>
+#include <stdint.h>
 
-#include "move.h"
-#include "move_gen.h"
-#include "interface.h"
-#include "interrupt.h"
+int time_man(int etime, int16_t saved_evaluation[256], uint8_t depth);
 
-uint64_t perft(struct position *pos, int depth, int verbose) {
-	if (depth <= 0 || interrupt)
-		return 0;
-	move move_list[MOVES_MAX];
-	generate_all(pos, move_list);
-	uint64_t nodes = 0, count;
-
-	for (move *move_ptr = move_list; *move_ptr; move_ptr++){
-		if (depth == 1) {
-			count = 1;
-			nodes++;
-		}
-		else {
-			do_move(pos, move_ptr);
-			count = perft(pos, depth - 1, 0);
-			undo_move(pos, move_ptr);
-			nodes += count;
-		}
-		if (verbose && !interrupt) {
-			print_move(move_ptr);
-			printf(": %" PRIu64 "\n", count);
-		}
-	}
-	return nodes;
-}
+#endif
