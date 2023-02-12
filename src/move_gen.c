@@ -545,8 +545,6 @@ int mate(const struct position *pos) {
 
 			piece = pawn_capture_e(pos->piece[pos->turn][pawn], target_bitboard, pos->turn) & ~pinned;
 			if (piece) {
-				source_square = ctz(piece);
-
 				temp = (all_pieces) ^ (target_bitboard | shift_color(target_bitboard, 1 - pos->turn) | shift_color_west(target_bitboard, 1 - pos->turn));
 
 				if (!(rook_attacks(king_square, 0, temp) & (pos->piece[1 - pos->turn][rook] | pos->piece[1 - pos->turn][queen])) && !(bishop_attacks(king_square, 0, temp) & (pos->piece[1 - pos->turn][bishop] | pos->piece[1 - pos->turn][queen])))
@@ -564,8 +562,6 @@ int mate(const struct position *pos) {
 
 			piece = pawn_capture_w(pos->piece[pos->turn][pawn], target_bitboard, pos->turn) & ~pinned;
 			if (piece) {
-				source_square = ctz(piece);
-
 				temp = (all_pieces) ^ (target_bitboard | shift_color(target_bitboard, 1 - pos->turn) | shift_color_east(target_bitboard, 1 - pos->turn));
 
 				if (!(rook_attacks(king_square, 0, temp) & (pos->piece[1 - pos->turn][rook] | pos->piece[1 - pos->turn][queen])) && !(bishop_attacks(king_square, 0, temp) & (pos->piece[1 - pos->turn][bishop] | pos->piece[1 - pos->turn][queen])))
