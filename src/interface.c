@@ -288,13 +288,15 @@ int interface_version(int argc, char **argv) {
 
 	printf("bitbit " MACRO_VALUE(VERSION) "\n");
 	printf("Copyright (C) 2022 Isak Ellmer  \n");
-	printf("c compiler: %s\n", compiler);
-	printf("environment: %s\n", environment);
-	char t[8];
-	printf("compilation date: %s\n", date(t));
-	printf("transposition table size: ");
-	transposition_table_size_print(log_2(sizeof(struct transposition) * transposition_table_size()));
-	printf("\ntransposition entry size: %" PRIu64 "B\n", sizeof(struct transposition));
+	if (argc) {
+		printf("c compiler: %s\n", compiler);
+		printf("environment: %s\n", environment);
+		char t[8];
+		printf("compilation date: %s\n", date(t));
+		printf("transposition table size: ");
+		transposition_table_size_print(log_2(sizeof(struct transposition) * transposition_table_size()));
+		printf("\ntransposition entry size: %" PRIu64 "B\n", sizeof(struct transposition));
+	}
 
 	return DONE;
 }
