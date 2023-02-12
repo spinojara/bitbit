@@ -24,14 +24,6 @@
 #define EXIT_LOOP 1
 #define ERR_MISS_ARG 2
 #define ERR_BAD_ARG 3
-#define ERR_MISS_FLAG 4
-#define ERR_BAD_FLAG 5
-
-struct arg {
-	int flag[256];
-	int argc;
-	char **argv;
-};
 
 struct history {
 	move *move;
@@ -41,11 +33,13 @@ struct history {
 
 int interface(int argc, char **argv);
 
+void execute_func(int argc, char **argv);
+
 void interface_init(void);
 
 void interface_term(void);
 
-int interface_version(struct arg *arg);
+int interface_version(int argc, char **argv);
 
 void delete_history(struct history **h);
 

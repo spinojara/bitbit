@@ -54,6 +54,8 @@ int str_to_int(const char *s);
 
 void merge_sort(move *arr, uint64_t *val, unsigned int first, unsigned int last, int increasing);
 
+int variance(int16_t *arr, int len);
+
 void util_init(void);
 
 #endif

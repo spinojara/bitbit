@@ -123,6 +123,18 @@ void merge_sort(move *arr, uint64_t *val, unsigned int first, unsigned int last,
 	}
 }
 
+int variance(int16_t *arr, int len) {
+	int variance = 0;
+	int mean = 0;
+	for (int i = 0; i < len; i++)
+		mean += arr[i];
+	mean = mean / len;
+	for (int i = 0; i < len; i++)
+		variance += (arr[i] - mean) * (arr[i] - mean);
+	variance /= len - 1;
+	return variance;
+}
+
 void util_init(void) {
 	srand(0);
 	init_status("setting seed");
