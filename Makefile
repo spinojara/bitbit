@@ -78,6 +78,8 @@ install: all
 	mkdir -p $(DESTDIR)$(BINDIR)
 	cp -f bitbit $(DESTDIR)$(BINDIR)/bitbit
 	chmod 755 $(DESTDIR)$(BINDIR)/bitbit
+	cp -f ava $(DESTDIR)$(BINDIR)/ava
+	chmod 755 $(DESTDIR)$(BINDIR)/ava
 	mkdir -p $(DESTDIR)$(MAN6DIR)
 	sed "s/VERSION/$(VERSION)/g" < $(LOCAL_MANDIR)/bitbit.6 > $(DESTDIR)$(MAN6DIR)/bitbit.6
 	chmod 644 $(DESTDIR)$(MAN6DIR)/bitbit.6
