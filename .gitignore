@@ -1,13 +1,16 @@
-# obj files
-*.o
-*.obj
-*.d
+# ignore everything
+/*
 
-# executable files
-bitbit
-ava
-*.exe
+# include
+!.gitignore
+!README
+!TODO
+!LICENSE
+!Makefile
 
-# vim swp files
-*.swp
-*~
+!src/*
+!include/*
+
+!man/*
+
+!files/*
