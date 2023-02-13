@@ -211,7 +211,7 @@ void setpos(struct position *pos, uint8_t turn, int8_t en_passant, uint8_t castl
 /* assumes that fen is ok */
 void pos_from_fen(struct position *pos, int argc, char **argv) {
 	int t = 0;
-	unsigned long i;
+	size_t i;
 
 	pos->castle = 0;
 	for (i = all; i <= king; i++) {
@@ -294,7 +294,7 @@ int fen_is_ok(int argc, char **argv) {
 	struct position *pos = NULL;
 	int ret = 1;
 	int t = 0;
-	unsigned long i;
+	size_t i;
 
 	if (argc < 4)
 		goto failure;
@@ -502,7 +502,7 @@ char *pos_to_fen(char *fen, const struct position *pos) {
 	int k = 0;
 	char tmp[128];
 
-	unsigned long i = 56, j = 0;
+	size_t i = 56, j = 0;
 	while (1) {
 		if (pos->mailbox[i]) {
 			if (j)

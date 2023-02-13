@@ -109,7 +109,7 @@ int interface_help(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
 	printf("The following commands are available in bitbit:\n");
-	for (unsigned long k = 0; k < SIZE(func_arr); k++)
+	for (size_t k = 0; k < SIZE(func_arr); k++)
 		printf("%s\n", func_arr[k].name);
 	
 	return DONE;
@@ -419,7 +419,7 @@ int parse(int *argc, char ***argv) {
 		ret = EXIT_LOOP;
 	else if (argc) {
 		struct func *f = NULL;
-		for (unsigned long k = 0; k < SIZE(func_arr); k++)
+		for (size_t k = 0; k < SIZE(func_arr); k++)
 			if (strcmp(func_arr[k].name, argv_t[0]) == 0)
 				f = func_arr + k;
 		if (f)
