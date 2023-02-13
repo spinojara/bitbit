@@ -22,7 +22,7 @@
 #include "init.h"
 #include "util.h"
 
-int interrupt = 0;
+volatile int interrupt = 0;
 
 void sigint_handler(int num) {
 	UNUSED(num);

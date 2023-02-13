@@ -20,6 +20,6 @@
 
 void interrupt_init(void);
 
-extern int interrupt;
+extern volatile int interrupt;
 
 #endif
