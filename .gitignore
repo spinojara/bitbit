@@ -5,7 +5,7 @@
 
 # executable files
 bitbit
-uci
+ava
 *.exe
 
 # vim swp files
