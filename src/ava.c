@@ -102,15 +102,24 @@ int play_game(struct engine *engine[2], int engine_white, struct parseinfo *info
 	while (1) {
 		pos_to_fen(fen, pos);
 		fprintf(engine[turn]->in, "position fen %s\n", fen);
-		//printf("position fen %s\n", fen);
-		fprintf(engine[turn]->in, "go wtime %ld btime %ld winc %d binc %d\n", t[white], t[black], info->winc, info->binc);
-		//printf("go wtime %ld btime %ld winc %d binc %d\n", t[white], t[black], info->winc, info->binc);
+		fprintf(engine[turn]->in, "go");
+		if (!info->movetime) {
+			fprintf(engine[turn]->in, " wtime %ld", t[white]);
+			fprintf(engine[turn]->in, " btime %ld", t[black]);
+		}
+		else {
+			fprintf(engine[turn]->in, " movetime %d", info->movetime);
+		}
+		if (info->winc)
+			fprintf(engine[turn]->in, " winc %d", info->winc);
+		if (info->binc)
+			fprintf(engine[turn]->in, " binc %d", info->binc);
+		fprintf(engine[turn]->in, "\n");
 		
 		t[3] = timems();
 		while (1) {
 			if (!fgets(buf, sizeof(buf), engine[turn]->out))
 				printf("fgets ERROR\n");
-			//printf("%s", buf);
 			if (strstr(buf, "bestmove ")) {
 				snprintf(move_str, SIZE(move_str), buf + strlen("bestmove "));
 				for (unsigned long i = 0; i < SIZE(move_str) - 1; i++)
@@ -189,7 +198,6 @@ struct engine *eopen(struct parseinfo *info, int n) {
 	while (1) {
 		if (!fgets(buf, sizeof(buf), engine->out))
 			printf("fgets ERROR\n");
-		//printf("%s", buf);
 		if (strstr(buf, "uciok"))
 			break;
 		if (strstr(buf, "id name "))
@@ -222,7 +230,7 @@ void print_eta(struct parseinfo *info) {
 	memcpy(&current, t, sizeof(*t));
 	t = localtime(&raweta);
 	memcpy(&eta, t, sizeof(*t));
-	printf("%d/%d time: %02d:%02d, eta: %02d:%02d\n", info->played + info->playing,
+	printf("%d/%d time: %02d:%02d eta: %02d:%02d\n", info->played + info->playing,
 			info->games, current.tm_hour, current.tm_min,
 			eta.tm_hour, eta.tm_min);
 }
@@ -269,7 +277,8 @@ void parseinfo(struct parseinfo *info, int argc, char **argv) {
 	info->games = 1;
 	info->threads = 1;
 	info->wtime = info->btime = -1;
-	info->winc = info->binc = 0;
+	info->winc = info->binc = -1;
+	info->movetime = -1;
 
 	int engine_n = -1;
 	int option_n = -1;
@@ -329,11 +338,11 @@ void parseinfo(struct parseinfo *info, int argc, char **argv) {
 	}
 
 	/* if not set */
-	if (info->wtime == -1 && info->btime == -1)
+	if (info->wtime == -1 && info->btime == -1 && info->movetime == -1)
 		info->winc = info->binc = 1000;
-	if (info->wtime == -1)
+	if (info->wtime == -1 && info->movetime == -1)
 		info->wtime = 120000;
-	if (info->btime == -1)
+	if (info->btime == -1 && info->movetime == -1)
 		info->btime = 120000;
 
 	info->threads = MAX(1, info->threads);
