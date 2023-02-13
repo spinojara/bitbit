@@ -45,6 +45,8 @@ int init(int argc, char **argv) {
 	counter->total = 366701;
 	counter->done = 0;
 	counter->time = clock();
+	setbuf(stdin, NULL);
+	setbuf(stdout, NULL);
 	init_status("init");
 	return 0;
 }
@@ -55,7 +57,6 @@ void term(void) {
 
 void init_print(char *str) {
 	printf("\033[2K[%" PRIu64 "/%" PRIu64 "] %s\r", counter->done, counter->total, str);
-	fflush(stdout);
 }
 
 void init_status(char *str) {

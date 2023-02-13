@@ -70,6 +70,14 @@ int str_to_int(const char *s) {
 	return ret;
 }
 
+char *appendstr(char *dest, const char *src) {
+	size_t i, n;
+	for (n = 0; dest[n]; n++);
+	for (i = 0; i <= strlen(src); i++)
+		dest[n + i] = src[i];
+	return dest;
+}
+
 void merge(move *arr, uint64_t *val, unsigned int first, unsigned int last, int increasing) {
 	if (!(first < last))
 		return;

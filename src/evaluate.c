@@ -667,7 +667,6 @@ int16_t evaluate(struct position *pos, uint8_t depth, int verbose, int etime, in
 			printf(" nodes %ld time %ld pv", nodes, 1000 * (clock() - clock_start) / CLOCKS_PER_SEC);
 			print_pv(pos, pv_moves[0], 0);
 			printf("\n");
-			fflush(stdout);
 		}
 		saved_evaluation[d] = evaluation;
 		if (etime && 3 * 1000 * (clock() - clock_start) > 2 * time_man(etime, saved_evaluation, d) * CLOCKS_PER_SEC)

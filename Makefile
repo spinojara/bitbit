@@ -26,9 +26,13 @@ SRC_BITBIT = bitboard.c magic_bitboard.c attack_gen.c \
 	     move.c util.c position.c move_gen.c perft.c \
 	     evaluate.c interface.c transposition_table.c \
 	     init.c time_man.c interrupt.c bitbit.c
+SRC_AVA = bitboard.c magic_bitboard.c attack_gen.c \
+	  move.c util.c position.c move_gen.c evaluate.c \
+	  interface.c transposition_table.c init.c ava.c
 
 OBJ = $(addprefix $(LOCAL_OBJDIR)/,$(SRC:.c=.o))
 OBJ_BITBIT = $(addprefix $(LOCAL_OBJDIR)/,$(SRC_BITBIT:.c=.o))
+OBJ_AVA = $(addprefix $(LOCAL_OBJDIR)/,$(SRC_AVA:.c=.o))
 
 PREFIX = /usr/local
 BINDIR = $(PREFIX)/bin
@@ -40,10 +44,13 @@ ifneq ($(TT), )
 	SIZE = -DTT=$(TT)
 endif
 
-all: bitbit
+all: bitbit ava
 
 bitbit: $(OBJ_BITBIT)
 	$(CC) $(LDFLAGS) $^ -o $@
+
+ava: $(OBJ_AVA)
+	$(CC) $(LDFLAGS) -lpthread $^ -o $@
 
 $(LOCAL_OBJDIR)/interface.o: $(LOCAL_SRCDIR)/interface.c
 	@mkdir -p $(LOCAL_OBJDIR)
@@ -52,6 +59,10 @@ $(LOCAL_OBJDIR)/interface.o: $(LOCAL_SRCDIR)/interface.c
 $(LOCAL_OBJDIR)/transposition_table.o: $(LOCAL_SRCDIR)/transposition_table.c
 	@mkdir -p $(LOCAL_OBJDIR)
 	$(CC) $(CFLAGS) -I$(LOCAL_INCDIR) $(SIZE) -c $< -o $@
+
+$(LOCAL_OBJDIR)/ava.o: $(LOCAL_SRCDIR)/ava.c
+	@mkdir -p $(LOCAL_OBJDIR)
+	$(CC) $(CFLAGS) -I$(LOCAL_INCDIR) -D_POSIX_C_SOURCE -c $< -o $@
 
 $(LOCAL_OBJDIR)/%.o: $(LOCAL_SRCDIR)/%.c
 	@mkdir -p $(LOCAL_OBJDIR)
