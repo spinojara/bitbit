@@ -77,10 +77,11 @@ int play_game(struct engine *engine[2], int engine_white, struct parseinfo *info
 	move m;
 	pos_from_fen(pos, SIZE(start_fen), start_fen);
 	
-
+	pthread_mutex_lock(&lock);
 	long t[3];
 	t[white] = info->wtime;
 	t[black] = info->btime;
+	pthread_mutex_unlock(&lock);
 
 	for (int i = 0; i < 2; i++) {
 		fprintf(engine[i]->in, "ucinewgame\n");
@@ -103,6 +104,8 @@ int play_game(struct engine *engine[2], int engine_white, struct parseinfo *info
 		pos_to_fen(fen, pos);
 		fprintf(engine[turn]->in, "position fen %s\n", fen);
 		fprintf(engine[turn]->in, "go");
+
+		pthread_mutex_lock(&lock);
 		if (!info->movetime) {
 			fprintf(engine[turn]->in, " wtime %ld", t[white]);
 			fprintf(engine[turn]->in, " btime %ld", t[black]);
@@ -115,6 +118,7 @@ int play_game(struct engine *engine[2], int engine_white, struct parseinfo *info
 		if (info->binc)
 			fprintf(engine[turn]->in, " binc %d", info->binc);
 		fprintf(engine[turn]->in, "\n");
+		pthread_mutex_unlock(&lock);
 		
 		t[3] = timems();
 		while (1) {
@@ -135,7 +139,9 @@ int play_game(struct engine *engine[2], int engine_white, struct parseinfo *info
 			break;
 		}
 		/* increment 1000 ms */
+		pthread_mutex_lock(&lock);
 		t[turn] += (turn == engine_white) ? info->winc : info->binc;
+		pthread_mutex_unlock(&lock);
 
 		/* remove \n character */
 		move_str[strlen(move_str) - 1] = '\0';
@@ -239,8 +245,10 @@ void *thread_play(void *ptr) {
 	struct parseinfo *info = (struct parseinfo *)ptr;
 	struct engine *engine[2];
 
+	pthread_mutex_lock(&lock);
 	engine[0] = eopen(info, 0);
 	engine[1] = eopen(info, 1);
+	pthread_mutex_unlock(&lock);
 
 	int ret;
 	while (1) {
