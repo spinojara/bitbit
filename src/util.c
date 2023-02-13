@@ -56,17 +56,14 @@ int find_char(const char *s, char c) {
 	return -1;
 }
 
-int str_is_int(const char *s) {
-	for (int i = 0; s[i]; i++)
+int strint(const char *s) {
+	int ret = 0;
+	for (int i = 0; s[i]; i++) {
 		if (s[i] < '0' || s[i] > '9')
 			return 0;
-	return 1;
-}
-
-int str_to_int(const char *s) {
-	int ret = 0;
-	for (int i = 0; s[i]; i++)
-		ret = ret * 10 + s[i] - '0';
+		else
+			ret = ret * 10 + s[i] - '0';
+	}
 	return ret;
 }
 

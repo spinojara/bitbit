@@ -48,9 +48,8 @@ int nearint(double f);
 
 int find_char(const char *s, char c);
 
-int str_is_int(const char *s);
-
-int str_to_int(const char *s);
+/* returns 0 if s is not a non negative integer */
+int strint(const char *s);
 
 char *appendstr(char *dest, const char *src);
 

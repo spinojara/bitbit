@@ -275,9 +275,9 @@ void pos_from_fen(struct position *pos, int argc, char **argv) {
 	pos->halfmove = 0;
 	pos->fullmove = 1;
 	if (argc >= 5)
-		pos->halfmove = str_to_int(argv[4]);
+		pos->halfmove = strint(argv[4]);
 	if (argc >= 6)
-		pos->fullmove = str_to_int(argv[5]);
+		pos->fullmove = strint(argv[5]);
 
 	pos->zobrist_key = 0;
 	for (i = 0; i < 64; i++)
@@ -299,12 +299,11 @@ int fen_is_ok(int argc, char **argv) {
 	if (argc < 4)
 		goto failure;
 
-	/* str_is_int returns 0 if integer is negative */
 	if (argc >= 5)
-		if (!str_is_int(argv[4]) || str_to_int(argv[4]) >= 100)
+		if (strint(argv[4]) >= 100)
 			goto failure;
 	if (argc >= 6)
-		if (!str_is_int(argv[5]) || str_to_int(argv[5]) > 6000)
+		if (strint(argv[5]) > 6000)
 			goto failure;
 
 	int counter = 56;

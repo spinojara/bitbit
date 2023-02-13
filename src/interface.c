@@ -162,21 +162,16 @@ int interface_perft(int argc, char **argv) {
 	if (argc < 2)
 		return ERR_MISS_ARG;
 
-	if (str_is_int(argv[1]) && str_to_int(argv[1]) >= 0) {
-		clock_t t = clock();
-		uint64_t p = perft(pos, str_to_int(argv[1]), 1);
-		t = clock() - t;
-		if (interrupt)
-			return DONE;
-		printf("nodes: %" PRIu64 "\n", p);
-		printf("time: %.2f\n", (double)t / CLOCKS_PER_SEC);
-		if (t != 0)
-			printf("mpns: %" PRIu64 "\n",
-				(p * CLOCKS_PER_SEC / ((uint64_t)t * 1000000)));
-	}
-	else {
-		return ERR_BAD_ARG;
-	}
+	clock_t t = clock();
+	uint64_t p = perft(pos, strint(argv[1]), 1);
+	t = clock() - t;
+	if (interrupt)
+		return DONE;
+	printf("nodes: %" PRIu64 "\n", p);
+	printf("time: %.2f\n", (double)t / CLOCKS_PER_SEC);
+	if (t != 0)
+		printf("mpns: %" PRIu64 "\n",
+			(p * CLOCKS_PER_SEC / ((uint64_t)t * 1000000)));
 	
 	return DONE;
 }
@@ -265,18 +260,18 @@ int interface_go(int argc, char **argv) {
 	UNUSED(winc);
 	UNUSED(binc);
 	for (int i = 1; i < argc - 1; i++) {
-		if (strcmp(argv[i], "depth") == 0 && str_is_int(argv[i + 1]))
-			depth = str_to_int(argv[i + 1]);
-		if (strcmp(argv[i], "wtime") == 0 && str_is_int(argv[i + 1]))
-			wtime = str_to_int(argv[i + 1]);
-		if (strcmp(argv[i], "btime") == 0 && str_is_int(argv[i + 1]))
-			btime = str_to_int(argv[i + 1]);
-		if (strcmp(argv[i], "winc") == 0 && str_is_int(argv[i + 1]))
-			winc = str_to_int(argv[i + 1]);
-		if (strcmp(argv[i], "binc") == 0 && str_is_int(argv[i + 1]))
-			binc = str_to_int(argv[i + 1]);
-		if (strcmp(argv[i], "movetime") == 0 && str_is_int(argv[i + 1]))
-			movetime = str_to_int(argv[i + 1]);
+		if (strcmp(argv[i], "depth") == 0)
+			depth = strint(argv[i + 1]);
+		if (strcmp(argv[i], "wtime") == 0)
+			wtime = strint(argv[i + 1]);
+		if (strcmp(argv[i], "btime") == 0)
+			btime = strint(argv[i + 1]);
+		if (strcmp(argv[i], "winc") == 0)
+			winc = strint(argv[i + 1]);
+		if (strcmp(argv[i], "binc") == 0)
+			binc = strint(argv[i + 1]);
+		if (strcmp(argv[i], "movetime") == 0)
+			movetime = strint(argv[i + 1]);
 	}
 	evaluate(pos, depth, 1, pos->turn ? wtime : btime, movetime, history);
 	return DONE;
@@ -312,8 +307,8 @@ int interface_tt(int argc, char **argv) {
 	else if (strcmp(argv[1], "clear") == 0) {
 		transposition_table_clear();
 	}
-	else if (argc >= 3 && strcmp(argv[1], "set") == 0 && str_is_int(argv[2])) {
-		int ret = allocate_transposition_table(str_to_int(argv[2]));
+	else if (argc >= 3 && strcmp(argv[1], "set") == 0) {
+		int ret = allocate_transposition_table(strint(argv[2]));
 		if (ret == 2)
 			return ERR_BAD_ARG;
 		if (ret == 3)

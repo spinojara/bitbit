@@ -323,7 +323,7 @@ void parseinfo(struct parseinfo *info, int argc, char **argv) {
 			appendstr(ptr, argv[i]);
 		}
 		else if (!as_str && ptr) {
-			*(int *)ptr = str_to_int(argv[i]);
+			*(int *)ptr = strint(argv[i]);
 			ptr = NULL;
 		}
 	}
