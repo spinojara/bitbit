@@ -830,9 +830,14 @@ void copy_position(struct position *dest, const struct position *src) {
 	dest->fullmove = src->fullmove;
 	for (int i = 0; i < 64; i++)
 		dest->mailbox[i] = src->mailbox[i];
+	dest->zobrist_key = src->zobrist_key;
 }
 
 int pos_are_equal(const struct position *pos1, const struct position *pos2) {
+	for (int j = 0; j < 2; j++)
+		for (int i = 0; i < 7; i++)
+			if (pos1->piece[j][i] != pos2->piece[j][i])
+				return 0;
 	if (pos1->turn != pos2->turn)
 		return 0;
 	if (pos1->en_passant != pos2->en_passant)
@@ -842,12 +847,6 @@ int pos_are_equal(const struct position *pos1, const struct position *pos2) {
 	for (int i = 0; i < 64; i++)
 		if (pos1->mailbox[i] != pos2->mailbox[i])
 			return 0;
-	for (int i = 0; i < 7; i++) {
-		if (pos1->piece[white][i] != pos2->piece[white][i])
-			return 0;
-		if (pos1->piece[black][i] != pos2->piece[black][i])
-			return 0;
-	}
 	if (pos1->zobrist_key != pos2->zobrist_key)
 		return 0;
 	return 1;
