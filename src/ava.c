@@ -102,7 +102,13 @@ int play_game(struct engine *engine[2], int engine_white, struct parseinfo *info
 
 	while (1) {
 		pos_to_fen(fen, pos);
-		fprintf(engine[turn]->in, "position fen %s\n", fen);
+		fprintf(engine[turn]->in, "position startpos");
+		if (history) {
+			fprintf(engine[turn]->in, " moves ");
+			print_history_algebraic(history, engine[turn]->in);
+			fprintf(engine[turn]->in, "\n");
+		}
+		fprintf(engine[turn]->in, "\n");
 		fprintf(engine[turn]->in, "go");
 
 		pthread_mutex_lock(&lock);
@@ -117,8 +123,8 @@ int play_game(struct engine *engine[2], int engine_white, struct parseinfo *info
 			fprintf(engine[turn]->in, " winc %d", info->winc);
 		if (info->binc)
 			fprintf(engine[turn]->in, " binc %d", info->binc);
-		fprintf(engine[turn]->in, "\n");
 		pthread_mutex_unlock(&lock);
+		fprintf(engine[turn]->in, "\n");
 		
 		t[3] = timems();
 		while (1) {
@@ -162,6 +168,7 @@ int play_game(struct engine *engine[2], int engine_white, struct parseinfo *info
 	}
 
 	/* fix early returns */
+	delete_history(&history);
 	free(pos);
 	return ret;
 }
@@ -260,7 +267,7 @@ void *thread_play(void *ptr) {
 			print_eta(info);
 			pthread_mutex_unlock(&lock);
 
-			ret = play_game(engine, white, info);
+			ret = play_game(engine, ret, info);
 
 			pthread_mutex_lock(&lock);
 			info->playing--;

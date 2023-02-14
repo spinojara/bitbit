@@ -24,8 +24,6 @@
 
 int16_t evaluate(struct position *pos, uint8_t depth, int verbose, int etime, int movetime, struct history *history);
 
-int is_threefold(struct position *pos, struct history *history);
-
 void evaluate_init(void);
 
 #endif

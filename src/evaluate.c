@@ -224,15 +224,6 @@ void print_pv(struct position *pos, move *pv_move, int ply) {
 	*pv_move = *pv_move & 0xFFFF;
 }
 
-int is_threefold(struct position *pos, struct history *history) {
-	int count;
-	struct history *t;
-	for (t = history, count = 0; t; t = t->previous)
-		if (pos_are_equal(pos, t->pos))
-			count++;
-	return count >= 2;
-}
-
 static inline uint64_t mvv_lva(int attacker, int victim) {
 	return mvv_lva_lookup[victim + 13 * attacker];
 }
@@ -495,11 +486,15 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int
 		if (transposition_type(e) == 0)
 			return transposition_evaluation(e);
 		/* cut */
-		else if (transposition_type(e) == 1)
-			alpha = transposition_evaluation(e);
+		else if (transposition_type(e) == 1) {
+			if (transposition_evaluation(e) >= beta)
+				return beta;
+		}
 		/* all */
-		else
-			beta = transposition_evaluation(e);
+		else if (transposition_type(e) == 2) {
+			if (transposition_evaluation(e) <= alpha)
+				return alpha;
+		}
 	}
 
 	if (depth <= 0) {

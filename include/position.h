@@ -19,6 +19,7 @@
 #define POSITION_H
 
 #include <stdint.h>
+#include <stdio.h>
 
 struct position {
 	uint64_t piece[2][7];
@@ -93,7 +94,10 @@ int pos_are_equal(const struct position *pos1, const struct position *pos2);
 struct history;
 
 void print_history_pgn(const struct history *history);
+void print_history_algebraic(const struct history *history, FILE *file);
 
 int has_big_piece(const struct position *pos);
+
+int is_threefold(struct position *pos, struct history *history);
 
 #endif

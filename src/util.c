@@ -141,6 +141,6 @@ int variance(int16_t *arr, int len) {
 }
 
 void util_init(void) {
-	srand(0);
+	srand(time(NULL));
 	init_status("setting seed");
 }

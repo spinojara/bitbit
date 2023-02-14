@@ -876,7 +876,32 @@ void print_history_pgn(const struct history *history) {
 	}
 }
 
+void print_history_algebraic(const struct history *history, FILE *file) {
+	if (!history)
+		return;
+	const struct history *t, *t_last = NULL;
+	char str[8];
+	while (1) {
+		for (t = history; t->previous != t_last; t = t->previous);
+		t_last = t;
+		if (t->previous)
+			fprintf(file, " ");
+		fprintf(file, "%s", move_str_algebraic(str, t->move));
+		if (t == history)
+			break;
+	}
+}
+
 int has_big_piece(const struct position *pos) {
 	return pos->turn ? pos->piece[white][bishop] || pos->piece[white][rook] || pos->piece[white][queen] :
 		pos->piece[black][bishop] || pos->piece[black][rook] || pos->piece[black][queen];
+}
+
+int is_threefold(struct position *pos, struct history *history) {
+	int count;
+	struct history *t;
+	for (t = history, count = 0; t; t = t->previous)
+		if (pos_are_equal(pos, t->pos))
+			count++;
+	return count >= 2;
 }
