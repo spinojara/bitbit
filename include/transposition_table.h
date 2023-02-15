@@ -88,6 +88,8 @@ int allocate_transposition_table(uint64_t t);
 
 int transposition_table_occupancy(void);
 
+void zobrist_key_init(void);
+
 int transposition_table_init(void);
 
 void transposition_table_term(void);

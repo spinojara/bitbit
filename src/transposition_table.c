@@ -107,6 +107,13 @@ int transposition_table_occupancy(void) {
 	return 100 * occupied / transposition_table->size;
 }
 
+void zobrist_key_init(void) {
+	for (int i = 0; i < 12 * 64 + 1 + 16 + 8; i++) {
+		transposition_table->zobrist_key[i] = rand_uint64();
+		init_status("generating zobrist keys");
+	}
+}
+
 int transposition_table_init(void) {
 	transposition_table = malloc(sizeof(struct transposition_table));
 	transposition_table->table = NULL;
@@ -117,11 +124,8 @@ int transposition_table_init(void) {
 	}
 
 	transposition_table->zobrist_key = malloc((12 * 64 + 1 + 16 + 8) * sizeof(uint64_t));
+	zobrist_key_init();
 
-	for (int i = 0; i < 12 * 64 + 1 + 16 + 8; i++) {
-		transposition_table->zobrist_key[i] = rand_uint64();
-		init_status("generating zobrist keys");
-	}
 	return 0;
 }
 
