@@ -79,8 +79,8 @@ int play_game(struct engine *engine[2], int engine_white, struct parseinfo *info
 	
 	pthread_mutex_lock(&lock);
 	long t[3];
-	t[white] = info->wtime;
-	t[black] = info->btime;
+	t[engine_white] = info->wtime;
+	t[1 - engine_white] = info->btime;
 	pthread_mutex_unlock(&lock);
 
 	for (int i = 0; i < 2; i++) {
@@ -113,8 +113,8 @@ int play_game(struct engine *engine[2], int engine_white, struct parseinfo *info
 
 		pthread_mutex_lock(&lock);
 		if (!info->movetime) {
-			fprintf(engine[turn]->in, " wtime %ld", t[white]);
-			fprintf(engine[turn]->in, " btime %ld", t[black]);
+			fprintf(engine[turn]->in, " wtime %ld", t[engine_white]);
+			fprintf(engine[turn]->in, " btime %ld", t[1 - engine_white]);
 		}
 		else {
 			fprintf(engine[turn]->in, " movetime %d", info->movetime);
@@ -155,7 +155,7 @@ int play_game(struct engine *engine[2], int engine_white, struct parseinfo *info
 		move_next(&pos, &history, m);
 
 		if (mate(pos) == 2) {
-			/* 1 - turn won */
+			/* turn won */
 			ret = turn;
 			break;
 		}
