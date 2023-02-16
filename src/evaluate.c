@@ -483,18 +483,15 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int
 		return 0;
 	if (e && transposition_depth(e) >= depth && !(*pv_flag)) {
 		/* pv */
+		evaluation = transposition_evaluation(e);
 		if (transposition_type(e) == 0)
-			return transposition_evaluation(e);
+			return evaluation;
 		/* cut */
-		else if (transposition_type(e) == 1) {
-			if (transposition_evaluation(e) >= beta)
-				return beta;
-		}
+		else if (transposition_type(e) == 1 && evaluation >= beta)
+			return beta;
 		/* all */
-		else if (transposition_type(e) == 2) {
-			if (transposition_evaluation(e) <= alpha)
-				return alpha;
-		}
+		else if (transposition_type(e) == 2 && evaluation <= alpha)
+			return alpha;
 	}
 
 	if (depth <= 0) {
