@@ -238,7 +238,7 @@ void print_eta(struct parseinfo *info) {
 	time_t rawcurrent, raweta;
 	struct tm current, eta, *t;
 	raweta = rawcurrent = time(NULL);
-	raweta += (info->games - info->played) * MAX(info->wtime + info->btime + 40 * (info->winc + info->binc), 2 * 40 * info->movetime) / (1000 * info->threads);
+	raweta += 0.95 * (info->games - info->played) * MAX(info->wtime + info->btime + 40 * (info->winc + info->binc), 2 * 40 * info->movetime) / (1000 * info->threads);
 	t = localtime(&rawcurrent);
 	memcpy(&current, t, sizeof(*t));
 	t = localtime(&raweta);
