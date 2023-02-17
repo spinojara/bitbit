@@ -209,7 +209,7 @@ void evaluate_init(void) {
 }
 
 int late_move_reduction(int index, int depth) {
-	int r = index < 3 ? 2 * depth / 3 : depth / 2;
+	int r = index < 8 ? depth - 2 : depth / 2;
 	return r;
 }
 
@@ -536,8 +536,8 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int
 	uint16_t m = 0;
 	for (move *ptr = move_list; *ptr; ptr++) {
 		do_move(pos, ptr);
+		/* late move reduction */
 		if (!(*pv_flag) && depth >= 3 && !checkers && ptr - move_list >= 2 && move_flag(ptr) != 2 && !move_capture(ptr)) {
-			//uint8_t r = ptr - move_list >= 4 ? depth / 3 : 1;
 			uint8_t r = late_move_reduction(ptr - move_list, depth);
 			evaluation = -evaluate_recursive(pos, r, ply + 1, -alpha - 1, -alpha, 0, clock_stop, pv_flag, pv_moves, killer_moves, history_moves);
 		}
@@ -548,6 +548,7 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int
 			/* -beta - 1 to search for mate in <n> */
 			evaluation = -evaluate_recursive(pos, depth - 1, ply + 1, -beta - 1, -alpha, 0, clock_stop, pv_flag, pv_moves, killer_moves, history_moves);
 		}
+		
 		evaluation -= (evaluation > 0x4000);
 		undo_move(pos, ptr);
 		if (evaluation >= beta) {
@@ -624,7 +625,9 @@ int16_t evaluate(struct position *pos, uint8_t depth, int verbose, int etime, in
 
 	int16_t alpha, beta;
 	int pv_flag;
-	for (uint8_t d = 1; d <= depth; d++) {
+	move bestmove = 0;
+	uint8_t d = 0;
+	for (d = 1; d <= depth; d++) {
 		nodes = 0;
 		pv_flag = 1;
 		alpha = -0x7F00;
@@ -635,9 +638,7 @@ int16_t evaluate(struct position *pos, uint8_t depth, int verbose, int etime, in
 		move *ptr;
 		for (ptr = move_list; *ptr; ptr++) {
 			do_move(pos, ptr);
-			/* search the first 5 moves fully */
-			uint8_t r = ptr - move_list >= 5 ? late_move_reduction(ptr - move_list, d) : d - 1;
-			evaluation = -evaluate_recursive(pos, r, 1, -beta, -alpha, 0, clock_stop, &pv_flag, pv_moves, killer_moves, history_moves);
+			evaluation = -evaluate_recursive(pos, d - 1, 1, -beta, -alpha, 0, clock_stop, &pv_flag, pv_moves, killer_moves, history_moves);
 			evaluation -= (evaluation > 0x4000);
 			undo_move(pos, ptr);
 			if (evaluation > alpha) {
@@ -645,9 +646,13 @@ int16_t evaluate(struct position *pos, uint8_t depth, int verbose, int etime, in
 				alpha = evaluation;
 			}
 		}
-		if (interrupt)
+		if (interrupt) {
+			d--;
 			break;
+		}
 		evaluation = alpha;
+		saved_evaluation[d] = evaluation;
+		bestmove = pv_moves[0][0];
 		if (verbose) {
 			printf("info depth %d score ", d);
 			if (evaluation < -0x4000)
@@ -660,7 +665,6 @@ int16_t evaluate(struct position *pos, uint8_t depth, int verbose, int etime, in
 			print_pv(pos, pv_moves[0], 0);
 			printf("\n");
 		}
-		saved_evaluation[d] = evaluation;
 		if (etime && 3 * 1000 * (clock() - clock_start) > 2 * time_man(etime, saved_evaluation, d) * CLOCKS_PER_SEC)
 			break;
 
@@ -671,6 +675,6 @@ int16_t evaluate(struct position *pos, uint8_t depth, int verbose, int etime, in
 			break;
 	}
 	if (verbose && interrupt != 2)
-		printf("bestmove %s\n", move_str_algebraic(str, &(pv_moves[0][0])));
-	return evaluation;
+		printf("bestmove %s\n", move_str_algebraic(str, &bestmove));
+	return saved_evaluation[d];
 }
