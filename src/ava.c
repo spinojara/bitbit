@@ -32,7 +32,6 @@
 #include "transposition_table.h"
 #include "move_gen.h"
 #include "interface.h"
-#include "evaluate.h"
 
 pthread_mutex_t lock;
 

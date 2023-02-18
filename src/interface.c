@@ -27,7 +27,7 @@
 #include "util.h"
 #include "position.h"
 #include "perft.h"
-#include "evaluate.h"
+#include "search.h"
 #include "transposition_table.h"
 #include "version.h"
 #include "interrupt.h"

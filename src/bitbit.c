@@ -20,7 +20,7 @@
 #include "bitboard.h"
 #include "magic_bitboard.h"
 #include "attack_gen.h"
-#include "evaluate.h"
+#include "search.h"
 #include "transposition_table.h"
 #include "interface.h"
 #include "interrupt.h"
