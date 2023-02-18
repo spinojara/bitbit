@@ -15,39 +15,15 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "init.h"
-#include "util.h"
-#include "bitboard.h"
-#include "magic_bitboard.h"
-#include "attack_gen.h"
-#include "search.h"
-#include "evaluate.h"
-#include "transposition_table.h"
-#include "interface.h"
-#include "interrupt.h"
+#ifndef EVALUATE_H
+#define EVALUATE_H
 
-int main(int argc, char **argv) {
-	int ret = 0;
-	/* --version */
-	if (init(argc, argv))
-		goto term;
-	interrupt_init();
-	util_init();
-	/* no magic found */
-	if ((ret = magic_bitboard_init()))
-		goto term;
-	attack_gen_init();
-	bitboard_init();
-	evaluate_init();
-	search_init();
-	/* transposition table size == 0 */
-	if ((ret = transposition_table_init()))
-		goto term;
-	interface_init();
-	ret = interface(argc, argv);
-term:;
-	interface_term();
-	transposition_table_term();
-	term();
-	return ret;
-}
+#include <stdint.h>
+
+#include "position.h"
+
+int16_t evaluate_static(struct position *pos, uint64_t *nodes);
+
+void evaluate_init(void);
+
+#endif
