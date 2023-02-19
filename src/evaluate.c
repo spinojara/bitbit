@@ -195,6 +195,33 @@ int king_safety(struct position *pos) {
 	/* own pawns close to king */
 	eval += 15 * popcount(king_attacks(king_white, 0) & pos->piece[white][pawn]);
 	eval -= 15 * popcount(king_attacks(king_black, 0) & pos->piece[black][pawn]);
+
+	/* uncastled king */
+	if (popcount(pos->piece[white][rook]) == 2) {
+		int rook1_x = ctz(pos->piece[white][rook]) % 8;
+		squares = clear_ls1b(pos->piece[white][rook]);
+		int rook2_x = ctz(squares) % 8;
+		if (rook2_x < rook1_x) {
+			squares = rook2_x;
+			rook2_x = rook1_x;
+			rook1_x = squares;
+		}
+		if (rook1_x <= king_white % 8 && king_white % 8 <= rook2_x)
+			eval -= 40;
+	}
+	if (popcount(pos->piece[black][rook]) == 2) {
+		int rook1_x = ctz(pos->piece[black][rook]) % 8;
+		squares = clear_ls1b(pos->piece[black][rook]);
+		int rook2_x = ctz(squares) % 8;
+		if (rook2_x < rook1_x) {
+			squares = rook2_x;
+			rook2_x = rook1_x;
+			rook1_x = squares;
+		}
+		if (rook1_x <= king_black % 8 && king_black % 8 <= rook2_x)
+			eval += 40;
+	}
+
 	return eval;
 }
 
@@ -203,10 +230,10 @@ int16_t evaluate_knights(struct position *pos) {
 	/* blocked c pawns */
 	if (pos->mailbox[c3] == white_knight && pos->mailbox[c2] == white_pawn &&
 			pos->mailbox[d4] == white_pawn && pos->mailbox[e4] != white_pawn)
-		eval -= 30;
+		eval -= 50;
 	if (pos->mailbox[c6] == white_knight && pos->mailbox[c7] == white_pawn &&
 			pos->mailbox[d5] == white_pawn && pos->mailbox[e5] != white_pawn)
-		eval += 30;
+		eval += 50;
 	return eval;
 }
 
@@ -216,6 +243,43 @@ int16_t evaluate_bishops(struct position *pos) {
 		eval += 30;
 	if (pos->piece[black][bishop] && clear_ls1b(pos->piece[black][bishop]))
 		eval -= 30;
+	return eval;
+}
+
+int16_t evaluate_rooks(struct position *pos) {
+	int eval = 0, square;
+	uint64_t b;
+	/* penalize rooks on non open files */
+	for (int i = 0; i < 7; i++) {
+		b = file(i) & (pos->piece[white][pawn] | pos->piece[black][pawn]);
+		if (file(i) & pos->piece[white][rook])
+			eval -= 10 * popcount(b);
+		if (file(i) & pos->piece[black][rook])
+			eval += 10 * popcount(b);
+	}
+
+	/* connected rooks (assuming max 2 rooks) */
+	if (pos->piece[white][rook]) {
+		square = ctz(pos->piece[white][rook]);
+		if (pos->piece[white][rook] & rook_attacks(square, 0, pos->piece[white][all] | pos->piece[black][all]))
+			eval += 30;
+	}
+	if (pos->piece[black][rook]) {
+		square = ctz(pos->piece[black][rook]);
+		if (pos->piece[black][rook] & rook_attacks(square, 0, pos->piece[white][all] | pos->piece[black][all]))
+			eval -= 30;
+	}
+	return eval;
+}
+
+int16_t evaluate_queen(struct position *pos) {
+	int eval = 0;
+	/* moving queen before minor pieces */
+	if (pos->piece[white][queen] != bitboard(d1))
+		eval -= 15 * popcount((pos->piece[white][knight] | pos->piece[white][bishop]) & RANK_1);
+	if (pos->piece[black][queen] != bitboard(d8))
+		eval += 15 * popcount((pos->piece[white][knight] | pos->piece[white][bishop]) & RANK_1);
+	
 	return eval;
 }
 
@@ -242,6 +306,8 @@ int16_t evaluate_static(struct position *pos, uint64_t *nodes) {
 	eval += evaluate_bishops(pos);
 	eval += evaluate_knights(pos);
 	eval += evaluate_pawns(pos);
+	eval += evaluate_rooks(pos);
+	eval += evaluate_queen(pos);
 
 	eval += early_game * king_safety(pos);
 
