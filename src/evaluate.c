@@ -1,5 +1,4 @@
-/* bitbit, a bitboard based chess engine written in c.
- * Copyright (C) 2022 Isak Ellmer
+/* bitbit, a bitboard based chess engine written in c.  * Copyright (C) 2022 Isak Ellmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,6 +23,7 @@
 #include "util.h"
 #include "attack_gen.h"
 #include "move_gen.h"
+#include "pawn.h"
 
 int eval_table[2][13][64];
 
@@ -156,59 +156,6 @@ int white_side_eval_table[2][6][64] = { { /* early game */
 	} }
 };
 
-int evaluate_pawns(struct position *pos) {
-	int eval = 0, i;
-	uint64_t t;
-
-	/* doubled pawns */
-	for (i = 0; i < 8; i++) {
-		if ((t = (pos->piece[white][pawn] & file(i))))
-			eval -= (popcount(t) - 1) * 50;
-		if ((t = (pos->piece[black][pawn] & file(i))))
-			eval += (popcount(t) - 1) * 50;
-	}
-
-	/* isolated pawns */
-	for (i = 0; i < 8; i++) {
-		if ((pos->piece[white][pawn] & file(i)) &&
-				!(pos->piece[white][pawn] & adjacent_files(i)))
-			eval -= 35;
-		if ((pos->piece[black][pawn] & file(i)) &&
-				!(pos->piece[black][pawn] & adjacent_files(i)))
-			eval += 35;
-	}
-
-	/* passed pawns */
-	int square;
-	uint64_t b;
-	for (i = 0; i < 8; i++) {
-		/* asymmetric because of bit scan */
-		if ((b = (pos->piece[white][pawn] & file(i)))) {
-			while (b) {
-				square = ctz(b);
-				b = clear_ls1b(b);
-			}
-			if (!(pos->piece[black][pawn] & passed_files_white(square)))
-				eval += 20 * (square / 8);
-		}
-		if ((b = (pos->piece[black][pawn] & file(i)))) {
-			square = ctz(b);
-			if (!(pos->piece[white][pawn] & passed_files_black(square)))
-				eval -= 20 * (7 - square / 8);
-		}
-	}
-
-	return eval;
-}
-
-int center_control(struct position *pos) {
-	int eval = 0;
-	uint64_t center = 0x3C3C000000;
-	eval += 20 * popcount((shift_west(shift_north(pos->piece[white][pawn])) | shift_east(shift_north(pos->piece[white][pawn]))) & center);
-	eval -= 20 * popcount((shift_west(shift_south(pos->piece[black][pawn])) | shift_east(shift_south(pos->piece[black][pawn]))) & center);
-	return eval;
-}
-
 int king_safety(struct position *pos) {
 	int king_white;
 	int king_black;
@@ -245,14 +192,14 @@ int king_safety(struct position *pos) {
 	attack_units += 2 * popcount(squares & (pos->piece[white][bishop] | pos->piece[white][knight]));
 	eval += safety_table[MIN(attack_units, 99)];
 
-	/* pawns close to king */
+	/* own pawns close to king */
 	eval += 15 * popcount(king_attacks(king_white, 0) & pos->piece[white][pawn]);
 	eval -= 15 * popcount(king_attacks(king_black, 0) & pos->piece[black][pawn]);
 	return eval;
 }
 
 int16_t evaluate_knights(struct position *pos) {
-	int16_t eval = 0;
+	int eval = 0;
 	/* blocked c pawns */
 	if (pos->mailbox[c3] == white_knight && pos->mailbox[c2] == white_pawn &&
 			pos->mailbox[d4] == white_pawn && pos->mailbox[e4] != white_pawn)
@@ -264,7 +211,7 @@ int16_t evaluate_knights(struct position *pos) {
 }
 
 int16_t evaluate_bishops(struct position *pos) {
-	int16_t eval = 0;
+	int eval = 0;
 	if (pos->piece[white][bishop] && clear_ls1b(pos->piece[white][bishop]))
 		eval += 30;
 	if (pos->piece[black][bishop] && clear_ls1b(pos->piece[black][bishop]))
@@ -297,8 +244,6 @@ int16_t evaluate_static(struct position *pos, uint64_t *nodes) {
 	eval += evaluate_pawns(pos);
 
 	eval += early_game * king_safety(pos);
-
-	eval += early_game * center_control(pos);
 
 	eval += 8 * (mobility(pos, white) - mobility(pos, black));
 	

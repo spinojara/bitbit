@@ -25,6 +25,7 @@
 #include "transposition_table.h"
 #include "interface.h"
 #include "interrupt.h"
+#include "pawn.h"
 
 int main(int argc, char **argv) {
 	int ret = 0;
@@ -43,10 +44,13 @@ int main(int argc, char **argv) {
 	/* transposition table size == 0 */
 	if ((ret = transposition_table_init()))
 		goto term;
+	if ((ret = pawn_init()))
+		goto term;
 	interface_init();
 	ret = interface(argc, argv);
 term:;
 	interface_term();
+	pawn_term();
 	transposition_table_term();
 	term();
 	return ret;

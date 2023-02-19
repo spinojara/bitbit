@@ -204,4 +204,15 @@ static inline uint64_t shift_color_west(uint64_t b, int color) {
 	return color ? shift_north_west(b) : shift_south_west(b);
 }
 
+static inline uint64_t fill_north(uint64_t b) {
+	for (int i = 0; i < 8; i++)
+		b |= shift_north(b);
+	return b;
+}
+static inline uint64_t fill_south(uint64_t b) {
+	for (int i = 0; i < 8; i++)
+		b |= shift_south(b);
+	return b;
+}
+
 #endif
