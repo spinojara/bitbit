@@ -15,24 +15,21 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef INTERFACE_H
-#define INTERFACE_H
+#ifndef HISTORY_H
+#define HISTORY_H
 
 #include "move.h"
 
-#define DONE 0
-#define EXIT_LOOP 1
-#define ERR_MISS_ARG 2
-#define ERR_BAD_ARG 3
+struct history {
+	move *move;
+	struct position *pos;
+	struct history *previous;
+};
 
-int interface(int argc, char **argv);
+void delete_history(struct history **h);
 
-void execute_func(int argc, char **argv);
+void move_next(struct position **p, struct history **h, move m);
 
-void interface_init(void);
-
-void interface_term(void);
-
-int interface_version(int argc, char **argv);
+void move_previous(struct position **p, struct history **h);
 
 #endif

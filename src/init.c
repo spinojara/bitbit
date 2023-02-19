@@ -22,7 +22,7 @@
 #include <string.h>
 #include <time.h>
 
-#include "interface.h"
+#include "util.h"
 
 #define PRINT_DELAY_MS 1
 
@@ -34,10 +34,15 @@ struct counter {
 
 struct counter *counter = NULL;
 
+void version(void) {
+	printf("bitbit " MACRO_VALUE(VERSION) "\n");
+	printf("Copyright (C) 2022 Isak Ellmer  \n");
+}
+
 int init(int argc, char **argv) {
 	if (argc > 1) {
 		if (strcmp(argv[1], "--version") == 0) {
-			interface_version(0, NULL);
+			version();
 			return 1;
 		}
 	}

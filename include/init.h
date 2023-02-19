@@ -26,4 +26,6 @@ void term(void);
 
 void init_status(char *str);
 
+void version(void);
+
 #endif

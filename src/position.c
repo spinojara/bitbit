@@ -27,6 +27,7 @@
 #include "transposition_table.h"
 #include "move.h"
 #include "move_gen.h"
+#include "history.h"
 #include "interface.h"
 
 void print_position(const struct position *pos, int flip) {

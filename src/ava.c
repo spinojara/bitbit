@@ -31,7 +31,7 @@
 #include "position.h"
 #include "transposition_table.h"
 #include "move_gen.h"
-#include "interface.h"
+#include "history.h"
 
 pthread_mutex_t lock;
 

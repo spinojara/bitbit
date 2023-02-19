@@ -31,6 +31,8 @@
 #include "transposition_table.h"
 #include "version.h"
 #include "interrupt.h"
+#include "history.h"
+#include "init.h"
 
 struct func {
 	char *name;
@@ -72,38 +74,6 @@ struct func func_arr[] = {
 
 struct position *pos = NULL;
 struct history *history = NULL;
-
-void move_next(struct position **p, struct history **h, move m) {
-	struct history *t = *h;
-	(*h) = malloc(sizeof(struct history));
-	(*h)->previous = t;
-	(*h)->move = malloc(sizeof(move));
-	(*h)->pos = malloc(sizeof(struct position));
-	copy_position((*h)->pos, *p);
-	*((*h)->move) = m;
-	do_move(*p, (*h)->move);
-}
-
-void move_previous(struct position **p, struct history **h) {
-	if (!(*h))
-		return;
-	undo_move(*p, (*h)->move);
-	struct history *t = *h;
-	(*h) = (*h)->previous;
-	free(t->move);
-	free(t->pos);
-	free(t);
-}
-
-void delete_history(struct history **h) {
-	while (*h) {
-		struct history *t = *h;
-		(*h) = (*h)->previous;
-		free(t->move);
-		free(t->pos);
-		free(t);
-	}
-}
 
 int interface_help(int argc, char **argv) {
 	UNUSED(argc);
@@ -281,17 +251,14 @@ int interface_version(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
 
-	printf("bitbit " MACRO_VALUE(VERSION) "\n");
-	printf("Copyright (C) 2022 Isak Ellmer  \n");
-	if (argc) {
-		printf("c compiler: %s\n", compiler);
-		printf("environment: %s\n", environment);
-		char t[8];
-		printf("compilation date: %s\n", date(t));
-		printf("transposition table size: ");
-		transposition_table_size_print(log_2(sizeof(struct transposition) * transposition_table_size()));
-		printf("\ntransposition entry size: %" PRIu64 "B\n", sizeof(struct transposition));
-	}
+	version();
+	printf("c compiler: %s\n", compiler);
+	printf("environment: %s\n", environment);
+	char t[8];
+	printf("compilation date: %s\n", date(t));
+	printf("transposition table size: ");
+	transposition_table_size_print(log_2(sizeof(struct transposition) * transposition_table_size()));
+	printf("\ntransposition entry size: %" PRIu64 "B\n", sizeof(struct transposition));
 
 	return DONE;
 }
