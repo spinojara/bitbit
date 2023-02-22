@@ -28,6 +28,7 @@
 #include "position.h"
 #include "perft.h"
 #include "search.h"
+#include "evaluate.h"
 #include "transposition_table.h"
 #include "version.h"
 #include "interrupt.h"
@@ -48,6 +49,7 @@ int interface_position(int argc, char **argv);
 int interface_clear(int argc, char **argv);
 int interface_stop(int argc, char **argv);
 int interface_quit(int argc, char **argv);
+int interface_eval(int argc, char **argv);
 int interface_go(int argc, char **argv);
 int interface_version(int argc, char **argv);
 int interface_tt(int argc, char **argv);
@@ -64,6 +66,7 @@ struct func func_arr[] = {
 	{ "position"   , interface_position   , },
 	{ "clear"      , interface_clear      , },
 	{ "quit"       , interface_quit       , },
+	{ "eval"       , interface_eval       , },
 	{ "go"         , interface_go         , },
 	{ "version"    , interface_version    , },
 	{ "tt"         , interface_tt         , },
@@ -218,6 +221,13 @@ int interface_quit(int argc, char **argv) {
 	return EXIT_LOOP;
 }
 
+int interface_eval(int argc, char **argv) {
+	UNUSED(argc);
+	UNUSED(argv);
+	print_evaluation(pos);
+	return DONE;
+}
+
 int interface_go(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
@@ -307,6 +317,8 @@ int interface_uci(int argc, char **argv) {
 int interface_ucinewgame(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
+	srand(time(NULL));
+	zobrist_key_init();
 	char *fen[] = { "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR", "w", "KQkq", "-", "0", "1", };
 	pos_from_fen(pos, SIZE(fen), fen);
 	delete_history(&history);

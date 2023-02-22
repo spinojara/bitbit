@@ -140,6 +140,16 @@ int variance(int16_t *arr, int len) {
 	return variance;
 }
 
+void printdigits(int d) {
+	double f = (double)d / 100;
+	if (d >= 1000 || d <= -1000)
+		printf("%+.1f", f);
+	else if (d == 0)
+		printf("+0.00");
+	else
+		printf("%+.2f", f);
+}
+
 void util_init(void) {
 	srand(0);
 	init_status("setting seed");

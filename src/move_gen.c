@@ -1015,7 +1015,7 @@ int mobility(const struct position *pos, int color) {
 		while (piece) {
 			source_square = ctz(piece);
 			attacks = knight_attacks(source_square, pos->piece[color][all]);
-			moves += (t = popcount(attacks)) ? t : -5;
+			moves += (t = popcount(attacks)) ? t : -3;
 			piece = clear_ls1b(piece);
 		}
 
@@ -1023,7 +1023,7 @@ int mobility(const struct position *pos, int color) {
 		while (piece) {
 			source_square = ctz(piece);
 			attacks = bishop_attacks(source_square, pos->piece[color][all], all_pieces);
-			moves += (t = popcount(attacks)) ? t : -5;
+			moves += (t = popcount(attacks)) ? t : -3;
 			piece = clear_ls1b(piece);
 		}
 
@@ -1031,7 +1031,7 @@ int mobility(const struct position *pos, int color) {
 		while (piece) {
 			source_square = ctz(piece);
 			attacks = rook_attacks(source_square, pos->piece[color][all], all_pieces);
-			moves += (t = popcount(attacks)) ? t : -5;
+			moves += (t = popcount(attacks)) ? t : -3;
 			piece = clear_ls1b(piece);
 		}
 
@@ -1039,7 +1039,7 @@ int mobility(const struct position *pos, int color) {
 		while (piece) {
 			source_square = ctz(piece);
 			attacks = queen_attacks(source_square, pos->piece[color][all], all_pieces);
-			moves += (t = popcount(attacks)) ? t : -5;
+			moves += popcount(attacks) ? 0 : -3;
 			piece = clear_ls1b(piece);
 		}
 
@@ -1052,7 +1052,7 @@ int mobility(const struct position *pos, int color) {
 		while (piece) {
 			source_square = ctz(piece);
 			attacks = knight_attacks(source_square, pos->piece[color][all]) & pinned_squares;
-			moves += (t = popcount(attacks)) ? t : -5;
+			moves += (t = popcount(attacks)) ? t : -3;
 			piece = clear_ls1b(piece);
 		}
 
@@ -1060,7 +1060,7 @@ int mobility(const struct position *pos, int color) {
 		while (piece) {
 			source_square = ctz(piece);
 			attacks = bishop_attacks(source_square, pos->piece[color][all], all_pieces) & pinned_squares;
-			moves += (t = popcount(attacks)) ? t : -5;
+			moves += (t = popcount(attacks)) ? t : -3;
 			piece = clear_ls1b(piece);
 		}
 
@@ -1068,7 +1068,7 @@ int mobility(const struct position *pos, int color) {
 		while (piece) {
 			source_square = ctz(piece);
 			attacks = rook_attacks(source_square, pos->piece[color][all], all_pieces) & pinned_squares;
-			moves += (t = popcount(attacks)) ? t : -5;
+			moves += (t = popcount(attacks)) ? t : -3;
 			piece = clear_ls1b(piece);
 		}
 
@@ -1076,10 +1076,10 @@ int mobility(const struct position *pos, int color) {
 		while (piece) {
 			source_square = ctz(piece);
 			attacks = queen_attacks(source_square, pos->piece[color][all], all_pieces) & pinned_squares;
-			moves += (t = popcount(attacks)) ? t : -5;
+			moves += popcount(attacks) ? 0 : -3;
 			piece = clear_ls1b(piece);
 		}
 	}
 
-	return moves;
+	return 5 * moves;
 }

@@ -24,6 +24,8 @@
 
 int16_t evaluate_static(struct position *pos, uint64_t *nodes);
 
+void print_evaluation(struct position *pos);
+
 void evaluate_init(void);
 
 #endif
