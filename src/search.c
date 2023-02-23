@@ -34,6 +34,7 @@
 #include "time_man.h"
 #include "interrupt.h"
 #include "evaluate.h"
+#include "history.h"
 
 uint64_t nodes = 0;
 
@@ -350,10 +351,12 @@ int16_t evaluate(struct position *pos, uint8_t depth, int verbose, int etime, in
 
 		move *ptr;
 		for (ptr = move_list; *ptr; ptr++) {
-			do_move(pos, ptr);
+			move_next(&pos, &history, *ptr);
 			evaluation = -evaluate_recursive(pos, d - 1, 1, -beta, -alpha, 0, clock_stop, &pv_flag, pv_moves, killer_moves, history_moves);
 			evaluation -= (evaluation > 0x4000);
-			undo_move(pos, ptr);
+			if (is_threefold(pos, history))
+				evaluation = 0;
+			move_previous(&pos, &history);
 			if (evaluation > alpha) {
 				store_pv_move(ptr, 0, pv_moves);
 				alpha = evaluation;

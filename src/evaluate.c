@@ -27,8 +27,8 @@
 
 int eval_table[2][13][64];
 
-int piece_value[2][13] = { {     0,   100,   310,   325,   500,   900,     0,  -100,  -310,  -325,  -500,  -900,     0 },
-                           {     0,   150,   340,   375,   580,  1050,     0,  -150,  -340,  -375,  -580, -1050,     0 } };
+int piece_value[2][13] = { {     0,   100,   320,   330,   500,   900,     0,  -100,  -320,  -330,  -500,  -900,     0 },
+                           {     0,   115,   340,   375,   580,  1050,     0,  -115,  -340,  -375,  -580, -1050,     0 } };
 enum { mg, eg };
 
 /* <https://www.chessprogramming.org/King_Safety> */
@@ -49,11 +49,11 @@ int safety_table[100] = {
 int white_side_eval_table[2][6][64] = { { /* early game */
 	{
 		  0,   0,   0,   0,   0,   0,   0,   0,
-		  0,   0,   0,   0,   0,   0,   0,   0,
-		  0,   0,   0,   5,  10,   0,   0,   0,
-		  0,   0,   0,  15,  20,   0,   0,   0,
-		  0,   0,   0,   5,  15, -18,   0,   0,
-		  5,  -5, -10,   7,  -2, -13,  -7,   2,
+		 19,  17,  23,  29,  32,  23,  25,  18,
+		  9,  11,  14,  11,  13,  11,   8,   7,
+		  1,   6,   5,  19,  28,   4,   3,   2,
+		  0,   0,   0,  13,  23, -18,   0,   0,
+		  5,  -5, -10,   9,  -2, -13,  -7,   2,
 		  1,   7,   5,  -3,  -4,  12,   9,   3,
 		  0,   0,   0,   0,   0,   0,   0,   0
 	}, {
@@ -63,8 +63,8 @@ int white_side_eval_table[2][6][64] = { { /* early game */
 		-25,   3,  12,  14,  14,  12,   3, -25,
 		-23,   4,  16,  17,  17,  16,   4, -23,
 		-11,   6,  20,  18,  18,  22,   6, -11,
-		-40, -20,   1,  11,  11,   1, -20, -40,
-		-76, -34, -25, -28, -28, -25, -34, -76
+		-40, -20,   1,  13,  13,   1, -20, -40,
+		-76, -34, -25, -23, -23, -25, -34, -76
 	}, {
 		-23, -17, -15, -14, -14, -15, -17, -23,
 		-18,   3,   9,   2,   2,   9,   3, -18,
@@ -180,7 +180,9 @@ int king_safety(struct position *pos, int color) {
 	eval -= safety_table[MIN(attack_units, 99)];
 
 	/* own pawns close to king_square */
-	eval += 7 * popcount(king_attacks(king_square, 0) & pos->piece[color][pawn]);
+	squares = shift_west(pos->piece[color][king]) | pos->piece[color][king] | shift_east(pos->piece[color][king]);
+	squares = shift_color(squares, color);
+	eval -= 15 * popcount(squares & ~pos->piece[color][pawn]);
 
 	/* uncastled king penalty */
 	if (popcount(pos->piece[color][rook]) == 2) {
@@ -194,15 +196,15 @@ int king_safety(struct position *pos, int color) {
 			rook2 = b;
 		}
 		if (rook1 <= king_square % 8 && king_square % 8 <= rook2)
-			eval -= 15;
+			eval -= 30;
 	}
 
 	return eval;
 }
 
-int16_t evaluate_knights(struct position *pos) {
-	UNUSED(pos);
+int16_t evaluate_knights(struct position *pos, int color) {
 	int eval = 0;
+	eval -= 3 * popcount(pos->piece[color][knight]) * (16 - popcount(pos->piece[white][pawn] | pos->piece[black][pawn]));
 	return eval;
 }
 
@@ -370,11 +372,12 @@ int16_t evaluate_static(struct position *pos, uint64_t *nodes) {
 	eval += mobility(pos, white) - mobility(pos, black);
 	eval += phase_mg * (king_safety(pos, white) - king_safety(pos, black));
 
-	eval += phase_eg * (evaluate_bishops(pos, white) - evaluate_bishops(pos, black));
+	eval += (phase_eg + phase_mg / 2) * (evaluate_bishops(pos, white) - evaluate_bishops(pos, black));
 	eval += evaluate_rooks(pos, white) - evaluate_rooks(pos, black);
 	eval += phase_mg * 4 * (2 * pos->turn - 1);
 	eval += evaluate_pawns(pos, white) - evaluate_pawns(pos, black);
 	eval += phase_mg * (evaluate_queens(pos, white) - evaluate_queens(pos, black));
+	eval += evaluate_knights(pos, white) - evaluate_knights(pos, black);
 
 	return pos->turn ? eval : -eval;
 }
