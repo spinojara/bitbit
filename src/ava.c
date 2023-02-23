@@ -44,6 +44,9 @@ struct engine {
 struct parseinfo {
 	char engine[2][BUFSIZ];
 	char option[2][16][BUFSIZ];
+	char opening[64][8];
+	char book[BUFSIZ];
+	int booklines;
 
 	int wins[3];
 
@@ -67,6 +70,47 @@ long timems(void) {
     return (((long)tv.tv_sec) * 1000) + (tv.tv_usec / 1000);
 }
 
+void play_opening(struct position **pos, struct history **history, char opening[][8]) {
+	move m;
+	for (int i = 0; i < 64; i++) {
+		m = string_to_move(*pos, opening[i]);
+		if (!m)
+			break;
+		move_next(pos, history, m);
+	}
+}
+
+void play_book(struct position **pos, struct history **history, struct parseinfo *info) {
+	char opening[64][8];
+	memset(opening, 0, sizeof(opening));
+	char line[BUFSIZ];
+	int linenum = rand() % info->booklines;
+	FILE *f = fopen(info->book, "r");
+	if (!f)
+		return;
+	for (int i = 0; i < linenum ; i++)
+		if (!fgets(line, sizeof(line), f))
+			printf("fgets ERROR\n");
+	for (int i = 0; i < 64; i++) {
+		snprintf(opening[i], 7, "%s", line);
+		if (strchr(opening[i], ' '))
+			*strchr(opening[i], ' ') = '\0';
+		else if (strchr(opening[i], '\n'))
+			*strchr(opening[i], '\n') = '\0';
+		else
+			break;
+
+		if (strchr(line, ' '))
+			sprintf(line, "%s", strchr(line, ' ') + 1);
+		else if (strchr(line, '\n'))
+			sprintf(line, "%s", strchr(line, '\n') + 1);
+		else
+			break;
+	}
+	fclose(f);
+	play_opening(pos, history, opening);
+}
+
 int play_game(struct engine *engine[2], int engine_white, struct parseinfo *info) {
 	struct position *pos = malloc(sizeof(struct position));
 	struct history *history = NULL;
@@ -77,6 +121,10 @@ int play_game(struct engine *engine[2], int engine_white, struct parseinfo *info
 	pos_from_fen(pos, SIZE(start_fen), start_fen);
 	
 	pthread_mutex_lock(&lock);
+	if (info->opening[0][0])
+		play_opening(&pos, &history, info->opening);
+	else if (info->booklines)
+		play_book(&pos, &history, info);
 	long t[3];
 	t[engine_white] = info->wtime;
 	t[1 - engine_white] = info->btime;
@@ -102,6 +150,7 @@ int play_game(struct engine *engine[2], int engine_white, struct parseinfo *info
 	while (1) {
 		pos_to_fen(fen, pos);
 		fprintf(engine[turn]->in, "position startpos");
+		printf("%s\n", fen);
 		if (history) {
 			fprintf(engine[turn]->in, " moves ");
 			print_history_algebraic(history, engine[turn]->in);
@@ -151,6 +200,8 @@ int play_game(struct engine *engine[2], int engine_white, struct parseinfo *info
 		/* remove \n character */
 		move_str[strlen(move_str) - 1] = '\0';
 		m = string_to_move(pos, move_str);
+		printf("%s\n", info->engine[turn]);
+		printf("bestmove %s\n\n", move_str_pgn(fen, pos, &m));
 		move_next(&pos, &history, m);
 
 		if (mate(pos) == 2) {
@@ -296,6 +347,7 @@ void parseinfo(struct parseinfo *info, int argc, char **argv) {
 
 	int engine_n = -1;
 	int option_n = -1;
+	int is_opening = 0;
 	void *ptr = NULL;
 
 	int as_str = 1;
@@ -305,12 +357,27 @@ void parseinfo(struct parseinfo *info, int argc, char **argv) {
 			as_str = 1;
 			engine_n++;
 			option_n = -1;
+			is_opening = 0;
 			ptr = info->engine[engine_n];
 		}
 		else if (!strcmp(argv[i], "option")) {
 			as_str = 1;
 			option_n++;
-			ptr = info->option[engine_n][option_n];
+			is_opening = 0;
+			if (option_n < 16)
+				ptr = info->option[engine_n][option_n];
+			else
+				ptr = NULL;
+		}
+		else if (!strcmp(argv[i], "book")) {
+			as_str = 1;
+			is_opening = 0;
+			ptr = info->book;
+		}
+		else if (!strcmp(argv[i], "opening")) {
+			as_str = 1;
+			is_opening = 1;
+			ptr = info->opening[0];
 		}
 		else if (!strcmp(argv[i], "games")) {
 			as_str = 0;
@@ -344,6 +411,8 @@ void parseinfo(struct parseinfo *info, int argc, char **argv) {
 			if (*(char *)ptr)
 				appendstr(ptr, " ");
 			appendstr(ptr, argv[i]);
+			if (is_opening)
+				ptr = (char *)ptr + 8;
 		}
 		else if (!as_str && ptr) {
 			*(int *)ptr = strint(argv[i]);
@@ -352,8 +421,12 @@ void parseinfo(struct parseinfo *info, int argc, char **argv) {
 	}
 
 	/* if not set */
-	if (info->wtime == -1 && info->btime == -1 && info->movetime == -1)
-		info->winc = info->binc = 1000;
+	if (info->wtime == -1 && info->btime == -1 && info->movetime == -1) {
+		if (info->winc == -1)
+			info->winc = 1000;
+		if (info->binc == -1)
+			info->binc = 1000;
+	}
 	if (info->wtime == -1 && info->movetime == -1)
 		info->wtime = 120000;
 	if (info->btime == -1 && info->movetime == -1)
@@ -367,6 +440,9 @@ void parseinfo(struct parseinfo *info, int argc, char **argv) {
 	info->binc = MAX(0, info->binc);
 	info->movetime = MAX(0, info->movetime);
 
+	if (engine_n != 1)
+		exit(1);
+
 	for (int i = 0; i < 2; i++) {
 		printf("%s\n", info->engine[i]);
 		for (int j = 0; j < 16; j++)
@@ -375,6 +451,13 @@ void parseinfo(struct parseinfo *info, int argc, char **argv) {
 	}
 	printf("games: %i\n", info->games);
 	printf("threads: %i\n", info->threads);
+	if (info->opening[0][0])
+		printf("opening");
+	for (int i = 0; i < 64; i++)
+		if (info->opening[i][0])
+			printf(" %s", info->opening[i]);
+	if (info->opening[0][0])
+		printf("\n");
 	if (info->wtime)
 		printf("wtime: %i\n", info->wtime);
 	if (info->btime)
@@ -385,6 +468,20 @@ void parseinfo(struct parseinfo *info, int argc, char **argv) {
 		printf("binc: %i\n", info->binc);
 	if (info->movetime)
 		printf("movetime: %i\n", info->movetime);
+
+	/* count book lines */
+	if (info->book[0]) {
+		FILE *f = fopen(info->book, "r");
+		if (!f) {
+			printf("failed to open book\n");
+			return;
+		}
+		int c;
+		while((c = fgetc(f)) != EOF)
+			if (c == '\n')
+				info->booklines++;
+		fclose(f);
+	}
 }
 
 int main(int argc, char **argv) {
@@ -404,6 +501,7 @@ int main(int argc, char **argv) {
 	setbuf(stdin, NULL);
 	setbuf(stdout, NULL);
 
+	srand(time(NULL));
 	for (int i = 0; i < info.threads; i++)
 		ret[i] = pthread_create(thread + i, NULL, thread_play, (void *)&info);
 
