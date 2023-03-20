@@ -30,6 +30,8 @@
 #include "history.h"
 #include "interface.h"
 
+struct position *start = NULL;
+
 void print_position(const struct position *pos, int flip) {
 	int i, j, t;
 	char pieces[] = " PNBRQKpnbrqk";
@@ -207,6 +209,10 @@ void setpos(struct position *pos, uint8_t turn, int8_t en_passant, uint8_t castl
 	pos->zobrist_key ^= zobrist_castle_key(pos->castle);
 	if (pos->en_passant)
 		pos->zobrist_key ^= zobrist_en_passant_key(pos->en_passant);
+}
+
+void startpos(struct position *pos) {
+	memcpy(pos, start, sizeof(struct position));
 }
 
 /* assumes that fen is ok */
@@ -905,4 +911,14 @@ int is_threefold(struct position *pos, struct history *history) {
 		if (pos_are_equal(pos, t->pos))
 			count++;
 	return count >= 2;
+}
+
+void position_init(void) {
+	char *fen[] = { "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR", "w", "KQkq", "-", "0", "1", };
+	start = malloc(sizeof(struct position));
+	pos_from_fen(start, SIZE(fen), fen);
+}
+
+void position_term(void) {
+	free(start);
 }

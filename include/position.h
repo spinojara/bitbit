@@ -73,6 +73,7 @@ char *algebraic(char *str, int square);
 
 char *castle_string(char *str, int castle);
 
+void startpos(struct position *pos);
 void pos_from_fen(struct position *pos, int argc, char **argv);
 
 void random_pos(struct position *pos, int n);
@@ -99,5 +100,9 @@ void print_history_algebraic(const struct history *history, FILE *file);
 int has_big_piece(const struct position *pos);
 
 int is_threefold(struct position *pos, struct history *history);
+
+void position_init(void);
+
+void position_term(void);
 
 #endif

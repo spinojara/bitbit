@@ -15,15 +15,25 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef SEARCH_H
-#define SEARCH_H
+#ifndef BATCH_H
+#define BATCH_H
 
-#include "position.h"
-#include "move.h"
-#include "interface.h"
+#include <stdint.h>
 
-int16_t evaluate(struct position *pos, uint8_t depth, int verbose, int etime, int movetime, move *m, struct history *history, int iterative);
+struct batch {
+	int size;
+	int ind_active;
+	int32_t *ind1;
+	int32_t *ind2;
+	float *eval;
+};
 
-void search_init(void);
+struct batch *next_batch(int requested_size);
+
+void free_batch(struct batch *batch);
+
+void batch_open(const char *s);
+
+void batch_close(void);
 
 #endif

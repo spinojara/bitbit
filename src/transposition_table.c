@@ -25,7 +25,8 @@
 #include "util.h"
 #include "init.h"
 
-struct transposition_table *transposition_table = NULL;
+//struct transposition_table *transposition_table = NULL;
+struct transposition_table transposition_table[1];
 
 void transposition_table_size_print(uint64_t t) {
 	int s = MIN(t / 10, 3);
@@ -55,7 +56,7 @@ void attempt_store(struct position *pos, int16_t evaluation, uint8_t depth, uint
 	struct transposition *e = get(pos);
 	if (transposition_type(e) == 0 ||
 			transposition_zobrist_key(e) != pos->zobrist_key ||
-			depth >= transposition_depth(e))
+			depth > transposition_depth(e))
 		store(e, pos, evaluation, depth, type, m);
 }
 
@@ -90,12 +91,13 @@ int allocate_transposition_table(uint64_t t) {
 	if (size < sizeof(struct transposition))
 		return 2;
 	transposition_table->size = size / sizeof(struct transposition);
-	free(transposition_table->table);
-	transposition_table->table = malloc(transposition_table->size * sizeof(struct transposition));
-	if (!transposition_table->table)
-		return 3;
-	transposition_table->index = transposition_table->size - 1;
+	//free(transposition_table->table);
+	//transposition_table->table = malloc(transposition_table->size * sizeof(struct transposition));
+	//if (!transposition_table->table)
+	//	return 3;
+	//transposition_table->index = transposition_table->size - 1;
 	transposition_table_clear();
+	printf("\n%d\n", transposition_table->size);
 	return 0;
 }
 
@@ -115,24 +117,24 @@ void zobrist_key_init(void) {
 }
 
 int transposition_table_init(void) {
-	transposition_table = malloc(sizeof(struct transposition_table));
-	transposition_table->table = NULL;
+	//transposition_table = malloc(sizeof(struct transposition_table));
+	//transposition_table->table = NULL;
 	int ret = allocate_transposition_table(TT);
 	if (ret) {
 		printf("\33[2Kfatal error: could not allocate transposition table\n");
 		return ret;
 	}
 
-	transposition_table->zobrist_key = malloc((12 * 64 + 1 + 16 + 8) * sizeof(uint64_t));
+	//transposition_table->zobrist_key = malloc((12 * 64 + 1 + 16 + 8) * sizeof(uint64_t));
 	zobrist_key_init();
 
 	return 0;
 }
 
 void transposition_table_term(void) {
-	if (transposition_table) {
-		free(transposition_table->zobrist_key);
-		free(transposition_table->table);
-	}
-	free(transposition_table);
+	//if (transposition_table) {
+	//	free(transposition_table->zobrist_key);
+	//	free(transposition_table->table);
+	//}
+	//free(transposition_table);
 }

@@ -107,12 +107,10 @@ int interface_move(int argc, char **argv) {
 int interface_undo(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
-	if (history) {
+	if (history)
 		move_previous(&pos, &history);
-	}
-	else {
+	else
 		printf("error: no move to undo\n");
-	}
 	return DONE;
 }
 
@@ -175,7 +173,7 @@ int interface_position(int argc, char **argv) {
 		for (int i = n + 1; i < argc; i++) {
 			if (string_to_move(pos, argv[i]))
 				move_next(&pos, &history, string_to_move(pos, argv[i]));
-			else 
+			else
 				break;
 		}
 	}
@@ -186,7 +184,7 @@ int interface_position(int argc, char **argv) {
 			for (int i = n + 1; i < argc; i++) {
 				if (string_to_move(pos, argv[i]))
 					move_next(&pos, &history, string_to_move(pos, argv[i]));
-				else 
+				else
 					break;
 			}
 		}
@@ -253,7 +251,7 @@ int interface_go(int argc, char **argv) {
 		if (strcmp(argv[i], "movetime") == 0)
 			movetime = strint(argv[i + 1]);
 	}
-	evaluate(pos, depth, 1, pos->turn ? wtime : btime, movetime, history);
+	evaluate(pos, depth, 1, pos->turn ? wtime : btime, movetime, NULL, history, 1);
 	return DONE;
 }
 

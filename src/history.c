@@ -29,8 +29,6 @@ void move_next(struct position **p, struct history **h, move m) {
 }
 
 void move_previous(struct position **p, struct history **h) {
-	if (!(*h))
-		return;
 	undo_move(*p, (*h)->move);
 	struct history *t = *h;
 	(*h) = (*h)->previous;

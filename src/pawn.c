@@ -123,10 +123,10 @@ int16_t evaluate_pawns(struct position *pos, int color) {
 	int16_t eval = 0;
 
 	/* doubled pawns */
-	eval -= 40 * popcount(pawn_doubled(pos->piece[color][pawn]));
+	eval -= 25 * popcount(pawn_doubled(pos->piece[color][pawn]));
 
 	/* isolated pawns */
-	eval -= 35 * popcount(pawn_isolated(pos->piece[color][pawn]));
+	eval -= 25 * popcount(pawn_isolated(pos->piece[color][pawn]));
 
 	/* passed pawns */
 	/* evaluates doubled pawns as two passed */
@@ -141,7 +141,7 @@ int16_t evaluate_pawns(struct position *pos, int color) {
 	}
 
 	/* backward pawns */
-	eval -= 30 * popcount(pawn_backward(pos->piece[white][pawn], pos->piece[black][pawn], color));
+	eval -= 15 * popcount(pawn_backward(pos->piece[white][pawn], pos->piece[black][pawn], color));
 
 	/* center control */
 	eval += 15 * popcount(pawn_centered(pos->piece[color][pawn], color));

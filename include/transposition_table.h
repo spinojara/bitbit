@@ -50,7 +50,7 @@ static inline void transposition_set_open(struct transposition *e) { e->open++; 
 static inline void transposition_set_closed(struct transposition *e) { e->open--; }
 
 struct transposition_table {
-	struct transposition *table;
+	struct transposition table[(uint64_t)1 << (TT - 4)];
 	uint64_t size;
 	uint64_t index;
 
@@ -59,7 +59,7 @@ struct transposition_table {
 	 * 16: each castling combination
 	 * 8: en passant on file
 	 */
-	uint64_t *zobrist_key;
+	uint64_t zobrist_key[12 * 64 + 1 + 16 + 8];
 };
 
 void transposition_table_size_print(uint64_t t);

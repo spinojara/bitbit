@@ -361,13 +361,24 @@ void print_evaluation(struct position *pos) {
 int16_t evaluate_static(struct position *pos, uint64_t *nodes) {
 	if (nodes)
 		++*nodes;
-	int eval = 0, i;
+	int eval = 0, i, j;
 
 	const double phase_mg = game_phase(pos);
 	const double phase_eg = 1 - phase_mg;
 
-	for (i = 0; i < 64; i++)
-		eval += phase_mg * eval_table[mg][pos->mailbox[i]][i] + phase_eg * eval_table[eg][pos->mailbox[i]][i];
+	int square;
+	uint64_t bitboard;
+
+	for (i = 0; i < 2; i++) {
+		for (j = pawn; j <= king; j++) {
+			bitboard = pos->piece[i][j];
+			while (bitboard) {
+				square = ctz(bitboard);
+				eval += phase_mg * eval_table[mg][j + 6 * (1 - i)][square] + phase_eg * eval_table[eg][j + 6 * (1 - i)][square];
+				bitboard = clear_ls1b(bitboard);
+			}
+		}
+	}
 
 	eval += mobility(pos, white) - mobility(pos, black);
 	eval += phase_mg * (king_safety(pos, white) - king_safety(pos, black));

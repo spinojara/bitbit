@@ -19,6 +19,7 @@
 #define UTIL_H
 
 #include <stdint.h>
+#include <stdio.h>
 
 #include "move.h"
 
@@ -60,5 +61,56 @@ int variance(int16_t *arr, int len);
 void printdigits(int d);
 
 void util_init(void);
+
+static inline uint8_t read_le_uint8(FILE *f) {
+	uint8_t buf[1];
+	if (!fread(buf, sizeof(buf), 1, f))
+		return 0;
+	return buf[0];
+}
+
+static inline uint16_t read_le_uint16(FILE *f) {
+	uint8_t buf[2];
+	if (!fread(buf, sizeof(buf), 1, f))
+		return 0;
+	return buf[0] | (buf[1] << 8);
+}
+
+static inline uint32_t read_le_uint32(FILE *f) {
+	uint8_t buf[4];
+	if (!fread(buf, sizeof(buf), 1, f))
+		return 0;
+	return buf[0] | (buf[1] << 8) | (buf[2] << 16) | (buf[3] << 24);
+}
+
+static inline void write_le_uint8(FILE *f, uint8_t t) {
+	uint8_t buf[1];
+	buf[0] = t;
+	fwrite(buf, sizeof(buf), 1, f);
+}
+
+static inline void write_le_uint16(FILE *f, uint16_t t) {
+	uint8_t buf[2];
+	buf[0] = ((uint8_t *)(&t))[0];
+	buf[1] = ((uint8_t *)(&t))[1];
+	fwrite(buf, sizeof(buf), 1, f);
+}
+
+static inline void write_le_uint32(FILE *f, uint32_t t) {
+	uint8_t buf[4];
+	buf[0] = ((uint8_t *)(&t))[0];
+	buf[1] = ((uint8_t *)(&t))[1];
+	buf[2] = ((uint8_t *)(&t))[2];
+	buf[3] = ((uint8_t *)(&t))[3];
+	fwrite(buf, sizeof(buf), 1, f);
+}
+
+static inline int reset_file_pointer(FILE *f) {
+	if (feof(f)) {
+		fseek(f, 0, SEEK_SET);
+		return 1;
+	}
+	return 0;
+}
 
 #endif
