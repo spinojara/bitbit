@@ -50,7 +50,7 @@ bitbit: $(OBJ_BITBIT)
 ava: $(OBJ_AVA)
 	$(CC) $(LDFLAGS) -lpthread $^ -o $@
 
-$(LOCAL_OBJDIR)/interface.o: $(LOCAL_SRCDIR)/interface.c
+$(LOCAL_OBJDIR)/init.o: $(LOCAL_SRCDIR)/init.c
 	@mkdir -p $(LOCAL_OBJDIR)
 	$(CC) $(CFLAGS) -I$(LOCAL_INCDIR) $(DVERSION) -c $< -o $@
 
