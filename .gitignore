@@ -12,3 +12,5 @@
 !include
 !man
 !files
+!nnue
+/nnue/*.pyc
