@@ -67,7 +67,7 @@ genfen: $(OBJ_GENFEN)
 libbatch.so: $(OBJ_BATCH)
 	$(CC) $(LDFLAGS) -shared $^ -o $@
 
-obj/init.o: src/init.c
+obj/init.o: src/init.c Makefile
 	@mkdir -p obj
 	$(CC) $(CFLAGS) -Iinclude $(DVERSION) -c $< -o $@
 
