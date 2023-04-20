@@ -64,12 +64,12 @@ bitbit: $(OBJ_BITBIT)
 genfen: $(OBJ_GENFEN)
 	$(CC) $(LDFLAGS) -lm -pthread $^ -o $@
 
+libbatch.so: $(OBJ_BATCH)
+	$(CC) $(LDFLAGS) -shared $^ -o $@
+
 obj/init.o: src/init.c
 	@mkdir -p obj
 	$(CC) $(CFLAGS) -Iinclude $(DVERSION) -c $< -o $@
-
-libbatch.so: $(OBJ_BATCH)
-	$(CC) $(LDFLAGS) -shared $^ -o $@
 
 obj/interface.o: src/interface.c dep/interface.d Makefile
 	@mkdir -p obj
