@@ -15,6 +15,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#ifndef VERSION_H
+#define VERSION_H
+
 char compiler[] =
 #if __clang__
 "clang "
@@ -93,3 +96,17 @@ char *date(char *str) {
 	return str;
 #endif
 }
+
+char simd[] =
+#if defined(AVX2)
+"avx2"
+#elif defined(SSE4)
+"sse4"
+#elif defined(SSE2)
+"sse2"
+#else
+"none"
+#endif
+;
+
+#endif

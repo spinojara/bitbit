@@ -979,7 +979,9 @@ move *generate_quiescence(const struct position *pos, move *move_list) {
 		}
 	}
 
-	attacks = king_attacks(king_square, pos->piece[pos->turn][all]) & ~attacked & pos->piece[1 - pos->turn][all];
+	attacks = king_attacks(king_square, pos->piece[pos->turn][all]) & ~attacked;
+	if (!checkers)
+		attacks &= pos->piece[1 - pos->turn][all];
 	while (attacks) {
 		target_square = ctz(attacks);
 
@@ -987,7 +989,6 @@ move *generate_quiescence(const struct position *pos, move *move_list) {
 
 		attacks = clear_ls1b(attacks);
 	}
-
 
 	/* set the terminating move */
 	*move_ptr = 0;

@@ -33,19 +33,19 @@ uint64_t perft(struct position *pos, int depth, int verbose) {
 	generate_all(pos, move_list);
 	uint64_t nodes = 0, count;
 
-	for (move *move_ptr = move_list; *move_ptr; move_ptr++){
+	for (move *ptr = move_list; *ptr; ptr++){
 		if (depth == 1) {
 			count = 1;
 			nodes++;
 		}
 		else {
-			do_move(pos, move_ptr);
+			do_move(pos, ptr);
 			count = perft(pos, depth - 1, 0);
-			undo_move(pos, move_ptr);
+			undo_move(pos, ptr);
 			nodes += count;
 		}
 		if (verbose && !interrupt) {
-			print_move(move_ptr);
+			print_move(ptr);
 			printf(": %" PRIu64 "\n", count);
 		}
 	}

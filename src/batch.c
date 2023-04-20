@@ -26,60 +26,90 @@
 #include "magic_bitboard.h"
 #include "attack_gen.h"
 #include "bitboard.h"
-#include "transposition_table.h"
 #include "move.h"
 #include "nnue.h"
 
-struct position *pos;
-uint64_t total = 0;
-FILE *f = NULL;
+static inline uint16_t make_index_p(int turn, int square, int piece) {
+	return orient(turn, square) + piece_to_index[turn][piece] + PS_END * 64;
+}
 
-struct batch *next_batch(int requested_size) {
+static inline void append_active_indices_p(struct position *pos, struct index *active, int turn) {
+	active->size = 0;
+	uint64_t b;
+	int square;
+	for (int color = 0; color < 2; color++) {
+		for (int piece = 1; piece < 6; piece++) {
+			b = pos->piece[color][piece];
+			while (b) {
+				square = ctz(b);
+				active->values[active->size++] = make_index_p(turn, square, piece + 6 * (1 - color));
+				b = clear_ls1b(b);
+			}
+		}
+	}
+}
+
+struct batch *next_batch(void *ptr, int requested_size) {
+	struct data *data = (struct data *)ptr;
 	struct batch *batch = malloc(sizeof(struct batch));
 	memset(batch, 0, sizeof(struct batch));
+	batch->requested_size = requested_size;
 	struct index *active_indices1 = malloc(requested_size * sizeof(struct index));
 	struct index *active_indices2 = malloc(requested_size * sizeof(struct index));
+	struct index *active_indices1_p = malloc(requested_size * sizeof(struct index));
+	struct index *active_indices2_p = malloc(requested_size * sizeof(struct index));
 	float *eval = malloc(requested_size * sizeof(float));
 	move m;
 
 	for (int i = 0; i < requested_size; i++) {
-		append_active_indices(pos, active_indices1 + i, pos->turn);
-		append_active_indices(pos, active_indices2 + i, 1 - pos->turn);
-		batch->ind_active += active_indices2[i].size;
-		uint16_t t = read_le_uint16(f);
-		if (reset_file_pointer(f))
-			t = read_le_uint16(f);
+		uint16_t t = read_le_uint(data->f, 2);
+		if (feof(data->f))
+			break;
+		append_active_indices(data->pos, active_indices1 + i, data->pos->turn);
+		append_active_indices(data->pos, active_indices2 + i, 1 - data->pos->turn);
+		append_active_indices_p(data->pos, active_indices1_p + i, data->pos->turn);
+		append_active_indices_p(data->pos, active_indices2_p + i, 1 - data->pos->turn);
+
+		batch->ind_active += active_indices1[i].size + active_indices1_p[i].size;
+		batch->size++;
 		eval[i] = FV_SCALE * (float)*(int16_t *)(&t) / (127 * 64);
-		m = read_le_uint16(f);
-		//char str[8];
-		//move_str_pgn(str, pos, &m);
+		m = read_le_uint(data->f, 2);
 		if (m)
-			do_move(pos, &m);
+			do_move(data->pos, &m);
 		else
-			startpos(pos);
+			startpos(data->pos);
 	}
 
 	batch->ind1 = malloc(2 * batch->ind_active * sizeof(int32_t));
 	batch->ind2 = malloc(2 * batch->ind_active * sizeof(int32_t));
 
 	int index = 0;
-	batch->size = requested_size;
 	batch->eval = malloc(batch->size * sizeof(float));
 	memcpy(batch->eval, eval, batch->size * sizeof(float));
 	
-	for (int i = 0; i < requested_size; i++) {
+	for (int i = 0; i < batch->size; i++) {
 		for (int j = 0; j < active_indices1[i].size; j++) {
 			batch->ind1[index + 2 * j] = i;
 			batch->ind1[index + 2 * j + 1] = active_indices1[i].values[j];
+
+
 			batch->ind2[index + 2 * j] = i;
 			batch->ind2[index + 2 * j + 1] = active_indices2[i].values[j];
 		}
-		index += 2 * active_indices1[i].size;
+		for (int j = 0; j < active_indices1[i].size; j++) {
+			batch->ind1[index + 2 * (j + active_indices1[i].size)] = i;
+			batch->ind1[index + 2 * (j + active_indices1[i].size) + 1] = active_indices1_p[i].values[j];
+			batch->ind2[index + 2 * (j + active_indices1[i].size)] = i;
+			batch->ind2[index + 2 * (j + active_indices1[i].size) + 1] = active_indices2_p[i].values[j];
+		}
+		index += 4 * active_indices1[i].size;
 	}
 
 	free(eval);
 	free(active_indices1);
+	free(active_indices1_p);
 	free(active_indices2);
+	free(active_indices2_p);
 
 	return batch;
 }
@@ -91,15 +121,39 @@ void free_batch(struct batch *batch) {
 	free(batch);
 }
 
-void batch_open(const char *s) {
-	startpos(pos);
-	f = fopen(s, "rb");
-	if (!f)
+void *batch_open(const char *s) {
+	void *ptr = malloc(sizeof(struct data));
+	struct data *data = (struct data *)ptr;
+	memset(data, 0, sizeof(*data));
+	startpos(data->pos);
+	data->f = fopen(s, "rb");
+	if (!data->f)
 		printf("Failed to open data file.\n");
+	while (1) {
+		read_le_uint(data->f, 4);
+		if (!feof(data->f))
+			data->total++;
+		else
+			break;
+	}
+	fseek(data->f, 0, SEEK_SET);
+	return ptr;
 }
 
-void batch_close(void) {
-	fclose(f);
+void batch_close(void *ptr) {
+	struct data *data = (struct data *)ptr;
+	fclose(data->f);
+	free(data);
+}
+
+void batch_reset(void *ptr) {
+	struct data *data = (struct data *)ptr;
+	fseek(data->f, 0, SEEK_SET);
+}
+
+uint64_t batch_total(void *ptr) {
+	struct data *data = (struct data *)ptr;
+	return data->total;
 }
 
 void batch_init(void) {
@@ -107,14 +161,9 @@ void batch_init(void) {
 	magic_bitboard_init();
 	attack_gen_init();
 	bitboard_init();
-	transposition_table_init();
 	position_init();
-	pos = malloc(sizeof(struct position));
-	startpos(pos);
 }
 
 void batch_term(void) {
 	position_term();
-	transposition_table_term();
-	free(pos);
 }

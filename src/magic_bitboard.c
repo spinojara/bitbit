@@ -19,14 +19,15 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdalign.h>
 
 #include "bitboard.h"
 #include "util.h"
 #include "position.h"
 #include "init.h"
 
-uint64_t bishop_attacks_lookup[64 * 512];
-uint64_t rook_attacks_lookup[64 * 4096];
+alignas(64) uint64_t bishop_attacks_lookup[64 * 512];
+alignas(64) uint64_t rook_attacks_lookup[64 * 4096];
 
 uint64_t bishop_magic[64];
 uint64_t rook_magic[64];

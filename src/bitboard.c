@@ -27,6 +27,7 @@
 
 uint64_t between_lookup[64 * 64];
 uint64_t line_lookup[64 * 64];
+uint64_t ray_lookup[64 * 64];
 uint64_t file_lookup[64];
 uint64_t rank_lookup[64];
 uint64_t file_left_lookup[64];
@@ -79,6 +80,34 @@ uint64_t line_calc(int x, int y) {
 	else {
 		return bishop_full_mask[x] & bishop_full_mask[y];
 	}
+}
+
+uint64_t ray_calc(int source, int target) {
+	uint64_t ret = 0;
+
+	int x = source % 8;
+	int y = source / 8;
+
+	int v_x = (target % 8) - (source % 8);
+	int v_y = (target / 8) - (source / 8);
+
+	if (source == target)
+		return ret;
+
+	if (v_x != 0 && v_y != 0 && v_x != v_y && v_x != -v_y)
+		return ret;
+
+	if (v_x)
+		v_x /= ABS(v_x);
+	if (v_y)
+		v_y /= ABS(v_y);
+
+	while (x <= 7 && x >= 0 && y <= 7 && y >= 0) {
+		ret |= bitboard(x + 8 * y);
+		x += v_x;
+		y += v_y;
+	}
+	return ret;
 }
 
 int castle_calc(int source_square, int target_square, int castle) {
@@ -214,6 +243,7 @@ void bitboard_init(void) {
 		for (int j = 0; j < 64; j++) {
 			between_lookup[i + 64 * j] = between_calc(i, j);
 			line_lookup[i + 64 * j] = line_calc(i, j);
+			ray_lookup[i + 64 * j] = ray_calc(i, j);
 			init_status("populating bitboard lookup table");
 		}
 	}

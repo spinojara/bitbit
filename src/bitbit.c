@@ -49,6 +49,7 @@ int main(int argc, char **argv) {
 	if ((ret = pawn_init()))
 		goto term;
 	interface_init();
+	nnue_init(argc, argv);
 	ret = interface(argc, argv);
 term:;
 	interface_term();

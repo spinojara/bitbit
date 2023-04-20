@@ -27,6 +27,10 @@ static inline uint64_t ctz(uint64_t b) {
 	return __builtin_ctzll(b);
 }
 
+static inline uint64_t clz(uint64_t b) {
+	return __builtin_clzll(b);
+}
+
 static inline uint64_t popcount(uint64_t b) {
 	return __builtin_popcountll(b);
 }
@@ -76,6 +80,10 @@ static inline uint64_t clear_ls1b(uint64_t b) {
 	return b & (b - 1);
 }
 
+static inline uint64_t ls1b(uint64_t b) {
+	return b & -b;
+}
+
 void print_bitboard(uint64_t b);
 
 static inline uint64_t single(uint64_t b) {
@@ -88,6 +96,7 @@ static inline uint64_t insert_zero(uint64_t b, int i) {
 
 extern uint64_t between_lookup[64 * 64];
 extern uint64_t line_lookup[64 * 64];
+extern uint64_t ray_lookup[64 * 64];
 extern uint64_t file_lookup[64];
 extern uint64_t rank_lookup[64];
 extern uint64_t file_left_lookup[64];
@@ -103,6 +112,10 @@ static inline uint64_t between(int source_square, int target_square) {
 
 static inline uint64_t line(int source_square, int target_square) {
 	return line_lookup[source_square + target_square * 64];
+}
+
+static inline uint64_t ray(int source_square, int target_square) {
+	return ray_lookup[source_square + target_square * 64];
 }
 
 static inline uint64_t file(int square) {

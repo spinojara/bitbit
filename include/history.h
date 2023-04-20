@@ -20,16 +20,19 @@
 
 #include "move.h"
 
+#define POSITIONS_MAX 8192
+
 struct history {
-	move *move;
-	struct position *pos;
-	struct history *previous;
+	move move[POSITIONS_MAX];
+	uint64_t zobrist_key[POSITIONS_MAX];
+	struct position start;
+	int index;
 };
 
-void delete_history(struct history **h);
+void history_reset(struct position *pos, struct history *h);
 
-void move_next(struct position **p, struct history **h, move m);
+void history_next(struct position *pos, struct history *h, move m);
 
-void move_previous(struct position **p, struct history **h);
+void history_previous(struct position *pos, struct history *h);
 
 #endif

@@ -19,21 +19,30 @@
 #define BATCH_H
 
 #include <stdint.h>
+#include <stdio.h>
+#include <position.h>
 
 struct batch {
 	int size;
+	int requested_size;
 	int ind_active;
 	int32_t *ind1;
 	int32_t *ind2;
 	float *eval;
 };
 
-struct batch *next_batch(int requested_size);
+struct data {
+	uint64_t total;
+	struct position pos[1];
+	FILE *f;
+};
+
+struct batch *next_batch(void *data, int requested_size);
 
 void free_batch(struct batch *batch);
 
-void batch_open(const char *s);
+void *batch_open(const char *s);
 
-void batch_close(void);
+void batch_close(void *data);
 
 #endif

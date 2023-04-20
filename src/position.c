@@ -24,13 +24,11 @@
 #include "bitboard.h"
 #include "util.h"
 #include "attack_gen.h"
-#include "transposition_table.h"
-#include "move.h"
 #include "move_gen.h"
 #include "history.h"
 #include "interface.h"
 
-struct position *start = NULL;
+struct position start[1];
 
 void print_position(const struct position *pos, int flip) {
 	int i, j, t;
@@ -140,6 +138,23 @@ uint64_t generate_pinned(const struct position *pos, int color) {
 	return pinned_all;
 }
 
+uint64_t generate_pinners(const struct position *pos, uint64_t pinned, int color) {
+	int king_square = ctz(pos->piece[color][king]);
+	int square;
+	uint64_t ret = 0;
+	uint64_t pinners = (rook_attacks(king_square, 0, pos->piece[1 - color][all]) & (pos->piece[1 - color][rook] | pos->piece[1 - color][queen])) |
+		(bishop_attacks(king_square, 0, pos->piece[1 - color][all]) & (pos->piece[1 - color][bishop] | pos->piece[1 - color][queen]));
+
+	while (pinned) {
+		square = ctz(pinned);
+		if (ray(king_square, square) & pinners)
+			ret |= ray(king_square, square) & pinners;
+		pinned = clear_ls1b(pinned);
+	}
+
+	return ret;
+}
+
 int square(const char *algebraic) {
 	if (strlen(algebraic) != 2) {
 		return -1;
@@ -200,15 +215,6 @@ void setpos(struct position *pos, uint8_t turn, int8_t en_passant, uint8_t castl
 		}
 	}
 
-	pos->zobrist_key = 0;
-	for (i = 0; i < 64; i++)
-		if (pos->mailbox[i])
-			pos->zobrist_key ^= zobrist_piece_key(pos->mailbox[i] - 1, i);
-	if (pos->turn)
-		pos->zobrist_key ^= zobrist_turn_key();
-	pos->zobrist_key ^= zobrist_castle_key(pos->castle);
-	if (pos->en_passant)
-		pos->zobrist_key ^= zobrist_en_passant_key(pos->en_passant);
 }
 
 void startpos(struct position *pos) {
@@ -285,16 +291,6 @@ void pos_from_fen(struct position *pos, int argc, char **argv) {
 		pos->halfmove = strint(argv[4]);
 	if (argc >= 6)
 		pos->fullmove = strint(argv[5]);
-
-	pos->zobrist_key = 0;
-	for (i = 0; i < 64; i++)
-		if (pos->mailbox[i])
-			pos->zobrist_key ^= zobrist_piece_key(pos->mailbox[i] - 1, i);
-	if (pos->turn)
-		pos->zobrist_key ^= zobrist_turn_key();
-	pos->zobrist_key ^= zobrist_castle_key(pos->castle);
-	if (pos->en_passant)
-		pos->zobrist_key ^= zobrist_en_passant_key(pos->en_passant);
 }
 
 int fen_is_ok(int argc, char **argv) {
@@ -489,19 +485,6 @@ failure:;
 no_failure:;
 	free(pos);
 	return ret;
-}
-
-void random_pos(struct position *pos, int n) {
-	char *fen[] = { "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR", "w", "KQkq", "-", "0", "1", };
-	pos_from_fen(pos, SIZE(fen), fen);
-	move m[MOVES_MAX];
-
-	for (int i = 0; i < n; i++) {
-		generate_all(pos, m);
-		if (!*m)
-			return;
-		do_move(pos, m + rand_int(move_count(m)));
-	}
 }
 
 char *pos_to_fen(char *fen, const struct position *pos) {
@@ -841,84 +824,100 @@ void copy_position(struct position *dest, const struct position *src) {
 }
 
 int pos_are_equal(const struct position *pos1, const struct position *pos2) {
-	for (int j = 0; j < 2; j++)
-		for (int i = 0; i < 7; i++)
-			if (pos1->piece[j][i] != pos2->piece[j][i])
+	for (int j = 0; j < 2; j++) {
+		for (int i = 0; i < 7; i++) {
+			if (pos1->piece[j][i] != pos2->piece[j][i]) {
+				printf("BITBOARD ERROR: %i, %i\n", j, i);
 				return 0;
-	if (pos1->turn != pos2->turn)
+			}
+		}
+	}
+	if (pos1->turn != pos2->turn) {
+		printf("TURN ERROR\n");
 		return 0;
-	if (pos1->en_passant != pos2->en_passant)
+	}
+	if (pos1->en_passant != pos2->en_passant) {
+		printf("EN PASSANT ERROR\n");
 		return 0;
-	if (pos1->castle != pos2->castle)
+	}
+	if (pos1->castle != pos2->castle) {
+		printf("CASTLE ERROR\n");
 		return 0;
-	for (int i = 0; i < 64; i++)
-		if (pos1->mailbox[i] != pos2->mailbox[i])
+	}
+	for (int i = 0; i < 64; i++) {
+		if (pos1->mailbox[i] != pos2->mailbox[i]) {
+			printf("MAILBOX ERROR: %i\n", i);
 			return 0;
-	if (pos1->zobrist_key != pos2->zobrist_key)
+		}
+	}
+	if (pos1->zobrist_key != pos2->zobrist_key) {
+		printf("ZOBRIST KEY ERROR\n");
 		return 0;
+	}
 	return 1;
 }
 
-void print_history_pgn(const struct history *history) {
-	if (!history)
+void print_history_pgn(const struct history *h) {
+	if (!h)
 		return;
-	const struct history *t, *t_last = NULL;
+
+	struct position pos[1];
+	copy_position(pos, &h->start);
+	move m[POSITIONS_MAX];
+	memcpy(m, h->move, sizeof(m));
+
 	char str[8];
-	while (1) {
-		for (t = history; t->previous != t_last; t = t->previous);
-		t_last = t;
-		if (t->pos->turn) {
-			printf("%i. ", t->pos->fullmove);
+	for (int i = 0; i < h->index; i++) {
+		if (pos->turn) {
+			printf("%i. ", pos->fullmove);
 		}
-		else if (!t->previous && !t->pos->turn) {
-			printf("%i. ... ", t->pos->fullmove);
+		else if (!i && !pos->turn) {
+			printf("%i. ... ", pos->fullmove);
 		}
-		printf("%s ", move_str_pgn(str, t->pos, t->move));
-		if (t == history) {
+		printf("%s ", move_str_pgn(str, pos, m + i));
+		if (!pos->turn)
 			printf("\n");
-			break;
-		}
-		if (!t->pos->turn)
-			printf("\n");
+		do_move(pos, m + i);
 	}
+	if (h->index)
+		printf("\n");
 }
 
-void print_history_algebraic(const struct history *history, FILE *file) {
-	if (!history)
+void print_history_algebraic(const struct history *h, FILE *file) {
+	if (!h)
 		return;
-	const struct history *t, *t_last = NULL;
+
+	struct position pos[1];
+	copy_position(pos, &h->start);
+	move m[POSITIONS_MAX];
+	memcpy(m, h->move, sizeof(m));
+
 	char str[8];
-	while (1) {
-		for (t = history; t->previous != t_last; t = t->previous);
-		t_last = t;
-		if (t->previous)
+	for (int i = 0; i < h->index; i++) {
+		if (!i)
 			fprintf(file, " ");
-		fprintf(file, "%s", move_str_algebraic(str, t->move));
-		if (t == history)
-			break;
+		fprintf(file, "%s", move_str_algebraic(str, m + i));
 	}
 }
 
 int has_big_piece(const struct position *pos) {
-	return pos->turn ? pos->piece[white][bishop] || pos->piece[white][rook] || pos->piece[white][queen] :
-		pos->piece[black][bishop] || pos->piece[black][rook] || pos->piece[black][queen];
+	return pos->piece[pos->turn][queen] || pos->piece[pos->turn][rook] || pos->piece[pos->turn][queen];
 }
 
-int is_threefold(struct position *pos, struct history *history) {
-	int count;
-	struct history *t;
-	for (t = history, count = 0; t; t = t->previous)
-		if (pos_are_equal(pos, t->pos))
+int is_threefold(struct position *pos, struct history *h) {
+	int count = 0;
+
+	for (int i = 0; i < h->index; i++)
+		if (pos->zobrist_key == h->zobrist_key[i])
 			count++;
+
 	return count >= 2;
 }
 
 void position_init(void) {
 	char *fen[] = { "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR", "w", "KQkq", "-", "0", "1", };
-	start = malloc(sizeof(struct position));
 	pos_from_fen(start, SIZE(fen), fen);
 }
 
 void position_term(void) {
-	free(start);
 }

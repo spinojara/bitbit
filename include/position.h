@@ -20,6 +20,9 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <stdalign.h>
+
+#define K_HALF_DIMENSIONS (256)
 
 struct position {
 	uint64_t piece[2][7];
@@ -34,6 +37,8 @@ struct position {
 	uint8_t mailbox[64];
 
 	uint64_t zobrist_key;
+
+	alignas(64) int16_t accumulation[1][2][K_HALF_DIMENSIONS];
 };
 
 enum square {
@@ -54,14 +59,9 @@ enum color { black, white };
 enum colored_piece { empty, white_pawn, white_knight, white_bishop, white_rook, white_queen, white_king, black_pawn, black_knight, black_bishop, black_rook, black_queen, black_king };
 
 uint64_t generate_checkers(const struct position *pos, int color);
-uint64_t generate_checkers_white(const struct position *pos);
-uint64_t generate_checkers_black(const struct position *pos);
 uint64_t generate_attacked(const struct position *pos, int color);
-uint64_t generate_attacked_white(const struct position *pos);
-uint64_t generate_attacked_black(const struct position *pos);
 uint64_t generate_pinned(const struct position *pos, int color);
-uint64_t generate_pinned_white(const struct position *pos);
-uint64_t generate_pinned_black(const struct position *pos);
+uint64_t generate_pinners(const struct position *pos, uint64_t pinned, int color);
 
 static inline void swap_turn(struct position *pos) {
 	pos->turn = 1 - pos->turn;

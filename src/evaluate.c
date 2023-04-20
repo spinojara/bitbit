@@ -355,12 +355,10 @@ void print_evaluation(struct position *pos) {
 	       (double)4 * (1 - pos->turn) / 100, (double)0,
 	       (double)4 * (2 * pos->turn - 1) / 100, (double)0);
 	printf("Phase: %.2f\n", phase_eg);
-	printf("Evaluation: %.2f\n", (double)(pos->turn ? evaluate_static(pos, NULL) : -evaluate_static(pos, NULL)) / 100);
+	printf("Evaluation: %.2f\n", (double)(pos->turn ? evaluate_static(pos) : -evaluate_static(pos)) / 100);
 }
 
-int16_t evaluate_static(struct position *pos, uint64_t *nodes) {
-	if (nodes)
-		++*nodes;
+int16_t evaluate_static(struct position *pos) {
 	int eval = 0, i, j;
 
 	const double phase_mg = game_phase(pos);

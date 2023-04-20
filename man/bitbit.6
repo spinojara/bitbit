@@ -3,37 +3,30 @@
 bitbit \- a bitboard based chess engine written in c
 .SH SYNOPSIS
 .B bitbit
-[\fIOPTION\fR]...
+[\fIOPTION\fR...]
 .SH DESCRIPTION
-\fBbitbit\fR, a bitboard based chess engine written in c.
-It uses a hand-crafted evaluation function and implements alpha beta
-pruning, a hash table, late move reductions and null move pruning.
+\fBbitbit\fR, a bitboard based chess engine written in c implementing the
+uci protocol.
 .PP
-\fBbitbit\fR implements commands for viewing, executing a perft
-on and evaluating a position.
 It is possible to cancel all calculations with \fBSIGINT\fR.
 .PP
-Many commands can be given to \fBbitbit\fR at startup by separating
-them with two spaces and a comma.
+Multiple commands may be given to \fBbitbit\fR at startup by separating
+them with " , ".
 See examples.
 .SH OPTIONS
 .TP
 \fB--version\fR
 Shows bitbit's version, then exits.
 .TP
-\fBhelp\fR [\fIOPTION\fR]
+\fBhelp\fR
 .br
 Displays a general help page.
-If a command is specified, \fBhelp\fR displays the help page for that
-command.
 .TP
-\fBversion\fR [\fIOPTION\fR]
+\fBversion\fR
 .br
 Shows bitbit's version.
-.in +2n
-\fB-d\fR shows extra debug information
 .TP
-\fBexit\fR
+\fBquit\fR
 .br
 Exits bitbit.
 .TP
@@ -41,63 +34,68 @@ Exits bitbit.
 .br
 Clears the screen.
 .TP
-\fBdomove\fR [\fIOPTION\fR] [\fIMOVE\fR]
+\fBmove\fR [\fIMOVE\fR]
 .br
-Does a move.
-.in +2n
-\fB-f\fR flips the move
-.br
-\fB-r\fR reverses the last move
+Does a move. The move string can be either in standard notation or
+long algebraic notation e.g. Nf3 or g1f3.
 .TP
-\fBperft\fR [\fIOPTION\fR] [\fIDEPTH\fR]
+\fBundo\fR
+.br
+Undos the last move.
+.TP
+\fBflip\fR
+.br
+Flips the side to move.
+.TP
+\fBperft\fR [\fIDEPTH\fR]
 .br
 Executes a performance test.
-.in +2n
-\fB-t\fR times the performance test
-.br
-\fB-v\fR shows verbose output
 .TP
-\fBsetpos\fR [\fIOPTION\fR] [\fIFEN\fR]
+\fBposition\fR [\fIOPTION\fR] [\fIARG\fR]
 .br
-Sets a position.
+Sets or shows information about the position.
 .in +2n
-\fB-f\fR sets a fischer random position
+\fBfen\fR The passed argument is in fen format.
 .br
-\fB-i\fR uses interactive mode
+\fBstartpos\fR Sets the start position.
 .br
-\fB-r\fR sets a random position
-.br
-\fB-s\fR sets the starting position
-.TP
-\fBpos\fR [\fIOPTION\fR]
-.br
-Shows information about the position.
 .in +2n
-\fB-f\fR flips the output
-.br
-\fB-h\fR shows the history
-.br
-\fB-v\fR shows verbose output
+\fBmoves\fR moves are passed in long algebraic notation after either a fen is
+given or the option startpos.
 .TP
-\fBeval\fR [\fIOPTION\fR] [\fITIME\fR]
+\fBgo\fR [\fIOPTION\fR]
 .br
 Evaluates the position.
 .in +2n
-\fB-d\fR argument is depth instead of time
+\fBwtime\fR
 .br
-\fB-m\fR does the best move when the evaluation is done
+\fBbtime\fR Respective side's time in milliseconds.
 .br
-\fB-t\fR times the evaluation
+\fBwinc\fR
 .br
-\fB-v\fR shows verbose output
+\fBbinc\fR Respective side's increment in milliseconds.
+.br
+\fBdepth\fR Max depth to search.
+.br
+\fBmovetime\fR Max time to search in milliseconds.
 .TP
 \fBtt\fR [\fIOPTION\fR] [\fISIZE\fR]
 .br
-Sets the transposition table.
+Sets or shows information about the transposition table.
 .in +2n
-\fB-e\fR empties the transposition table
+\fBclear\fR Empties the transposition table.
+.TP
+\fBisready\fR
 .br
-\fB-s\fR displays or sets the transposition table size
+Prints "readyok" if engine is ready.
+.TP
+\fBucinewgame\fR
+.br
+Resets engine for a new game.
+.TP
+\fBuci\fR
+.br
+Prints information about the engine.
 .SH EXIT STATUS
 .PP
 If \fBbitbit\fR was killed by a signal it returns the signal + 128.
@@ -122,14 +120,7 @@ Evaluate the starting position to depth 12 and then exit.
 .PP
 .in +4n
 .EX
-$ \fBbitbit eval -vd 12 , exit\fR
-.EE
-.PP
-Show the help page for \fBsetpos\fR then exit.
-.PP
-.in +4n
-.EX
-$ \fBbitbit help setpos , exit\fR
+$ \fBbitbit go depth 12 , quit\fR
 .EE
 .PP
 Set a position, do a performance test to depth 6 and then exit.
@@ -138,8 +129,8 @@ Set a position, do a performance test to depth 6 and then exit.
 .EX
 $ \fBbitbit\fR
 bitbit Copyright (C) 2022 Isak Ellmer
-> \fBsetpos r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1\fR
-> \fBperft 6 -v\fR
+> \fBposition fen r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1\fR
+> \fBperft 6\fR
 g1h1: 149335005
 c4c5: 92063670
 d2d4: 124002076
@@ -147,7 +138,7 @@ f3d4: 129579089
 b4c5: 87986826
 f1f2: 123078367
 nodes: 706045033
-> \fBexit\fR
+time: 1.60
+mnps: 441
+> \fBquit\fR
 .EE
-.SH SEE ALSO
-See \fBbitbit help\fR [\fIOPTION\fR].

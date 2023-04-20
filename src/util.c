@@ -22,6 +22,7 @@
 #include <time.h>
 
 #include "init.h"
+#include "bitboard.h"
 
 uint64_t rand_uint64(void) {
 	uint64_t ret = 0;
@@ -148,6 +149,25 @@ void printdigits(int d) {
 		printf("+0.00");
 	else
 		printf("%+.2f", f);
+}
+
+void printbinary(uint64_t b, int l) {
+	for (int i = l - 1; i >= 0; i--) {
+		printf("%d", get_bit(b, i) ? 1 : 0);
+	}
+}
+
+uint32_t read_le_uint(FILE *f, int bytes) {
+	uint8_t buf[4] = { 0 };
+	if (!fread(buf, bytes, 1, f))
+		return 0;
+	return buf[0] | (buf[1] << 8) | (buf[2] << 16) | (buf[3] << 24);
+}
+
+void write_le_uint(FILE *f, uint32_t t, int bytes) {
+	uint8_t buf[4] = { 0 };
+	memcpy(buf, &t, 4);
+	fwrite(buf, bytes, 1, f);
 }
 
 void util_init(void) {

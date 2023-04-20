@@ -75,8 +75,8 @@ struct func func_arr[] = {
 	{ "ucinewgame" , interface_ucinewgame , },
 };
 
-struct position *pos = NULL;
-struct history *history = NULL;
+struct position pos[1];
+struct history history[1];
 
 int interface_help(int argc, char **argv) {
 	UNUSED(argc);
@@ -96,10 +96,13 @@ int interface_move(int argc, char **argv) {
 	}
 	else {
 		move m = string_to_move(pos, argv[1]);
-		if (m)
-			move_next(&pos, &history, m);
-		else
+		if (m) {
+			do_zobrist_key(pos, &m);
+			history_next(pos, history, m);
+		}
+		else {
 			return ERR_BAD_ARG;
+		}
 	}
 	return DONE;
 }
@@ -107,10 +110,10 @@ int interface_move(int argc, char **argv) {
 int interface_undo(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
-	if (history)
-		move_previous(&pos, &history);
-	else
-		printf("error: no move to undo\n");
+	if (history->index) {
+		undo_zobrist_key(pos, history->move + history->index - 1);
+		history_previous(pos, history);
+	}
 	return DONE;
 }
 
@@ -118,8 +121,8 @@ int interface_flip(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
 	if (!generate_checkers(pos, pos->turn)) {
-		delete_history(&history);
 		do_null_move(pos, 0);
+		history_reset(pos, history);
 	}
 	else {
 		printf("error: cannot flip the move\n");
@@ -141,7 +144,7 @@ int interface_perft(int argc, char **argv) {
 	printf("nodes: %" PRIu64 "\n", p);
 	printf("time: %.2f\n", (double)t / CLOCKS_PER_SEC);
 	if (t != 0)
-		printf("mpns: %" PRIu64 "\n",
+		printf("mnps: %" PRIu64 "\n",
 			(p * CLOCKS_PER_SEC / ((uint64_t)t * 1000000)));
 	
 	return DONE;
@@ -167,25 +170,34 @@ int interface_position(int argc, char **argv) {
 		print_history_pgn(history);
 	}
 	else if (strcmp(argv[1], "startpos") == 0) {
-		char *fen[] = { "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR", "w", "KQkq", "-", "0", "1", };
-		pos_from_fen(pos, SIZE(fen), fen);
-		delete_history(&history);
+		startpos(pos);
+		set_zobrist_key(pos);
+		history_reset(pos, history);
 		for (int i = n + 1; i < argc; i++) {
-			if (string_to_move(pos, argv[i]))
-				move_next(&pos, &history, string_to_move(pos, argv[i]));
-			else
+			move m = string_to_move(pos, argv[i]);
+			if (m) {
+				do_zobrist_key(pos, &m);
+				history_next(pos, history, m);
+			}
+			else {
 				break;
+			}
 		}
 	}
 	else if (strcmp(argv[1], "fen") == 0) {
 		if (fen_is_ok(n - 2, argv + 2)) {
 			pos_from_fen(pos, n - 2, argv + 2);
-			delete_history(&history);
+			set_zobrist_key(pos);
+			history_reset(pos, history);
 			for (int i = n + 1; i < argc; i++) {
-				if (string_to_move(pos, argv[i]))
-					move_next(&pos, &history, string_to_move(pos, argv[i]));
-				else
+				move m = string_to_move(pos, argv[i]);
+				if (m) {
+					do_zobrist_key(pos, &m);
+					history_next(pos, history, m);
+				}
+				else {
 					break;
+				}
 			}
 		}
 		else {
@@ -215,6 +227,7 @@ int interface_stop(int argc, char **argv) {
 int interface_quit(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
+
 	interface_stop(argc, argv);
 	return EXIT_LOOP;
 }
@@ -251,6 +264,7 @@ int interface_go(int argc, char **argv) {
 		if (strcmp(argv[i], "movetime") == 0)
 			movetime = strint(argv[i + 1]);
 	}
+
 	evaluate(pos, depth, 1, pos->turn ? wtime : btime, movetime, NULL, history, 1);
 	return DONE;
 }
@@ -264,6 +278,7 @@ int interface_version(int argc, char **argv) {
 	printf("environment: %s\n", environment);
 	char t[8];
 	printf("compilation date: %s\n", date(t));
+	printf("simd: %s\n", simd);
 	printf("transposition table size: ");
 	transposition_table_size_print(log_2(sizeof(struct transposition) * transposition_table_size()));
 	printf("\ntransposition entry size: %" PRIu64 "B\n", sizeof(struct transposition));
@@ -317,9 +332,9 @@ int interface_ucinewgame(int argc, char **argv) {
 	UNUSED(argv);
 	srand(time(NULL));
 	zobrist_key_init();
-	char *fen[] = { "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR", "w", "KQkq", "-", "0", "1", };
-	pos_from_fen(pos, SIZE(fen), fen);
-	delete_history(&history);
+	startpos(pos);
+	set_zobrist_key(pos);
+	history_reset(pos, history);
 	transposition_table_clear();
 	return DONE;
 }
@@ -422,12 +437,10 @@ int interface(int argc, char **argv) {
 }
 
 void interface_init(void) {
-	char *fen[] = { "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR", "w", "KQkq", "-", "0", "1", };
-	pos = malloc(sizeof(struct position));
-	pos_from_fen(pos, SIZE(fen), fen);
+	startpos(pos);
+	set_zobrist_key(pos);
+	history_reset(pos, history);
 }
 
 void interface_term(void) {
-	free(pos);
-	delete_history(&history);
 }
