@@ -9,9 +9,12 @@ Run
 
 	make
 
-in the root directory. To choose a transposition table size, run
+in the root directory. Make can be run with the following command
 
-	make TT={n}
+	make TT={n} SIMD={str} NNUE={file}
 
-for a transposition table of 2^n bytes. The default value of n
-is 26 which corresponds to a 64MiB transposition table.
+to specify a transposition table size, available SIMD instructions
+and an NNUE filename respectively. TT={n} gives a transposition
+table of 2^n bytes. The default value of n is 26 which corresponds
+to a 64MiB transposition table. Available targets for SIMD={str}
+are avx2, sse4 and sse2 in decreasing order of performance.
