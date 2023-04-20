@@ -19,6 +19,7 @@
 #define UTIL_H
 
 #include <stdint.h>
+#include <stdio.h>
 
 #include "move.h"
 
@@ -57,6 +58,14 @@ void merge_sort(move *arr, uint64_t *val, unsigned int first, unsigned int last,
 
 int variance(int16_t *arr, int len);
 
+void printdigits(int d);
+
+void printbinary(uint64_t d, int l);
+
 void util_init(void);
+
+uint32_t read_le_uint(FILE *f, int bytes);
+
+void write_le_uint(FILE *f, uint32_t t, int bytes);
 
 #endif

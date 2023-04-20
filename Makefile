@@ -3,34 +3,52 @@ MINOR = 3
 VERSION = $(MAJOR).$(MINOR)
 
 CC = cc
-CSTANDARD = -std=c99
+CSTANDARD = -std=c11
 CWARNINGS = -Wall -Wextra -Wshadow -pedantic
 ARCH = native
 COPTIMIZE = -O2 -march=$(ARCH) -flto
 CFLAGS = $(CSTANDARD) $(CWARNINGS) $(COPTIMIZE)
 LDFLAGS = $(CFLAGS)
 
-DVERSION = -DVERSION=$(VERSION)
+ifeq ($(SIMD), AVX2)
+	CFLAGS += -DAVX2 -mavx2
+endif
+ifeq ($(SIMD), SSE4)
+	CFLAGS += -DSSE4 -msse4
+endif
+ifeq ($(SIMD), SSE2)
+	CFLAGS += -DSSE2 -msse2
+endif
 
-LOCAL_SRCDIR = src
-LOCAL_INCDIR = include
-LOCAL_OBJDIR = obj
-LOCAL_DEPDIR = dep
-LOCAL_MANDIR = man
+ifeq ($(TT), )
+	TT = 26
+endif
+ifeq ($(NNUE), )
+	NNUE = files/current.nnue
+endif
+
+DVERSION = -DVERSION=$(VERSION)
 
 SRC_BITBIT = bitboard.c magic_bitboard.c attack_gen.c \
              move.c util.c position.c move_gen.c perft.c \
              search.c evaluate.c interface.c \
              transposition_table.c init.c time_man.c \
-             interrupt.c pawn.c history.c bitbit.c
+             interrupt.c pawn.c history.c nnue.c bitbit.c
 
-SRC_AVA    = bitboard.c magic_bitboard.c attack_gen.c \
-             move.c util.c position.c move_gen.c \
-             transposition_table.c init.c history.c \
-             ava.c
+SRC_GENFEN = bitboard.c magic_bitboard.c attack_gen.c \
+             move.c util.c position.c move_gen.c perft.c \
+             evaluate.c init.c time_man.c \
+             interrupt.c pawn.c history.c genfen.c
 
-OBJ_BITBIT = $(addprefix $(LOCAL_OBJDIR)/,$(SRC_BITBIT:.c=.o))
-OBJ_AVA = $(addprefix $(LOCAL_OBJDIR)/,$(SRC_AVA:.c=.o))
+SRC_BATCH  = bitboard.c magic_bitboard.c attack_gen.c \
+             move.c util.c position.c move_gen.c init.c \
+             batch.c
+
+SRC = $(SRC_BITBIT) $(SRC_GENFEN) $(SRC_BATCH)
+
+OBJ_BITBIT = $(addprefix obj/,$(SRC_BITBIT:.c=.o)) obj/incbin.o
+OBJ_GENFEN = $(addprefix obj/,$(SRC_GENFEN:.c=.o)) obj/genfensearch.o
+OBJ_BATCH  = $(addprefix obj/pic,$(SRC_BATCH:.c=.o))
 
 PREFIX = /usr/local
 BINDIR = $(PREFIX)/bin
@@ -38,55 +56,68 @@ MANPREFIX = $(PREFIX)/share
 MANDIR = $(MANPREFIX)/man
 MAN6DIR = $(MANDIR)/man6
 
-ifneq ($(TT), )
-	SIZE = -DTT=$(TT)
-endif
-
-all: bitbit ava
+all: bitbit genfen libbatch.so
 
 bitbit: $(OBJ_BITBIT)
-	$(CC) $(LDFLAGS) $^ -o $@
+	$(CC) $(LDFLAGS) -lm $^ -o $@
 
-ava: $(OBJ_AVA)
-	$(CC) $(LDFLAGS) -lpthread $^ -o $@
+genfen: $(OBJ_GENFEN)
+	$(CC) $(LDFLAGS) -lm -pthread $^ -o $@
 
-$(LOCAL_OBJDIR)/init.o: $(LOCAL_SRCDIR)/init.c
-	@mkdir -p $(LOCAL_OBJDIR)
-	$(CC) $(CFLAGS) -I$(LOCAL_INCDIR) $(DVERSION) -c $< -o $@
+obj/init.o: src/init.c
+	@mkdir -p obj
+	$(CC) $(CFLAGS) -Iinclude $(DVERSION) -c $< -o $@
 
-$(LOCAL_OBJDIR)/transposition_table.o: $(LOCAL_SRCDIR)/transposition_table.c
-	@mkdir -p $(LOCAL_OBJDIR)
-	$(CC) $(CFLAGS) -I$(LOCAL_INCDIR) $(SIZE) -c $< -o $@
+libbatch.so: $(OBJ_BATCH)
+	$(CC) $(LDFLAGS) -shared $^ -o $@
 
-$(LOCAL_OBJDIR)/ava.o: $(LOCAL_SRCDIR)/ava.c
-	@mkdir -p $(LOCAL_OBJDIR)
-	$(CC) $(CFLAGS) -I$(LOCAL_INCDIR) -D_POSIX_C_SOURCE -c $< -o $@
+obj/interface.o: src/interface.c dep/interface.d Makefile
+	@mkdir -p obj
+	$(CC) $(CFLAGS) -Iinclude -c $< -o $@
 
-$(LOCAL_OBJDIR)/%.o: $(LOCAL_SRCDIR)/%.c
-	@mkdir -p $(LOCAL_OBJDIR)
-	$(CC) $(CFLAGS) -I$(LOCAL_INCDIR) -c $< -o $@
+obj/transposition_table.o: src/transposition_table.c dep/transposition_table.d Makefile
+	@mkdir -p obj
+	$(CC) $(CFLAGS) -DTT=$(TT) -Iinclude -c $< -o $@
 
-include $(addprefix $(LOCAL_DEPDIR)/,$(SRC:.c=.d))
+obj/incbin.o: src/incbin.S Makefile
+	@mkdir -p obj
+	$(CC) $(CFLAGS) -DNNUE=\"$(NNUE)\" -c $< -o $@
 
-$(LOCAL_DEPDIR)/%.d: $(LOCAL_SRCDIR)/%.c
-	@mkdir -p $(LOCAL_DEPDIR)
-	@$(CC) -MM -MT "$@ $(<:$(LOCAL_SRCDIR)/%.c=$(LOCAL_OBJDIR)/%.o)" $(CFLAGS) -I$(LOCAL_INCDIR) $< -o $@
+obj/search.o: src/search.c Makefile
+	@mkdir -p obj
+	$(CC) $(CFLAGS) -DNNUE -DTRANSPOSITION -Iinclude -c $< -o $@
+
+obj/genfensearch.o: src/search.c Makefile
+	@mkdir -p obj
+	$(CC) $(CFLAGS) -Iinclude -c $< -o $@
+
+obj/pic%.o: src/%.c dep/%.d Makefile
+	@mkdir -p obj
+	$(CC) $(CFLAGS) -fPIC -Iinclude -c $< -o $@
+
+obj/%.o: src/%.c dep/%.d Makefile
+	@mkdir -p obj
+	$(CC) $(CFLAGS) -Iinclude -c $< -o $@
+
+dep/%.d: src/%.c
+	@mkdir -p dep
+	@$(CC) -MM -MT "$(<:src/%.c=obj/%.o)" $(CFLAGS) -Iinclude $< -o $@
+
+-include $(addprefix dep/,$(SRC:.c=.d))
 
 install: all
 	mkdir -p $(DESTDIR)$(BINDIR)
 	cp -f bitbit $(DESTDIR)$(BINDIR)/bitbit
 	chmod 755 $(DESTDIR)$(BINDIR)/bitbit
-	cp -f ava $(DESTDIR)$(BINDIR)/ava
-	chmod 755 $(DESTDIR)$(BINDIR)/ava
 	mkdir -p $(DESTDIR)$(MAN6DIR)
-	sed "s/VERSION/$(VERSION)/g" < $(LOCAL_MANDIR)/bitbit.6 > $(DESTDIR)$(MAN6DIR)/bitbit.6
+	sed "s/VERSION/$(VERSION)/g" < man/bitbit.6 > $(DESTDIR)$(MAN6DIR)/bitbit.6
 	chmod 644 $(DESTDIR)$(MAN6DIR)/bitbit.6
 
 uninstall:
 	rm -f $(DESTDIR)$(BINDIR)/bitbit $(DESTDIR)$(MAN6DIR)/bitbit.6
 
 clean:
-	rm -rf $(LOCAL_OBJDIR) $(LOCAL_DEPDIR)
+	rm -rf obj dep
 
 options:
 	@echo "CC      = $(CC)"

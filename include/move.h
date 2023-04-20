@@ -30,11 +30,9 @@
  * 19-23 available castles before move. First bit, 0: K, 1: Q, 2: k, 3: q.
  * 24-29 en passant square before move.
  * 30-36 halfmove.
- * 37-63 fullmove.
  */
 typedef uint64_t move;
 
-/* uint32_t fastest? */
 static inline uint8_t move_from(const move *m) { return *m & 0x3F; }
 static inline uint8_t move_to(const move *m) { return (*m >> 0x6) & 0x3F; }
 static inline uint8_t move_flag(const move *m) { return (*m >> 0xC) & 0x3; }
@@ -43,12 +41,10 @@ static inline uint8_t move_capture(const move *m) { return (*m >> 0x10) & 0x7; }
 static inline uint8_t move_castle(const move *m) { return (*m >> 0x13) & 0xF; }
 static inline uint8_t move_en_passant(const move *m) { return (*m >> 0x18) & 0x3F; }
 static inline uint16_t move_halfmove(const move *m) { return (*m >> 0x1E) & 0x7F; }
-static inline uint32_t move_fullmove(const move *m) { return (*m >> 0x25); }
 static inline void move_set_captured(move *m, uint64_t i) { *m |= (i << 0x10); }
 static inline void move_set_castle(move *m, uint64_t i) { *m |= (i << 0x13); }
 static inline void move_set_en_passant(move *m, uint64_t i) { *m |= (i << 0x18); }
 static inline void move_set_halfmove(move *m, uint64_t i) { *m |= (i << 0x1E); }
-static inline void move_set_fullmove(move *m, uint64_t i) { *m |= (i << 0x25); }
 
 #define MOVES_MAX 256
 
@@ -58,6 +54,10 @@ void undo_move(struct position *pos, const move *m);
 
 static inline move new_move(uint8_t source_square, uint8_t target_square, uint8_t flag, uint8_t promotion) {
 	return source_square | (target_square << 0x6) | (flag << 0xC) | (promotion << 0xE);
+}
+
+static inline int is_capture(const struct position *pos, const move *m) {
+	return pos->mailbox[move_to(m)];
 }
 
 void print_move(const move *m);

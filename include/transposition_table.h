@@ -21,10 +21,8 @@
 #include <stdint.h>
 
 #include "position.h"
-
-#ifndef TT
-#define TT 26
-#endif
+#include "transposition_table.h"
+#include "move.h"
 
 struct transposition {
 	uint64_t zobrist_key;
@@ -89,6 +87,14 @@ int allocate_transposition_table(uint64_t t);
 int transposition_table_occupancy(void);
 
 void zobrist_key_init(void);
+
+void do_zobrist_key(struct position *pos, const move *m);
+
+void undo_zobrist_key(struct position *pos, const move *m);
+
+void do_null_zobrist_key(struct position *pos, int en_passant);
+
+void set_zobrist_key(struct position *pos);
 
 int transposition_table_init(void);
 

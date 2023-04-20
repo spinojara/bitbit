@@ -15,37 +15,23 @@
 
 #include "history.h"
 
-#include <stdlib.h>
-
-void move_next(struct position **p, struct history **h, move m) {
-	struct history *t = *h;
-	(*h) = malloc(sizeof(struct history));
-	(*h)->previous = t;
-	(*h)->move = malloc(sizeof(move));
-	(*h)->pos = malloc(sizeof(struct position));
-	copy_position((*h)->pos, *p);
-	*((*h)->move) = m;
-	do_move(*p, (*h)->move);
+void history_next(struct position *pos, struct history *h, move m) {
+	h->zobrist_key[h->index] = pos->zobrist_key;
+	h->move[h->index] = m;
+	do_move(pos, h->move + h->index);
+	h->index++;
 }
 
-void move_previous(struct position **p, struct history **h) {
-	if (!(*h))
-		return;
-	undo_move(*p, (*h)->move);
-	struct history *t = *h;
-	(*h) = (*h)->previous;
-	free(t->move);
-	free(t->pos);
-	free(t);
+void history_previous(struct position *pos, struct history *h) {
+	h->index--;
+	undo_move(pos, h->move + h->index);
 }
 
-void delete_history(struct history **h) {
-	while (*h) {
-		struct history *t = *h;
-		(*h) = (*h)->previous;
-		free(t->move);
-		free(t->pos);
-		free(t);
-	}
+move *history_get_move(struct history *h) {
+	return h->index ? h->move + (h->index - 1) : NULL;
 }
 
+void history_reset(struct position *pos, struct history *h) {
+	h->index = 0;
+	copy_position(&h->start, pos);
+}

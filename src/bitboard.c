@@ -27,13 +27,13 @@
 
 uint64_t between_lookup[64 * 64];
 uint64_t line_lookup[64 * 64];
+uint64_t ray_lookup[64 * 64];
 uint64_t file_lookup[64];
 uint64_t rank_lookup[64];
 uint64_t file_left_lookup[64];
 uint64_t file_right_lookup[64];
 uint64_t adjacent_files_lookup[64];
-uint64_t passed_files_white_lookup[64];
-uint64_t passed_files_black_lookup[64];
+uint64_t passed_files_lookup[64 * 2];
 int castle_lookup[64 * 64 * 16];
 uint64_t king_squares_lookup[64 * 2];
 
@@ -80,6 +80,34 @@ uint64_t line_calc(int x, int y) {
 	else {
 		return bishop_full_mask[x] & bishop_full_mask[y];
 	}
+}
+
+uint64_t ray_calc(int source, int target) {
+	uint64_t ret = 0;
+
+	int x = source % 8;
+	int y = source / 8;
+
+	int v_x = (target % 8) - (source % 8);
+	int v_y = (target / 8) - (source / 8);
+
+	if (source == target)
+		return ret;
+
+	if (v_x != 0 && v_y != 0 && v_x != v_y && v_x != -v_y)
+		return ret;
+
+	if (v_x)
+		v_x /= ABS(v_x);
+	if (v_y)
+		v_y /= ABS(v_y);
+
+	while (x <= 7 && x >= 0 && y <= 7 && y >= 0) {
+		ret |= bitboard(x + 8 * y);
+		x += v_x;
+		y += v_y;
+	}
+	return ret;
 }
 
 int castle_calc(int source_square, int target_square, int castle) {
@@ -161,34 +189,43 @@ uint64_t adjacent_files_calc(int square) {
 	return r;
 }
 
-uint64_t passed_files_white_calc(int square) {
+uint64_t passed_files_calc(int square, int color) {
 	uint64_t r = 0;
 	int x = square % 8;
 	
-	if (x > 0)
-		r |= between_calc(square - 1, 55 + x);
-	r |= between_calc(square, 56 + x);
-	if (x < 7)
-		r |= between_calc(square + 1, 57 + x);
-	return r;
-}
-
-uint64_t passed_files_black_calc(int square) {
-	uint64_t r = 0;
-	int x = square % 8;
-	
-	if (x > 0)
-		r |= between_calc(square - 1, x - 1);
-	r |= between_calc(square, x);
-	if (x < 7)
-		r |= between_calc(square + 1, x + 1);
+	if (color) {
+		if (x > 0)
+			r |= between_calc(square - 1, 55 + x);
+		r |= between_calc(square, 56 + x);
+		if (x < 7)
+			r |= between_calc(square + 1, 57 + x);
+	}
+	else {
+		if (x > 0)
+			r |= between_calc(square - 1, x - 1);
+		r |= between_calc(square, x);
+		if (x < 7)
+			r |= between_calc(square + 1, x + 1);
+	}
 	return r;
 }
 
 uint64_t king_squares_calc(int square, int turn) {
-	uint64_t ret = king_attacks(square, 0) | bitboard(square);
-	for (int i = 0; i < 3; i++)
-		ret = ret | (turn ? shift_north(ret) : shift_south(ret));
+	uint64_t attacks = king_attacks(square, 0) | bitboard(square);
+	uint64_t ret = attacks;
+	ret |= shift_west(ret) | shift_east(ret);
+	if (turn) {
+		ret |= shift_north(shift_north(ret));
+		for (int i = 0; i < 3; i++)
+			attacks |= shift_north(attacks);
+		ret |= attacks;
+	}
+	else {
+		ret |= shift_south(shift_south(ret));
+		for (int i = 0; i < 3; i++)
+			attacks |= shift_south(attacks);
+		ret |= attacks;
+	}
 	return ret;
 }
 
@@ -199,13 +236,14 @@ void bitboard_init(void) {
 		file_left_lookup[i] = file_left_calc(i);
 		file_right_lookup[i] = file_right_calc(i);
 		adjacent_files_lookup[i] = adjacent_files_calc(i);
-		passed_files_white_lookup[i] = passed_files_white_calc(i);
-		passed_files_black_lookup[i] = passed_files_black_calc(i);
-		king_squares_lookup[i] = king_squares_calc(i, 1);
-		king_squares_lookup[i + 64] = king_squares_calc(i, 0);
+		passed_files_lookup[i] = passed_files_calc(i, white);
+		passed_files_lookup[i + 64] = passed_files_calc(i, black);
+		king_squares_lookup[i] = king_squares_calc(i, white);
+		king_squares_lookup[i + 64] = king_squares_calc(i, black);
 		for (int j = 0; j < 64; j++) {
 			between_lookup[i + 64 * j] = between_calc(i, j);
 			line_lookup[i + 64 * j] = line_calc(i, j);
+			ray_lookup[i + 64 * j] = ray_calc(i, j);
 			init_status("populating bitboard lookup table");
 		}
 	}

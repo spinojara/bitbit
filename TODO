@@ -1,2 +1,1 @@
 add checks for malloc
-look for compiler and architecture in Makefile

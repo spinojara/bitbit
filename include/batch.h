@@ -15,24 +15,34 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef HISTORY_H
-#define HISTORY_H
+#ifndef BATCH_H
+#define BATCH_H
 
-#include "move.h"
+#include <stdint.h>
+#include <stdio.h>
+#include <position.h>
 
-#define POSITIONS_MAX 8192
-
-struct history {
-	move move[POSITIONS_MAX];
-	uint64_t zobrist_key[POSITIONS_MAX];
-	struct position start;
-	int index;
+struct batch {
+	int size;
+	int requested_size;
+	int ind_active;
+	int32_t *ind1;
+	int32_t *ind2;
+	float *eval;
 };
 
-void history_reset(struct position *pos, struct history *h);
+struct data {
+	uint64_t total;
+	struct position pos[1];
+	FILE *f;
+};
 
-void history_next(struct position *pos, struct history *h, move m);
+struct batch *next_batch(void *data, int requested_size);
 
-void history_previous(struct position *pos, struct history *h);
+void free_batch(struct batch *batch);
+
+void *batch_open(const char *s);
+
+void batch_close(void *data);
 
 #endif

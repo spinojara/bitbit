@@ -979,7 +979,9 @@ move *generate_quiescence(const struct position *pos, move *move_list) {
 		}
 	}
 
-	attacks = king_attacks(king_square, pos->piece[pos->turn][all]) & ~attacked & pos->piece[1 - pos->turn][all];
+	attacks = king_attacks(king_square, pos->piece[pos->turn][all]) & ~attacked;
+	if (!checkers)
+		attacks &= pos->piece[1 - pos->turn][all];
 	while (attacks) {
 		target_square = ctz(attacks);
 
@@ -987,7 +989,6 @@ move *generate_quiescence(const struct position *pos, move *move_list) {
 
 		attacks = clear_ls1b(attacks);
 	}
-
 
 	/* set the terminating move */
 	*move_ptr = 0;
@@ -1015,7 +1016,7 @@ int mobility(const struct position *pos, int color) {
 		while (piece) {
 			source_square = ctz(piece);
 			attacks = knight_attacks(source_square, pos->piece[color][all]);
-			moves += (t = popcount(attacks)) ? t : -5;
+			moves += (t = popcount(attacks)) ? t : -3;
 			piece = clear_ls1b(piece);
 		}
 
@@ -1023,7 +1024,7 @@ int mobility(const struct position *pos, int color) {
 		while (piece) {
 			source_square = ctz(piece);
 			attacks = bishop_attacks(source_square, pos->piece[color][all], all_pieces);
-			moves += (t = popcount(attacks)) ? t : -5;
+			moves += (t = popcount(attacks)) ? t : -3;
 			piece = clear_ls1b(piece);
 		}
 
@@ -1031,7 +1032,7 @@ int mobility(const struct position *pos, int color) {
 		while (piece) {
 			source_square = ctz(piece);
 			attacks = rook_attacks(source_square, pos->piece[color][all], all_pieces);
-			moves += (t = popcount(attacks)) ? t : -5;
+			moves += (t = popcount(attacks)) ? t : -3;
 			piece = clear_ls1b(piece);
 		}
 
@@ -1039,7 +1040,7 @@ int mobility(const struct position *pos, int color) {
 		while (piece) {
 			source_square = ctz(piece);
 			attacks = queen_attacks(source_square, pos->piece[color][all], all_pieces);
-			moves += (t = popcount(attacks)) ? t : -5;
+			moves += popcount(attacks) ? 0 : -3;
 			piece = clear_ls1b(piece);
 		}
 
@@ -1052,7 +1053,7 @@ int mobility(const struct position *pos, int color) {
 		while (piece) {
 			source_square = ctz(piece);
 			attacks = knight_attacks(source_square, pos->piece[color][all]) & pinned_squares;
-			moves += (t = popcount(attacks)) ? t : -5;
+			moves += (t = popcount(attacks)) ? t : -3;
 			piece = clear_ls1b(piece);
 		}
 
@@ -1060,7 +1061,7 @@ int mobility(const struct position *pos, int color) {
 		while (piece) {
 			source_square = ctz(piece);
 			attacks = bishop_attacks(source_square, pos->piece[color][all], all_pieces) & pinned_squares;
-			moves += (t = popcount(attacks)) ? t : -5;
+			moves += (t = popcount(attacks)) ? t : -3;
 			piece = clear_ls1b(piece);
 		}
 
@@ -1068,7 +1069,7 @@ int mobility(const struct position *pos, int color) {
 		while (piece) {
 			source_square = ctz(piece);
 			attacks = rook_attacks(source_square, pos->piece[color][all], all_pieces) & pinned_squares;
-			moves += (t = popcount(attacks)) ? t : -5;
+			moves += (t = popcount(attacks)) ? t : -3;
 			piece = clear_ls1b(piece);
 		}
 
@@ -1076,10 +1077,10 @@ int mobility(const struct position *pos, int color) {
 		while (piece) {
 			source_square = ctz(piece);
 			attacks = queen_attacks(source_square, pos->piece[color][all], all_pieces) & pinned_squares;
-			moves += (t = popcount(attacks)) ? t : -5;
+			moves += popcount(attacks) ? 0 : -3;
 			piece = clear_ls1b(piece);
 		}
 	}
 
-	return moves;
+	return 5 * moves;
 }

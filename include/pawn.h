@@ -20,7 +20,7 @@
 
 #include "position.h"
 
-int16_t evaluate_pawns(struct position *pos);
+int16_t evaluate_pawns(struct position *pos, int color);
 
 int pawn_init(void);
 

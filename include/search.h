@@ -22,7 +22,7 @@
 #include "move.h"
 #include "interface.h"
 
-int16_t evaluate(struct position *pos, uint8_t depth, int verbose, int etime, int movetime, struct history *history);
+int16_t evaluate(struct position *pos, uint8_t depth, int verbose, int etime, int movetime, move *m, struct history *history, int iterative);
 
 void search_init(void);
 

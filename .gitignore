@@ -9,12 +9,8 @@
 !Makefile
 
 !src
-!src/*
 !include
-!include/*
-
 !man
-!man/*
-
 !files
-!files/*
+!nnue
+/nnue/*.pyc

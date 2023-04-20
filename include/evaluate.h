@@ -22,7 +22,9 @@
 
 #include "position.h"
 
-int16_t evaluate_static(struct position *pos, uint64_t *nodes);
+int16_t evaluate_static(struct position *pos);
+
+void print_evaluation(struct position *pos);
 
 void evaluate_init(void);
 

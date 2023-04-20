@@ -67,10 +67,10 @@ void init_print(char *str) {
 void init_status(char *str) {
 	if (!counter)
 		return;
-	counter->done++;
 	clock_t t = clock();
-	if (1000 * (t - counter->time) > CLOCKS_PER_SEC * PRINT_DELAY_MS) {
+	if ((counter->done < counter->total) && 1000 * (t - counter->time) > CLOCKS_PER_SEC * PRINT_DELAY_MS) {
 		init_print(str);
 		counter->time = t;
 	}
+	counter->done++;
 }

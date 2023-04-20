@@ -27,6 +27,10 @@ static inline uint64_t ctz(uint64_t b) {
 	return __builtin_ctzll(b);
 }
 
+static inline uint64_t clz(uint64_t b) {
+	return __builtin_clzll(b);
+}
+
 static inline uint64_t popcount(uint64_t b) {
 	return __builtin_popcountll(b);
 }
@@ -76,6 +80,10 @@ static inline uint64_t clear_ls1b(uint64_t b) {
 	return b & (b - 1);
 }
 
+static inline uint64_t ls1b(uint64_t b) {
+	return b & -b;
+}
+
 void print_bitboard(uint64_t b);
 
 static inline uint64_t single(uint64_t b) {
@@ -88,13 +96,13 @@ static inline uint64_t insert_zero(uint64_t b, int i) {
 
 extern uint64_t between_lookup[64 * 64];
 extern uint64_t line_lookup[64 * 64];
+extern uint64_t ray_lookup[64 * 64];
 extern uint64_t file_lookup[64];
 extern uint64_t rank_lookup[64];
 extern uint64_t file_left_lookup[64];
 extern uint64_t file_right_lookup[64];
 extern uint64_t adjacent_files_lookup[64];
-extern uint64_t passed_files_white_lookup[64];
-extern uint64_t passed_files_black_lookup[64];
+extern uint64_t passed_files_lookup[64 * 2];
 extern int castle_lookup[64 * 64 * 16];
 extern uint64_t king_squares_lookup[64 * 2];
 
@@ -104,6 +112,10 @@ static inline uint64_t between(int source_square, int target_square) {
 
 static inline uint64_t line(int source_square, int target_square) {
 	return line_lookup[source_square + target_square * 64];
+}
+
+static inline uint64_t ray(int source_square, int target_square) {
+	return ray_lookup[source_square + target_square * 64];
 }
 
 static inline uint64_t file(int square) {
@@ -126,20 +138,16 @@ static inline uint64_t adjacent_files(int square) {
 	return adjacent_files_lookup[square];
 }
 
-static inline uint64_t passed_files_white(int square) {
-	return passed_files_white_lookup[square];
-}
-
-static inline uint64_t passed_files_black(int square) {
-	return passed_files_black_lookup[square];
+static inline uint64_t passed_files(int square, int color) {
+	return passed_files_lookup[square + 64 * (1 - color)];
 }
 
 static inline int castle(int source_square, int target_square, int castle) {
 	return castle_lookup[source_square + 64 * target_square + 64 * 64 * castle];
 }
 
-static inline uint64_t king_squares(int square, int turn) {
-	return king_squares_lookup[square + 64 * (1 - turn)];
+static inline uint64_t king_squares(int square, int color) {
+	return king_squares_lookup[square + 64 * (1 - color)];
 }
 
 extern const uint64_t FILE_H;
