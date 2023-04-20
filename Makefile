@@ -10,13 +10,13 @@ COPTIMIZE = -O2 -march=$(ARCH) -flto
 CFLAGS = $(CSTANDARD) $(CWARNINGS) $(COPTIMIZE)
 LDFLAGS = $(CFLAGS)
 
-ifeq ($(SIMD), AVX2)
+ifeq ($(SIMD), avx2)
 	CFLAGS += -DAVX2 -mavx2
 endif
-ifeq ($(SIMD), SSE4)
+ifeq ($(SIMD), sse4)
 	CFLAGS += -DSSE4 -msse4
 endif
-ifeq ($(SIMD), SSE2)
+ifeq ($(SIMD), sse2)
 	CFLAGS += -DSSE2 -msse2
 endif
 
