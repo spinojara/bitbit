@@ -572,7 +572,8 @@ uint32_t incbin_le_uint(int *index, int bytes) {
 		buf[0] = incbinweights[*index + 0];
 	}
 	*index += bytes;
-	return buf[0] | (buf[1] << 8) | (buf[2] << 16) | (buf[3] << 24);
+	return (uint32_t)buf[0] | ((uint32_t)buf[1] << 8) |
+		((uint32_t)buf[2] << 16) | ((uint32_t)buf[3] << 24);
 }
 
 void incbin_hidden_weights(weight_t *w, int dims, int *index) {

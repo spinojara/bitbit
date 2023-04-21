@@ -130,6 +130,8 @@ void merge_sort(move *arr, uint64_t *val, unsigned int first, unsigned int last,
 }
 
 int variance(int16_t *arr, int len) {
+	if (len < 2)
+		return -1;
 	int variance = 0;
 	int mean = 0;
 	for (int i = 0; i < len; i++)

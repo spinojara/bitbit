@@ -491,7 +491,9 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int
 				store_history_move(pos, ptr, depth, history_moves);
 			alpha = evaluation;
 			store_pv_move(ptr, ply, pv_moves);
+#if defined(TRANSPOSITION)
 			m = *ptr;
+#endif
 		}
 	}
 #if defined(TRANSPOSITION)
@@ -509,14 +511,6 @@ int16_t evaluate(struct position *pos, uint8_t depth, int verbose, int etime, in
 	move move_list[MOVES_MAX];
 	generate_all(pos, move_list);
 
-	if (history) {
-		if(is_threefold(pos, history)) {
-		if (verbose)
-			printf("info depth 0 score cp 0 string repetition\n");
-		return 0;
-		}
-	}
-
 	if (!move_list[0]) {
 		uint64_t checkers = generate_checkers(pos, pos->turn);
 		if (!checkers)
@@ -532,8 +526,17 @@ int16_t evaluate(struct position *pos, uint8_t depth, int verbose, int etime, in
 		return evaluation;
 	}
 
+#if defined(NNUE)
+	update_accumulator(pos, pos->accumulation, 0);
+	update_accumulator(pos, pos->accumulation, 1);
+#endif
+
 	if (depth == 0) {
+#if defined(NNUE)
+		evaluation = evaluate_accumulator(pos);
+#else
 		evaluation = evaluate_static(pos);
+#endif
 		if (verbose)
 			printf("info depth 0 score cp %d nodes 1\n", evaluation);
 		return evaluation;
@@ -550,11 +553,6 @@ int16_t evaluate(struct position *pos, uint8_t depth, int verbose, int etime, in
 	memset(pv_moves, 0, sizeof(pv_moves));
 	memset(killer_moves, 0, sizeof(killer_moves));
 	memset(history_moves, 0, sizeof(history_moves));
-
-#if defined(NNUE)
-	update_accumulator(pos, pos->accumulation, 0);
-	update_accumulator(pos, pos->accumulation, 1);
-#endif
 
 	int16_t alpha, beta;
 	int pv_flag;

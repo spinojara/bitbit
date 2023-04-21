@@ -14,21 +14,20 @@
  */
 
 #include "history.h"
+#include "transposition_table.h"
 
 void history_next(struct position *pos, struct history *h, move m) {
 	h->zobrist_key[h->index] = pos->zobrist_key;
 	h->move[h->index] = m;
+	do_zobrist_key(pos, h->move + h->index);
 	do_move(pos, h->move + h->index);
 	h->index++;
 }
 
 void history_previous(struct position *pos, struct history *h) {
 	h->index--;
+	undo_zobrist_key(pos, h->move + h->index);
 	undo_move(pos, h->move + h->index);
-}
-
-move *history_get_move(struct history *h) {
-	return h->index ? h->move + (h->index - 1) : NULL;
 }
 
 void history_reset(struct position *pos, struct history *h) {

@@ -37,8 +37,8 @@ SRC_BITBIT = bitboard.c magic_bitboard.c attack_gen.c \
 
 SRC_GENFEN = bitboard.c magic_bitboard.c attack_gen.c \
              move.c util.c position.c move_gen.c perft.c \
-             evaluate.c init.c time_man.c \
-             interrupt.c pawn.c history.c genfen.c
+             evaluate.c init.c time_man.c interrupt.c \
+             pawn.c genfen.c
 
 SRC_BATCH  = bitboard.c magic_bitboard.c attack_gen.c \
              move.c util.c position.c move_gen.c init.c \
@@ -67,7 +67,7 @@ genfen: $(OBJ_GENFEN)
 libbatch.so: $(OBJ_BATCH)
 	$(CC) $(LDFLAGS) -shared $^ -o $@
 
-obj/init.o: src/init.c Makefile
+obj/init.o: src/init.c dep/init.d Makefile
 	@mkdir -p obj
 	$(CC) $(CFLAGS) -Iinclude $(DVERSION) -c $< -o $@
 
@@ -83,11 +83,11 @@ obj/incbin.o: src/incbin.S Makefile
 	@mkdir -p obj
 	$(CC) $(CFLAGS) -DNNUE=\"$(NNUE)\" -c $< -o $@
 
-obj/search.o: src/search.c Makefile
+obj/search.o: src/search.c dep/search.d Makefile
 	@mkdir -p obj
 	$(CC) $(CFLAGS) -DNNUE -DTRANSPOSITION -Iinclude -c $< -o $@
 
-obj/genfensearch.o: src/search.c Makefile
+obj/genfensearch.o: src/search.c dep/search.d Makefile
 	@mkdir -p obj
 	$(CC) $(CFLAGS) -Iinclude -c $< -o $@
 

@@ -35,7 +35,6 @@
 #include "bitboard.h"
 #include "attack_gen.h"
 #include "search.h"
-#include "history.h"
 #include "evaluate.h"
 #include "pawn.h"
 
@@ -58,9 +57,7 @@ void *worker(void *arg) {
 	pthread_mutex_unlock(&lock);
 	
 	struct position pos[1];
-	struct history h[1];
 	startpos(pos);
-	history_reset(pos, h);
 	move move_list[MOVES_MAX];
 	move m;
 	int16_t eval;
@@ -74,24 +71,24 @@ void *worker(void *arg) {
 		if (write(fd, &eval, sizeof(eval)) == -1)
 			printf("WRITE ERROR\n");
 
-		if (!m || pos->fullmove >= 50 || eval == 20000 || eval == -20000 || is_threefold(pos, h)) {
+		/* CHECK FOR TWOFOLD */
+		if (!m || pos->fullmove >= 50 || eval == 20000 || eval == -20000) {
 			m = 0;
 			if (write(fd, &m, sizeof(eval)) == -1)
 				printf("WRITE ERROR\n");
 			startpos(pos);
-			history_reset(pos, h);
 		}
 		else if (rand() % 5 == 0) {
 			generate_all(pos, move_list);
 			m = move_list[rand() % move_count(move_list)];
 			if (write(fd, &m, sizeof(eval)) == -1)
 				printf("WRITE ERROR\n");
-			history_next(pos, h, m);
+			do_move(pos, &m);
 		}
 		else {
 			if (write(fd, &m, sizeof(eval)) == -1)
 				printf("WRITE ERROR\n");
-			history_next(pos, h, m);
+			do_move(pos, &m);
 		}
 		if (count >= FEN_CHUNKS) {
 			pthread_mutex_lock(&lock);

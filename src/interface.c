@@ -96,13 +96,10 @@ int interface_move(int argc, char **argv) {
 	}
 	else {
 		move m = string_to_move(pos, argv[1]);
-		if (m) {
-			do_zobrist_key(pos, &m);
+		if (m)
 			history_next(pos, history, m);
-		}
-		else {
+		else
 			return ERR_BAD_ARG;
-		}
 	}
 	return DONE;
 }
@@ -110,10 +107,8 @@ int interface_move(int argc, char **argv) {
 int interface_undo(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
-	if (history->index) {
-		undo_zobrist_key(pos, history->move + history->index - 1);
+	if (history->index)
 		history_previous(pos, history);
-	}
 	return DONE;
 }
 
@@ -175,13 +170,10 @@ int interface_position(int argc, char **argv) {
 		history_reset(pos, history);
 		for (int i = n + 1; i < argc; i++) {
 			move m = string_to_move(pos, argv[i]);
-			if (m) {
-				do_zobrist_key(pos, &m);
+			if (m)
 				history_next(pos, history, m);
-			}
-			else {
+			else
 				break;
-			}
 		}
 	}
 	else if (strcmp(argv[1], "fen") == 0) {
@@ -191,13 +183,10 @@ int interface_position(int argc, char **argv) {
 			history_reset(pos, history);
 			for (int i = n + 1; i < argc; i++) {
 				move m = string_to_move(pos, argv[i]);
-				if (m) {
-					do_zobrist_key(pos, &m);
+				if (m)
 					history_next(pos, history, m);
-				}
-				else {
+				else
 					break;
-				}
 			}
 		}
 		else {
