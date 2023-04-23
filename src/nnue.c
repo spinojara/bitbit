@@ -264,7 +264,7 @@ static inline void affine_propagate(int8_t *input, int8_t *output, int in_dim,
 #endif
 }
 
-static inline int16_t output_layer(int8_t *input, const bias_t *biases, const weight_t *weights) {
+static inline int32_t output_layer(int8_t *input, const bias_t *biases, const weight_t *weights) {
 #if defined(AVX2)
 	__m256i *a = (__m256i *)input;
 	__m256i *b = (__m256i *)weights;

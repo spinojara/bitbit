@@ -51,15 +51,15 @@ uint64_t mvv_lva_calc(int attacker, int victim) {
 	int a = (attacker + 5) % 6;
 	int v = (victim + 5) % 6;
 	int lookup_t[6 * 6] = {
-		 2, 15, 16, 17, 21,  0,
-		 0,  3,  7, 14, 20,  0,
-		 0,  1,  4, 13, 19,  0,
-		 0,  0,  0,  5, 18,  0,
+		 2,  9, 10, 16, 21,  0,
+		 0,  3,  7, 14, 19,  0,
+		 0,  1,  4, 13, 18,  0,
+		 0,  0,  0,  5, 17,  0,
 		 0,  0,  0,  0,  6,  0,
-		 8,  9, 10, 11, 12,  0,
+		 8, 11, 12, 15, 20,  0,
 	};
 	if (!lookup_t[v + 6 * a])
-		return 0xFFFFFFFFFFFF0000;
+		return 0xFFFF;
 	return lookup_t[v + 6 * a] + 0xFFFFFFFFFFFFFF00;
 }
 
@@ -69,14 +69,14 @@ uint64_t mvv_lva_calc(int attacker, int victim) {
  * Simplyfing and using the mean value theorem gives us 1>Clog(x)/y''
  * where 2<=y'<y''<y. The constant C must satisfy C<y''/log(x) for all such
  * x and y''. x can be at most 255 and y'' can only attain some discrete
- * values as a function of y,y'. The min of y'' occurs for y=3, y'=2 where
+ * values as a function of y, y'. The min of y'' occurs for y=3, y'=2 where
  * we get y''=2.46. Thus C<2.46/log(255)=0.44. Scaling C and instead using
  * its square root we get the formula
  * sqrt(C)=sqrt(1024/((log(3)-log(2))log(255))). D is experimental for now.
  */
 int late_move_reduction(int index, int depth) {
 	int r = reductions[index] * reductions[depth];
-	return (r >> 10) + 2;
+	return (r >> 10) + 1;
 }
 
 int see_geq(struct position *pos, const move *m, int16_t value) {
@@ -96,7 +96,6 @@ int see_geq(struct position *pos, const move *m, int16_t value) {
 	swap = piece_value[attacker] - swap;
 	if (swap <= 0)
 		return 1;
-
 
 	pos->piece[1 - pos->turn][victim] ^= tob;
 	pos->piece[1 - pos->turn][all] ^= tob;
@@ -263,11 +262,15 @@ uint64_t evaluate_move(struct position *pos, move *m, uint8_t depth, uint8_t ply
 	UNUSED(e);
 #endif
 
+	/* queen promotion */
+	if (move_flag(m) == 2 && move_promote(m) == 3)
+		return 0xFFFFFFFFFFFFFFFD;
+
 	/* attack */
 	if (is_capture(pos, m))
 		return mvv_lva(pos->mailbox[move_from(m)], pos->mailbox[move_to(m)]);
 
-	/* promotions */
+	/* other promotions */
 	if (move_flag(m) == 2)
 		return 0xFFFFFFFFFFFFF000 + move_promote(m);
 
@@ -321,7 +324,6 @@ int16_t quiescence(struct position *pos, int16_t alpha, int16_t beta, clock_t cl
 	nodes++;
 	if (!checkers) {
 		if (evaluation >= beta) {
-			nodes++;
 			return beta;
 		}
 		if (evaluation > alpha)
@@ -336,7 +338,7 @@ int16_t quiescence(struct position *pos, int16_t alpha, int16_t beta, clock_t cl
 
 	evaluate_moves(pos, move_list, 0, 0, NULL, 0, NULL, NULL, history_moves);
 	for (move *ptr = move_list; *ptr; ptr++) {
-		if (is_capture(pos, ptr) && !see_geq(pos, ptr, 0))
+		if (is_capture(pos, ptr) && !see_geq(pos, ptr, 0) && !checkers)
 			continue;
 		do_move(pos, ptr);
 #if defined(NNUE)
@@ -355,7 +357,7 @@ int16_t quiescence(struct position *pos, int16_t alpha, int16_t beta, clock_t cl
 	return alpha;
 }
 
-int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int16_t alpha, int16_t beta, int null_move, clock_t clock_stop, int *pv_flag, move pv_moves[][256], move killer_moves[][2], uint64_t history_moves[13][64], struct history *h) {
+int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int16_t alpha, int16_t beta, int null_move, clock_t clock_stop, int *pv_flag, move pv_moves[][256], move killer_moves[][2], uint64_t history_moves[13][64]) {
 	int16_t evaluation;
 
 	if (interrupt)
@@ -363,9 +365,6 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int
 	if (nodes % 4096 == 0)
 		if (clock_stop && clock() > clock_stop)
 			interrupt = 1;
-
-	if (h && is_threefold(pos, h))
-		return 0;
 
 #if defined(TRANSPOSITION)
 	void *e = attempt_get(pos);
@@ -386,7 +385,7 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int
 #else
 	void *e = NULL;
 #endif
-
+	
 	if (depth <= 0) {
 		evaluation = mate(pos);
 		/* stalemate */
@@ -398,7 +397,6 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int
 		return quiescence(pos, alpha, beta, clock_stop, history_moves);
 	}
 
-
 	uint64_t checkers = generate_checkers(pos, pos->turn);
 	/* null move pruning */
 	if (!null_move && !(*pv_flag) && !checkers && depth >= 3 && has_big_piece(pos)) {
@@ -407,7 +405,7 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int
 #if defined(TRANSPOSITION)
 		do_null_zobrist_key(pos, 0);
 #endif
-		evaluation = -evaluate_recursive(pos, depth - 3, ply + 1, -beta, -beta + 1, 1, clock_stop, pv_flag, NULL, NULL, history_moves, NULL);
+		evaluation = -evaluate_recursive(pos, depth - 3, ply + 1, -beta, -beta + 1, 1, clock_stop, pv_flag, NULL, NULL, history_moves);
 		do_null_move(pos, t);
 #if defined(TRANSPOSITION)
 		do_null_zobrist_key(pos, t);
@@ -435,9 +433,6 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int
 		transposition_set_open(e);
 #endif
 
-	if (!(*pv_flag) && !e && depth >= 6)
-		depth = MAX(0, depth - 2);
-
 	uint16_t m = 0;
 #if !defined(TRANSPOSITION)
 	UNUSED(m);
@@ -451,16 +446,16 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int
 		do_accumulator(pos, ptr);
 #endif
 		/* late move reduction */
-		if (!(*pv_flag) && depth >= 2 && !checkers && ptr - move_list >= 1 && move_flag(ptr) != 2 && !move_capture(ptr)) {
+		if (!(*pv_flag) && depth >= 2 && !checkers && ptr - move_list >= 1 && move_flag(ptr) != 2 && is_capture(pos, ptr)) {
 			uint8_t r = late_move_reduction(ptr - move_list, depth);
-			evaluation = -evaluate_recursive(pos, MAX(depth - 1 - r, 0), ply + 1, -alpha - 1, -alpha, 0, clock_stop, pv_flag, pv_moves, killer_moves, history_moves, NULL);
+			evaluation = -evaluate_recursive(pos, MAX(depth - 1 - r, 0), ply + 1, -alpha - 1, -alpha, 0, clock_stop, pv_flag, pv_moves, killer_moves, history_moves);
 		}
 		else {
 			evaluation = alpha + 1;
 		}
 		if (evaluation > alpha) {
 			/* -beta - 1 to search for mate in <n> */
-			evaluation = -evaluate_recursive(pos, depth - 1, ply + 1, -beta - 1, -alpha, 0, clock_stop, pv_flag, pv_moves, killer_moves, history_moves, NULL);
+			evaluation = -evaluate_recursive(pos, depth - 1, ply + 1, -beta - 1, -alpha, 0, clock_stop, pv_flag, pv_moves, killer_moves, history_moves);
 		}
 		
 		evaluation -= (evaluation > 0x4000);
@@ -478,8 +473,6 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int
 #if defined(TRANSPOSITION)
 			if (e)
 				transposition_set_closed(e);
-#endif
-#if defined(TRANSPOSITION)
 			/* type cut */
 			attempt_store(pos, beta, depth, 1, *ptr);
 #endif
@@ -506,6 +499,11 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int
 }
 
 int16_t evaluate(struct position *pos, uint8_t depth, int verbose, int etime, int movetime, move *m, struct history *history, int iterative) {
+	clock_t clock_start = clock();
+	if (etime && !movetime)
+		movetime = etime / 5;
+	clock_t clock_stop = movetime ? clock() + (CLOCKS_PER_SEC * movetime) / 1000 : 0;
+
 	char str[8];
 	int16_t evaluation = 0, saved_evaluation[256] = { 0 };
 	move move_list[MOVES_MAX];
@@ -541,11 +539,6 @@ int16_t evaluate(struct position *pos, uint8_t depth, int verbose, int etime, in
 			printf("info depth 0 score cp %d nodes 1\n", evaluation);
 		return evaluation;
 	}
-
-	clock_t clock_start = clock();
-	if (etime && !movetime)
-		movetime = etime / 5;
-	clock_t clock_stop = movetime ? clock() + (CLOCKS_PER_SEC * movetime) / 1000 : 0;
 
 	move pv_moves[256][256];
 	move killer_moves[256][2];
@@ -584,7 +577,7 @@ int16_t evaluate(struct position *pos, uint8_t depth, int verbose, int etime, in
 #if defined(NNUE)
 			do_accumulator(pos, ptr);
 #endif
-			evaluation = -evaluate_recursive(pos, d - 1, 1, -beta, -alpha, 0, clock_stop, &pv_flag, pv_moves, killer_moves, history_moves, history);
+			evaluation = -evaluate_recursive(pos, d - 1, 1, -beta, -alpha, 0, clock_stop, &pv_flag, pv_moves, killer_moves, history_moves);
 			evaluation -= (evaluation > 0x4000);
 			if (history && is_threefold(pos, history))
 				evaluation = 0;
