@@ -54,7 +54,7 @@ static uint32_t piece_to_index[2][13] = {
 
 /* should use horizontal symmetry */
 static inline int orient(int turn, int square) {
-	return turn ? square : 8 * (7 - square / 8) + square % 8;
+	return square ^ (turn ? 0x0 : 0x38);
 }
 
 static inline uint16_t make_index(int turn, int square, int piece, int king_square) {

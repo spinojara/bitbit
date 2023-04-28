@@ -224,7 +224,7 @@ int interface_quit(int argc, char **argv) {
 int interface_eval(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
-	print_evaluation(pos);
+	evaluate_print(pos);
 	return DONE;
 }
 
@@ -254,7 +254,7 @@ int interface_go(int argc, char **argv) {
 			movetime = strint(argv[i + 1]);
 	}
 
-	evaluate(pos, depth, 1, pos->turn ? wtime : btime, movetime, NULL, history, 1);
+	search(pos, depth, 1, pos->turn ? wtime : btime, movetime, NULL, history, 1);
 	return DONE;
 }
 

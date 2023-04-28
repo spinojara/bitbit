@@ -54,7 +54,6 @@ int main(int argc, char **argv) {
 term:;
 	interface_term();
 	pawn_term();
-	position_term();
 	transposition_table_term();
 	term();
 	return ret;

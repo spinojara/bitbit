@@ -123,7 +123,7 @@ void free_batch(struct batch *batch) {
 
 void *batch_open(const char *s) {
 	void *ptr = malloc(sizeof(struct data));
-	struct data *data = (struct data *)ptr;
+	struct data *data = ptr;
 	memset(data, 0, sizeof(*data));
 	startpos(data->pos);
 	data->f = fopen(s, "rb");
@@ -141,18 +141,18 @@ void *batch_open(const char *s) {
 }
 
 void batch_close(void *ptr) {
-	struct data *data = (struct data *)ptr;
+	struct data *data = ptr;
 	fclose(data->f);
 	free(data);
 }
 
 void batch_reset(void *ptr) {
-	struct data *data = (struct data *)ptr;
+	struct data *data = ptr;
 	fseek(data->f, 0, SEEK_SET);
 }
 
 uint64_t batch_total(void *ptr) {
-	struct data *data = (struct data *)ptr;
+	struct data *data = ptr;
 	return data->total;
 }
 
@@ -162,8 +162,4 @@ void batch_init(void) {
 	attack_gen_init();
 	bitboard_init();
 	position_init();
-}
-
-void batch_term(void) {
-	position_term();
 }

@@ -22,74 +22,17 @@
 #include <stdlib.h>
 
 #include "bitboard.h"
+#include "util.h"
 
 /* around 100 KiB with hitrate of ~80% */
 #define PAWN_TABLE_SIZE ((uint64_t)1 << 12)
 
 struct pawn {
 	uint64_t pawns[2];
-	int8_t color;
-	int16_t evaluation;
+	mevalue evaluation;
 };
 
 struct pawn *pawn_table = NULL;
-
-uint64_t pawn_backward_white(uint64_t white_pawns, uint64_t black_pawns) {
-	uint64_t white_attacks = shift_north(shift_west(white_pawns)) | shift_north(shift_east(white_pawns));
-	uint64_t black_attacks = shift_south(shift_west(black_pawns)) | shift_south(shift_east(black_pawns));
-
-	uint64_t white_attack_spans = fill_north(white_attacks);
-	uint64_t backward = fill_south(~white_attack_spans & black_attacks);
-	return backward & white_pawns;
-}
-
-uint64_t pawn_backward_black(uint64_t white_pawns, uint64_t black_pawns) {
-	uint64_t white_attacks = shift_north(shift_west(white_pawns)) | shift_north(shift_east(white_pawns));
-	uint64_t black_attacks = shift_south(shift_west(black_pawns)) | shift_south(shift_east(black_pawns));
-
-	uint64_t black_attack_spans = fill_south(black_attacks);
-	uint64_t backward = fill_north(~black_attack_spans & white_attacks);
-	return backward & black_pawns;
-}
-
-uint64_t pawn_backward(uint64_t white_pawns, uint64_t black_pawns, int color) {
-	return color ? pawn_backward_white(white_pawns, black_pawns) : pawn_backward_black(white_pawns, black_pawns);
-}
-
-uint64_t pawn_doubled(uint64_t pawns) {
-	uint64_t t, r = 0;
-	for (int i = 0; i < 8; i++) {
-		t = pawns & file(i);
-		if (t & (t - 1))
-			r |= t;
-	}
-	return r;
-}
-
-uint64_t pawn_isolated(uint64_t pawns) {
-	uint64_t r = 0;
-	for (int i = 0; i < 8; i++) {
-		if ((pawns & file(i)) && !clear_ls1b(pawns & file(i)) && !(pawns & adjacent_files(i)))
-			r |= pawns & file(i);
-	}
-	return r;
-}
-
-uint64_t pawn_chain_white(uint64_t pawns) {
-	return pawns & (shift_north(shift_west(pawns)) | shift_north(shift_east(pawns)));
-}
-
-uint64_t pawn_chain_black(uint64_t pawns) {
-	return pawns & (shift_south(shift_west(pawns)) | shift_south(shift_east(pawns)));
-}
-
-uint64_t pawn_centered(uint64_t pawns, int color) {
-	uint64_t center = 0x3C3C000000;
-	if (color)
-		return (shift_west(shift_north(pawns)) | shift_east(shift_north(pawns))) & center;
-	else
-		return (shift_west(shift_south(pawns)) | shift_east(shift_south(pawns))) & center;
-}
 
 uint16_t hash(uint64_t key) {
 	key = key * 0x4cf5ad432745937full;
@@ -97,56 +40,91 @@ uint16_t hash(uint64_t key) {
 	return key % PAWN_TABLE_SIZE;
 }
 
-struct pawn *pawn_get(struct position *pos, int color) {
-	return pawn_table + hash((pos->piece[black][pawn] | pos->piece[white][pawn] >> (8 - color)));
+struct pawn *pawn_get(uint64_t *pawns) {
+	return pawn_table + hash((pawns[black] | pawns[white]) >> 8);
 }
 
-struct pawn *pawn_attempt_get(struct position *pos, int color) {
-	struct pawn *p = pawn_get(pos, color);
-	if (p->pawns[white] != pos->piece[white][pawn] || p->pawns[black] != pos->piece[black][pawn] || p->color != color)
+struct pawn *pawn_attempt_get(uint64_t *pawns) {
+	struct pawn *p = pawn_get(pawns);
+	if (p->pawns[white] != pawns[white] || p->pawns[black] != pawns[black])
 		return NULL;
 	return p;
 }
 
-void pawn_store(struct position *pos, int16_t evaluation, int color) {
-	struct pawn *e = pawn_get(pos, color);
-	e->pawns[white] = pos->piece[white][pawn];
-	e->pawns[black] = pos->piece[black][pawn];
+void pawn_store(uint64_t *pawns, mevalue evaluation) {
+	struct pawn *e = pawn_get(pawns);
+	e->pawns[white] = pawns[white];
+	e->pawns[black] = pawns[black];
 	e->evaluation = evaluation;
-	e->color = color;
 }
 
-int16_t evaluate_pawns(struct position *pos, int color) {
-	struct pawn *e = pawn_attempt_get(pos, color);
+/* mostly inspiration from stockfish */
+mevalue evaluate_pawns(const struct position *pos, struct evaluationinfo *ei, int color) {
+	UNUSED(ei);
+	uint64_t pawns[2];
+	if (color) {
+		pawns[white] = pos->piece[white][pawn];
+		pawns[black] = pos->piece[black][pawn];
+	}
+	else {
+		pawns[white] = rotate_bytes(pos->piece[black][pawn]);
+		pawns[black] = rotate_bytes(pos->piece[white][pawn]);
+	}
+	struct pawn *e = pawn_attempt_get(pawns);
 	if (e)
 		return e->evaluation;
-	int16_t eval = 0;
+	/* we are now always evaluation from white's perspective */
+	mevalue eval = 0;
 
-	/* doubled pawns */
-	eval -= 25 * popcount(pawn_doubled(pos->piece[color][pawn]));
-
-	/* isolated pawns */
-	eval -= 25 * popcount(pawn_isolated(pos->piece[color][pawn]));
-
-	/* passed pawns */
-	/* evaluates doubled pawns as two passed */
+	uint64_t b = pawns[white];
+	uint64_t neighbours, doubled, stoppers, support, phalanx, lever, leverpush, blockers;
+	int backward, passed;
 	int square;
-	uint64_t b;
-	b = pos->piece[color][pawn];
+	uint64_t squareb;
 	while (b) {
 		square = ctz(b);
-		if (!(pos->piece[1 - color][pawn] & passed_files(square, color)))
-			eval += 20 * (color ? (square / 8) : (7 - square / 8));
+		squareb = bitboard(square);
+
+		int y = square / 8;
+		int x = square % 8;
+		
+		/* uint64_t */
+		doubled    = pawns[white] & bitboard(square - 8);
+		neighbours = pawns[white] & adjacent_files(square);
+		stoppers   = pawns[black] & passed_files(square, white);
+		blockers   = pawns[black] & bitboard(square + 8);
+		support    = neighbours & rank(square - 8);
+		phalanx    = neighbours & rank(square);
+		lever      = pawns[black] & (shift_north_west(squareb) | shift_north_east(squareb));
+		leverpush  = pawns[black] & (shift_north(shift_north_west(squareb) | shift_north_east(squareb)));
+
+		/* int */
+		backward   = !(neighbours & passed_files(square + 8, black)) && (leverpush | blockers);
+		passed     = !(stoppers ^ lever) || (!(stoppers ^ lever ^ leverpush) && popcount(phalanx) >= popcount(leverpush));
+		passed    &= !(passed_files(square, white) & file(square) & pawns[white]);
+
+		if (backward)
+			eval += S(-11, -17);
+
+		if (support)
+			eval += S(5, 3) * (y - 1) * popcount(support);
+
+		if (phalanx)
+			eval += S(3, 2 * (y - 1));
+
+		if (passed)
+			eval += S(14, 26) * y - S(9, 9) * MIN(x, 7 - x);
+
+		if (!neighbours)
+			eval += S(-21, -36);
+		
+		if (!support && doubled)
+			eval += S(-22, -32);
+
 		b = clear_ls1b(b);
 	}
 
-	/* backward pawns */
-	eval -= 15 * popcount(pawn_backward(pos->piece[white][pawn], pos->piece[black][pawn], color));
-
-	/* center control */
-	eval += 15 * popcount(pawn_centered(pos->piece[color][pawn], color));
-
-	pawn_store(pos, eval, color);
+	pawn_store(pawns, eval);
 	return eval;
 }
 

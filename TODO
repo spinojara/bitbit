@@ -1,1 +1,2 @@
 add checks for malloc
+make see_geq use psqtable

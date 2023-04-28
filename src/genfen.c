@@ -66,7 +66,7 @@ void *worker(void *arg) {
 	while (1) {
 		count++;
 		m = 0;
-		eval = evaluate(pos, 2, 0, 0, 0, &m, NULL, 0);
+		eval = search(pos, 2, 0, 0, 0, &m, NULL, 0);
 		eval = CLAMP(eval, -20000, 20000);
 		if (write(fd, &eval, sizeof(eval)) == -1)
 			printf("WRITE ERROR\n");
@@ -202,5 +202,4 @@ int main(int argc, char **argv) {
 	pthread_mutex_destroy(&lock);
 
 	pawn_term();
-	position_term();
 }

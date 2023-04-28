@@ -305,6 +305,19 @@ void evaluate_moves(struct position *pos, move *move_list, uint8_t depth, uint8_
 	merge_sort(move_list, evaluation_list, 0, i - 1, 0);
 }
 
+static inline int16_t evaluate(struct position *pos) {
+	int16_t evaluation;
+#if defined(NNUE)
+	evaluation = evaluate_accumulator(pos);
+#else
+	evaluation = evaluate_classical(pos);
+#endif
+	/* damp when shuffling pieces */
+	evaluation = (int32_t)evaluation * (200 - pos->halfmove) / 200;
+
+	return evaluation;
+}
+
 int16_t quiescence(struct position *pos, int16_t alpha, int16_t beta, clock_t clock_stop, uint64_t history_moves[13][64]) {
 	if (interrupt)
 		return 0;
@@ -316,11 +329,7 @@ int16_t quiescence(struct position *pos, int16_t alpha, int16_t beta, clock_t cl
 	int16_t evaluation = 0;
 	uint64_t checkers = generate_checkers(pos, pos->turn);
 	
-#if defined(NNUE)
-	evaluation = evaluate_accumulator(pos);
-#else
-	evaluation = evaluate_static(pos);
-#endif
+	evaluation = evaluate(pos);
 	nodes++;
 	if (!checkers) {
 		if (evaluation >= beta) {
@@ -357,7 +366,7 @@ int16_t quiescence(struct position *pos, int16_t alpha, int16_t beta, clock_t cl
 	return alpha;
 }
 
-int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int16_t alpha, int16_t beta, int null_move, clock_t clock_stop, int *pv_flag, move pv_moves[][256], move killer_moves[][2], uint64_t history_moves[13][64]) {
+int16_t negamax(struct position *pos, uint8_t depth, uint8_t ply, int16_t alpha, int16_t beta, int null_move, clock_t clock_stop, int *pv_flag, move pv_moves[][256], move killer_moves[][2], uint64_t history_moves[13][64], struct history *history) {
 	int16_t evaluation;
 
 	if (interrupt)
@@ -365,6 +374,9 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int
 	if (nodes % 4096 == 0)
 		if (clock_stop && clock() > clock_stop)
 			interrupt = 1;
+
+	if (ply <= 2 && history && is_threefold(pos, history))
+		return 0;
 
 #if defined(TRANSPOSITION)
 	void *e = attempt_get(pos);
@@ -405,7 +417,7 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int
 #if defined(TRANSPOSITION)
 		do_null_zobrist_key(pos, 0);
 #endif
-		evaluation = -evaluate_recursive(pos, depth - 3, ply + 1, -beta, -beta + 1, 1, clock_stop, pv_flag, NULL, NULL, history_moves);
+		evaluation = -negamax(pos, depth - 3, ply + 1, -beta, -beta + 1, 1, clock_stop, pv_flag, NULL, NULL, history_moves, NULL);
 		do_null_move(pos, t);
 #if defined(TRANSPOSITION)
 		do_null_zobrist_key(pos, t);
@@ -448,14 +460,14 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int
 		/* late move reduction */
 		if (!(*pv_flag) && depth >= 2 && !checkers && ptr - move_list >= 1 && move_flag(ptr) != 2 && is_capture(pos, ptr)) {
 			uint8_t r = late_move_reduction(ptr - move_list, depth);
-			evaluation = -evaluate_recursive(pos, MAX(depth - 1 - r, 0), ply + 1, -alpha - 1, -alpha, 0, clock_stop, pv_flag, pv_moves, killer_moves, history_moves);
+			evaluation = -negamax(pos, MAX(depth - 1 - r, 0), ply + 1, -alpha - 1, -alpha, 0, clock_stop, pv_flag, pv_moves, killer_moves, history_moves, history);
 		}
 		else {
 			evaluation = alpha + 1;
 		}
 		if (evaluation > alpha) {
 			/* -beta - 1 to search for mate in <n> */
-			evaluation = -evaluate_recursive(pos, depth - 1, ply + 1, -beta - 1, -alpha, 0, clock_stop, pv_flag, pv_moves, killer_moves, history_moves);
+			evaluation = -negamax(pos, depth - 1, ply + 1, -beta - 1, -alpha, 0, clock_stop, pv_flag, pv_moves, killer_moves, history_moves, history);
 		}
 		
 		evaluation -= (evaluation > 0x4000);
@@ -498,7 +510,7 @@ int16_t evaluate_recursive(struct position *pos, uint8_t depth, uint8_t ply, int
 	return alpha;
 }
 
-int16_t evaluate(struct position *pos, uint8_t depth, int verbose, int etime, int movetime, move *m, struct history *history, int iterative) {
+int16_t search(struct position *pos, uint8_t depth, int verbose, int etime, int movetime, move *m, struct history *history, int iterative) {
 	clock_t clock_start = clock();
 	if (etime && !movetime)
 		movetime = etime / 5;
@@ -530,11 +542,7 @@ int16_t evaluate(struct position *pos, uint8_t depth, int verbose, int etime, in
 #endif
 
 	if (depth == 0) {
-#if defined(NNUE)
-		evaluation = evaluate_accumulator(pos);
-#else
-		evaluation = evaluate_static(pos);
-#endif
+		evaluation = evaluate(pos);
 		if (verbose)
 			printf("info depth 0 score cp %d nodes 1\n", evaluation);
 		return evaluation;
@@ -577,10 +585,8 @@ int16_t evaluate(struct position *pos, uint8_t depth, int verbose, int etime, in
 #if defined(NNUE)
 			do_accumulator(pos, ptr);
 #endif
-			evaluation = -evaluate_recursive(pos, d - 1, 1, -beta, -alpha, 0, clock_stop, &pv_flag, pv_moves, killer_moves, history_moves);
+			evaluation = -negamax(pos, d - 1, 1, -beta, -alpha, 0, clock_stop, &pv_flag, pv_moves, killer_moves, history_moves, history);
 			evaluation -= (evaluation > 0x4000);
-			if (history && is_threefold(pos, history))
-				evaluation = 0;
 #if defined(TRANSPOSITION)
 			undo_zobrist_key(pos, ptr);
 #endif

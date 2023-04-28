@@ -32,7 +32,9 @@ uint64_t file_lookup[64];
 uint64_t rank_lookup[64];
 uint64_t file_left_lookup[64];
 uint64_t file_right_lookup[64];
+uint64_t same_colored_squares_lookup[64];
 uint64_t adjacent_files_lookup[64];
+int distance_lookup[64 * 64];
 uint64_t passed_files_lookup[64 * 2];
 int castle_lookup[64 * 64 * 16];
 uint64_t king_squares_lookup[64 * 2];
@@ -229,6 +231,17 @@ uint64_t king_squares_calc(int square, int turn) {
 	return ret;
 }
 
+uint64_t same_colored_squares_calc(int square) {
+	uint64_t b = 0;
+	for (int i = 0; i < 32; i++)
+		b |= bitboard(2 * i + ((i / 4) % 2 ? 1 : 0));
+	return (square + (square / 8)) % 2 ? ~b : b;
+}
+
+uint64_t distance_calc(int a, int b) {
+	return MAX(ABS(a % 8 - b % 8), ABS(a / 8 - b / 8));
+}
+
 void bitboard_init(void) {
 	for (int i = 0; i < 64; i++) {
 		file_lookup[i] = file_calc(i);
@@ -240,7 +253,9 @@ void bitboard_init(void) {
 		passed_files_lookup[i + 64] = passed_files_calc(i, black);
 		king_squares_lookup[i] = king_squares_calc(i, white);
 		king_squares_lookup[i + 64] = king_squares_calc(i, black);
+		same_colored_squares_lookup[i] = same_colored_squares_calc(i);
 		for (int j = 0; j < 64; j++) {
+			distance_lookup[i + 64 * j] = distance_calc(i, j);
 			between_lookup[i + 64 * j] = between_calc(i, j);
 			line_lookup[i + 64 * j] = line_calc(i, j);
 			ray_lookup[i + 64 * j] = ray_calc(i, j);

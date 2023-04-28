@@ -29,6 +29,7 @@ struct position {
 
 	uint8_t turn;
 	int8_t en_passant;
+	/* KQkq */
 	uint8_t castle;
 
 	uint16_t halfmove;
@@ -67,6 +68,10 @@ static inline void swap_turn(struct position *pos) {
 	pos->turn = 1 - pos->turn;
 }
 
+static inline uint64_t all_pieces(const struct position *pos) {
+	return pos->piece[black][all] | pos->piece[white][all];
+}
+
 int square(const char *algebraic);
 
 char *algebraic(char *str, int square);
@@ -102,7 +107,5 @@ int has_big_piece(const struct position *pos);
 int is_threefold(struct position *pos, struct history *history);
 
 void position_init(void);
-
-void position_term(void);
 
 #endif

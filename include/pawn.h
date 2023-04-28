@@ -19,8 +19,9 @@
 #define PAWN_H
 
 #include "position.h"
+#include "evaluate.h"
 
-int16_t evaluate_pawns(struct position *pos, int color);
+mevalue evaluate_pawns(const struct position *pos, struct evaluationinfo *ei, int color);
 
 int pawn_init(void);
 

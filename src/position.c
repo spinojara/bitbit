@@ -918,6 +918,3 @@ void position_init(void) {
 	char *fen[] = { "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR", "w", "KQkq", "-", "0", "1", };
 	pos_from_fen(start, SIZE(fen), fen);
 }
-
-void position_term(void) {
-}

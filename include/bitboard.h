@@ -84,6 +84,11 @@ static inline uint64_t ls1b(uint64_t b) {
 	return b & -b;
 }
 
+static inline uint64_t rotate_bytes(uint64_t b) {
+	return (b >> 56) | ((b & 0xFF000000000000) >> 40) | ((b & 0xFF0000000000) >> 24) | ((b & 0xFF00000000) >> 8) |
+		((b & 0xFF000000) << 8) | ((b & 0xFF0000) << 24) | ((b & 0xFF00) << 40) | (b << 56);
+}
+
 void print_bitboard(uint64_t b);
 
 static inline uint64_t single(uint64_t b) {
@@ -102,7 +107,9 @@ extern uint64_t rank_lookup[64];
 extern uint64_t file_left_lookup[64];
 extern uint64_t file_right_lookup[64];
 extern uint64_t adjacent_files_lookup[64];
+extern uint64_t same_colored_squares_lookup[64];
 extern uint64_t passed_files_lookup[64 * 2];
+extern int distance_lookup[64 * 64];
 extern int castle_lookup[64 * 64 * 16];
 extern uint64_t king_squares_lookup[64 * 2];
 
@@ -116,6 +123,14 @@ static inline uint64_t line(int source_square, int target_square) {
 
 static inline uint64_t ray(int source_square, int target_square) {
 	return ray_lookup[source_square + target_square * 64];
+}
+
+static inline int distance(int i, int j) {
+	return distance_lookup[i + j * 64];
+}
+
+static inline uint64_t same_colored_squares(int square) {
+	return same_colored_squares_lookup[square];
 }
 
 static inline uint64_t file(int square) {

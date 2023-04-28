@@ -22,9 +22,37 @@
 
 #include "position.h"
 
-int16_t evaluate_static(struct position *pos);
+typedef int32_t mevalue;
 
-void print_evaluation(struct position *pos);
+struct evaluationinfo {
+	mevalue mobility[2];
+
+	uint64_t mobility_squares[2];
+	uint64_t pawn_attack_span[2];
+
+	uint64_t attacked_squares[2][7];
+	uint64_t attacked2_squares[2];
+
+	uint64_t king_ring[2];
+	int king_attack_units[2];
+};
+
+#define S(a, b) ((mevalue)((a) + ((uint32_t)(b) << 16)))
+
+static inline int16_t mevalue_mg(mevalue eval) { return (int16_t)((uint32_t)eval & 0xFFFF); }
+static inline int16_t mevalue_eg(mevalue eval) { return (int16_t)((uint32_t)(eval + 0x8000) >> 16); }
+
+static inline mevalue new_mevalue(int16_t mgeval, int16_t egeval) {
+	return (mevalue)(mgeval + ((uint32_t)egeval << 16));
+}
+
+static inline int16_t mevalue_evaluation(mevalue eval, double phase) {
+	return phase * mevalue_mg(eval) + (1 - phase) * mevalue_eg(eval);
+}
+
+int16_t evaluate_classical(const struct position *pos);
+
+void evaluate_print(const struct position *pos);
 
 void evaluate_init(void);
 

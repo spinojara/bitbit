@@ -103,4 +103,3 @@ save.save_model(model)
 
 batch.lib.batch_close(validation_data)
 batch.lib.batch_close(training_data)
-batch.lib.batch_term()
