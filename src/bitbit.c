@@ -23,6 +23,7 @@
 #include "search.h"
 #include "evaluate.h"
 #include "transposition_table.h"
+#include "move_order.h"
 #include "interface.h"
 #include "interrupt.h"
 #include "pawn.h"
@@ -42,6 +43,7 @@ int main(int argc, char **argv) {
 	bitboard_init();
 	evaluate_init();
 	search_init();
+	move_order_init();
 	/* transposition table size == 0 */
 	if ((ret = transposition_table_init()))
 		goto term;

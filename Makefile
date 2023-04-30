@@ -33,12 +33,13 @@ SRC_BITBIT = bitboard.c magic_bitboard.c attack_gen.c \
              move.c util.c position.c move_gen.c perft.c \
              search.c evaluate.c interface.c \
              transposition_table.c init.c time_man.c \
-             interrupt.c pawn.c history.c nnue.c bitbit.c
+             interrupt.c pawn.c history.c nnue.c move_order.c \
+             bitbit.c
 
 SRC_GENFEN = bitboard.c magic_bitboard.c attack_gen.c \
              move.c util.c position.c move_gen.c perft.c \
              evaluate.c init.c time_man.c interrupt.c \
-             pawn.c genfen.c
+             pawn.c move_order.c genfen.c
 
 SRC_BATCH  = bitboard.c magic_bitboard.c attack_gen.c \
              move.c util.c position.c move_gen.c init.c \
@@ -86,6 +87,10 @@ obj/incbin.o: src/incbin.S Makefile
 obj/search.o: src/search.c dep/search.d Makefile
 	@mkdir -p obj
 	$(CC) $(CFLAGS) -DNNUE -DTRANSPOSITION -Iinclude -c $< -o $@
+
+obj/move_order.o: src/move_order.c dep/move_order.d Makefile
+	@mkdir -p obj
+	$(CC) $(CFLAGS) -DTRANSPOSITION -Iinclude -c $< -o $@
 
 obj/genfensearch.o: src/search.c dep/search.d Makefile
 	@mkdir -p obj

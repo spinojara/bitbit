@@ -21,8 +21,6 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "move.h"
-
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define MAX(a, b) (((a) < (b)) ? (b) : (a))
 
@@ -53,8 +51,6 @@ int find_char(const char *s, char c);
 int strint(const char *s);
 
 char *appendstr(char *dest, const char *src);
-
-void merge_sort(move *arr, uint64_t *val, unsigned int first, unsigned int last, int increasing);
 
 int variance(int16_t *arr, int len);
 

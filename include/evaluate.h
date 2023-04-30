@@ -37,6 +37,14 @@ struct evaluationinfo {
 	int king_attack_units[2];
 };
 
+enum {
+	pawn_mg   =   75, pawn_eg   =  125,
+	knight_mg =  400, knight_eg =  425,
+	bishop_mg =  425, bishop_eg =  450,
+	rook_mg   =  650, rook_eg   =  700,
+	queen_mg  = 1300, queen_eg  = 1350,
+};
+
 #define S(a, b) ((mevalue)((a) + ((uint32_t)(b) << 16)))
 
 static inline int16_t mevalue_mg(mevalue eval) { return (int16_t)((uint32_t)eval & 0xFFFF); }

@@ -27,7 +27,7 @@
 
 mevalue psqtable[2][7][64];
 
-mevalue piece_value[6] = { S(75, 125), S(400, 425), S(425, 450), S(650, 700), S(1300, 1350), S(0, 0) };
+mevalue piece_value[6] = { S(pawn_mg, pawn_eg), S(knight_mg, knight_eg), S(bishop_mg, bishop_eg), S(rook_mg, rook_eg), S(queen_mg, queen_eg), S(0, 0) };
 
 enum { mg, eg };
 

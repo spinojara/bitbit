@@ -40,28 +40,11 @@
 #include "interrupt.h"
 #include "evaluate.h"
 #include "history.h"
+#include "move_order.h"
 
 uint64_t nodes = 0;
 
-uint64_t mvv_lva_lookup[13 * 13];
-
 static int reductions[256];
-
-uint64_t mvv_lva_calc(int attacker, int victim) {
-	int a = (attacker + 5) % 6;
-	int v = (victim + 5) % 6;
-	int lookup_t[6 * 6] = {
-		 2,  9, 10, 16, 21,  0,
-		 0,  3,  7, 14, 19,  0,
-		 0,  1,  4, 13, 18,  0,
-		 0,  0,  0,  5, 17,  0,
-		 0,  0,  0,  0,  6,  0,
-		 8, 11, 12, 15, 20,  0,
-	};
-	if (!lookup_t[v + 6 * a])
-		return 0xFFFF;
-	return lookup_t[v + 6 * a] + 0xFFFFFFFFFFFFFF00;
-}
 
 /* We choose r(x,y)=Clog(x)log(y)+D because it is increasing and concave.
  * It is also relatively simple. If x is constant, y > y' we have and by
@@ -79,131 +62,6 @@ int late_move_reduction(int index, int depth) {
 	return (r >> 10) + 1;
 }
 
-int see_geq(struct position *pos, const move *m, int16_t value) {
-	int piece_value[] = { 0, 100, 320, 330, 500, 900, 100000 };
-	int from = move_from(m);
-	int to = move_to(m);
-	uint64_t fromb = bitboard(from);
-	uint64_t tob = bitboard(to);
-
-	int attacker = pos->mailbox[from] % 6;
-	int victim = pos->mailbox[to] % 6;
-
-	int16_t swap = piece_value[victim] - value;
-	if (swap < 0)
-		return 0;
-
-	swap = piece_value[attacker] - swap;
-	if (swap <= 0)
-		return 1;
-
-	pos->piece[1 - pos->turn][victim] ^= tob;
-	pos->piece[1 - pos->turn][all] ^= tob;
-	pos->piece[pos->turn][attacker] ^= tob | fromb;
-	pos->piece[pos->turn][all] ^= tob | fromb;
-
-	int turn = pos->turn;
-
-	uint64_t b;
-	
-	uint64_t attackers = 0, turnattackers, occupied = pos->piece[white][all] | pos->piece[black][all];
-	/* Speed is more important than accuracy so we only
-	 * generate moves which are probably legal.
-	 */
-	attackers |= (shift_south_west(tob) | shift_south_east(tob)) & pos->piece[white][pawn];
-	attackers |= (shift_north_west(tob) | shift_north_east(tob)) & pos->piece[black][pawn];
-
-	attackers |= knight_attacks(to, 0) & (pos->piece[white][knight] | pos->piece[black][knight]);
-
-	attackers |= bishop_attacks(to, 0, occupied) &
-		(pos->piece[white][bishop] | pos->piece[black][bishop]);
-
-	attackers |= rook_attacks(to, 0, occupied) &
-		(pos->piece[white][rook] | pos->piece[black][rook]);
-
-	attackers |= queen_attacks(to, 0, occupied) &
-		(pos->piece[white][queen] | pos->piece[black][queen]);
-
-
-	uint64_t pinned[2] = { generate_pinned(pos, black) & attackers, generate_pinned(pos, white) & attackers };
-	uint64_t pinners[2] = { generate_pinners(pos, pinned[black], black), generate_pinners(pos, pinned[white], white) };
-
-	int ret = 1;
-
-	while (1) {
-		turn = 1 - turn;
-		
-		attackers &= occupied;
-
-		turnattackers = attackers & pos->piece[turn][all];
-
-		if (pinners[1 - turn] & occupied)
-			turnattackers &= ~pinned[turn];
-
-		if (!turnattackers)
-			break;
-
-		ret = 1 - ret;
-
-		if ((b = turnattackers) & pos->piece[turn][pawn]) {
-			/* x < ret because x < 1 is same as <= 0 */
-			if ((swap = piece_value[pawn] - swap) < ret)
-				break;
-
-			occupied ^= ls1b(b);
-			/* add x-ray pieces */
-			attackers |= bishop_attacks(to, 0, occupied) & (pos->piece[white][bishop] | pos->piece[white][queen] |
-									pos->piece[black][bishop] | pos->piece[black][queen]);
-		}
-		else if ((b = turnattackers) & pos->piece[turn][knight]) {
-			if ((swap = piece_value[knight] - swap) < ret)
-				break;
-
-			occupied ^= ls1b(b);
-		}
-		else if ((b = turnattackers) & pos->piece[turn][bishop]) {
-			if ((swap = piece_value[bishop] - swap) < ret)
-				break;
-
-			occupied ^= ls1b(b);
-			attackers |= bishop_attacks(to, 0, occupied) & (pos->piece[white][bishop] | pos->piece[white][queen] |
-									pos->piece[black][bishop] | pos->piece[black][queen]);
-		}
-		else if ((b = turnattackers) & pos->piece[turn][rook]) {
-			if ((swap = piece_value[rook] - swap) < ret)
-				break;
-
-			occupied ^= ls1b(b);
-			attackers |= rook_attacks(to, 0, occupied) & (pos->piece[white][rook] | pos->piece[white][queen] |
-									pos->piece[black][rook] | pos->piece[black][queen]);
-		}
-		else if ((b = turnattackers) & pos->piece[turn][queen]) {
-			if ((swap = piece_value[queen] - swap) < ret)
-				break;
-
-			occupied ^= ls1b(b);
-			attackers |= bishop_attacks(to, 0, occupied) & (pos->piece[white][bishop] | pos->piece[white][queen] |
-									pos->piece[black][bishop] | pos->piece[black][queen]);
-			attackers |= rook_attacks(to, 0, occupied) & (pos->piece[white][rook] | pos->piece[white][queen] |
-									pos->piece[black][rook] | pos->piece[black][queen]);
-		}
-		/* king */
-		else {
-			pos->piece[1 - pos->turn][victim] ^= tob;
-			pos->piece[1 - pos->turn][all] ^= tob;
-			pos->piece[pos->turn][attacker] ^= tob | fromb;
-			pos->piece[pos->turn][all] ^= tob | fromb;
-			/* we lose if other side still has attackers */
-			return (attackers & pos->piece[1 - turn][all]) ? 1 - ret : ret;
-		}
-	}
-	pos->piece[1 - pos->turn][victim] ^= tob;
-	pos->piece[1 - pos->turn][all] ^= tob;
-	pos->piece[pos->turn][attacker] ^= tob | fromb;
-	pos->piece[pos->turn][all] ^= tob | fromb;
-	return ret;
-}
-
 void print_pv(struct position *pos, move *pv_move, int ply) {
 	char str[8];
 	if (ply > 255 || !is_legal(pos, pv_move))
@@ -213,10 +71,6 @@ void print_pv(struct position *pos, move *pv_move, int ply) {
 	print_pv(pos, pv_move + 1, ply + 1);
 	undo_move(pos, pv_move);
 	*pv_move = *pv_move & 0xFFFF;
-}
-
-static inline uint64_t mvv_lva(int attacker, int victim) {
-	return mvv_lva_lookup[victim + 13 * attacker];
 }
 
 static inline void store_killer_move(move *m, uint8_t ply, move killer_moves[][2]) {
@@ -246,63 +100,6 @@ int contains_pv_move(move *move_list, uint8_t ply, move pv_moves[256][256]) {
 		if ((*ptr & 0xFFFF) == pv_moves[0][ply])
 			return 1;
 	return 0;
-}
-
-uint64_t evaluate_move(struct position *pos, move *m, uint8_t depth, uint8_t ply, void *e, int pv_flag, move pv_moves[256][256], move killer_moves[][2], uint64_t history_moves[13][64]) {
-	UNUSED(depth);
-	/* pv */
-	if (pv_flag && pv_moves && pv_moves[0][ply] == (*m & 0xFFFF))
-		return 0xFFFFFFFFFFFFFFFF;
-
-	/* transposition table */
-#if defined(TRANSPOSITION)
-	if (e && *m == transposition_move(e))
-		return 0xFFFFFFFFFFFFFFFE;
-#else
-	UNUSED(e);
-#endif
-
-	/* queen promotion */
-	if (move_flag(m) == 2 && move_promote(m) == 3)
-		return 0xFFFFFFFFFFFFFFFD;
-
-	/* attack */
-	if (is_capture(pos, m))
-		return mvv_lva(pos->mailbox[move_from(m)], pos->mailbox[move_to(m)]);
-
-	/* other promotions */
-	if (move_flag(m) == 2)
-		return 0xFFFFFFFFFFFFF000 + move_promote(m);
-
-	/* killer */
-	if (killer_moves) {
-		if (killer_moves[ply][0] == *m)
-			return 0xFFFFFFFFFFFF0002;
-		if (killer_moves[ply][1] == *m)
-			return 0xFFFFFFFFFFFF0001;
-	}
-
-	/* history */
-	if (history_moves)
-		return history_moves[pos->mailbox[move_from(m)]][move_to(m)];
-	return 0;
-}
-
-/* 1. pv
- * 2. tt
- * 3. mvv lva winning
- * 4. promotions
- * 5. killer
- * 6. mvv lva losing
- * 7. history
- */
-void evaluate_moves(struct position *pos, move *move_list, uint8_t depth, uint8_t ply, void *e, int pv_flag, move pv_moves[256][256], move killer_moves[][2], uint64_t history_moves[13][64]) {
-	uint64_t evaluation_list[MOVES_MAX];
-	int i;
-	for (i = 0; move_list[i]; i++)
-		evaluation_list[i] = evaluate_move(pos, move_list + i, depth, ply, e, pv_flag, pv_moves, killer_moves, history_moves);
-
-	merge_sort(move_list, evaluation_list, 0, i - 1, 0);
 }
 
 static inline int16_t evaluate(struct position *pos) {
@@ -345,9 +142,10 @@ int16_t quiescence(struct position *pos, int16_t alpha, int16_t beta, clock_t cl
 	if (!move_list[0])
 		return evaluation;
 
-	evaluate_moves(pos, move_list, 0, 0, NULL, 0, NULL, NULL, history_moves);
-	for (move *ptr = move_list; *ptr; ptr++) {
-		if (is_capture(pos, ptr) && !see_geq(pos, ptr, 0) && !checkers)
+	uint64_t evaluation_list[MOVES_MAX];
+	move *ptr = order_moves(pos, move_list, evaluation_list, 0, 0, NULL, 0, NULL, NULL, history_moves);
+	for (; *ptr; next_move(move_list, evaluation_list, &ptr)) {
+		if (is_capture(pos, ptr) && !see_geq(pos, ptr, -50) && !checkers)
 			continue;
 		do_move(pos, ptr);
 #if defined(NNUE)
@@ -435,10 +233,10 @@ int16_t negamax(struct position *pos, uint8_t depth, uint8_t ply, int16_t alpha,
 	if (*pv_flag && !contains_pv_move(move_list, ply, pv_moves))
 		*pv_flag = 0;
 
-	evaluate_moves(pos, move_list, depth, ply, e, *pv_flag, pv_moves, killer_moves, history_moves);
-
 	if (pos->halfmove >= 100)
 		return 0;
+
+	uint64_t evaluation_list[MOVES_MAX];
 	
 #if defined(TRANSPOSITION)
 	if (e)
@@ -449,7 +247,20 @@ int16_t negamax(struct position *pos, uint8_t depth, uint8_t ply, int16_t alpha,
 #if !defined(TRANSPOSITION)
 	UNUSED(m);
 #endif
-	for (move *ptr = move_list; *ptr; ptr++) {
+	int flag = 0;
+	if (ply > 15 && 0) {
+		flag = 1;
+		char fen[128];
+		print_position(pos, 0);
+		printf("%s\n", pos_to_fen(fen, pos));
+	}
+	move *ptr = order_moves(pos, move_list, evaluation_list, depth, ply, e, *pv_flag, pv_moves, killer_moves, history_moves);
+	for (; *ptr; next_move(move_list, evaluation_list, &ptr)) {
+		if (flag) {
+			char str[8];
+			printf("%s, %lu\n", move_str_pgn(str, pos, ptr), evaluation_list[ptr - move_list]);
+			continue;
+		}
 #if defined(TRANSPOSITION)
 		do_zobrist_key(pos, ptr);
 #endif
@@ -480,7 +291,7 @@ int16_t negamax(struct position *pos, uint8_t depth, uint8_t ply, int16_t alpha,
 #endif
 		if (evaluation >= beta) {
 			/* quiet */
-			if (!is_capture(pos, ptr))
+			if (!is_capture(pos, ptr) && move_flag(ptr) != 2)
 				store_killer_move(ptr, ply, killer_moves);
 #if defined(TRANSPOSITION)
 			if (e)
@@ -492,7 +303,7 @@ int16_t negamax(struct position *pos, uint8_t depth, uint8_t ply, int16_t alpha,
 		}
 		if (evaluation > alpha) {
 			/* quiet */
-			if (!is_capture(pos, ptr))
+			if (!is_capture(pos, ptr) && move_flag(ptr) != 2)
 				store_history_move(pos, ptr, depth, history_moves);
 			alpha = evaluation;
 			store_pv_move(ptr, ply, pv_moves);
@@ -501,6 +312,8 @@ int16_t negamax(struct position *pos, uint8_t depth, uint8_t ply, int16_t alpha,
 #endif
 		}
 	}
+	if (flag)
+		exit(1);
 #if defined(TRANSPOSITION)
 	if (e)
 		transposition_set_closed(e);
@@ -518,7 +331,9 @@ int16_t search(struct position *pos, uint8_t depth, int verbose, int etime, int 
 
 	char str[8];
 	int16_t evaluation = 0, saved_evaluation[256] = { 0 };
+
 	move move_list[MOVES_MAX];
+	uint64_t evaluation_list[MOVES_MAX];
 	generate_all(pos, move_list);
 
 	if (!move_list[0]) {
@@ -574,10 +389,9 @@ int16_t search(struct position *pos, uint8_t depth, int verbose, int etime, int 
 			beta = last + delta;
 		}
 
-		evaluate_moves(pos, move_list, d, 0, NULL, pv_flag, pv_moves, killer_moves, history_moves);
+		move *ptr = order_moves(pos, move_list, evaluation_list, d, 0, NULL, pv_flag, pv_moves, killer_moves, history_moves);
 
-		move *ptr;
-		for (ptr = move_list; *ptr; ptr++) {
+		for (; *ptr; next_move(move_list, evaluation_list, &ptr)) {
 #if defined(TRANSPOSITION)
 			do_zobrist_key(pos, ptr);
 #endif
@@ -655,12 +469,6 @@ int16_t search(struct position *pos, uint8_t depth, int verbose, int etime, int 
 }
 
 void search_init(void) {
-	for (int i = 0; i < 13; i++) {
-		for (int j = 0; j < 13; j++) {
-			mvv_lva_lookup[j + 13 * i] = mvv_lva_calc(i, j);
-			init_status("populating mvv lva lookup table");
-		}
-	}
 	for (int i = 1; i < 256; i++) {
 		/* sqrt(C) * log(i) */
 		reductions[i] = (int)(21.35 * log(i));

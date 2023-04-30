@@ -1,2 +1,3 @@
 add checks for malloc
-make see_geq use psqtable
+refactor code to use searchinfo
+filenames without _
