@@ -33,42 +33,19 @@ struct moveorderinfo {
 	uint64_t check_squares[7];
 };
 
-uint64_t mvv_lva_lookup[13 * 13];
+int mvv_lva_lookup[13 * 13];
 
-int piece_value_eg[] = { 0, pawn_eg, knight_eg, bishop_eg, rook_eg, queen_eg, 0 };
+static inline uint64_t mvv_lva(int attacker, int victim) {
+	return mvv_lva_lookup[attacker + 13 * victim];
+}
+
+unsigned move_order_piece_value[] = { 0, 100, 300, 300, 500, 900, 0 };
 
 void mvv_lva_init() {
-	/* (attacker, victim) */
-	int lookup_t[6 * 6];
-	for (int i = 0; i < 6 * 6; i++)
-		lookup_t[i] = i;
-
-	/* we do the sort twice to get all the indices in the right places */
-	for (int k = 0; k < 2; k++) {
-		for (int i = 0; i < 6 * 6; i++) {
-			int ia = i % 6 + 1;
-			int iv = i / 6 + 1;
-			int ivalue = piece_value_eg[iv] - piece_value_eg[ia];
-			for (int j = 0; j < 6 * 6; j++) {
-				int ja = j % 6 + 1;
-				int jv = j / 6 + 1;
-				int jvalue = piece_value_eg[jv] - piece_value_eg[ja];
-				if ((ivalue < jvalue) != (lookup_t[i] < lookup_t[j])) {
-					int t = lookup_t[i];
-					lookup_t[i] = lookup_t[j];
-					lookup_t[j] = t;
-				}
-			}
-		}
-	}
-
-	for (int attacker = 0; attacker < 13; attacker++) {
-		for (int victim = 0; victim < 13; victim++) {
-			int a = (attacker + 5) % 6;
-			int v = (victim + 5) % 6;
-			mvv_lva_lookup[attacker + 13 * victim] = lookup_t[a + 6 * v];
-		}
-	}
+	for (int attacker = 0; attacker < 13; attacker++)
+		for (int victim = 0; victim < 13; victim++)
+			mvv_lva_lookup[attacker + 13 * victim] = move_order_piece_value[victim % 6] -
+			                                         move_order_piece_value[attacker % 6];
 }
 
 int see_geq(struct position *pos, const move *m, int16_t value) {
@@ -80,11 +57,11 @@ int see_geq(struct position *pos, const move *m, int16_t value) {
 	int attacker = pos->mailbox[from] % 6;
 	int victim = pos->mailbox[to] % 6;
 
-	int16_t swap = piece_value_eg[victim] - value;
+	int16_t swap = move_order_piece_value[victim] - value;
 	if (swap < 0)
 		return 0;
 
-	swap = piece_value_eg[attacker] - swap;
+	swap = move_order_piece_value[attacker] - swap;
 	if (swap <= 0)
 		return 1;
 
@@ -115,7 +92,6 @@ int see_geq(struct position *pos, const move *m, int16_t value) {
 	attackers |= queen_attacks(to, 0, occupied) &
 		(pos->piece[white][queen] | pos->piece[black][queen]);
 
-
 	uint64_t pinned[2] = { generate_pinned(pos, black) & attackers, generate_pinned(pos, white) & attackers };
 	uint64_t pinners[2] = { generate_pinners(pos, pinned[black], black), generate_pinners(pos, pinned[white], white) };
 
@@ -138,7 +114,7 @@ int see_geq(struct position *pos, const move *m, int16_t value) {
 
 		if ((b = turnattackers) & pos->piece[turn][pawn]) {
 			/* x < ret because x < 1 is same as <= 0 */
-			if ((swap = piece_value_eg[pawn] - swap) < ret)
+			if ((swap = move_order_piece_value[pawn] - swap) < ret)
 				break;
 
 			occupied ^= ls1b(b);
@@ -147,13 +123,13 @@ int see_geq(struct position *pos, const move *m, int16_t value) {
 									pos->piece[black][bishop] | pos->piece[black][queen]);
 		}
 		else if ((b = turnattackers) & pos->piece[turn][knight]) {
-			if ((swap = piece_value_eg[knight] - swap) < ret)
+			if ((swap = move_order_piece_value[knight] - swap) < ret)
 				break;
 
 			occupied ^= ls1b(b);
 		}
 		else if ((b = turnattackers) & pos->piece[turn][bishop]) {
-			if ((swap = piece_value_eg[bishop] - swap) < ret)
+			if ((swap = move_order_piece_value[bishop] - swap) < ret)
 				break;
 
 			occupied ^= ls1b(b);
@@ -161,7 +137,7 @@ int see_geq(struct position *pos, const move *m, int16_t value) {
 									pos->piece[black][bishop] | pos->piece[black][queen]);
 		}
 		else if ((b = turnattackers) & pos->piece[turn][rook]) {
-			if ((swap = piece_value_eg[rook] - swap) < ret)
+			if ((swap = move_order_piece_value[rook] - swap) < ret)
 				break;
 
 			occupied ^= ls1b(b);
@@ -169,7 +145,7 @@ int see_geq(struct position *pos, const move *m, int16_t value) {
 									pos->piece[black][rook] | pos->piece[black][queen]);
 		}
 		else if ((b = turnattackers) & pos->piece[turn][queen]) {
-			if ((swap = piece_value_eg[queen] - swap) < ret)
+			if ((swap = move_order_piece_value[queen] - swap) < ret)
 				break;
 
 			occupied ^= ls1b(b);
@@ -199,48 +175,91 @@ uint64_t evaluate_move(struct position *pos, move *m, uint8_t depth, uint8_t ply
 	UNUSED(depth);
 	/* pv */
 	if (pv_flag && pv_moves && pv_moves[0][ply] == (*m & 0xFFFF))
-		return 0xFFFFFFFFFFFFFFFF;
+		return 0xF000000000000001;
 
 	/* transposition table */
 #if defined(TRANSPOSITION)
 	if (e && *m == transposition_move(e))
-		return 0xFFFFFFFFFFFFFFFE;
+		return 0xF000000000000000;
 #else
 	UNUSED(e);
 #endif
-	int piece = pos->mailbox[move_from(m)];
-	int capture = pos->mailbox[move_to(m)];
-	uint64_t squareb = bitboard(move_to(m));
-
-	/* low evaluation for moves to squares defended by pawns */
-	if ((squareb & mi->pawn_attacks) && piece % 6 != pawn && capture % 6 <= pawn) {
-		/* should ideally check for discovered checks */
-		return 0;
-	}
+	const int piece = pos->mailbox[move_from(m)];
+	const int capture = pos->mailbox[move_to(m)];
+	const uint64_t to = bitboard(move_to(m));
+	const uint64_t from = bitboard(move_from(m));
+	int enemy_king_square = ctz(pos->piece[1 - pos->turn][king]);
 
 	/* queen promotion */
 	if (move_flag(m) == 2 && move_promote(m) == 3)
-		return 0xFFFFFFFFFFFFFFFD;
+		return 0x1000000000000000;
 
-	/* attack */
-	if (is_capture(pos, m)) {
-		int mvv_lva_ret = mvv_lva(piece, capture);
-		return mvv_lva_ret < 14 ? 0xFFFF : 0xFFFFFFFFFFFFFF00 + mvv_lva_ret;
+	int discovered_check = 0;
+	uint64_t check_squares;
+	uint64_t all_pieces = (pos->piece[white][all] | pos->piece[black][all]) ^ from;
+	if (!(to & king_attacks(enemy_king_square, 0))) {
+		if (piece % 6 == knight) {
+			check_squares = bishop_attacks(enemy_king_square, 0, all_pieces);
+			if (check_squares & (pos->piece[pos->turn][bishop] | pos->piece[pos->turn][queen]))
+				discovered_check = 1;
+
+			check_squares = rook_attacks(enemy_king_square, 0, all_pieces);
+			if (check_squares & (pos->piece[pos->turn][rook] | pos->piece[pos->turn][queen]))
+				discovered_check = 1;
+		}
+		else if (piece % 6 == bishop) {
+			check_squares = rook_attacks(enemy_king_square, 0, all_pieces);
+			if (check_squares & (pos->piece[pos->turn][rook] | pos->piece[pos->turn][queen]))
+				discovered_check = 1;
+		}
+		else if (piece % 6 == rook) {
+			check_squares = bishop_attacks(enemy_king_square, 0, all_pieces);
+			if (check_squares & (pos->piece[pos->turn][bishop] | pos->piece[pos->turn][queen]))
+				discovered_check = 1;
+		}
 	}
-	
-	/* other promotions */
-	if (move_flag(m) == 2)
-		return 0xFFFFFFFFFFFFF000 + move_promote(m);
+
+	/* captures */
+	if (capture) {
+		uint64_t eval = 0;
+
+		if (discovered_check || see_geq(pos, m, 100))
+			eval += 0x100000000000000;
+		else if (see_geq(pos, m, 0))
+			eval += 0x10000000000000;
+		else if (see_geq(pos, m, -100))
+			eval += 0x1000000000000;
+		else
+			eval += 0x100000000000;
+
+		eval += discovered_check ? move_order_piece_value[capture % 6] : mvv_lva(piece, capture);
+		return eval;
+	}
+
+	/* low evaluation for moves to squares defended by pawns,
+	 * unless there is a discovered check
+	 */
+	if ((to & mi->pawn_attacks) && piece % 6 != pawn && !discovered_check)
+		return 0;
 
 	/* killer */
 	if (killer_moves) {
 		if (killer_moves[ply][0] == *m)
-			return 0xFFFFFFFFFFFF0002;
+			return 0x8000000000001;
 		if (killer_moves[ply][1] == *m)
-			return 0xFFFFFFFFFFFF0001;
+			return 0x8000000000000;
 	}
 
-	uint64_t eval = 0x1;
+	uint64_t eval = 0x2;
+	/* higher evaluation for moves from squares defended by pawns */
+	if ((from & mi->pawn_attacks) && piece % 6 != pawn)
+		eval += 0x100;
+
+	if (discovered_check)
+		eval += 0x10000;
+	/* checks */
+	if (pos->mailbox[move_from(m)] % 6 && mi->check_squares[piece % 6] & to)
+		eval += 0x1000;
 
 	/* history */
 	if (history_moves)
@@ -287,7 +306,7 @@ move *order_moves(struct position *pos, move *move_list, uint64_t *evaluation_li
 		evaluation_list[i] = evaluate_move(pos, move_list + i, depth, ply, e, pv_flag, pv_moves, killer_moves, history_moves, &mi);
 	move *ptr = move_list - 1;
 	next_move(move_list, evaluation_list, &ptr);
-	return move_list;
+	return ptr;
 }
 
 void move_order_init(void) {

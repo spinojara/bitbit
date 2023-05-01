@@ -29,12 +29,6 @@ move *order_moves(struct position *pos, move *move_list, uint64_t *evaluation_li
 
 int see_geq(struct position *pos, const move *m, int16_t value);
 
-extern uint64_t mvv_lva_lookup[13 * 13];
-
-static inline uint64_t mvv_lva(int attacker, int victim) {
-	return mvv_lva_lookup[attacker + 13 * victim];
-}
-
 void move_order_init(void);
 
 #endif

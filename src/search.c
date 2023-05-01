@@ -145,7 +145,7 @@ int16_t quiescence(struct position *pos, int16_t alpha, int16_t beta, clock_t cl
 	uint64_t evaluation_list[MOVES_MAX];
 	move *ptr = order_moves(pos, move_list, evaluation_list, 0, 0, NULL, 0, NULL, NULL, history_moves);
 	for (; *ptr; next_move(move_list, evaluation_list, &ptr)) {
-		if (is_capture(pos, ptr) && !see_geq(pos, ptr, -50) && !checkers)
+		if (is_capture(pos, ptr) && !see_geq(pos, ptr, -100) && !checkers)
 			continue;
 		do_move(pos, ptr);
 #if defined(NNUE)
