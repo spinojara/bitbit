@@ -34,12 +34,12 @@ SRC_BITBIT = bitboard.c magic_bitboard.c attack_gen.c \
              search.c evaluate.c interface.c \
              transposition_table.c init.c time_man.c \
              interrupt.c pawn.c history.c nnue.c move_order.c \
-             bitbit.c
+             material.c bitbit.c
 
 SRC_GENFEN = bitboard.c magic_bitboard.c attack_gen.c \
              move.c util.c position.c move_gen.c perft.c \
              evaluate.c init.c time_man.c interrupt.c \
-             pawn.c move_order.c genfen.c
+             pawn.c move_order.c material.c genfen.c
 
 SRC_BATCH  = bitboard.c magic_bitboard.c attack_gen.c \
              move.c util.c position.c move_gen.c init.c \

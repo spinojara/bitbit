@@ -18,9 +18,21 @@
 #ifndef SEARCH_H
 #define SEARCH_H
 
+#include <time.h>
+
 #include "position.h"
 #include "move.h"
 #include "interface.h"
+
+struct searchinfo {
+	uint64_t nodes;
+	clock_t clock_stop;
+	int pv_flag;
+	move pv_moves[256][256];
+	move killer_moves[256][2];
+	uint64_t history_moves[13][64];
+	struct history *history;
+};
 
 int16_t search(struct position *pos, uint8_t depth, int verbose, int etime, int movetime, move *m, struct history *history, int iterative);
 

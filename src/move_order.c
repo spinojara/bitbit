@@ -171,10 +171,10 @@ int see_geq(struct position *pos, const move *m, int16_t value) {
 	return ret;
 }
 
-uint64_t evaluate_move(struct position *pos, move *m, uint8_t depth, uint8_t ply, void *e, int pv_flag, move pv_moves[256][256], move killer_moves[][2], uint64_t history_moves[13][64], struct moveorderinfo *mi) {
+uint64_t evaluate_move(struct position *pos, move *m, uint8_t depth, uint8_t ply, void *e, struct searchinfo *si, struct moveorderinfo *mi) {
 	UNUSED(depth);
 	/* pv */
-	if (pv_flag && pv_moves && pv_moves[0][ply] == (*m & 0xFFFF))
+	if (si->pv_flag && si->pv_moves[0][ply] == (*m & 0xFFFF))
 		return 0xF000000000000001;
 
 	/* transposition table */
@@ -228,7 +228,7 @@ uint64_t evaluate_move(struct position *pos, move *m, uint8_t depth, uint8_t ply
 		else if (see_geq(pos, m, 0))
 			eval += 0x10000000000000;
 		else if (see_geq(pos, m, -100))
-			eval += 0x1000000000000;
+			eval += SEE_VALUE_MINUS_100;
 		else
 			eval += 0x100000000000;
 
@@ -243,12 +243,10 @@ uint64_t evaluate_move(struct position *pos, move *m, uint8_t depth, uint8_t ply
 		return 0;
 
 	/* killer */
-	if (killer_moves) {
-		if (killer_moves[ply][0] == *m)
-			return 0x8000000000001;
-		if (killer_moves[ply][1] == *m)
-			return 0x8000000000000;
-	}
+	if (si->killer_moves[ply][0] == *m)
+		return 0x8000000000001;
+	if (si->killer_moves[ply][1] == *m)
+		return 0x8000000000000;
 
 	uint64_t eval = 0x2;
 	/* higher evaluation for moves from squares defended by pawns */
@@ -262,8 +260,7 @@ uint64_t evaluate_move(struct position *pos, move *m, uint8_t depth, uint8_t ply
 		eval += 0x1000;
 
 	/* history */
-	if (history_moves)
-		eval += history_moves[piece][move_to(m)];
+	eval += si->history_moves[piece][move_to(m)];
 	return eval;
 }
 
@@ -299,11 +296,11 @@ void next_move(move *move_list, uint64_t *evaluation_list, move **ptr) {
 	}
 }
 
-move *order_moves(struct position *pos, move *move_list, uint64_t *evaluation_list, uint8_t depth, uint8_t ply, void *e, int pv_flag, move pv_moves[256][256], move killer_moves[][2], uint64_t history_moves[13][64]) {
+move *order_moves(struct position *pos, move *move_list, uint64_t *evaluation_list, uint8_t depth, uint8_t ply, void *e, struct searchinfo *si) {
 	struct moveorderinfo mi;
 	moveorderinfo_init(pos, &mi);
 	for (int i = 0; move_list[i]; i++)
-		evaluation_list[i] = evaluate_move(pos, move_list + i, depth, ply, e, pv_flag, pv_moves, killer_moves, history_moves, &mi);
+		evaluation_list[i] = evaluate_move(pos, move_list + i, depth, ply, e, si, &mi);
 	move *ptr = move_list - 1;
 	next_move(move_list, evaluation_list, &ptr);
 	return ptr;

@@ -34,57 +34,12 @@ void transposition_table_size_print(uint64_t t) {
 	printf("%" PRIu64 "%c", ((uint64_t)1 << t) / ((uint64_t)1 << 10 * s), "BKMG"[s]);
 }
 
-struct transposition *get(struct position *pos) {
-	return transposition_table->table + (pos->zobrist_key & transposition_table->index);
-}
-
-struct transposition *attempt_get(struct position *pos) {
-	struct transposition *e = get(pos);
-	if (transposition_zobrist_key(e) == pos->zobrist_key)
-		return e;
-	return NULL;
-}
-
-void store(struct transposition *e, struct position *pos, int16_t evaluation, uint8_t depth, uint8_t type, uint16_t m) {
-	transposition_set_zobrist_key(e, pos->zobrist_key);
-	transposition_set_evaluation(e, evaluation);
-	transposition_set_depth(e, depth);
-	transposition_set_type(e, type);
-	transposition_set_move(e, m);
-}
-
-void attempt_store(struct position *pos, int16_t evaluation, uint8_t depth, uint8_t type, uint16_t m) {
-	struct transposition *e = get(pos);
-	if (transposition_type(e) == 0 ||
-			transposition_zobrist_key(e) != pos->zobrist_key ||
-			depth >= transposition_depth(e))
-		store(e, pos, evaluation, depth, type, m);
-}
-
 uint64_t transposition_table_size(void) {
 	return transposition_table->size;
 }
 
 void transposition_table_clear(void) {
 	memset(transposition_table->table, 0, transposition_table->size * sizeof(struct transposition));
-}
-
-uint64_t zobrist_piece_key(int piece, int square) {
-	return transposition_table->zobrist_key[piece + 12 * square];
-}
-
-uint64_t zobrist_turn_key(void) {
-	return transposition_table->zobrist_key[12 * 64];
-}
-
-uint64_t zobrist_castle_key(int castle) {
-	return transposition_table->zobrist_key[12 * 64 + 1 + castle];
-}
-
-uint64_t zobrist_en_passant_key(int square) {
-	if (square == 0)
-		return 0;
-	return transposition_table->zobrist_key[12 * 64 + 1 + 16 + square % 8];
 }
 
 int allocate_transposition_table(uint64_t t) {
