@@ -23,8 +23,8 @@
 
 #include "bitboard.h"
 #include "util.h"
-#include "attack_gen.h"
-#include "move_gen.h"
+#include "attackgen.h"
+#include "movegen.h"
 #include "history.h"
 #include "interface.h"
 

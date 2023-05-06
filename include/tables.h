@@ -15,39 +15,19 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "perft.h"
+#ifndef TABLES_H
+#define TABLES_H
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <inttypes.h>
+extern mevalue psqtable[2][7][64];
 
-#include "move.h"
-#include "movegen.h"
-#include "interface.h"
-#include "interrupt.h"
+extern const int16_t pawn_shelter[4][7];
 
-uint64_t perft(struct position *pos, int depth, int verbose) {
-	if (depth <= 0 || interrupt)
-		return 0;
-	move move_list[MOVES_MAX];
-	generate_all(pos, move_list);
-	uint64_t nodes = 0, count;
+extern const int16_t unblocked_storm[4][7];
 
-	for (move *ptr = move_list; *ptr; ptr++){
-		if (depth == 1) {
-			count = 1;
-			nodes++;
-		}
-		else {
-			do_move(pos, ptr);
-			count = perft(pos, depth - 1, 0);
-			undo_move(pos, ptr);
-			nodes += count;
-		}
-		if (verbose && !interrupt) {
-			print_move(ptr);
-			printf(": %" PRIu64 "\n", count);
-		}
-	}
-	return nodes;
-}
+extern const int16_t blocked_storm[7];
+
+extern const mevalue mobility_bonus[4][28];
+
+void tables_init(void);
+
+#endif

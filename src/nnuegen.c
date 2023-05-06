@@ -29,13 +29,14 @@
 
 #include "position.h"
 #include "move.h"
-#include "move_gen.h"
+#include "movegen.h"
 #include "util.h"
-#include "magic_bitboard.h"
+#include "magicbitboard.h"
 #include "bitboard.h"
-#include "attack_gen.h"
+#include "attackgen.h"
 #include "search.h"
 #include "evaluate.h"
+#include "tables.h"
 #include "pawn.h"
 
 #define FEN_CHUNKS (1000)
@@ -153,10 +154,10 @@ int main(int argc, char **argv) {
 	UNUSED(argv);
 
 	util_init();
-	magic_bitboard_init();
-	attack_gen_init();
+	magicbitboard_init();
+	attackgen_init();
 	bitboard_init();
-	evaluate_init();
+	tables_init();
 	search_init();
 	position_init();
 	pawn_init();

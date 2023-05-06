@@ -19,8 +19,8 @@
 
 #include <stdio.h>
 
-#include "magic_bitboard.h"
-#include "attack_gen.h"
+#include "magicbitboard.h"
+#include "attackgen.h"
 #include "init.h"
 #include "position.h"
 #include "util.h"

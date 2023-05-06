@@ -15,31 +15,23 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef MAGIC_BITBOARD_H
-#define MAGIC_BITBOARD_H
+#ifndef MOVE_ORDER_H
+#define MOVE_ORDER_H
 
 #include <stdint.h>
 
-int magic_bitboard_init(void);
+#include "move.h"
+#include "position.h"
+#include "search.h"
 
-extern uint64_t bishop_attacks_lookup[64 * 512];
-extern uint64_t rook_attacks_lookup[64 * 4096];
+#define SEE_VALUE_MINUS_100   0x1000000000000
+#define SEE_VALUE_100       0x100000000000000
+void next_move(move *move_list, uint64_t *evaluation_list, move **ptr);
 
-extern uint64_t bishop_magic[64];
-extern uint64_t rook_magic[64];
+move *order_moves(struct position *pos, move *move_list, uint64_t *evaluation_list, uint8_t depth, uint8_t ply, void *e, struct searchinfo *si);
 
-extern uint64_t bishop_mask[64];
-extern uint64_t rook_mask[64];
+int see_geq(struct position *pos, const move *m, int16_t value);
 
-extern uint64_t bishop_full_mask[64];
-extern uint64_t rook_full_mask[64];
-
-static inline int bishop_index(int square, uint64_t b) {
-	return (((b & bishop_mask[square]) * bishop_magic[square]) >> (64 - 9)) + 512 * square;
-}
-
-static inline int rook_index(int square, uint64_t b) {
-	return (((b & rook_mask[square]) * rook_magic[square]) >> (64 - 12)) + 4096 * square;
-}
+void moveorder_init(void);
 
 #endif

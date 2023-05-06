@@ -15,7 +15,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "attack_gen.h"
+#include "attackgen.h"
 
 #include "init.h"
 
@@ -50,7 +50,7 @@ uint64_t king_attacks_calc(int square) {
 	return b;
 }
 
-void attack_gen_init(void) {
+void attackgen_init(void) {
 	for (int i = 0; i < 64; i++) {
 		knight_attacks_lookup[i] = knight_attacks_calc(i);
 		init_status("populating knight attack table");

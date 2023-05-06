@@ -21,9 +21,9 @@
 #include <stdint.h>
 
 #include "bitboard.h"
-#include "magic_bitboard.h"
+#include "magicbitboard.h"
 
-void attack_gen_init(void);
+void attackgen_init(void);
 
 extern uint64_t knight_attacks_lookup[64];
 extern uint64_t king_attacks_lookup[64];

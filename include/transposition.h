@@ -21,7 +21,7 @@
 #include <stdint.h>
 
 #include "position.h"
-#include "transposition_table.h"
+#include "transposition.h"
 #include "evaluate.h"
 #include "move.h"
 #include "search.h"
@@ -155,8 +155,8 @@ void do_null_zobrist_key(struct position *pos, int en_passant);
 
 void set_zobrist_key(struct position *pos);
 
-int transposition_table_init(void);
+int transposition_init(void);
 
-void transposition_table_term(void);
+void transposition_term(void);
 
 #endif

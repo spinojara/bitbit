@@ -18,14 +18,15 @@
 #include "init.h"
 #include "util.h"
 #include "bitboard.h"
-#include "magic_bitboard.h"
-#include "attack_gen.h"
+#include "magicbitboard.h"
+#include "attackgen.h"
 #include "search.h"
 #include "evaluate.h"
-#include "transposition_table.h"
-#include "move_order.h"
+#include "transposition.h"
+#include "moveorder.h"
 #include "interface.h"
 #include "interrupt.h"
+#include "tables.h"
 #include "pawn.h"
 #include "nnue.h"
 
@@ -37,15 +38,15 @@ int main(int argc, char **argv) {
 	interrupt_init();
 	util_init();
 	/* no magic found */
-	if ((ret = magic_bitboard_init()))
+	if ((ret = magicbitboard_init()))
 		goto term;
-	attack_gen_init();
+	attackgen_init();
 	bitboard_init();
-	evaluate_init();
+	tables_init();
 	search_init();
-	move_order_init();
+	moveorder_init();
 	/* transposition table size == 0 */
-	if ((ret = transposition_table_init()))
+	if ((ret = transposition_init()))
 		goto term;
 	position_init();
 	if ((ret = pawn_init()))
@@ -56,7 +57,7 @@ int main(int argc, char **argv) {
 term:;
 	interface_term();
 	pawn_term();
-	transposition_table_term();
+	transposition_term();
 	term();
 	return ret;
 }

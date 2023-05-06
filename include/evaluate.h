@@ -25,6 +25,8 @@
 #define VALUE_MATE (0x7F00)
 #define VALUE_MATE_IN_MAX_PLY (VALUE_MATE - 128)
 
+enum { mg, eg };
+
 typedef int32_t mevalue;
 
 struct evaluationinfo {
@@ -64,7 +66,5 @@ static inline int16_t mevalue_evaluation(mevalue eval, double phase) {
 int16_t evaluate_classical(const struct position *pos);
 
 void evaluate_print(const struct position *pos);
-
-void evaluate_init(void);
 
 #endif

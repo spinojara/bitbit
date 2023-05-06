@@ -29,7 +29,7 @@
 #include "perft.h"
 #include "search.h"
 #include "evaluate.h"
-#include "transposition_table.h"
+#include "transposition.h"
 #include "version.h"
 #include "interrupt.h"
 #include "history.h"

@@ -14,7 +14,7 @@
  */
 
 #include "history.h"
-#include "transposition_table.h"
+#include "transposition.h"
 
 void history_next(struct position *pos, struct history *h, move m) {
 	h->zobrist_key[h->index] = pos->zobrist_key;

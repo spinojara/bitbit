@@ -15,10 +15,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "move_gen.h"
+#include "movegen.h"
 
 #include "bitboard.h"
-#include "attack_gen.h"
+#include "attackgen.h"
 
 int move_count(const move *m) {
 	const move *n;

@@ -24,8 +24,8 @@
 
 #include "bitboard.h"
 #include "util.h"
-#include "move_gen.h"
-#include "attack_gen.h"
+#include "movegen.h"
+#include "attackgen.h"
 
 void do_move(struct position *pos, move *m) {
 	uint8_t source_square = move_from(m);

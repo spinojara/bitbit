@@ -15,17 +15,17 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "move_order.h"
+#include "moveorder.h"
 
 #include <stdlib.h>
 
 #include "init.h"
 #include "util.h"
 #include "bitboard.h"
-#include "attack_gen.h"
+#include "attackgen.h"
 #include "evaluate.h"
 #if defined(TRANSPOSITION)
-#include "transposition_table.h"
+#include "transposition.h"
 #endif
 
 struct moveorderinfo {
@@ -303,6 +303,6 @@ move *order_moves(struct position *pos, move *move_list, uint64_t *evaluation_li
 	return ptr;
 }
 
-void move_order_init(void) {
+void moveorder_init(void) {
 	mvv_lva_init();
 }

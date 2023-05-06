@@ -23,8 +23,8 @@
 
 #include "position.h"
 #include "util.h"
-#include "magic_bitboard.h"
-#include "attack_gen.h"
+#include "magicbitboard.h"
+#include "attackgen.h"
 #include "bitboard.h"
 #include "move.h"
 #include "nnue.h"
@@ -158,8 +158,8 @@ uint64_t batch_total(void *ptr) {
 
 void batch_init(void) {
 	util_init();
-	magic_bitboard_init();
-	attack_gen_init();
+	magicbitboard_init();
+	attackgen_init();
 	bitboard_init();
 	position_init();
 }

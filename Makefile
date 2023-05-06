@@ -29,27 +29,27 @@ endif
 
 DVERSION = -DVERSION=$(VERSION)
 
-SRC_BITBIT = bitboard.c magic_bitboard.c attack_gen.c \
-             move.c util.c position.c move_gen.c perft.c \
-             search.c evaluate.c interface.c \
-             transposition_table.c init.c time_man.c \
-             interrupt.c pawn.c history.c nnue.c move_order.c \
-             material.c bitbit.c
+SRC_BITBIT  = bitboard.c magicbitboard.c attackgen.c \
+              move.c util.c position.c movegen.c perft.c \
+              search.c evaluate.c tables.c interface.c \
+              transposition.c init.c timeman.c \
+              interrupt.c pawn.c history.c nnue.c moveorder.c \
+              material.c bitbit.c
 
-SRC_GENFEN = bitboard.c magic_bitboard.c attack_gen.c \
-             move.c util.c position.c move_gen.c perft.c \
-             evaluate.c init.c time_man.c interrupt.c \
-             pawn.c move_order.c material.c genfen.c
+SRC_NNUEGEN = bitboard.c magicbitboard.c attackgen.c \
+             move.c util.c position.c movegen.c perft.c \
+             evaluate.c tables.c init.c timeman.c interrupt.c \
+             pawn.c moveorder.c material.c nnuegen.c
 
-SRC_BATCH  = bitboard.c magic_bitboard.c attack_gen.c \
-             move.c util.c position.c move_gen.c init.c \
-             batch.c
+SRC_BATCH   = bitboard.c magicbitboard.c attackgen.c \
+              move.c util.c position.c movegen.c init.c \
+              batch.c
 
-SRC = $(SRC_BITBIT) $(SRC_GENFEN) $(SRC_BATCH)
+SRC = $(SRC_BITBIT) $(SRC_NNUEGEN) $(SRC_BATCH)
 
-OBJ_BITBIT = $(addprefix obj/,$(SRC_BITBIT:.c=.o)) obj/incbin.o
-OBJ_GENFEN = $(addprefix obj/,$(SRC_GENFEN:.c=.o)) obj/genfensearch.o
-OBJ_BATCH  = $(addprefix obj/pic,$(SRC_BATCH:.c=.o))
+OBJ_BITBIT  = $(addprefix obj/,$(SRC_BITBIT:.c=.o)) obj/incbin.o
+OBJ_NNUEGEN = $(addprefix obj/,$(SRC_NNUEGEN:.c=.o)) obj/gensearch.o
+OBJ_BATCH   = $(addprefix obj/pic,$(SRC_BATCH:.c=.o))
 
 PREFIX = /usr/local
 BINDIR = $(PREFIX)/bin
@@ -57,12 +57,12 @@ MANPREFIX = $(PREFIX)/share
 MANDIR = $(MANPREFIX)/man
 MAN6DIR = $(MANDIR)/man6
 
-all: bitbit genfen libbatch.so
+all: bitbit nnuegen libbatch.so
 
 bitbit: $(OBJ_BITBIT)
 	$(CC) $(LDFLAGS) -lm $^ -o $@
 
-genfen: $(OBJ_GENFEN)
+nnuegen: $(OBJ_NNUEGEN)
 	$(CC) $(LDFLAGS) -lm -pthread $^ -o $@
 
 libbatch.so: $(OBJ_BATCH)
@@ -76,7 +76,7 @@ obj/interface.o: src/interface.c dep/interface.d Makefile
 	@mkdir -p obj
 	$(CC) $(CFLAGS) -Iinclude -c $< -o $@
 
-obj/transposition_table.o: src/transposition_table.c dep/transposition_table.d Makefile
+obj/transposition.o: src/transposition.c dep/transposition.d Makefile
 	@mkdir -p obj
 	$(CC) $(CFLAGS) -DTT=$(TT) -Iinclude -c $< -o $@
 
@@ -88,11 +88,11 @@ obj/search.o: src/search.c dep/search.d Makefile
 	@mkdir -p obj
 	$(CC) $(CFLAGS) -DNNUE -DTRANSPOSITION -Iinclude -c $< -o $@
 
-obj/move_order.o: src/move_order.c dep/move_order.d Makefile
+obj/moveorder.o: src/moveorder.c dep/moveorder.d Makefile
 	@mkdir -p obj
 	$(CC) $(CFLAGS) -DTRANSPOSITION -Iinclude -c $< -o $@
 
-obj/genfensearch.o: src/search.c dep/search.d Makefile
+obj/gensearch.o: src/search.c dep/search.d Makefile
 	@mkdir -p obj
 	$(CC) $(CFLAGS) -Iinclude -c $< -o $@
 

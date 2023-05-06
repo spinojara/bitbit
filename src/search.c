@@ -23,23 +23,23 @@
 #include <math.h>
 
 #include "bitboard.h"
-#include "move_gen.h"
+#include "movegen.h"
 #include "move.h"
 #include "util.h"
 #if defined(TRANSPOSITION)
-#include "transposition_table.h"
+#include "transposition.h"
 #endif
 #if defined(NNUE)
 #include "nnue.h"
 #endif
 #include "init.h"
 #include "position.h"
-#include "attack_gen.h"
-#include "time_man.h"
+#include "attackgen.h"
+#include "timeman.h"
 #include "interrupt.h"
 #include "evaluate.h"
 #include "history.h"
-#include "move_order.h"
+#include "moveorder.h"
 #include "material.h"
 
 static int reductions[256] = { 0 };
