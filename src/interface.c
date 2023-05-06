@@ -281,7 +281,10 @@ int interface_tt(int argc, char **argv) {
 	if (argc < 2) {
 		transposition_table_size_print(log_2(transposition_table_size() *
 					sizeof(struct transposition)));
-		printf("\n%d%%\n", transposition_table_occupancy());
+		printf("\npv    nodes: %4d pm\n", transposition_table_occupancy(NODE_PV));
+		printf("cut   nodes: %4d pm\n", transposition_table_occupancy(NODE_CUT));
+		printf("all   nodes: %4d pm\n", transposition_table_occupancy(NODE_ALL));
+		printf("total nodes: %4d pm\n", transposition_table_occupancy(0));
 	}
 	else if (strcmp(argv[1], "clear") == 0) {
 		transposition_table_clear();

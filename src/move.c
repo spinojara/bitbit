@@ -77,7 +77,6 @@ void do_move(struct position *pos, move *m) {
 		pos->mailbox[target_square] = move_promote(m) + 2 + 6 * (1 - pos->turn);
 	}
 	else if (move_flag(m) == 3) {
-		pos->halfmove = 0;
 		switch (target_square) {
 		case g1:
 			pos->piece[white][rook] ^= 0xA0;

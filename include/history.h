@@ -24,6 +24,7 @@
 
 struct history {
 	move move[POSITIONS_MAX];
+	int irreversible[POSITIONS_MAX];
 	uint64_t zobrist_key[POSITIONS_MAX];
 	struct position start;
 	int index;

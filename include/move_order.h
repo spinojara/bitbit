@@ -24,8 +24,8 @@
 #include "position.h"
 #include "search.h"
 
-#define SEE_VALUE_MINUS_100 0x1000000000000
-
+#define SEE_VALUE_MINUS_100   0x1000000000000
+#define SEE_VALUE_100       0x100000000000000
 void next_move(move *move_list, uint64_t *evaluation_list, move **ptr);
 
 move *order_moves(struct position *pos, move *move_list, uint64_t *evaluation_list, uint8_t depth, uint8_t ply, void *e, struct searchinfo *si);

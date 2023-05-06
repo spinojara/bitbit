@@ -24,14 +24,27 @@
 #include "move.h"
 #include "interface.h"
 
+enum {
+	NODE_ROOT = 0,
+	NODE_PV = 1,
+	NODE_CUT = 2,
+	NODE_ALL = 3,
+	NODE_OTHER = 4,
+};
+
+enum {
+	FLAG_NONE = 64,
+	FLAG_NULL_MOVE = 65,
+};
+
 struct searchinfo {
 	uint64_t nodes;
 	clock_t clock_stop;
-	int pv_flag;
 	move pv_moves[256][256];
 	move killer_moves[256][2];
 	uint64_t history_moves[13][64];
 	struct history *history;
+	uint8_t root_depth;
 };
 
 int16_t search(struct position *pos, uint8_t depth, int verbose, int etime, int movetime, move *m, struct history *history, int iterative);

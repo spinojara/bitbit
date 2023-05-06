@@ -22,6 +22,9 @@
 
 #include "position.h"
 
+#define VALUE_MATE (0x7F00)
+#define VALUE_MATE_IN_MAX_PLY (VALUE_MATE - 128)
+
 typedef int32_t mevalue;
 
 struct evaluationinfo {

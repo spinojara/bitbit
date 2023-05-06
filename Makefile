@@ -106,7 +106,7 @@ obj/%.o: src/%.c dep/%.d Makefile
 
 dep/%.d: src/%.c
 	@mkdir -p dep
-	@$(CC) -MM -MT "$(<:src/%.c=obj/%.o)" $(CFLAGS) -Iinclude $< -o $@
+	@$(CC) -MM -MT "$(<:src/%.c=obj/%.o)" $(CFLAGS) -DNNUE -DTRANSPOSITION -Iinclude $< -o $@
 
 -include $(addprefix dep/,$(SRC:.c=.d))
 

@@ -173,17 +173,14 @@ int see_geq(struct position *pos, const move *m, int16_t value) {
 
 uint64_t evaluate_move(struct position *pos, move *m, uint8_t depth, uint8_t ply, void *e, struct searchinfo *si, struct moveorderinfo *mi) {
 	UNUSED(depth);
-	/* pv */
-	if (si->pv_flag && si->pv_moves[0][ply] == (*m & 0xFFFF))
-		return 0xF000000000000001;
-
 	/* transposition table */
 #if defined(TRANSPOSITION)
 	if (e && *m == transposition_move(e))
-		return 0xF000000000000000;
+		return 0xF000000000000001;
 #else
 	UNUSED(e);
 #endif
+
 	const int piece = pos->mailbox[move_from(m)];
 	const int capture = pos->mailbox[move_to(m)];
 	const uint64_t to = bitboard(move_to(m));
@@ -224,7 +221,7 @@ uint64_t evaluate_move(struct position *pos, move *m, uint8_t depth, uint8_t ply
 		uint64_t eval = 0;
 
 		if (discovered_check || see_geq(pos, m, 100))
-			eval += 0x100000000000000;
+			eval += SEE_VALUE_100;
 		else if (see_geq(pos, m, 0))
 			eval += 0x10000000000000;
 		else if (see_geq(pos, m, -100))

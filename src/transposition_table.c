@@ -56,12 +56,13 @@ int allocate_transposition_table(uint64_t t) {
 	return 0;
 }
 
-int transposition_table_occupancy(void) {
+int transposition_table_occupancy(int node_type) {
 	uint64_t occupied = 0;
 	for (uint64_t i = 0; i < transposition_table->size; i++)
-		if ((transposition_table->table + i)->zobrist_key)
+		if (node_type ? ((transposition_table->table + i)->type == node_type) :
+			(transposition_table->table + i)->type > 0)
 			occupied++;
-	return 100 * occupied / transposition_table->size;
+	return 1000 * occupied / transposition_table->size;
 }
 
 void zobrist_key_init(void) {

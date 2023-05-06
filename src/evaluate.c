@@ -425,18 +425,16 @@ int16_t evaluate_classical(const struct position *pos) {
 
 	mevalue eval = evaluate_psqtable(pos, &ei, white) - evaluate_psqtable(pos, &ei, black);
 
+	eval += evaluate_pawns(pos, &ei, white) - evaluate_pawns(pos, &ei, black);
 	eval += evaluate_knights(pos, &ei, white) - evaluate_knights(pos, &ei, black);
 	eval += evaluate_bishops(pos, &ei, white) - evaluate_bishops(pos, &ei, black);
 	eval += evaluate_rooks(pos, &ei, white) - evaluate_rooks(pos, &ei, black);
 	eval += evaluate_queens(pos, &ei, white) - evaluate_queens(pos, &ei, black);
-	eval += evaluate_pawns(pos, &ei, white) - evaluate_pawns(pos, &ei, black);
 	eval += evaluate_king(pos, &ei, white) - evaluate_king(pos, &ei, black);
 	
 	eval += evaluate_mobility(pos, &ei, white) - evaluate_mobility(pos, &ei, black);
 
 	eval += evaluate_space(pos, &ei, white) - evaluate_space(pos, &ei, black);
-
-	eval += evaluate_turn(pos, &ei, white) - evaluate_turn(pos, &ei, black);
 
 	int16_t ret = mevalue_evaluation(eval, game_phase(pos));
 
