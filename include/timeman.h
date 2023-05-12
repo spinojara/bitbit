@@ -19,7 +19,29 @@
 #define TIME_MAN_H
 
 #include <stdint.h>
+#include <sys/time.h>
+#include <stddef.h>
+
+#include "search.h"
+#include "position.h"
+
+typedef int64_t time_point;
 
 int time_man(int etime, int16_t saved_evaluation[256], uint8_t depth);
+
+void time_init(struct position *pos, int etime, struct searchinfo *si);
+
+int stop_searching(struct searchinfo *si);
+
+static inline time_point time_now() {
+	struct timeval t;
+	gettimeofday(&t, NULL);
+	return t.tv_sec * 1000000 + t.tv_usec;
+}
+
+static inline void check_time(struct searchinfo *si) {
+	if (si->time_stop && time_now() >= si->time_stop)
+		si->interrupt = 1;
+}
 
 #endif

@@ -18,11 +18,11 @@
 #ifndef SEARCH_H
 #define SEARCH_H
 
-#include <time.h>
-
 #include "position.h"
 #include "move.h"
 #include "interface.h"
+
+typedef int64_t time_point;
 
 enum {
 	NODE_ROOT = 0,
@@ -39,15 +39,25 @@ enum {
 
 struct searchinfo {
 	uint64_t nodes;
-	clock_t clock_stop;
+
+	time_point time_start;
+	time_point time_optimal;
+	time_point time_stop;
+
+	int16_t evaluation_list[256];
 	move pv_moves[256][256];
 	move killer_moves[256][2];
 	uint64_t history_moves[13][64];
 	struct history *history;
+
 	uint8_t root_depth;
+
+	int interrupt;
 };
 
 int16_t search(struct position *pos, uint8_t depth, int verbose, int etime, int movetime, move *m, struct history *history, int iterative);
+
+int16_t quiescence(struct position *pos, int16_t alpha, int16_t beta, struct searchinfo *si);
 
 void search_init(void);
 

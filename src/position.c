@@ -567,7 +567,7 @@ int interactive_setpos(struct position *pos) {
 		printf("      a   b   c   d   e   f   g   h\n\n");
 		printf("\033[1;1H\033[%iB\033[%iC", 3 + 2 * y, 6 + 4 * x);
 
-		if(!fgets(line, sizeof(line), stdin))
+		if (!fgets(line, sizeof(line), stdin))
 			return DONE;
 		switch (line[0]) {
 		case 's':
@@ -809,20 +809,6 @@ void fischer_pos(struct position *pos) {
 	setpos(pos, 1, 0, 0, 0, 1, mailbox);
 }
 
-void copy_position(struct position *dest, const struct position *src) {
-	for (int j = 0; j < 2; j++)
-		for (int i = 0; i < 7; i++)
-			dest->piece[j][i] = src->piece[j][i];
-	dest->turn = src->turn;
-	dest->en_passant = src->en_passant;
-	dest->castle = src->castle;
-	dest->halfmove = src->halfmove;
-	dest->fullmove = src->fullmove;
-	for (int i = 0; i < 64; i++)
-		dest->mailbox[i] = src->mailbox[i];
-	dest->zobrist_key = src->zobrist_key;
-}
-
 int pos_are_equal(const struct position *pos1, const struct position *pos2) {
 	for (int j = 0; j < 2; j++) {
 		for (int i = 0; i < 7; i++) {
@@ -862,7 +848,7 @@ void print_history_pgn(const struct history *h) {
 		return;
 
 	struct position pos[1];
-	copy_position(pos, &h->start);
+	memcpy(pos, &h->start, sizeof(struct position));
 	move m[POSITIONS_MAX];
 	memcpy(m, h->move, sizeof(m));
 
@@ -888,7 +874,7 @@ void print_history_algebraic(const struct history *h, FILE *file) {
 		return;
 
 	struct position pos[1];
-	copy_position(pos, &h->start);
+	memcpy(pos, &h->start, sizeof(struct position));
 	move m[POSITIONS_MAX];
 	memcpy(m, h->move, sizeof(m));
 
@@ -912,6 +898,14 @@ int is_threefold(struct position *pos, struct history *h) {
 			count++;
 
 	return count >= 2;
+}
+
+int is_twofold(struct position *pos, struct history *h) {
+	for (int i = 0; i < h->index; i++)
+		if (pos->zobrist_key == h->zobrist_key[i])
+			return 1;
+
+	return 0;
 }
 
 void position_init(void) {

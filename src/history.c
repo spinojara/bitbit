@@ -14,6 +14,9 @@
  */
 
 #include "history.h"
+
+#include <string.h>
+
 #include "transposition.h"
 
 void history_next(struct position *pos, struct history *h, move m) {
@@ -32,5 +35,5 @@ void history_previous(struct position *pos, struct history *h) {
 
 void history_reset(struct position *pos, struct history *h) {
 	h->index = 0;
-	copy_position(&h->start, pos);
+	memcpy(&h->start, pos, sizeof(struct position));
 }

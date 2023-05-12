@@ -42,6 +42,20 @@ struct position {
 	alignas(64) int16_t accumulation[1][2][K_HALF_DIMENSIONS];
 };
 
+struct compressedposition {
+	uint64_t piece[2][7];
+
+	uint8_t turn;
+	int8_t en_passant;
+	/* KQkq */
+	uint8_t castle;
+
+	uint16_t halfmove;
+	uint16_t fullmove;
+
+	uint8_t mailbox[64];
+};
+
 enum square {
 	a1, b1, c1, d1, e1, f1, g1, h1,
 	a2, b2, c2, d2, e2, f2, g2, h2,
@@ -93,8 +107,6 @@ int interactive_setpos(struct position *pos);
 
 void fischer_pos(struct position *pos);
 
-void copy_position(struct position *dest, const struct position *src);
-
 int pos_are_equal(const struct position *pos1, const struct position *pos2);
 
 struct history;
@@ -105,6 +117,7 @@ void print_history_algebraic(const struct history *history, FILE *file);
 int has_big_piece(const struct position *pos);
 
 int is_threefold(struct position *pos, struct history *history);
+int is_twofold(struct position *pos, struct history *history);
 
 void position_init(void);
 

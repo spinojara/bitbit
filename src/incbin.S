@@ -1,8 +1,8 @@
 .section .rodata
 
 .balign 4
-.global incbinweights
-incbinweights:
-.incbin NNUE
+.global incbin
+incbin:
+.incbin FILE
 
 .section .note.GNU-stack

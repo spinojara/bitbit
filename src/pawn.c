@@ -27,6 +27,14 @@
 /* around 100 KiB with hitrate of ~80% */
 #define PAWN_TABLE_SIZE ((uint64_t)1 << 12)
 
+mevalue backward_pawn  = S(-5, -3);
+mevalue supported_pawn = S(7, 5);
+mevalue passed_pawn    = S(8, 26);
+mevalue passed_file    = S(-8, -15);
+mevalue isolated_pawn  = S(-11, -14);
+mevalue doubled_pawn   = S(-11, -16);
+mevalue phalanx_pawn   = S(6, 5);
+
 struct pawn {
 	uint64_t pawns[2];
 	mevalue evaluation;
@@ -104,22 +112,22 @@ mevalue evaluate_pawns(const struct position *pos, struct evaluationinfo *ei, in
 		passed    &= !(passed_files(square, white) & file(square) & pawns[white]);
 
 		if (backward)
-			eval += S(-11, -17);
+			eval += backward_pawn;
 
 		if (support)
-			eval += S(5, 3) * (y - 1) * popcount(support);
+			eval += supported_pawn * (y - 1) * popcount(support);
 
 		if (phalanx)
-			eval += S(3, 2 * (y - 1));
+			eval += phalanx_pawn * (y - 1);
 
 		if (passed)
-			eval += S(14, 26) * y - S(9, 9) * MIN(x, 7 - x);
+			eval += passed_pawn * y + passed_file * MIN(x, 7 - x);
 
 		if (!neighbours)
-			eval += S(-21, -36);
+			eval += isolated_pawn;
 		
 		if (!support && doubled)
-			eval += S(-22, -32);
+			eval += doubled_pawn;
 
 		b = clear_ls1b(b);
 	}

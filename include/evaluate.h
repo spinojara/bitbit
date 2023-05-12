@@ -29,6 +29,27 @@ enum { mg, eg };
 
 typedef int32_t mevalue;
 
+extern mevalue king_on_open_file;
+extern mevalue outpost_bonus;
+extern mevalue outpost_attack;
+extern mevalue minor_behind_pawn;
+extern mevalue knight_far_from_king;
+extern mevalue bishop_far_from_king;
+extern mevalue bishop_pair;
+extern mevalue pawn_on_bishop_square;
+extern mevalue rook_on_open_file;
+extern mevalue blocked_rook;
+extern mevalue undeveloped_piece;
+extern mevalue defended_minor;
+extern mevalue side_to_move_bonus;
+
+extern int weak_squares_danger;
+extern int enemy_no_queen_bonus;
+extern int knight_king_attack_danger;
+extern int bishop_king_attack_danger;
+extern int rook_king_attack_danger;
+extern int queen_king_attack_danger;
+
 struct evaluationinfo {
 	mevalue mobility[2];
 
@@ -43,11 +64,11 @@ struct evaluationinfo {
 };
 
 enum {
-	pawn_mg   =   75, pawn_eg   =  125,
-	knight_mg =  400, knight_eg =  425,
-	bishop_mg =  425, bishop_eg =  450,
-	rook_mg   =  650, rook_eg   =  700,
-	queen_mg  = 1300, queen_eg  = 1350,
+	pawn_mg   =   80, pawn_eg   =  118,
+	knight_mg =  405, knight_eg =  370,
+	bishop_mg =  436, bishop_eg =  383,
+	rook_mg   =  565, rook_eg   =  649,
+	queen_mg  = 1289, queen_eg  = 1254,
 };
 
 #define S(a, b) ((mevalue)((a) + ((uint32_t)(b) << 16)))

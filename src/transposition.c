@@ -160,7 +160,7 @@ void undo_zobrist_key(struct position *pos, const move *m) {
 		else
 			pos->zobrist_key ^= zobrist_piece_key(black_pawn - 1, target_square - 8);
 	}
-	else if(move_flag(m) == 2) {
+	else if (move_flag(m) == 2) {
 		if (pos->turn) {
 			pos->zobrist_key ^= zobrist_piece_key(black_pawn - 1, source_square);
 			pos->zobrist_key ^= zobrist_piece_key(pos->mailbox[target_square] - 1, source_square);

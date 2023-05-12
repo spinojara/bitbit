@@ -29,27 +29,38 @@ endif
 
 DVERSION = -DVERSION=$(VERSION)
 
-SRC_BITBIT  = bitboard.c magicbitboard.c attackgen.c \
-              move.c util.c position.c movegen.c perft.c \
-              search.c evaluate.c tables.c interface.c \
-              transposition.c init.c timeman.c \
-              interrupt.c pawn.c history.c nnue.c moveorder.c \
-              material.c bitbit.c
+SRC_BITBIT    = bitboard.c magicbitboard.c attackgen.c \
+                move.c util.c position.c movegen.c perft.c \
+                search.c evaluate.c tables.c interface.c \
+                transposition.c init.c timeman.c interrupt.c \
+                pawn.c history.c nnue.c moveorder.c \
+                material.c bitbit.c
 
-SRC_NNUEGEN = bitboard.c magicbitboard.c attackgen.c \
-             move.c util.c position.c movegen.c perft.c \
-             evaluate.c tables.c init.c timeman.c interrupt.c \
-             pawn.c moveorder.c material.c nnuegen.c
+SRC_NNUEGEN   = bitboard.c magicbitboard.c attackgen.c \
+                move.c util.c position.c movegen.c evaluate.c \
+                tables.c init.c timeman.c interrupt.c pawn.c \
+                moveorder.c material.c nnuegen.c
 
-SRC_BATCH   = bitboard.c magicbitboard.c attackgen.c \
-              move.c util.c position.c movegen.c init.c \
-              batch.c
+SRC_TEXELGEN  = bitboard.c magicbitboard.c attackgen.c \
+                move.c util.c position.c movegen.c init.c \
+                texelgen.c
 
-SRC = $(SRC_BITBIT) $(SRC_NNUEGEN) $(SRC_BATCH)
+SRC_TEXELTUNE = bitboard.c magicbitboard.c attackgen.c \
+                move.c util.c position.c movegen.c evaluate.c \
+                tables.c init.c timeman.c interrupt.c pawn.c \
+                moveorder.c texeltune.c
 
-OBJ_BITBIT  = $(addprefix obj/,$(SRC_BITBIT:.c=.o)) obj/incbin.o
-OBJ_NNUEGEN = $(addprefix obj/,$(SRC_NNUEGEN:.c=.o)) obj/gensearch.o
-OBJ_BATCH   = $(addprefix obj/pic,$(SRC_BATCH:.c=.o))
+SRC_BATCH     = bitboard.c magicbitboard.c attackgen.c \
+                move.c util.c position.c movegen.c init.c \
+                batch.c
+
+SRC = $(SRC_BITBIT) $(SRC_NNUEGEN) $(SRC_TEXELGEN) $(SRC_TEXELTUNE) $(SRC_BATCH)
+
+OBJ_BITBIT    = $(addprefix obj/,$(SRC_BITBIT:.c=.o)) obj/nnueincbin.o
+OBJ_NNUEGEN   = $(addprefix obj/,$(SRC_NNUEGEN:.c=.o)) obj/gensearch.o
+OBJ_TEXELGEN  = $(addprefix obj/,$(SRC_TEXELGEN:.c=.o))
+OBJ_TEXELTUNE = $(addprefix obj/,$(SRC_TEXELTUNE:.c=.o)) obj/gensearch.o
+OBJ_BATCH     = $(addprefix obj/pic,$(SRC_BATCH:.c=.o))
 
 PREFIX = /usr/local
 BINDIR = $(PREFIX)/bin
@@ -57,12 +68,18 @@ MANPREFIX = $(PREFIX)/share
 MANDIR = $(MANPREFIX)/man
 MAN6DIR = $(MANDIR)/man6
 
-all: bitbit nnuegen libbatch.so
+all: bitbit nnuegen texelgen texeltune libbatch.so
 
 bitbit: $(OBJ_BITBIT)
 	$(CC) $(LDFLAGS) -lm $^ -o $@
 
 nnuegen: $(OBJ_NNUEGEN)
+	$(CC) $(LDFLAGS) -lm -pthread $^ -o $@
+
+texelgen: $(OBJ_TEXELGEN)
+	$(CC) $(LDFLAGS) -lm -pthread $^ -o $@
+
+texeltune: $(OBJ_TEXELTUNE)
 	$(CC) $(LDFLAGS) -lm -pthread $^ -o $@
 
 libbatch.so: $(OBJ_BATCH)
@@ -80,13 +97,13 @@ obj/transposition.o: src/transposition.c dep/transposition.d Makefile
 	@mkdir -p obj
 	$(CC) $(CFLAGS) -DTT=$(TT) -Iinclude -c $< -o $@
 
-obj/incbin.o: src/incbin.S Makefile
+obj/nnueincbin.o: src/incbin.S Makefile
 	@mkdir -p obj
-	$(CC) $(CFLAGS) -DNNUE=\"$(NNUE)\" -c $< -o $@
+	$(CC) $(CFLAGS) -DFILE=\"$(NNUE)\" -c $< -o $@
 
 obj/search.o: src/search.c dep/search.d Makefile
 	@mkdir -p obj
-	$(CC) $(CFLAGS) -DNNUE -DTRANSPOSITION -Iinclude -c $< -o $@
+	$(CC) $(CFLAGS) -DNNNUE -DTRANSPOSITION -Iinclude -c $< -o $@
 
 obj/moveorder.o: src/moveorder.c dep/moveorder.d Makefile
 	@mkdir -p obj

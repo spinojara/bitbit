@@ -15,16 +15,13 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#define _DEFAULT_SOURCE
-
 #include <stdio.h>
 #include <stdint.h>
-#include <stdlib.h>
-#include <time.h>
-#include <sys/time.h>
 #include <string.h>
-#include <pthread.h>
+#include <stdlib.h>
 #include <unistd.h>
+#include <sys/time.h>
+#include <pthread.h>
 #include <stdatomic.h>
 
 #include "position.h"
@@ -41,14 +38,57 @@
 
 #define FEN_CHUNKS (1000)
 
+struct threadinfo {
+	atomic_int available;
+	int fd[2];
+};
+
 pthread_mutex_t lock;
 
 int stop = 0;
 
-struct threadinfo {
-	atomic_int available_fens;
-	int fd[2];
-};
+struct threadinfo *choose_thread(struct threadinfo *threadinfo, int n_threads) {
+	int thread;
+	int ret;
+	int64_t most = -(FEN_CHUNKS + 1);
+	for (ret = 0, thread = 0; thread < n_threads; thread++) {
+		int available = atomic_load(&threadinfo[thread].available);
+		if (available >= most) {
+			most = available;
+			ret = thread;
+		}
+	}
+	return &threadinfo[ret];
+}
+void write_thread(FILE *f, struct threadinfo *threadinfo, uint64_t *curr_fens, uint64_t fens) {
+	int fd = threadinfo->fd[0];
+	int16_t value = 1;
+	uint64_t gen_fens = 0;
+	while (value || gen_fens < FEN_CHUNKS) {
+		if (read(fd, &value, sizeof(value)) == -1)
+			printf("READ ERROR\n");
+		write_le_uint(f, value, 2);
+		if (read(fd, &value, sizeof(value)) == -1)
+			printf("READ ERROR\n");
+		gen_fens++;
+		if (*curr_fens + gen_fens < fens) {
+			write_le_uint(f, value, 2);
+		}
+		else {
+			write_le_uint(f, 0, 2);
+			pthread_mutex_lock(&lock);
+			stop = 1;
+			pthread_mutex_unlock(&lock);
+			break;
+		}
+		if (fens / 100 && (*curr_fens + gen_fens) % (fens / 100) == 0 && 100 * (*curr_fens + gen_fens) / fens) {
+			printf("%ld%%\n", 100 * (*curr_fens + gen_fens) / fens);
+			fflush(stdout);
+		}
+	}
+	*curr_fens += gen_fens;
+	atomic_fetch_sub(&threadinfo->available, gen_fens);
+}
 
 void *worker(void *arg) {
 	struct threadinfo *threadinfo;
@@ -95,7 +135,7 @@ void *worker(void *arg) {
 			pthread_mutex_lock(&lock);
 			int stop_t = stop;
 			pthread_mutex_unlock(&lock);
-			atomic_fetch_add(&threadinfo->available_fens, count);
+			atomic_fetch_add(&threadinfo->available, count);
 			count = 0;
 			if (stop_t)
 				break;
@@ -103,50 +143,6 @@ void *worker(void *arg) {
 	}
 
 	return NULL;
-}
-
-struct threadinfo *choose_thread(struct threadinfo *threadinfo, int n_threads) {
-	int thread;
-	int ret;
-	int64_t most_fens = -(FEN_CHUNKS + 1);
-	for (ret = 0, thread = 0; thread < n_threads; thread++) {
-		int available_fens = atomic_load(&threadinfo[thread].available_fens);
-		if (available_fens >= most_fens) {
-			most_fens = available_fens;
-			ret = thread;
-		}
-	}
-	return &threadinfo[ret];
-}
-
-void write_thread(FILE *f, struct threadinfo *threadinfo, uint64_t *curr_fens, uint64_t fens) {
-	int fd = threadinfo->fd[0];
-	int16_t value = 1;
-	uint64_t gen_fens = 0;
-	while (value || gen_fens < FEN_CHUNKS) {
-		if (read(fd, &value, sizeof(value)) == -1)
-			printf("READ ERROR\n");
-		write_le_uint(f, value, 2);
-		if (read(fd, &value, sizeof(value)) == -1)
-			printf("READ ERROR\n");
-		gen_fens++;
-		if (*curr_fens + gen_fens < fens) {
-			write_le_uint(f, value, 2);
-		}
-		else {
-			write_le_uint(f, 0, 2);
-			pthread_mutex_lock(&lock);
-			stop = 1;
-			pthread_mutex_unlock(&lock);
-			break;
-		}
-		if (fens / 100 && (*curr_fens + gen_fens) % (fens / 100) == 0 && 100 * (*curr_fens + gen_fens) / fens) {
-			printf("%ld%%\n", 100 * (*curr_fens + gen_fens) / fens);
-			fflush(stdout);
-		}
-	}
-	*curr_fens += gen_fens;
-	atomic_fetch_sub(&threadinfo->available_fens, gen_fens);
 }
 
 int main(int argc, char **argv) {
@@ -182,12 +178,11 @@ int main(int argc, char **argv) {
 
 	uint64_t fens = 100000;
 
-	FILE *f = fopen("train.bin", "wb");
+	FILE *f = fopen("nnue.bin", "wb");
 
 	uint64_t curr_fens = 0;
-	while (curr_fens < fens) {
+	while (curr_fens < fens)
 		write_thread(f, choose_thread(threadinfo, n_threads), &curr_fens, fens);
-	}
 
 	fclose(f);
 

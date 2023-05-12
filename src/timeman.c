@@ -29,3 +29,17 @@ int time_man(int etime, int16_t saved_evaluation[256], uint8_t depth) {
 	int a = (double)etime / 20 * (1 + (double)var / 4096);
 	return a;
 }
+
+void time_init(struct position *pos, int etime, struct searchinfo *si) {
+	if (!etime)
+		return;
+
+	int moves_left = MAX(25, 50 - pos->fullmove);
+
+	si->time_optimal = 1000 * etime / moves_left + si->time_start;
+	si->time_stop = 1000 * etime / 10 + si->time_start;
+}
+
+int stop_searching(struct searchinfo *si) {
+	return time_now() >= si->time_optimal;
+}

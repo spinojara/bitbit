@@ -92,7 +92,7 @@ struct data {
 	alignas(64) int8_t hidden2_out[32];
 };
 
-extern uint8_t incbinweights[];
+extern uint8_t incbin[];
 
 alignas(64) static ft_weight_t ft_weights[K_HALF_DIMENSIONS * FT_IN_DIMS];
 alignas(64) static ft_bias_t ft_biases[K_HALF_DIMENSIONS];
@@ -560,16 +560,16 @@ uint32_t incbin_le_uint(int *index, int bytes) {
 	uint8_t buf[4] = { 0 };
 	switch (bytes) {
 	case 4:
-		buf[3] = incbinweights[*index + 3];
+		buf[3] = incbin[*index + 3];
 		/* fallthrough */
 	case 3:
-		buf[2] = incbinweights[*index + 2];
+		buf[2] = incbin[*index + 2];
 		/* fallthrough */
 	case 2:
-		buf[1] = incbinweights[*index + 1];
+		buf[1] = incbin[*index + 1];
 		/* fallthrough */
 	case 1:
-		buf[0] = incbinweights[*index + 0];
+		buf[0] = incbin[*index + 0];
 	}
 	*index += bytes;
 	return (uint32_t)buf[0] | ((uint32_t)buf[1] << 8) |

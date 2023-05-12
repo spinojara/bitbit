@@ -26,7 +26,7 @@ volatile int interrupt = 0;
 
 void sigint_handler(int num) {
 	UNUSED(num);
-	interrupt = 2;
+	interrupt = 1;
 	signal(SIGINT, sigint_handler);
 }
 

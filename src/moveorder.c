@@ -171,7 +171,7 @@ int see_geq(struct position *pos, const move *m, int16_t value) {
 	return ret;
 }
 
-uint64_t evaluate_move(struct position *pos, move *m, uint8_t depth, uint8_t ply, void *e, struct searchinfo *si, struct moveorderinfo *mi) {
+uint64_t evaluate_move(struct position *pos, move *m, uint8_t depth, uint8_t ply, void *e, const struct searchinfo *si, struct moveorderinfo *mi) {
 	UNUSED(depth);
 	/* transposition table */
 #if defined(TRANSPOSITION)
@@ -293,7 +293,7 @@ void next_move(move *move_list, uint64_t *evaluation_list, move **ptr) {
 	}
 }
 
-move *order_moves(struct position *pos, move *move_list, uint64_t *evaluation_list, uint8_t depth, uint8_t ply, void *e, struct searchinfo *si) {
+move *order_moves(struct position *pos, move *move_list, uint64_t *evaluation_list, uint8_t depth, uint8_t ply, void *e, const struct searchinfo *si) {
 	struct moveorderinfo mi;
 	moveorderinfo_init(pos, &mi);
 	for (int i = 0; move_list[i]; i++)

@@ -18,15 +18,19 @@
 #ifndef TABLES_H
 #define TABLES_H
 
+extern mevalue piece_value[6];
+
 extern mevalue psqtable[2][7][64];
 
-extern const int16_t pawn_shelter[4][7];
+extern mevalue white_psqtable[6][64];
 
-extern const int16_t unblocked_storm[4][7];
+extern mevalue pawn_shelter[4][7];
 
-extern const int16_t blocked_storm[7];
+extern mevalue unblocked_storm[4][7];
 
-extern const mevalue mobility_bonus[4][28];
+extern mevalue blocked_storm[7];
+
+extern mevalue mobility_bonus[4][28];
 
 void tables_init(void);
 

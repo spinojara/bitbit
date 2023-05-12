@@ -26,6 +26,28 @@
 #include "pawn.h"
 #include "tables.h"
 
+mevalue king_on_open_file     = S(-8, 3);
+mevalue outpost_bonus  	      = S(38, 11);
+mevalue outpost_attack        = S(15, 9);
+mevalue minor_behind_pawn     = S(3, 7);
+mevalue knight_far_from_king  = S(-5, -1);
+mevalue bishop_far_from_king  = S(-6, 0);
+mevalue bishop_pair           = S(17, 50);
+mevalue pawn_on_bishop_square = S(-6, -8);
+mevalue rook_on_open_file     = S(18, 9);
+mevalue blocked_rook          = S(-28, -9);
+mevalue undeveloped_piece     = S(-12, -17);
+mevalue defended_minor        = S(4, 5);
+mevalue side_to_move_bonus    = S(8, 6);
+
+/* king danger */
+int weak_squares_danger       = 34;
+int enemy_no_queen_bonus      = 206;
+int knight_king_attack_danger = 61;
+int bishop_king_attack_danger = 53;
+int rook_king_attack_danger   = 69;
+int queen_king_attack_danger  = 78;
+
 mevalue evaluate_mobility(const struct position *pos, struct evaluationinfo *ei, int turn) {
 	UNUSED(pos);
 	return ei->mobility[turn];
@@ -50,26 +72,24 @@ mevalue evaluate_king(const struct position *pos, struct evaluationinfo *ei, int
 		 */
 		b = ourpawns & file(f);
 		/* king is on semi open file */
-		if (!b)
-			eval += S(-15, 0);
+		if (!b && f == center)
+			eval += king_on_open_file;
 		if (turn)
 			ourrank = b ? (63 - clz(b)) / 8 : 0;
 		else
 			ourrank = b ? 7 - ctz(b) / 8 : 0;
 		b = theirpawns & file(f);
-		if (!b)
-			eval += S(-5, 0);
 		if (turn)
 			theirrank = b ? ctz(b) / 8 : 0;
 		else
 			theirrank = b ? 7 - (63 - clz(b)) / 8 : 0;
 
 		int d = MIN(f, 7 - f);
-		eval += S(pawn_shelter[d][ourrank], 0);
+		eval += pawn_shelter[d][ourrank];
 		if (ourrank && ourrank + 1 == theirrank)
-			eval += S(blocked_storm[ourrank], 0);
+			eval += blocked_storm[ourrank];
 		else
-			eval += S(unblocked_storm[d][theirrank], 0);
+			eval += unblocked_storm[d][theirrank];
 	}
 
 	/* king safety */
@@ -78,8 +98,8 @@ mevalue evaluate_king(const struct position *pos, struct evaluationinfo *ei, int
 				(~ei->attacked_squares[turn][all] | ei->attacked_squares[turn][king] | ei->attacked_squares[turn][queen]);
 
 	int king_danger =       ei->king_attack_units[1 - turn]
-			+  40 * popcount(weak_squares & ei->king_ring[turn])
-			- 200 * !pos->piece[1 - turn][queen];
+			+ weak_squares_danger * popcount(weak_squares & ei->king_ring[turn])
+			- enemy_no_queen_bonus * !pos->piece[1 - turn][queen];
 	if (king_danger > 0)
 		eval -= S(king_danger * king_danger / 2048, king_danger / 8);
 
@@ -105,20 +125,24 @@ mevalue evaluate_knights(const struct position *pos, struct evaluationinfo *ei, 
 
 		/* king attacks */
 		if (ei->king_ring[1 - turn] & attacks)
-			ei->king_attack_units[turn] += 60 * (popcount(ei->king_ring[1 - turn] & attacks) + 1) / 2;
+			ei->king_attack_units[turn] += knight_king_attack_danger * (popcount(ei->king_ring[1 - turn] & attacks) + 1) / 2;
 
 		/* outpost */
 		if (squareb & outpost & ~ei->pawn_attack_span[1 - turn] & ei->attacked_squares[turn][pawn])
-			eval += S(40, 15);
+			eval += outpost_bonus;
 		else if (attacks & outpost & ~ei->pawn_attack_span[1 - turn] & ei->attacked_squares[turn][pawn])
-			eval += S(15, 5);
+			eval += outpost_attack;
 		
 		/* minor behind pawn */
 		if (squareb & shift_color(pos->piece[turn][pawn], 1 - turn))
-			eval += S(10, 0);
+			eval += minor_behind_pawn;
+
+		/* defended minor */
+		if (squareb & ei->attacked_squares[turn][pawn])
+			eval += defended_minor;
 		
 		/* penalty if piece is far from own king */
-		eval += S(-4, -4) * distance(square, ctz(pos->piece[turn][king]));
+		eval += knight_far_from_king * distance(square, ctz(pos->piece[turn][king]));
 
 		b = clear_ls1b(b);
 	}
@@ -141,21 +165,25 @@ mevalue evaluate_bishops(const struct position *pos, struct evaluationinfo *ei, 
 
 		/* king attacks */
 		if (ei->king_ring[1 - turn] & attacks)
-			ei->king_attack_units[turn] += 50 * (popcount(ei->king_ring[1 - turn] & attacks) + 1) / 2;
-		
+			ei->king_attack_units[turn] += bishop_king_attack_danger * (popcount(ei->king_ring[1 - turn] & attacks) + 1) / 2;
+
 		/* bishop pair */
 		if (popcount(b) >= 2)
-			eval += S(20, 25);
+			eval += bishop_pair;
 
 		/* minor behind pawn */
 		if (squareb & shift_color(pos->piece[turn][pawn], 1 - turn))
-			eval += S(15, 0);
+			eval += minor_behind_pawn;
+
+		/* defended minor */
+		if (squareb & ei->attacked_squares[turn][pawn])
+			eval += defended_minor;
 		
 		/* penalty if piece is far from own king */
-		eval += S(-3, -3) * distance(square, ctz(pos->piece[turn][king]));
+		eval += bishop_far_from_king * distance(square, ctz(pos->piece[turn][king]));
 
 		/* penalty for own pawns on same squares as bishop */
-		eval += S(-1, -4) * popcount(same_colored_squares(square) & pos->piece[turn][pawn]);
+		eval += pawn_on_bishop_square * popcount(same_colored_squares(square) & pos->piece[turn][pawn]);
 
 		b = clear_ls1b(b);
 	}
@@ -178,17 +206,17 @@ mevalue evaluate_rooks(const struct position *pos, struct evaluationinfo *ei, in
 
 		/* king attacks */
 		if (ei->king_ring[1 - turn] & attacks)
-			ei->king_attack_units[turn] += 60 * (popcount(ei->king_ring[1 - turn] & attacks) + 1) / 2;
+			ei->king_attack_units[turn] += rook_king_attack_danger * (popcount(ei->king_ring[1 - turn] & attacks) + 1) / 2;
 
 		/* bonus on semiopen files */
-		if (!(pos->piece[turn][pawn] & file(square))) {
-			eval += S(30, 15);
-		}
+		if (!(pos->piece[turn][pawn] & file(square)))
+			eval += rook_on_open_file;
+
 		/* penalty if blocked by uncastled king */
 		else if (mobility <= 5) {
 			int kf = ctz(pos->piece[turn][king]) % 8;
 			if ((kf < e1) == ((square % 8) < kf))
-				eval += S(-30, 0) * (1 + !(pos->castle & (turn ? 0x3 : 0xC)));
+				eval += blocked_rook * (1 + !(pos->castle & (turn ? 0x3 : 0xC)));
 		}
 
 		b = clear_ls1b(b);
@@ -212,19 +240,20 @@ mevalue evaluate_queens(const struct position *pos, struct evaluationinfo *ei, i
 
 		/* king attacks */
 		if (ei->king_ring[1 - turn] & attacks)
-			ei->king_attack_units[turn] += 70 * (popcount(ei->king_ring[1 - turn] & attacks) + 1) / 2;
+			ei->king_attack_units[turn] += queen_king_attack_danger * (popcount(ei->king_ring[1 - turn] & attacks) + 1) / 2;
 
 		/* undeveloped minor pieces when moving queen */
 		if (turn)
-			eval += (square != d1) * S(-8, 0) * popcount((pos->piece[white][knight] | pos->piece[white][bishop]) & RANK_1);
+			eval += (square != d1) * undeveloped_piece * popcount((pos->piece[white][knight] | pos->piece[white][bishop]) & RANK_1);
 		else
-			eval += (square != d8) * S(-8, 0) * popcount((pos->piece[black][knight] | pos->piece[black][bishop]) & RANK_8);
+			eval += (square != d8) * undeveloped_piece * popcount((pos->piece[black][knight] | pos->piece[black][bishop]) & RANK_8);
 
 		b = clear_ls1b(b);
 	}
 	return eval;
 }
 
+/* from stockfish */
 mevalue evaluate_space(const struct position *pos, struct evaluationinfo *ei, int turn) {
 	const uint64_t center = (FILE_C | FILE_D | FILE_E | FILE_F) & (turn ? (RANK_2 | RANK_3 | RANK_4) : (RANK_5 | RANK_6 | RANK_7));
 
@@ -234,7 +263,9 @@ mevalue evaluate_space(const struct position *pos, struct evaluationinfo *ei, in
 	behind |= shift_color(behind, 1 - turn);
 	behind |= shift_color(behind, 1 - turn);
 
-	return 3 * S(popcount(safe_center) + popcount(behind & safe_center), 0);
+	int bonus = popcount(safe_center) + popcount(behind & safe_center & ~ei->attacked_squares[1 - turn][all]);
+	int weight = popcount(pos->piece[turn][all]) - 3 + popcount((shift_north(pos->piece[white][pawn]) & pos->piece[black][pawn]));
+	return S(bonus * weight * weight / 16, 0);
 }
 
 double game_phase(const struct position *pos) {
@@ -249,6 +280,7 @@ double game_phase(const struct position *pos) {
 }
 
 void evaluationinfo_init(const struct position *pos, struct evaluationinfo *ei) {
+	memset(ei->attacked_squares, 0, sizeof(ei->attacked_squares));
 
 	ei->attacked_squares[white][pawn] = shift_north_west(pos->piece[white][pawn]) | shift_north_east(pos->piece[white][pawn]);
 	ei->attacked_squares[black][pawn] = shift_south_west(pos->piece[black][pawn]) | shift_south_east(pos->piece[black][pawn]);
@@ -256,7 +288,6 @@ void evaluationinfo_init(const struct position *pos, struct evaluationinfo *ei) 
 	ei->pawn_attack_span[white] = fill_north(ei->attacked_squares[white][pawn]);
 	ei->pawn_attack_span[black] = fill_south(ei->attacked_squares[black][pawn]);
 
-	memset(ei->attacked_squares, 0, sizeof(ei->attacked_squares));
 
 	for (int turn = 0; turn < 2; turn++) {
 		ei->mobility[turn] = 0;
@@ -302,7 +333,7 @@ mevalue evaluate_psqtable(const struct position *pos, struct evaluationinfo *ei,
 
 mevalue evaluate_turn(const struct position *pos, struct evaluationinfo *ei, int turn) {
 	UNUSED(ei);
-	return (pos->turn == turn) * S(15, 5);
+	return (pos->turn == turn) * side_to_move_bonus;
 }
 
 int16_t evaluate_classical(const struct position *pos) {
@@ -322,6 +353,8 @@ int16_t evaluate_classical(const struct position *pos) {
 	eval += evaluate_mobility(pos, &ei, white) - evaluate_mobility(pos, &ei, black);
 
 	eval += evaluate_space(pos, &ei, white) - evaluate_space(pos, &ei, black);
+
+	eval += evaluate_turn(pos, &ei, white) - evaluate_turn(pos, &ei, black);
 
 	int16_t ret = mevalue_evaluation(eval, game_phase(pos));
 
