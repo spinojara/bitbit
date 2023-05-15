@@ -20,20 +20,34 @@
 #include "transposition.h"
 
 void history_next(struct position *pos, struct history *h, move m) {
-	h->zobrist_key[h->index] = pos->zobrist_key;
-	h->move[h->index] = m;
-	do_zobrist_key(pos, h->move + h->index);
-	do_move(pos, h->move + h->index);
-	h->index++;
+	h->zobrist_key[h->ply] = pos->zobrist_key;
+	h->move[h->ply] = m;
+	do_zobrist_key(pos, h->move + h->ply);
+	do_move(pos, h->move + h->ply);
+	h->ply++;
 }
 
 void history_previous(struct position *pos, struct history *h) {
-	h->index--;
-	undo_zobrist_key(pos, h->move + h->index);
-	undo_move(pos, h->move + h->index);
+	h->ply--;
+	undo_zobrist_key(pos, h->move + h->ply);
+	undo_move(pos, h->move + h->ply);
 }
 
-void history_reset(struct position *pos, struct history *h) {
-	h->index = 0;
+void history_reset(const struct position *pos, struct history *h) {
+	memset(h, 0, sizeof(*h));
 	memcpy(&h->start, pos, sizeof(struct position));
+}
+
+int seldepth(const struct history *h) {
+	int ply;
+	for (ply = h->ply; ply < POSITIONS_MAX; ply++) {
+		if (!h->zobrist_key[ply])
+			break;
+	}
+	return ply - h->ply;
+}
+
+void reset_seldepth(struct history *h) {
+	for (int ply = h->ply; ply < POSITIONS_MAX; ply++)
+		h->zobrist_key[ply] = 0;
 }

@@ -26,29 +26,22 @@
 #include "move.h"
 #include "search.h"
 #include "interrupt.h"
+#include "option.h"
+
+enum {
+	BOUND_NONE  = 0,
+	BOUND_EXACT = 1,
+	BOUND_UPPER = 2,
+	BOUND_LOWER = 3,
+};
 
 struct transposition {
 	uint64_t zobrist_key;
 	int16_t evaluation;
 	uint8_t depth;
-	uint8_t type;
+	uint8_t bound;
 	uint16_t move;
-	uint8_t draw;
 };
-
-static inline uint64_t transposition_zobrist_key(struct transposition *e) { return e->zobrist_key; }
-static inline int16_t transposition_evaluation(struct transposition *e) { return e->evaluation; }
-static inline uint8_t transposition_depth(struct transposition *e) { return e->depth; }
-static inline uint8_t transposition_type(struct transposition *e) { return e->type; }
-static inline uint16_t transposition_move(struct transposition *e) { return e->move; }
-static inline uint8_t transposition_open(struct transposition *e) { return e->draw; }
-static inline void transposition_set_zobrist_key(struct transposition *e, uint64_t t) { e->zobrist_key = t; }
-static inline void transposition_set_evaluation(struct transposition *e, int16_t t) { e->evaluation = t; }
-static inline void transposition_set_depth(struct transposition *e, uint8_t t) { e->depth = t; }
-static inline void transposition_set_type(struct transposition *e, uint8_t t) { e->type = t; }
-static inline void transposition_set_move(struct transposition *e, uint16_t t) { e->move = t; }
-static inline void transposition_set_open(struct transposition *e) { e->draw = 1; }
-static inline void transposition_set_closed(struct transposition *e) { e->draw = 0; }
 
 struct transposition_table {
 	struct transposition *table;
@@ -70,30 +63,32 @@ static inline struct transposition *get(struct position *pos) {
 }
 
 static inline struct transposition *attempt_get(struct position *pos) {
+	if (!option_transposition)
+		return NULL;
 	struct transposition *e = get(pos);
-	if (transposition_zobrist_key(e) == pos->zobrist_key)
+	if (e->zobrist_key == pos->zobrist_key)
 		return e;
 	return NULL;
 }
 
-static inline void store(struct transposition *e, struct position *pos, int16_t evaluation, uint8_t depth, uint8_t type, move m) {
-	transposition_set_zobrist_key(e, pos->zobrist_key);
-	transposition_set_evaluation(e, evaluation);
-	transposition_set_depth(e, depth);
-	transposition_set_type(e, type);
+static inline void store(struct transposition *e, struct position *pos, int16_t evaluation, uint8_t depth, uint8_t bound, move m) {
+	e->zobrist_key = pos->zobrist_key;
+	e->evaluation  = evaluation;
+	e->depth       = depth;
+	e->bound        = bound;
 	/* keep old move */
-	if (m)
-		transposition_set_move(e, m & 0xFFFF);
+	if (m || e->zobrist_key != pos->zobrist_key)
+		e->move = m & 0xFFFF;
 }
 
-static inline void attempt_store(struct position *pos, int16_t evaluation, uint8_t depth, uint8_t type, move m) {
-	if (interrupt)
+static inline void attempt_store(struct position *pos, int16_t evaluation, uint8_t depth, uint8_t bound, move m) {
+	if (interrupt || !option_transposition)
 		return;
 	struct transposition *e = get(pos);
-	if ((type == NODE_PV && transposition_type(e) != NODE_PV) ||
-			transposition_zobrist_key(e) != pos->zobrist_key ||
-			depth > transposition_depth(e))
-		store(e, pos, evaluation, depth, type, m);
+	if ((bound == BOUND_EXACT && e->bound != BOUND_EXACT) ||
+			e->bound != pos->zobrist_key ||
+			depth >= e->depth)
+		store(e, pos, evaluation, depth, bound, m);
 }
 
 static inline int16_t adjust_value_mate_store(int16_t evaluation, uint8_t ply) {

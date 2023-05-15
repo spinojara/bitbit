@@ -26,12 +26,8 @@
 #include "movegen.h"
 #include "move.h"
 #include "util.h"
-#if defined(TRANSPOSITION)
 #include "transposition.h"
-#endif
-#if defined(NNUE)
 #include "nnue.h"
-#endif
 #include "init.h"
 #include "position.h"
 #include "attackgen.h"
@@ -41,6 +37,7 @@
 #include "history.h"
 #include "moveorder.h"
 #include "material.h"
+#include "option.h"
 
 static int reductions[256] = { 0 };
 
@@ -95,40 +92,39 @@ static inline void store_pv_move(move *m, uint8_t ply, move pv_moves[256][256]) 
 
 /* random drawn score to search more dynamically */
 static inline int16_t draw(struct searchinfo *si) {
-	return 0x3 - (si->nodes & 0x7);
+	return (si->nodes & 0x3);
 }
 
 static inline int16_t evaluate(struct position *pos) {
 	int16_t evaluation;
-#if defined(NNUE)
-	evaluation = evaluate_accumulator(pos);
-#else
-	evaluation = evaluate_classical(pos);
-#endif
+	if (option_nnue)
+		evaluation = evaluate_accumulator(pos);
+	else
+		evaluation = evaluate_classical(pos);
 	/* damp when shuffling pieces */
 	evaluation = (int32_t)evaluation * (200 - pos->halfmove) / 200;
 
 	return evaluation;
 }
 
-int16_t quiescence(struct position *pos, int16_t alpha, int16_t beta, struct searchinfo *si) {
+int16_t quiescence(struct position *pos, uint16_t ply, int16_t alpha, int16_t beta, struct searchinfo *si) {
 	uint64_t checkers = generate_checkers(pos, pos->turn);
-	si->nodes++;
-	int16_t evaluation = evaluate(pos);
-
-	if (!checkers) {
-		if (evaluation >= beta) {
-			return beta;
-		}
-		if (evaluation > alpha)
-			alpha = evaluation;
-	}
+	int16_t best_eval = -VALUE_INFINITE;
+	int16_t eval = evaluate(pos);
 
 	move move_list[MOVES_MAX];
 	generate_quiescence(pos, move_list);
 
 	if (!move_list[0])
-		return evaluation;
+		return checkers ? -VALUE_MATE + ply : eval;
+
+	if (!checkers) {
+		if (eval >= beta) {
+			return beta;
+		}
+		if (eval > alpha)
+			alpha = eval;
+	}
 
 	uint64_t evaluation_list[MOVES_MAX];
 	move *ptr = order_moves(pos, move_list, evaluation_list, 0, 0, NULL, si);
@@ -136,25 +132,28 @@ int16_t quiescence(struct position *pos, int16_t alpha, int16_t beta, struct sea
 		if (is_capture(pos, ptr) && !checkers && evaluation_list[ptr - move_list] < SEE_VALUE_MINUS_100 + 10000)
 			continue;
 		do_move(pos, ptr);
-#if defined(NNUE)
+		si->nodes++;
 		do_accumulator(pos, ptr);
-#endif
-		evaluation = -quiescence(pos, -beta, -alpha, si);
+		eval = -quiescence(pos, ply + 1, -beta, -alpha, si);
 		undo_move(pos, ptr);
-#if defined(NNUE)
 		undo_accumulator(pos, ptr);
-#endif
-		if (evaluation >= beta)
-			return beta;
-		if (evaluation > alpha)
-			alpha = evaluation;
+		if (eval > best_eval) {
+			best_eval = eval;
+			if (eval > alpha) {
+				alpha = eval;
+				if (eval >= beta)
+					break;
+			}
+		}
 	}
-	return alpha;
+	return best_eval;
 }
 
-int16_t negamax(struct position *pos, uint8_t depth, uint8_t ply, int16_t alpha, int16_t beta, int cut_node, int flag, struct searchinfo *si) {
+/* check for ply and depth out of bound */
+int16_t negamax(struct position *pos, uint8_t depth, uint16_t ply, int16_t alpha, int16_t beta, int cut_node, int flag, struct searchinfo *si) {
+	int16_t best_eval = -VALUE_INFINITE;
 	/* value is not used but suppresses compiler warning */
-	int16_t evaluation = 0;
+	int16_t eval = -VALUE_INFINITE;
 
 	const int root_node = (ply == 0);
 	const int pv_node = (beta != alpha + 1);
@@ -164,38 +163,32 @@ int16_t negamax(struct position *pos, uint8_t depth, uint8_t ply, int16_t alpha,
 	if (si->nodes % 4096 == 0)
 		check_time(si);
 
-	/* draw by repetition or 50 move rule */
-	if (!root_node && (((pv_node || ply <= 2) && si->history && is_threefold(pos, si->history)) || pos->halfmove >= 100))
-		return draw(si);
+	if (!root_node) {
+		/* draws */
+		if (pos->halfmove >= 100 || is_repetition(pos, si->history, ply, 1 + pv_node))
+			return draw(si);
 
-#if defined(TRANSPOSITION)
-	void *e = attempt_get(pos);
-	if (e && transposition_open(e) && !pv_node)
-		return draw(si);
-	if (e && transposition_depth(e) >= depth && !pv_node) {
-		evaluation = adjust_value_mate_get(transposition_evaluation(e), ply);
-		if (transposition_type(e) == NODE_PV)
-			return evaluation;
-		else if (transposition_type(e) == NODE_CUT && evaluation >= beta)
-			return beta;
-		else if (transposition_type(e) == NODE_ALL && evaluation <= alpha)
+		/* mate distance pruning */
+		alpha = MAX(alpha, -VALUE_MATE + ply);
+		beta = MIN(beta, VALUE_MATE - ply - 1);
+		if (alpha >= beta)
 			return alpha;
 	}
-#else
-	void *e = NULL;
-#endif
+
+	struct transposition *e = attempt_get(pos);
+	if (e && e->depth >= depth && !pv_node) {
+		eval = adjust_value_mate_get(e->evaluation, ply);
+		if (e->bound == BOUND_EXACT)
+			return eval;
+		else if (e->bound == BOUND_LOWER && eval >= beta)
+			return beta;
+		else if (e->bound == BOUND_UPPER && eval <= alpha)
+			return alpha;
+	}
 	
 	uint64_t checkers = generate_checkers(pos, pos->turn);
-	if (depth <= 0 && (!checkers || ply >= 2 * si->root_depth)) {
-		evaluation = mate(pos);
-		/* stalemate */
-		if (evaluation == 1)
-			return 0;
-		/* checkmate */
-		if (evaluation == 2)
-			return ply - VALUE_MATE;
-		return quiescence(pos, alpha, beta, si);
-	}
+	if ((depth == 0 && !checkers) || ply >= 2 * si->root_depth)
+		return quiescence(pos, ply + 1, alpha, beta, si);
 
 #if 0
 	int16_t static_evaluation = evaluate(pos);
@@ -208,20 +201,16 @@ int16_t negamax(struct position *pos, uint8_t depth, uint8_t ply, int16_t alpha,
 	if (!pv_node && !checkers && depth == 1 && static_evaluation - 200 > beta)
 		return static_evaluation;
 #endif
-
 	/* null move pruning */
 	if (!pv_node && !checkers && flag != FLAG_NULL_MOVE && depth >= 3 && has_big_piece(pos)) {
 		int t = pos->en_passant;
 		do_null_move(pos, 0);
-#if defined(TRANSPOSITION)
+		si->history->zobrist_key[si->history->ply + ply] = pos->zobrist_key;
 		do_null_zobrist_key(pos, 0);
-#endif
-		evaluation = -negamax(pos, depth - 3, ply + 1, -beta, -beta + 1, !cut_node, FLAG_NULL_MOVE, si);
+		eval = -negamax(pos, depth - 3, ply + 1, -beta, -beta + 1, !cut_node, FLAG_NULL_MOVE, si);
 		do_null_move(pos, t);
-#if defined(TRANSPOSITION)
 		do_null_zobrist_key(pos, t);
-#endif
-		if (evaluation >= beta)
+		if (eval >= beta)
 			return beta;
 	}
 
@@ -229,29 +218,20 @@ int16_t negamax(struct position *pos, uint8_t depth, uint8_t ply, int16_t alpha,
 	generate_all(pos, move_list);
 
 	if (!move_list[0])
-		return checkers ? ply - VALUE_MATE : 0;
+		return checkers ? -VALUE_MATE + ply : 0;
 
 	uint64_t evaluation_list[MOVES_MAX];
 	
-#if defined(TRANSPOSITION)
-	if (e)
-		transposition_set_open(e);
-#endif
-
 	uint16_t m = 0;
-#if !defined(TRANSPOSITION)
-	UNUSED(m);
-#endif
+
 	move *ptr = order_moves(pos, move_list, evaluation_list, depth, ply, e, si);
 	for (; *ptr; next_move(move_list, evaluation_list, &ptr)) {
 		int move_number = ptr - move_list;
-#if defined(TRANSPOSITION)
+		si->history->zobrist_key[si->history->ply + ply] = pos->zobrist_key;
 		do_zobrist_key(pos, ptr);
-#endif
 		do_move(pos, ptr);
-#if defined(NNUE)
+		si->nodes++;
 		do_accumulator(pos, ptr);
-#endif
 
 		uint8_t new_depth = depth - 1;
 		/* extensions */
@@ -263,24 +243,16 @@ int16_t negamax(struct position *pos, uint8_t depth, uint8_t ply, int16_t alpha,
 		int new_flag = move_capture(ptr) ? move_to(ptr) : FLAG_NONE;
 		/* late move reductions */
 		int full_depth_search = 0;
-		if (depth >= 2 && !checkers && move_number >= (1 + pv_node) && move_flag(ptr) != 2 && !move_capture(ptr)) {
+		if (depth >= 2 && !checkers && move_number >= (1 + pv_node) && (!move_capture(ptr) || cut_node)) {
 			uint8_t r = late_move_reduction(move_number, depth);
-
 			r -= pv_node;
-#if defined(TRANSPOSITION)
-			if (e) {
-				move ttmove = transposition_move(e);
-				if (is_capture(pos, &ttmove))
-					r += 1;
-			}
-#endif
+			r += !move_capture(ptr);
 			r += cut_node;
-
 			uint8_t lmr_depth = CLAMP(new_depth - r, 1, new_depth);
 
-			evaluation = -negamax(pos, lmr_depth, ply + 1, -alpha - 1, -alpha, 1, new_flag, si);
+			eval = -negamax(pos, lmr_depth, ply + 1, -alpha - 1, -alpha, 1, new_flag, si);
 
-			if (evaluation > alpha)
+			if (eval > alpha)
 				full_depth_search = 1;
 		}
 		else {
@@ -288,54 +260,47 @@ int16_t negamax(struct position *pos, uint8_t depth, uint8_t ply, int16_t alpha,
 		}
 
 		if (full_depth_search)
-			evaluation = -negamax(pos, new_depth, ply + 1, -alpha - 1, -alpha, !cut_node, new_flag, si);
+			eval = -negamax(pos, new_depth, ply + 1, -alpha - 1, -alpha, !cut_node, new_flag, si);
 
-		if (pv_node && (!move_number || (evaluation > alpha && (root_node || evaluation < beta))))
-			evaluation = -negamax(pos, new_depth, ply + 1, -beta, -alpha, 0, new_flag, si);
+		if (pv_node && (!move_number || (eval > alpha && (root_node || eval < beta))))
+			eval = -negamax(pos, new_depth, ply + 1, -beta, -alpha, 0, new_flag, si);
 
-#if defined(TRANSPOSITION)
 		undo_zobrist_key(pos, ptr);
-#endif
 		undo_move(pos, ptr);
-#if defined(NNUE)
 		undo_accumulator(pos, ptr);
-#endif
-		if (evaluation >= beta) {
-			if (!si->interrupt && pv_node && !is_capture(pos, ptr) && move_flag(ptr) != 2)
-				store_killer_move(ptr, ply, si->killer_moves);
-#if defined(TRANSPOSITION)
-			if (e)
-				transposition_set_closed(e);
-			/* type cut */
-			if (!si->interrupt)
-				attempt_store(pos, beta, depth, NODE_CUT, *ptr);
-#endif
-			return beta;
-		}
-		if (evaluation > alpha) {
-			if (!si->interrupt && !is_capture(pos, ptr) && move_flag(ptr) != 2)
-				store_history_move(pos, ptr, depth, si->history_moves);
-			alpha = evaluation;
-			if (!si->interrupt && pv_node)
-				store_pv_move(ptr, ply, si->pv_moves);
-#if defined(TRANSPOSITION)
-			m = *ptr;
-#endif
+		if (interrupt || si->interrupt)
+			return 0;
+
+		if (eval > best_eval) {
+			best_eval = eval;
+
+			if (eval > alpha) {
+				m = *ptr;
+
+				if (pv_node)
+					store_pv_move(ptr, ply, si->pv_moves);
+				if (!is_capture(pos, ptr) && move_flag(ptr) != 2)
+					store_history_move(pos, ptr, depth, si->history_moves);
+
+				if (pv_node && eval < beta) {
+					alpha = eval;
+				}
+				else {
+					if (!is_capture(pos, ptr) && move_flag(ptr) != 2)
+						store_killer_move(ptr, ply, si->killer_moves);
+					break;
+				}
+			}
 		}
 	}
-#if defined(TRANSPOSITION)
-	if (e)
-		transposition_set_closed(e);
-	/* type pv or all */
-	if (!si->interrupt)
-		attempt_store(pos, adjust_value_mate_store(alpha, ply), depth, m ? NODE_PV : NODE_ALL , m);
-#endif
-	return alpha;
+	int bound = (best_eval >= beta) ? BOUND_LOWER : (pv_node && m) ? BOUND_EXACT : BOUND_UPPER;
+	attempt_store(pos, adjust_value_mate_store(best_eval, ply), depth, bound, m);
+	return best_eval;
 }
 
 int16_t aspiration_window(struct position *pos, uint8_t depth, int16_t last, struct searchinfo *si) {
 	int16_t evaluation;
-	int16_t delta = 15;
+	int16_t delta = 25 + last * last / 16384;
 	int16_t alpha = MAX(last - delta, -VALUE_MATE);
 	int16_t beta = MIN(last + delta, VALUE_MATE);
 
@@ -364,19 +329,17 @@ int16_t search(struct position *pos, uint8_t depth, int verbose, int etime, int 
 		movetime = etime / 5;
 
 	struct searchinfo si = { 0 };
-	si.history = history;
 	si.time_start = ts;
 	si.time_stop = movetime ? si.time_start + 1000 * movetime : 0;
+	si.history = history;
 
 	time_init(pos, etime, &si);
 
 	char str[8];
 	int16_t evaluation = 0;
 
-#if defined(NNUE)
 	update_accumulator(pos, pos->accumulation, 0);
 	update_accumulator(pos, pos->accumulation, 1);
-#endif
 
 	if (depth == 0) {
 		evaluation = evaluate(pos);
@@ -386,12 +349,11 @@ int16_t search(struct position *pos, uint8_t depth, int verbose, int etime, int 
 	}
 
 	move bestmove = 0;
-	uint8_t d;
+	uint16_t d;
 	for (d = iterative ? 1 : depth; d <= depth; d++) {
-		time_point ie = time_now();
-
 		si.root_depth = d;
-		si.nodes = 0;
+		if (verbose)
+			reset_seldepth(si.history);
 
 		if (d <= 6 || !iterative)
 			evaluation = negamax(pos, d, 0, -VALUE_MATE, VALUE_MATE, 0, 0, &si);
@@ -406,18 +368,17 @@ int16_t search(struct position *pos, uint8_t depth, int verbose, int etime, int 
 
 		bestmove = si.pv_moves[0][0];
 
-		ie = time_now() - ie;
-		time_point ae = time_now() - ts;
+		time_point tp = time_now() - ts;
 		if (verbose) {
-			printf("info depth %d score ", d);
+			printf("info depth %d seldepth %d score ", d, seldepth(si.history));
 			if (evaluation >= VALUE_MATE_IN_MAX_PLY)
 				printf("mate %d", (VALUE_MATE - evaluation + 1) / 2);
 			else if (evaluation <= -VALUE_MATE_IN_MAX_PLY)
 				printf("mate %d", (-VALUE_MATE - evaluation) / 2);
 			else
 				printf("cp %d", evaluation);
-			printf(" nodes %ld time %ld ", si.nodes, ae / 1000);
-			printf("nps %ld ", ie ? 1000000 * si.nodes / ie : 0);
+			printf(" nodes %ld time %ld ", si.nodes, tp / 1000);
+			printf("nps %ld ", tp ? 1000000 * si.nodes / tp : 0);
 			printf("pv");
 			print_pv(pos, si.pv_moves[0], 0);
 			printf("\n");

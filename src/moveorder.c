@@ -24,9 +24,7 @@
 #include "bitboard.h"
 #include "attackgen.h"
 #include "evaluate.h"
-#if defined(TRANSPOSITION)
 #include "transposition.h"
-#endif
 
 struct moveorderinfo {
 	uint64_t pawn_attacks;
@@ -174,12 +172,8 @@ int see_geq(struct position *pos, const move *m, int16_t value) {
 uint64_t evaluate_move(struct position *pos, move *m, uint8_t depth, uint8_t ply, void *e, const struct searchinfo *si, struct moveorderinfo *mi) {
 	UNUSED(depth);
 	/* transposition table */
-#if defined(TRANSPOSITION)
-	if (e && *m == transposition_move(e))
+	if (e && *m == ((struct transposition *)e)->move)
 		return 0xF000000000000001;
-#else
-	UNUSED(e);
-#endif
 
 	const int piece = pos->mailbox[move_from(m)];
 	const int capture = pos->mailbox[move_to(m)];

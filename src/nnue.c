@@ -29,6 +29,7 @@
 #include "evaluate.h"
 #include "move.h"
 #include "position.h"
+#include "option.h"
 
 #ifdef AVX2
 #include <immintrin.h>
@@ -37,6 +38,12 @@
 #elif SSE2
 #include <emmintrin.h>
 #endif
+
+int enable_nnue = 0;
+
+void setoption_nnue(int o) {
+	enable_nnue = o;
+}
 
 #define K_HALF_DIMENSIONS (256)
 #define FT_IN_DIMS (64 * PS_END)
@@ -328,6 +335,8 @@ static inline void remove_index(unsigned index, int16_t (*accumulation)[2][K_HAL
 }
 
 void update_accumulator(struct position *pos, int16_t (*accumulation)[2][K_HALF_DIMENSIONS], int turn) {
+	if (!option_nnue)
+		return;
 	memcpy((*accumulation)[turn], ft_biases, K_HALF_DIMENSIONS * sizeof(ft_bias_t));
 	int king_square = ctz(pos->piece[turn][king]);
 	king_square = orient(turn, king_square);
@@ -426,6 +435,8 @@ void undo_refresh_accumulator(struct position *pos, move *m, int turn) {
 }
 
 void do_accumulator(struct position *pos, move *m) {
+	if (!option_nnue)
+		return;
 	int target_square = move_to(m);
 	/* king */
 	if (pos->mailbox[target_square] % 6 == 0) {
@@ -476,6 +487,8 @@ void do_accumulator(struct position *pos, move *m) {
 }
 
 void undo_accumulator(struct position *pos, move *m) {
+	if (!option_nnue)
+		return;
 	int source_square = move_from(m);
 	int target_square = move_to(m);
 	/* king */

@@ -86,7 +86,6 @@ struct parameter parameters[] = {
 	PARAMETER(&blocked_rook, 1, 1),
 	PARAMETER(&undeveloped_piece, 1, 1),
 	PARAMETER(&defended_minor, 1, 1),
-	PARAMETER(&side_to_move_bonus, 1, 1),
 
 	PARAMETER(&backward_pawn, 1, 1),
 	PARAMETER(&supported_pawn, 1, 1),
@@ -102,6 +101,8 @@ struct parameter parameters[] = {
 	PARAMETER(&bishop_king_attack_danger, 1, 0),
 	PARAMETER(&rook_king_attack_danger, 1, 0),
 	PARAMETER(&queen_king_attack_danger, 1, 0),
+
+	PARAMETER(&tempo_bonus, 1, 0),
 };
 
 void mevalue_print(mevalue eval) {
@@ -214,7 +215,7 @@ double E(int fd) {
 	while (read(fd, pos, sizeof(struct compressedposition))) {
 		if (read(fd, &result, sizeof(float)) == -1)
 			printf("READ ERROR\n");
-		int16_t q = (2 * pos->turn - 1) * quiescence(pos, -VALUE_MATE, VALUE_MATE, si);
+		int16_t q = (2 * pos->turn - 1) * quiescence(pos, 0, -VALUE_MATE, VALUE_MATE, si);
 		double s = sigmoid(q);
 		ret += (result - s) * (result - s);
 	}
@@ -251,7 +252,7 @@ double sum_positions(struct position pos[BATCH_SIZE], float result[BATCH_SIZE], 
 	tables_init();
 	double ret = 0;
 	for (size_t i = 0; i < BATCH_SIZE; i++) {
-		int16_t q = (2 * pos[i].turn - 1) * quiescence(&pos[i], -VALUE_MATE, VALUE_MATE, si);
+		int16_t q = (2 * pos[i].turn - 1) * quiescence(&pos[i], 0, -VALUE_MATE, VALUE_MATE, si);
 		double s = sigmoid(q);
 		ret += (result[i] - s) * (result[i] - s);
 	}
@@ -272,7 +273,7 @@ double Es(int fd) {
 			printf("READ ERROR\n");
 		if (read(fd, &result, sizeof(float)) == -1)
 			printf("READ ERROR\n");
-		int16_t q = (2 * pos->turn - 1) * quiescence(pos, -VALUE_MATE, VALUE_MATE, si);
+		int16_t q = (2 * pos->turn - 1) * quiescence(pos, 0, -VALUE_MATE, VALUE_MATE, si);
 		double s = sigmoid(q);
 		ret += (result - s) * (result - s);
 	}

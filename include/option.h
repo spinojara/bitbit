@@ -15,29 +15,14 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef HISTORY_H
-#define HISTORY_H
+#ifndef OPTION_H
+#define OPTION_H
 
-#include "move.h"
+extern int option_nnue;
+extern int option_transposition;
 
-#define POSITIONS_MAX 8192
+void print_options();
 
-struct history {
-	move move[POSITIONS_MAX];
-	int irreversible[POSITIONS_MAX];
-	uint64_t zobrist_key[POSITIONS_MAX];
-	struct position start;
-	int ply;
-};
-
-void history_reset(const struct position *pos, struct history *h);
-
-void history_next(struct position *pos, struct history *h, move m);
-
-void history_previous(struct position *pos, struct history *h);
-
-int seldepth(const struct history *h);
-
-void reset_seldepth(struct history *h);
+void setoption(int argc, char **argv);
 
 #endif

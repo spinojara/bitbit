@@ -22,6 +22,7 @@
 
 #include "position.h"
 
+#define VALUE_INFINITE (0x7FFF)
 #define VALUE_MATE (0x7F00)
 #define VALUE_MATE_IN_MAX_PLY (VALUE_MATE - 128)
 
@@ -41,7 +42,6 @@ extern mevalue rook_on_open_file;
 extern mevalue blocked_rook;
 extern mevalue undeveloped_piece;
 extern mevalue defended_minor;
-extern mevalue side_to_move_bonus;
 
 extern int weak_squares_danger;
 extern int enemy_no_queen_bonus;
@@ -49,6 +49,8 @@ extern int knight_king_attack_danger;
 extern int bishop_king_attack_danger;
 extern int rook_king_attack_danger;
 extern int queen_king_attack_danger;
+
+extern int tempo_bonus;
 
 struct evaluationinfo {
 	mevalue mobility[2];

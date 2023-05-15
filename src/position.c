@@ -27,6 +27,7 @@
 #include "movegen.h"
 #include "history.h"
 #include "interface.h"
+#include "option.h"
 
 struct position start[1];
 
@@ -853,7 +854,7 @@ void print_history_pgn(const struct history *h) {
 	memcpy(m, h->move, sizeof(m));
 
 	char str[8];
-	for (int i = 0; i < h->index; i++) {
+	for (int i = 0; i < h->ply; i++) {
 		if (pos->turn) {
 			printf("%i. ", pos->fullmove);
 		}
@@ -865,7 +866,7 @@ void print_history_pgn(const struct history *h) {
 			printf("\n");
 		do_move(pos, m + i);
 	}
-	if (h->index)
+	if (h->ply)
 		printf("\n");
 }
 
@@ -879,7 +880,7 @@ void print_history_algebraic(const struct history *h, FILE *file) {
 	memcpy(m, h->move, sizeof(m));
 
 	char str[8];
-	for (int i = 0; i < h->index; i++) {
+	for (int i = 0; i < h->ply; i++) {
 		if (!i)
 			fprintf(file, " ");
 		fprintf(file, "%s", move_str_algebraic(str, m + i));
@@ -890,21 +891,16 @@ int has_big_piece(const struct position *pos) {
 	return pos->piece[pos->turn][queen] || pos->piece[pos->turn][rook] || pos->piece[pos->turn][queen];
 }
 
-int is_threefold(struct position *pos, struct history *h) {
-	int count = 0;
-
-	for (int i = 0; i < h->index; i++)
+/* check for irreversible moves */
+int is_repetition(const struct position *pos, const struct history *h, int ply, int count) {
+	if (!option_transposition)
+		return 0;
+	for (int i = ply + h->ply - 2, c = 0; i >= 0; i -= 2) {
 		if (pos->zobrist_key == h->zobrist_key[i])
-			count++;
-
-	return count >= 2;
-}
-
-int is_twofold(struct position *pos, struct history *h) {
-	for (int i = 0; i < h->index; i++)
-		if (pos->zobrist_key == h->zobrist_key[i])
+			c++;
+		if (c == count)
 			return 1;
-
+	}
 	return 0;
 }
 

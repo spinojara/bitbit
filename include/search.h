@@ -25,14 +25,6 @@
 typedef int64_t time_point;
 
 enum {
-	NODE_ROOT = 0,
-	NODE_PV = 1,
-	NODE_CUT = 2,
-	NODE_ALL = 3,
-	NODE_OTHER = 4,
-};
-
-enum {
 	FLAG_NONE = 64,
 	FLAG_NULL_MOVE = 65,
 };
@@ -57,7 +49,7 @@ struct searchinfo {
 
 int16_t search(struct position *pos, uint8_t depth, int verbose, int etime, int movetime, move *m, struct history *history, int iterative);
 
-int16_t quiescence(struct position *pos, int16_t alpha, int16_t beta, struct searchinfo *si);
+int16_t quiescence(struct position *pos, uint16_t ply, int16_t alpha, int16_t beta, struct searchinfo *si);
 
 void search_init(void);
 

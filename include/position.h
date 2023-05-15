@@ -116,8 +116,7 @@ void print_history_algebraic(const struct history *history, FILE *file);
 
 int has_big_piece(const struct position *pos);
 
-int is_threefold(struct position *pos, struct history *history);
-int is_twofold(struct position *pos, struct history *history);
+int is_repetition(const struct position *pos, const struct history *h, int ply, int count);
 
 void position_init(void);
 

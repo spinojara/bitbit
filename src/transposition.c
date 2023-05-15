@@ -47,6 +47,8 @@ int allocate_transposition_table(uint64_t t) {
 	if (size < sizeof(struct transposition))
 		return 2;
 	transposition_table->size = size / sizeof(struct transposition);
+	if (transposition_table)
+		free(transposition_table->table);
 	transposition_table->table = malloc(transposition_table->size * sizeof(struct transposition));
 	
 	if (!transposition_table->table)
@@ -56,11 +58,11 @@ int allocate_transposition_table(uint64_t t) {
 	return 0;
 }
 
-int transposition_table_occupancy(int node_type) {
+int transposition_table_occupancy(int bound) {
 	uint64_t occupied = 0;
 	for (uint64_t i = 0; i < transposition_table->size; i++)
-		if (node_type ? ((transposition_table->table + i)->type == node_type) :
-			(transposition_table->table + i)->type > 0)
+		if (bound ? ((transposition_table->table + i)->bound == bound) :
+			(transposition_table->table + i)->bound > 0)
 			occupied++;
 	return 1000 * occupied / transposition_table->size;
 }
@@ -73,6 +75,8 @@ void zobrist_key_init(void) {
 }
 
 void do_zobrist_key(struct position *pos, const move *m) {
+	if (!option_transposition)
+		return;
 	uint8_t source_square = move_from(m);
 	uint8_t target_square = move_to(m);
 
@@ -133,6 +137,8 @@ void do_zobrist_key(struct position *pos, const move *m) {
 }
 
 void undo_zobrist_key(struct position *pos, const move *m) {
+	if (!option_transposition)
+		return;
 	uint8_t source_square = move_from(m);
 	uint8_t target_square = move_to(m);
 
@@ -193,6 +199,8 @@ void undo_zobrist_key(struct position *pos, const move *m) {
 }
 
 void do_null_zobrist_key(struct position *pos, int en_passant) {
+	if (!option_transposition)
+		return;
 	pos->zobrist_key ^= zobrist_en_passant_key(pos->en_passant);
 	pos->zobrist_key ^= zobrist_en_passant_key(en_passant);
 	pos->zobrist_key ^= zobrist_turn_key();

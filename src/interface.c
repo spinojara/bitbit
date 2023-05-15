@@ -34,6 +34,7 @@
 #include "interrupt.h"
 #include "history.h"
 #include "init.h"
+#include "option.h"
 
 struct func {
 	char *name;
@@ -55,6 +56,7 @@ int interface_version(int argc, char **argv);
 int interface_tt(int argc, char **argv);
 int interface_isready(int argc, char **argv);
 int interface_uci(int argc, char **argv);
+int interface_setoption(int argc, char **argv);
 int interface_ucinewgame(int argc, char **argv);
 
 struct func func_arr[] = {
@@ -72,6 +74,7 @@ struct func func_arr[] = {
 	{ "tt"         , interface_tt         , },
 	{ "isready"    , interface_isready    , },
 	{ "uci"        , interface_uci        , },
+	{ "setoption"  , interface_setoption  , },
 	{ "ucinewgame" , interface_ucinewgame , },
 };
 
@@ -107,7 +110,7 @@ int interface_move(int argc, char **argv) {
 int interface_undo(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
-	if (history->index)
+	if (history->ply)
 		history_previous(pos, history);
 	return DONE;
 }
@@ -281,9 +284,9 @@ int interface_tt(int argc, char **argv) {
 	if (argc < 2) {
 		transposition_table_size_print(log_2(transposition_table_size() *
 					sizeof(struct transposition)));
-		printf("\npv    nodes: %4d pm\n", transposition_table_occupancy(NODE_PV));
-		printf("cut   nodes: %4d pm\n", transposition_table_occupancy(NODE_CUT));
-		printf("all   nodes: %4d pm\n", transposition_table_occupancy(NODE_ALL));
+		printf("\npv    nodes: %4d pm\n", transposition_table_occupancy(BOUND_EXACT));
+		printf("cut   nodes: %4d pm\n", transposition_table_occupancy(BOUND_LOWER));
+		printf("all   nodes: %4d pm\n", transposition_table_occupancy(BOUND_UPPER));
 		printf("total nodes: %4d pm\n", transposition_table_occupancy(0));
 	}
 	else if (strcmp(argv[1], "clear") == 0) {
@@ -315,7 +318,15 @@ int interface_uci(int argc, char **argv) {
 	UNUSED(argv);
 	printf("id name bitbit\n");
 	printf("id author Isak Ellmer\n");
+	print_options();
 	printf("uciok\n");
+	return DONE;
+}
+
+int interface_setoption(int argc, char **argv) {
+	UNUSED(argc);
+	UNUSED(argv);
+	setoption(argc, argv);
 	return DONE;
 }
 

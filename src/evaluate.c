@@ -38,7 +38,6 @@ mevalue rook_on_open_file     = S(18, 9);
 mevalue blocked_rook          = S(-28, -9);
 mevalue undeveloped_piece     = S(-12, -17);
 mevalue defended_minor        = S(4, 5);
-mevalue side_to_move_bonus    = S(8, 6);
 
 /* king danger */
 int weak_squares_danger       = 34;
@@ -47,6 +46,8 @@ int knight_king_attack_danger = 61;
 int bishop_king_attack_danger = 53;
 int rook_king_attack_danger   = 69;
 int queen_king_attack_danger  = 78;
+
+int tempo_bonus               = 7;
 
 mevalue evaluate_mobility(const struct position *pos, struct evaluationinfo *ei, int turn) {
 	UNUSED(pos);
@@ -331,11 +332,6 @@ mevalue evaluate_psqtable(const struct position *pos, struct evaluationinfo *ei,
 	return eval;
 }
 
-mevalue evaluate_turn(const struct position *pos, struct evaluationinfo *ei, int turn) {
-	UNUSED(ei);
-	return (pos->turn == turn) * side_to_move_bonus;
-}
-
 int16_t evaluate_classical(const struct position *pos) {
 	struct evaluationinfo ei;
 
@@ -354,11 +350,9 @@ int16_t evaluate_classical(const struct position *pos) {
 
 	eval += evaluate_space(pos, &ei, white) - evaluate_space(pos, &ei, black);
 
-	eval += evaluate_turn(pos, &ei, white) - evaluate_turn(pos, &ei, black);
-
 	int16_t ret = mevalue_evaluation(eval, game_phase(pos));
 
-	return pos->turn ? ret : -ret;
+	return (pos->turn ? ret : -ret) + tempo_bonus;
 }
 
 void print_mevalue(mevalue eval);
@@ -384,7 +378,6 @@ void evaluate_print(const struct position *pos) {
 	eval += evaluate_print_x("King", pos, &ei, &evaluate_king);
 	eval += evaluate_print_x("Mobility", pos, &ei, &evaluate_mobility);
 	eval += evaluate_print_x("Space", pos, &ei, &evaluate_space);
-	eval += evaluate_print_x("Turn", pos, &ei, &evaluate_turn);
 	printf("+-------------+-------------+-------------+-------------+\n");
 	printf("| Total       |             |             | ");
 	print_mevalue(eval);
