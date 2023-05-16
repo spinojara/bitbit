@@ -1,3 +1,2 @@
 add checks for malloc
-refactor code to use searchinfo
-filenames without _
+own fixed rng
