@@ -124,6 +124,7 @@ int16_t quiescence(struct position *pos, uint16_t ply, int16_t alpha, int16_t be
 		}
 		if (eval > alpha)
 			alpha = eval;
+		best_eval = eval;
 	}
 
 	uint64_t evaluation_list[MOVES_MAX];
@@ -191,16 +192,17 @@ int16_t negamax(struct position *pos, uint8_t depth, uint16_t ply, int16_t alpha
 		return quiescence(pos, ply + 1, alpha, beta, si);
 
 #if 0
-	int16_t static_evaluation = evaluate(pos);
-	if (!pv_node && !checkers && depth <= 6 && static_evaluation + (160 + 90 * depth * depth) < alpha) {
-		evaluation = quiescence(pos, alpha - 1, alpha, si);
-		if (evaluation < alpha)
-			return evaluation;
+	int16_t static_eval = evaluate(pos);
+	if (!pv_node && !checkers && depth <= 6 && static_eval + (160 + 90 * depth * depth) < alpha) {
+		eval = quiescence(pos, ply + 1, alpha - 1, alpha, si);
+		if (eval < alpha)
+			return eval;
 	}
 
-	if (!pv_node && !checkers && depth == 1 && static_evaluation - 200 > beta)
-		return static_evaluation;
+	if (!pv_node && !checkers && depth == 1 && static_eval - 200 > beta)
+		return static_eval;
 #endif
+
 	/* null move pruning */
 	if (!pv_node && !checkers && flag != FLAG_NULL_MOVE && depth >= 3 && has_big_piece(pos)) {
 		int t = pos->en_passant;
