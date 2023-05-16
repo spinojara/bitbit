@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include <assert.h>
 
 #include "bitboard.h"
 #include "movegen.h"
@@ -71,6 +72,7 @@ void print_pv(struct position *pos, move *pv_move, int ply) {
 static inline void store_killer_move(move *m, uint8_t ply, move killer_moves[][2]) {
 	if (interrupt)
 		return;
+	assert(*m);
 	if ((*m & 0xFFFF) == killer_moves[ply][0])
 		return;
 	killer_moves[ply][1] = killer_moves[ply][0];
@@ -80,17 +82,19 @@ static inline void store_killer_move(move *m, uint8_t ply, move killer_moves[][2
 static inline void store_history_move(struct position *pos, move *m, uint8_t depth, uint64_t history_moves[13][64]) {
 	if (interrupt)
 		return;
-	history_moves[pos->mailbox[move_from(m)]][move_to(m)] += (uint64_t)1 << depth;
+	assert(*m);
+	history_moves[pos->mailbox[move_from(m)]][move_to(m)] += (uint64_t)1 << MIN(depth, 32);
 }
 
 static inline void store_pv_move(move *m, uint8_t ply, move pv_moves[256][256]) {
 	if (interrupt)
 		return;
+	assert(*m);
 	pv_moves[ply][ply] = *m & 0xFFFF;
 	memcpy(pv_moves[ply] + ply + 1, pv_moves[ply + 1] + ply + 1, sizeof(move) * (255 - ply));
 }
 
-/* random drawn score to search more dynamically */
+/* random drawn score to avoid threefold blindness */
 static inline int16_t draw(struct searchinfo *si) {
 	return (si->nodes & 0x3);
 }
@@ -147,6 +151,7 @@ int16_t quiescence(struct position *pos, uint16_t ply, int16_t alpha, int16_t be
 			}
 		}
 	}
+	assert(-VALUE_MATE < best_eval && best_eval < VALUE_MATE);
 	return best_eval;
 }
 
@@ -206,12 +211,12 @@ int16_t negamax(struct position *pos, uint8_t depth, uint16_t ply, int16_t alpha
 	/* null move pruning */
 	if (!pv_node && !checkers && flag != FLAG_NULL_MOVE && depth >= 3 && has_big_piece(pos)) {
 		int t = pos->en_passant;
+		do_null_zobrist_key(pos, 0);
 		do_null_move(pos, 0);
 		si->history->zobrist_key[si->history->ply + ply] = pos->zobrist_key;
-		do_null_zobrist_key(pos, 0);
 		eval = -negamax(pos, depth - 3, ply + 1, -beta, -beta + 1, !cut_node, FLAG_NULL_MOVE, si);
-		do_null_move(pos, t);
 		do_null_zobrist_key(pos, t);
+		do_null_move(pos, t);
 		if (eval >= beta)
 			return beta;
 	}
@@ -224,7 +229,7 @@ int16_t negamax(struct position *pos, uint8_t depth, uint16_t ply, int16_t alpha
 
 	uint64_t evaluation_list[MOVES_MAX];
 	
-	uint16_t m = 0;
+	uint16_t bestmove = 0;
 
 	move *ptr = order_moves(pos, move_list, evaluation_list, depth, ply, e, si);
 	for (; *ptr; next_move(move_list, evaluation_list, &ptr)) {
@@ -277,7 +282,7 @@ int16_t negamax(struct position *pos, uint8_t depth, uint16_t ply, int16_t alpha
 			best_eval = eval;
 
 			if (eval > alpha) {
-				m = *ptr;
+				bestmove = *ptr;
 
 				if (pv_node)
 					store_pv_move(ptr, ply, si->pv_moves);
@@ -295,8 +300,9 @@ int16_t negamax(struct position *pos, uint8_t depth, uint16_t ply, int16_t alpha
 			}
 		}
 	}
-	int bound = (best_eval >= beta) ? BOUND_LOWER : (pv_node && m) ? BOUND_EXACT : BOUND_UPPER;
-	attempt_store(pos, adjust_value_mate_store(best_eval, ply), depth, bound, m);
+	int bound = (best_eval >= beta) ? BOUND_LOWER : (pv_node && bestmove) ? BOUND_EXACT : BOUND_UPPER;
+	attempt_store(pos, adjust_value_mate_store(best_eval, ply), depth, bound, bestmove);
+	assert(-VALUE_MATE < best_eval && best_eval < VALUE_MATE);
 	return best_eval;
 }
 
@@ -340,13 +346,13 @@ int16_t search(struct position *pos, uint8_t depth, int verbose, int etime, int 
 	char str[8];
 	int16_t evaluation = 0;
 
-	update_accumulator(pos, pos->accumulation, 0);
-	update_accumulator(pos, pos->accumulation, 1);
+	refresh_accumulator(pos, pos->accumulation, 0);
+	refresh_accumulator(pos, pos->accumulation, 1);
 
 	if (depth == 0) {
 		evaluation = evaluate(pos);
 		if (verbose)
-			printf("info depth 0 score cp %d nodes 1\n", evaluation);
+			printf("info depth 0 score cp %d\n", evaluation);
 		return evaluation;
 	}
 
@@ -388,6 +394,8 @@ int16_t search(struct position *pos, uint8_t depth, int verbose, int etime, int 
 		if (etime && stop_searching(&si))
 			break;
 	}
+
+	assert(bestmove || interrupt || si.interrupt);
 
 	if (verbose && !interrupt)
 		printf("bestmove %s\n", move_str_algebraic(str, &bestmove));

@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <inttypes.h>
 #include <string.h>
+#include <assert.h>
 
 #include "util.h"
 #include "init.h"
@@ -47,6 +48,7 @@ int allocate_transposition_table(uint64_t t) {
 	if (size < sizeof(struct transposition))
 		return 2;
 	transposition_table->size = size / sizeof(struct transposition);
+	assert(transposition_table->size);
 	if (transposition_table)
 		free(transposition_table->table);
 	transposition_table->table = malloc(transposition_table->size * sizeof(struct transposition));
@@ -74,7 +76,10 @@ void zobrist_key_init(void) {
 	}
 }
 
+/* should be called before do_move */
 void do_zobrist_key(struct position *pos, const move *m) {
+	assert(*m);
+	assert(pos->mailbox[move_from(m)]);
 	if (!option_transposition)
 		return;
 	uint8_t source_square = move_from(m);
@@ -136,7 +141,11 @@ void do_zobrist_key(struct position *pos, const move *m) {
 	}
 }
 
+/* should be called before undo_move */
 void undo_zobrist_key(struct position *pos, const move *m) {
+	assert(*m);
+	assert(!pos->mailbox[move_from(m)]);
+	assert(pos->mailbox[move_to(m)]);
 	if (!option_transposition)
 		return;
 	uint8_t source_square = move_from(m);
@@ -198,6 +207,7 @@ void undo_zobrist_key(struct position *pos, const move *m) {
 	}
 }
 
+/* should be called before do_null_move and then again before (un)do_null_move */
 void do_null_zobrist_key(struct position *pos, int en_passant) {
 	if (!option_transposition)
 		return;

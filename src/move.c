@@ -21,6 +21,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <inttypes.h>
+#include <assert.h>
 
 #include "bitboard.h"
 #include "util.h"
@@ -28,6 +29,7 @@
 #include "attackgen.h"
 
 void do_move(struct position *pos, move *m) {
+	assert(*m);
 	uint8_t source_square = move_from(m);
 	uint8_t target_square = move_to(m);
 
@@ -111,6 +113,7 @@ void do_move(struct position *pos, move *m) {
 }
 
 void undo_move(struct position *pos, const move *m) {
+	assert(*m);
 	uint8_t source_square = move_from(m);
 	uint8_t target_square = move_to(m);
 

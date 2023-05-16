@@ -79,13 +79,12 @@ static inline void append_active_indices(struct position *pos, struct index *act
 	}
 }
 
-void update_accumulator(struct position *pos, int16_t (*accumulation)[2][K_HALF_DIMENSIONS], int turn);
+void refresh_accumulator(struct position *pos, int16_t (*accumulation)[2][K_HALF_DIMENSIONS], int turn);
 
-void do_refresh_accumulator(struct position *pos, move *m, int turn);
+void do_update_accumulator(struct position *pos, move *m, int turn);
+void undo_update_accumulator(struct position *pos, move *m, int turn);
 
 void do_accumulator(struct position *pos, move *m);
-
-void undo_refresh_accumulator(struct position *pos, move *m, int turn);
 
 void undo_accumulator(struct position *pos, move *m);
 

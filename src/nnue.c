@@ -23,6 +23,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdalign.h>
+#include <assert.h>
 
 #include "bitboard.h"
 #include "util.h"
@@ -38,12 +39,6 @@
 #elif SSE2
 #include <emmintrin.h>
 #endif
-
-int enable_nnue = 0;
-
-void setoption_nnue(int o) {
-	enable_nnue = o;
-}
 
 #define K_HALF_DIMENSIONS (256)
 #define FT_IN_DIMS (64 * PS_END)
@@ -99,7 +94,11 @@ struct data {
 	alignas(64) int8_t hidden2_out[32];
 };
 
+#if defined(INCBIN)
 extern uint8_t incbin[];
+#else
+uint8_t *incbin = NULL;
+#endif
 
 alignas(64) static ft_weight_t ft_weights[K_HALF_DIMENSIONS * FT_IN_DIMS];
 alignas(64) static ft_bias_t ft_biases[K_HALF_DIMENSIONS];
@@ -334,7 +333,7 @@ static inline void remove_index(unsigned index, int16_t (*accumulation)[2][K_HAL
 #endif
 }
 
-void update_accumulator(struct position *pos, int16_t (*accumulation)[2][K_HALF_DIMENSIONS], int turn) {
+void refresh_accumulator(struct position *pos, int16_t (*accumulation)[2][K_HALF_DIMENSIONS], int turn) {
 	if (!option_nnue)
 		return;
 	memcpy((*accumulation)[turn], ft_biases, K_HALF_DIMENSIONS * sizeof(ft_bias_t));
@@ -356,7 +355,7 @@ void update_accumulator(struct position *pos, int16_t (*accumulation)[2][K_HALF_
 }
 
 /* m cannot be a king move */
-void do_refresh_accumulator(struct position *pos, move *m, int turn) {
+void do_update_accumulator(struct position *pos, move *m, int turn) {
 	int source_square = move_from(m);
 	int target_square = move_to(m);
 	int king_square = orient(turn, ctz(pos->piece[turn][king]));
@@ -395,7 +394,7 @@ void do_refresh_accumulator(struct position *pos, move *m, int turn) {
 	}
 }
 
-void undo_refresh_accumulator(struct position *pos, move *m, int turn) {
+void undo_update_accumulator(struct position *pos, move *m, int turn) {
 	int source_square = move_from(m);
 	int target_square = move_to(m);
 	int king_square = orient(turn, ctz(pos->piece[turn][king]));
@@ -434,13 +433,17 @@ void undo_refresh_accumulator(struct position *pos, move *m, int turn) {
 	}
 }
 
+/* should be called after do_move */
 void do_accumulator(struct position *pos, move *m) {
+	assert(*m);
+	assert(!pos->mailbox[move_from(m)]);
+	assert(pos->mailbox[move_to(m)]);
 	if (!option_nnue)
 		return;
 	int target_square = move_to(m);
 	/* king */
 	if (pos->mailbox[target_square] % 6 == 0) {
-		update_accumulator(pos, pos->accumulation, 1 - pos->turn);
+		refresh_accumulator(pos, pos->accumulation, 1 - pos->turn);
 		if (move_capture(m)) {
 			unsigned index;
 			int turn = pos->turn;
@@ -481,19 +484,22 @@ void do_accumulator(struct position *pos, move *m) {
 		}
 	}
 	else {
-		do_refresh_accumulator(pos, m, black);
-		do_refresh_accumulator(pos, m, white);
+		do_update_accumulator(pos, m, black);
+		do_update_accumulator(pos, m, white);
 	}
 }
 
+/* should be called after undo_move */
 void undo_accumulator(struct position *pos, move *m) {
+	assert(*m);
+	assert(pos->mailbox[move_from(m)]);
 	if (!option_nnue)
 		return;
 	int source_square = move_from(m);
 	int target_square = move_to(m);
 	/* king */
 	if (pos->mailbox[source_square] % 6 == 0) {
-		update_accumulator(pos, pos->accumulation, pos->turn);
+		refresh_accumulator(pos, pos->accumulation, pos->turn);
 		if (move_capture(m)) {
 			unsigned index;
 			int turn = 1 - pos->turn;
@@ -534,27 +540,22 @@ void undo_accumulator(struct position *pos, move *m) {
 		}
 	}
 	else {
-		undo_refresh_accumulator(pos, m, black);
-		undo_refresh_accumulator(pos, m, white);
+		undo_update_accumulator(pos, m, black);
+		undo_update_accumulator(pos, m, white);
 	}
 }
 
 int16_t evaluate_accumulator(struct position *pos) {
 	struct data buf;
-
 	transform(pos, pos->accumulation, buf.ft_out);
-
 	affine_propagate(buf.ft_out, buf.hidden1_out, FT_OUT_DIMS, hidden1_biases, hidden1_weights);
-
 	affine_propagate(buf.hidden1_out, buf.hidden2_out, 32, hidden2_biases, hidden2_weights);
-
 	return output_layer(buf.hidden2_out, output_biases, output_weights) / FV_SCALE;
 }
 
 int16_t evaluate_nnue(struct position *pos) {
-	update_accumulator(pos, pos->accumulation, 0);
-	update_accumulator(pos, pos->accumulation, 1);
-
+	refresh_accumulator(pos, pos->accumulation, 0);
+	refresh_accumulator(pos, pos->accumulation, 1);
 	return evaluate_accumulator(pos);
 }
 

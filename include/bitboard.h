@@ -19,46 +19,43 @@
 #define BITBOARD_H
 
 #include <stdint.h>
+#include <assert.h>
+
+#if defined(_MSC_VER)
+#include <intrin.h>
+#endif
 
 void bitboard_init(void);
 
-#if __GNUC__
 static inline uint64_t ctz(uint64_t b) {
+	assert(b);
+#if defined(__GNUC__)
 	return __builtin_ctzll(b);
-}
-
-static inline uint64_t clz(uint64_t b) {
-	return __builtin_clzll(b);
-}
-
-static inline uint64_t popcount(uint64_t b) {
-	return __builtin_popcountll(b);
-}
-#elif _MSC_VER
-#include <intrin.h>
-#if _WIN64
-static inline uint64_t ctz(uint64_t b) {
+#elif defined(_MSC_VER)
 	unsigned long ret;
 	_BitScanForward64(&ret, b);
 	return ret;
+#endif
 }
-#else
-static inline uint64_t ctz(uint64_t b) {
+
+static inline uint64_t clz(uint64_t b) {
+	assert(b);
+#if defined(__GNUC__)
+	return __builtin_clzll(b);
+#elif defined(_MSC_VER)
 	unsigned long ret;
-	if (b & 0xFFFFFFFF) {
-		_BitScanForward(&ret, b);
-		return ret;
-	}
-	else {
-		_BitScanForward(&ret, b >> 32);
-		return ret + 32;
-	}
-}
+	_BitScanReverse(&ret, b);
+	return ret;
 #endif
+}
+
 static inline uint64_t popcount(uint64_t b) {
+#if defined(__GNUC__)
+	return __builtin_popcountll(b);
+#elif defined(_MSC_VER)
 	return __popcnt64(b);
-}
 #endif
+}
 
 static inline uint64_t bitboard(int i) {
 	return (uint64_t)1 << i;

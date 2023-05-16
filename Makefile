@@ -6,9 +6,16 @@ CC = cc
 CSTANDARD = -std=c11
 CWARNINGS = -Wall -Wextra -Wshadow -pedantic
 ARCH = native
-COPTIMIZE = -O3 -march=$(ARCH) -flto
-CFLAGS = $(CSTANDARD) $(CWARNINGS) $(COPTIMIZE)
-LDFLAGS = $(CFLAGS)
+
+ifeq ($(DEBUG), yes)
+	CDEBUG = -fsanitize=address -fsanitize=undefined -g3 -ggdb
+	COPTIMIZE =
+else
+	CDEBUG = -DNDEBUG
+	COPTIMIZE = -O3 -march=$(ARCH) -flto
+endif
+
+CFLAGS = $(CSTANDARD) $(CWARNINGS) $(COPTIMIZE) $(CDEBUG)
 
 ifeq ($(SIMD), avx2)
 	CFLAGS += -DAVX2 -mavx2
@@ -27,14 +34,16 @@ ifeq ($(NNUE), )
 	NNUE = files/current.nnue
 endif
 
+LDFLAGS = $(CFLAGS)
+
 DVERSION = -DVERSION=$(VERSION)
 
 SRC_BITBIT    = bitboard.c magicbitboard.c attackgen.c \
                 move.c util.c position.c movegen.c perft.c \
                 search.c evaluate.c tables.c interface.c \
                 transposition.c init.c timeman.c interrupt.c \
-                pawn.c history.c nnue.c moveorder.c \
-                material.c option.c bitbit.c
+                pawn.c history.c moveorder.c material.c \
+                option.c bitbit.c
 
 SRC_NNUEGEN   = bitboard.c magicbitboard.c attackgen.c \
                 move.c util.c position.c movegen.c evaluate.c \
@@ -44,7 +53,7 @@ SRC_NNUEGEN   = bitboard.c magicbitboard.c attackgen.c \
 
 SRC_TEXELGEN  = bitboard.c magicbitboard.c attackgen.c \
                 move.c util.c position.c movegen.c init.c \
-                option.c texelgen.c
+                option.c transposition.c texelgen.c
 
 SRC_TEXELTUNE = bitboard.c magicbitboard.c attackgen.c \
                 move.c util.c position.c movegen.c evaluate.c \
@@ -58,7 +67,7 @@ SRC_BATCH     = bitboard.c magicbitboard.c attackgen.c \
 
 SRC = $(SRC_BITBIT) $(SRC_NNUEGEN) $(SRC_TEXELGEN) $(SRC_TEXELTUNE) $(SRC_BATCH)
 
-OBJ_BITBIT    = $(addprefix obj/,$(SRC_BITBIT:.c=.o)) obj/nnueincbin.o
+OBJ_BITBIT    = $(addprefix obj/,$(SRC_BITBIT:.c=.o)) obj/incbin.o obj/incbinnnue.o
 OBJ_NNUEGEN   = $(addprefix obj/,$(SRC_NNUEGEN:.c=.o))
 OBJ_TEXELGEN  = $(addprefix obj/,$(SRC_TEXELGEN:.c=.o))
 OBJ_TEXELTUNE = $(addprefix obj/,$(SRC_TEXELTUNE:.c=.o))
@@ -95,9 +104,13 @@ obj/transposition.o: src/transposition.c dep/transposition.d Makefile
 	@mkdir -p obj
 	$(CC) $(CFLAGS) -DTT=$(TT) -Iinclude -c $< -o $@
 
-obj/nnueincbin.o: src/incbin.S Makefile
+obj/incbin.o: src/incbin.S Makefile
 	@mkdir -p obj
 	$(CC) $(CFLAGS) -DFILE=\"$(NNUE)\" -c $< -o $@
+
+obj/incbinnnue.o: src/nnue.c Makefile
+	@mkdir -p obj
+	$(CC) $(CFLAGS) -DINCBIN -Iinclude -c $< -o $@
 
 obj/pic%.o: src/%.c dep/%.d Makefile
 	@mkdir -p obj
