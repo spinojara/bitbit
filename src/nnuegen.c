@@ -30,11 +30,13 @@
 #include "util.h"
 #include "magicbitboard.h"
 #include "bitboard.h"
+#include "moveorder.h"
 #include "attackgen.h"
 #include "search.h"
 #include "evaluate.h"
 #include "tables.h"
 #include "pawn.h"
+#include "option.h"
 
 #define FEN_CHUNKS (1000)
 
@@ -107,7 +109,7 @@ void *worker(void *arg) {
 	while (1) {
 		count++;
 		m = 0;
-		eval = search(pos, 2, 0, 0, 0, &m, NULL, 0);
+		eval = search(pos, 3, 0, 0, 0, &m, NULL, 0);
 		eval = CLAMP(eval, -20000, 20000);
 		if (write(fd, &eval, sizeof(eval)) == -1)
 			printf("WRITE ERROR\n");
@@ -149,14 +151,19 @@ int main(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
 
-	util_init();
 	magicbitboard_init();
 	attackgen_init();
 	bitboard_init();
 	tables_init();
 	search_init();
+	moveorder_init();
 	position_init();
 	pawn_init();
+
+	option_transposition = 0;
+	option_nnue = 0;
+
+	srand(time(NULL));
 
 	int n_threads = 10;
 
@@ -176,7 +183,7 @@ int main(int argc, char **argv) {
 	struct timeval start, end;
 	gettimeofday(&start, NULL);
 
-	uint64_t fens = 100000;
+	uint64_t fens = 1000000;
 
 	FILE *f = fopen("nnue.bin", "wb");
 

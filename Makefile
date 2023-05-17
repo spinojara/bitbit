@@ -64,7 +64,7 @@ SRC_TEXELTUNE = bitboard.c magicbitboard.c attackgen.c \
 
 SRC_BATCH     = bitboard.c magicbitboard.c attackgen.c \
                 move.c util.c position.c movegen.c init.c \
-                option.c batch.c
+                batch.c
 
 SRC = $(SRC_BITBIT) $(SRC_NNUEGEN) $(SRC_TEXELGEN) $(SRC_TEXELTUNE) $(SRC_BATCH)
 

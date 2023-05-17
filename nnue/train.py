@@ -35,7 +35,7 @@ validation_data = batch.lib.batch_open(b'train.bin')
 
 scaling = 400 * 16 / (127 * 64)
 
-epochs = 2
+epochs = 100
 
 #batch_size = 32768
 batch_size = 16384

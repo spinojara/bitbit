@@ -157,7 +157,6 @@ uint64_t batch_total(void *ptr) {
 }
 
 void batch_init(void) {
-	util_init();
 	magicbitboard_init();
 	attackgen_init();
 	bitboard_init();

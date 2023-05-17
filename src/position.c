@@ -27,7 +27,6 @@
 #include "movegen.h"
 #include "history.h"
 #include "interface.h"
-#include "option.h"
 
 struct position start[1];
 
@@ -724,92 +723,6 @@ int interactive_setpos(struct position *pos) {
 	return DONE;
 }
 
-void fischer_pos(struct position *pos) {
-	uint8_t mailbox[64];
-	memset(mailbox, 0, 64);
-	int i, j;
-	for (i = 0; i < 8; i++) {
-		mailbox[8 + i] = white_pawn;
-		mailbox[48 + i] = black_pawn;
-	}
-
-	/* first bishop */
-	i = rand_int(4);
-	mailbox[2 * i] = white_bishop;
-	mailbox[56 + 2 * i] = black_bishop;
-
-	/* second bishop */
-	i = rand_int(4);
-	mailbox[2 * i + 1] = white_bishop;
-	mailbox[56 + 2 * i + 1] = black_bishop;
-
-	/* queen */
-	i = rand_int(6);
-	j = 0;
-	while (1) {
-		if (mailbox[j]) {
-			j++;
-		}
-		else if (0 < i) {
-			i--;
-			j++;
-		}
-		else {
-			break;
-		}
-	}
-	mailbox[j] = white_queen;
-	mailbox[56 + j] = black_queen;
-
-	/* first knight */
-	i = rand_int(5);
-	j = 0;
-	while (1) {
-		if (mailbox[j]) {
-			j++;
-		}
-		else if (0 < i) {
-			i--;
-			j++;
-		}
-		else {
-			break;
-		}
-	}
-	mailbox[j] = white_knight;
-	mailbox[56 + j] = black_knight;
-
-	/* second knight */
-	i = rand_int(4);
-	j = 0;
-	while (1) {
-		if (mailbox[j]) {
-			j++;
-		}
-		else if (0 < i) {
-			i--;
-			j++;
-		}
-		else {
-			break;
-		}
-	}
-	mailbox[j] = white_knight;
-	mailbox[56 + j] = black_knight;
-
-	/* rook, king, rook */
-	j = 0;
-	for (i = 0; i < 8; i++) {
-		if (!mailbox[i]) {
-			mailbox[i] = j ? white_king : white_rook;
-			mailbox[56 + i] = j ? black_king : black_rook;
-			j = 1 - j;
-		}
-	}
-
-	setpos(pos, 1, 0, 0, 0, 1, mailbox);
-}
-
 int pos_are_equal(const struct position *pos1, const struct position *pos2) {
 	for (int j = 0; j < 2; j++) {
 		for (int i = 0; i < 7; i++) {
@@ -893,8 +806,6 @@ int has_big_piece(const struct position *pos) {
 
 /* check for irreversible moves */
 int is_repetition(const struct position *pos, const struct history *h, int ply, int count) {
-	if (!option_transposition)
-		return 0;
 	for (int i = ply + h->ply - 2, c = 0; i >= 0; i -= 2) {
 		if (pos->zobrist_key == h->zobrist_key[i])
 			c++;

@@ -172,7 +172,7 @@ int16_t negamax(struct position *pos, uint8_t depth, uint16_t ply, int16_t alpha
 
 	if (!root_node) {
 		/* draws */
-		if (pos->halfmove >= 100 || is_repetition(pos, si->history, ply, 1 + pv_node))
+		if (pos->halfmove >= 100 || (option_transposition && is_repetition(pos, si->history, ply, 1 + pv_node)))
 			return draw(si);
 
 		/* mate distance pruning */
@@ -214,7 +214,8 @@ int16_t negamax(struct position *pos, uint8_t depth, uint16_t ply, int16_t alpha
 		int t = pos->en_passant;
 		do_null_zobrist_key(pos, 0);
 		do_null_move(pos, 0);
-		si->history->zobrist_key[si->history->ply + ply] = pos->zobrist_key;
+		if (option_transposition)
+			si->history->zobrist_key[si->history->ply + ply] = pos->zobrist_key;
 		eval = -negamax(pos, depth - 3, ply + 1, -beta, -beta + 1, !cut_node, FLAG_NULL_MOVE, si);
 		do_null_zobrist_key(pos, t);
 		do_null_move(pos, t);
@@ -235,7 +236,8 @@ int16_t negamax(struct position *pos, uint8_t depth, uint16_t ply, int16_t alpha
 	move m;
 	while ((m = next_move(&mp))) {
 		int move_number = mp.index - 1;
-		si->history->zobrist_key[si->history->ply + ply] = pos->zobrist_key;
+		if (option_transposition)
+			si->history->zobrist_key[si->history->ply + ply] = pos->zobrist_key;
 		do_zobrist_key(pos, &m);
 		do_move(pos, &m);
 		si->nodes++;

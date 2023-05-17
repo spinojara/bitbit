@@ -333,8 +333,6 @@ int interface_setoption(int argc, char **argv) {
 int interface_ucinewgame(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
-	srand(time(NULL));
-	zobrist_key_init();
 	startpos(pos);
 	set_zobrist_key(pos);
 	history_reset(pos, history);

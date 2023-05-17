@@ -71,7 +71,7 @@ int transposition_table_occupancy(int bound) {
 
 void zobrist_key_init(void) {
 	for (int i = 0; i < 12 * 64 + 1 + 16 + 8; i++) {
-		transposition_table->zobrist_key[i] = rand_uint64();
+		transposition_table->zobrist_key[i] = xorshift64();
 		init_status("generating zobrist keys");
 	}
 }

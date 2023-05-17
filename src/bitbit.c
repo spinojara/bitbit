@@ -16,7 +16,6 @@
  */
 
 #include "init.h"
-#include "util.h"
 #include "bitboard.h"
 #include "magicbitboard.h"
 #include "attackgen.h"
@@ -36,7 +35,6 @@ int main(int argc, char **argv) {
 	if (init(argc, argv))
 		goto term;
 	interrupt_init();
-	util_init();
 	/* no magic found */
 	if ((ret = magicbitboard_init()))
 		goto term;

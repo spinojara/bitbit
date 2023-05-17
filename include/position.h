@@ -105,8 +105,6 @@ void print_position(const struct position *pos, int flip);
 
 int interactive_setpos(struct position *pos);
 
-void fischer_pos(struct position *pos);
-
 int pos_are_equal(const struct position *pos1, const struct position *pos2);
 
 struct history;

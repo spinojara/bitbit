@@ -24,17 +24,13 @@
 #include "init.h"
 #include "bitboard.h"
 
-uint64_t rand_uint64(void) {
-	uint64_t ret = 0;
-	for (int i = 0; i < 4; i++) {
-		ret ^= (uint64_t)(rand() & 0xFFFF) << 16 * i;
-	}
-	return ret;
-}
-
-/* results not completely uniform */
-int rand_int(int i) {
-	return rand() % i;
+/* <http://vigna.di.unimi.it/ftp/papers/xorshift.pdf> */
+uint64_t seed = 1274012836ull;
+uint64_t xorshift64() {
+	seed ^= seed >> 12;
+	seed ^= seed << 25;
+	seed ^= seed >> 27;
+	return seed * 2685821657736338717ull;
 }
 
 uint64_t log_2(uint64_t m) {
@@ -117,9 +113,4 @@ void write_le_uint(FILE *f, uint32_t t, int bytes) {
 	uint8_t buf[4] = { 0 };
 	memcpy(buf, &t, 4);
 	fwrite(buf, bytes, 1, f);
-}
-
-void util_init(void) {
-	srand(0);
-	init_status("setting seed");
 }

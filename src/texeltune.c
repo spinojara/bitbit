@@ -333,7 +333,6 @@ void learn(int fd) {
 }
 
 int main() {
-	util_init();
 	magicbitboard_init();
 	attackgen_init();
 	bitboard_init();

@@ -35,9 +35,7 @@
 #define MACRO_NAME(x) #x
 #define MACRO_VALUE(x) MACRO_NAME(x)
 
-uint64_t rand_uint64(void);
-
-int rand_int(int i);
+uint64_t xorshift64();
 
 uint64_t power(uint64_t m, uint64_t n);
 
@@ -57,8 +55,6 @@ int variance(int16_t *arr, int len);
 void printdigits(int d);
 
 void printbinary(uint64_t d, int l);
-
-void util_init(void);
 
 uint32_t read_le_uint(FILE *f, int bytes);
 
