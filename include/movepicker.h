@@ -15,23 +15,40 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef MOVE_ORDER_H
-#define MOVE_ORDER_H
+#ifndef MOVEPICKER_H
+#define MOVEPICKER_H
 
-#include <stdint.h>
-
-#include "move.h"
 #include "position.h"
+#include "move.h"
 #include "search.h"
+#include "transposition.h"
 
-extern int mvv_lva_lookup[13 * 13];
+enum {
+	STAGE_TT,
+	STAGE_SORT,
+	STAGE_GOODCAPTURE,
+	STAGE_KILLER1,
+	STAGE_KILLER2,
+	STAGE_OKCAPTURE,
+	STAGE_QUIET,
+	STAGE_BADCAPTURE,
+	STAGE_NONE,
+};
 
-static inline int mvv_lva(int attacker, int victim) {
-	return mvv_lva_lookup[attacker + 13 * victim];
-}
+struct movepicker {
+	struct position *pos;
+	move *move_list;
+	int64_t evaluation_list[MOVES_MAX];
+	int stage;
+	int index;
 
-int see_geq(struct position *pos, const move *m, int16_t value);
+	move ttmove;
+	move killer1, killer2;
+	struct searchinfo *si;
+};
 
-void moveorder_init(void);
+move next_move(struct movepicker *mp);
+
+void movepicker_init(struct movepicker *mp, struct position *pos, move *move_list, move ttmove, move killer1, move killer2, struct searchinfo *si);
 
 #endif

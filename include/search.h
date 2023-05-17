@@ -37,9 +37,9 @@ struct searchinfo {
 	time_point time_stop;
 
 	int16_t evaluation_list[256];
-	move pv_moves[256][256];
-	move killer_moves[256][2];
-	uint64_t history_moves[13][64];
+	move pv[256][256];
+	move killers[256][2];
+	int64_t history_moves[13][64];
 	struct history *history;
 
 	uint8_t root_depth;

@@ -36,7 +36,7 @@
 #include "interrupt.h"
 #include "evaluate.h"
 #include "history.h"
-#include "moveorder.h"
+#include "movepicker.h"
 #include "material.h"
 #include "option.h"
 
@@ -69,29 +69,29 @@ void print_pv(struct position *pos, move *pv_move, int ply) {
 	*pv_move = *pv_move & 0xFFFF;
 }
 
-static inline void store_killer_move(move *m, uint8_t ply, move killer_moves[][2]) {
+static inline void store_killer_move(move *m, uint8_t ply, move killers[][2]) {
 	if (interrupt)
 		return;
 	assert(*m);
-	if ((*m & 0xFFFF) == killer_moves[ply][0])
+	if ((*m & 0xFFFF) == killers[ply][0])
 		return;
-	killer_moves[ply][1] = killer_moves[ply][0];
-	killer_moves[ply][0] = *m & 0xFFFF;
+	killers[ply][1] = killers[ply][0];
+	killers[ply][0] = *m & 0xFFFF;
 }
 
-static inline void store_history_move(struct position *pos, move *m, uint8_t depth, uint64_t history_moves[13][64]) {
+static inline void store_history_move(struct position *pos, move *m, uint8_t depth, int64_t history_moves[13][64]) {
 	if (interrupt)
 		return;
 	assert(*m);
 	history_moves[pos->mailbox[move_from(m)]][move_to(m)] += (uint64_t)1 << MIN(depth, 32);
 }
 
-static inline void store_pv_move(move *m, uint8_t ply, move pv_moves[256][256]) {
+static inline void store_pv_move(move *m, uint8_t ply, move pv[256][256]) {
 	if (interrupt)
 		return;
 	assert(*m);
-	pv_moves[ply][ply] = *m & 0xFFFF;
-	memcpy(pv_moves[ply] + ply + 1, pv_moves[ply + 1] + ply + 1, sizeof(move) * (255 - ply));
+	pv[ply][ply] = *m & 0xFFFF;
+	memcpy(pv[ply] + ply + 1, pv[ply + 1] + ply + 1, sizeof(move) * (255 - ply));
 }
 
 /* random drawn score to avoid threefold blindness */
@@ -107,7 +107,6 @@ static inline int16_t evaluate(struct position *pos) {
 		evaluation = evaluate_classical(pos);
 	/* damp when shuffling pieces */
 	evaluation = (int32_t)evaluation * (200 - pos->halfmove) / 200;
-
 	return evaluation;
 }
 
@@ -131,17 +130,19 @@ int16_t quiescence(struct position *pos, uint16_t ply, int16_t alpha, int16_t be
 		best_eval = eval;
 	}
 
-	uint64_t evaluation_list[MOVES_MAX];
-	move *ptr = order_moves(pos, move_list, evaluation_list, 0, 0, NULL, si);
-	for (; *ptr; next_move(move_list, evaluation_list, &ptr)) {
-		if (is_capture(pos, ptr) && !checkers && evaluation_list[ptr - move_list] < SEE_VALUE_MINUS_100 + 10000)
+	struct movepicker mp;
+	movepicker_init(&mp, pos, move_list, 0, 0, 0, si);
+	move m;
+	while ((m = next_move(&mp))) {
+		assert(checkers || is_capture(pos, &m) || move_promote(&m) == 3);
+		if (is_capture(pos, &m) && !checkers && mp.stage > STAGE_OKCAPTURE)
 			continue;
-		do_move(pos, ptr);
+		do_move(pos, &m);
 		si->nodes++;
-		do_accumulator(pos, ptr);
+		do_accumulator(pos, &m);
 		eval = -quiescence(pos, ply + 1, -beta, -alpha, si);
-		undo_move(pos, ptr);
-		undo_accumulator(pos, ptr);
+		undo_move(pos, &m);
+		undo_accumulator(pos, &m);
 		if (eval > best_eval) {
 			best_eval = eval;
 			if (eval > alpha) {
@@ -227,18 +228,18 @@ int16_t negamax(struct position *pos, uint8_t depth, uint16_t ply, int16_t alpha
 	if (!move_list[0])
 		return checkers ? -VALUE_MATE + ply : 0;
 
-	uint64_t evaluation_list[MOVES_MAX];
-	
 	uint16_t bestmove = 0;
 
-	move *ptr = order_moves(pos, move_list, evaluation_list, depth, ply, e, si);
-	for (; *ptr; next_move(move_list, evaluation_list, &ptr)) {
-		int move_number = ptr - move_list;
+	struct movepicker mp;
+	movepicker_init(&mp, pos, move_list, e ? e->move : 0, si->killers[ply][0], si->killers[ply][1], si);
+	move m;
+	while ((m = next_move(&mp))) {
+		int move_number = mp.index - 1;
 		si->history->zobrist_key[si->history->ply + ply] = pos->zobrist_key;
-		do_zobrist_key(pos, ptr);
-		do_move(pos, ptr);
+		do_zobrist_key(pos, &m);
+		do_move(pos, &m);
 		si->nodes++;
-		do_accumulator(pos, ptr);
+		do_accumulator(pos, &m);
 
 		uint8_t new_depth = depth - 1;
 		/* extensions */
@@ -247,13 +248,13 @@ int16_t negamax(struct position *pos, uint8_t depth, uint16_t ply, int16_t alpha
 			extensions = (checkers || !move_list[1]);
 		}
 		new_depth += extensions;
-		int new_flag = move_capture(ptr) ? move_to(ptr) : FLAG_NONE;
+		int new_flag = FLAG_NONE;
 		/* late move reductions */
 		int full_depth_search = 0;
-		if (depth >= 2 && !checkers && move_number >= (1 + pv_node) && (!move_capture(ptr) || cut_node)) {
+		if (depth >= 2 && !checkers && move_number >= (1 + pv_node) && (!move_capture(&m) || cut_node)) {
 			uint8_t r = late_move_reduction(move_number, depth);
 			r -= pv_node;
-			r += !move_capture(ptr);
+			r += !move_capture(&m);
 			r += cut_node;
 			uint8_t lmr_depth = CLAMP(new_depth - r, 1, new_depth);
 
@@ -272,9 +273,9 @@ int16_t negamax(struct position *pos, uint8_t depth, uint16_t ply, int16_t alpha
 		if (pv_node && (!move_number || (eval > alpha && (root_node || eval < beta))))
 			eval = -negamax(pos, new_depth, ply + 1, -beta, -alpha, 0, new_flag, si);
 
-		undo_zobrist_key(pos, ptr);
-		undo_move(pos, ptr);
-		undo_accumulator(pos, ptr);
+		undo_zobrist_key(pos, &m);
+		undo_move(pos, &m);
+		undo_accumulator(pos, &m);
 		if (interrupt || si->interrupt)
 			return 0;
 
@@ -282,19 +283,19 @@ int16_t negamax(struct position *pos, uint8_t depth, uint16_t ply, int16_t alpha
 			best_eval = eval;
 
 			if (eval > alpha) {
-				bestmove = *ptr;
+				bestmove = m;
 
 				if (pv_node)
-					store_pv_move(ptr, ply, si->pv_moves);
-				if (!is_capture(pos, ptr) && move_flag(ptr) != 2)
-					store_history_move(pos, ptr, depth, si->history_moves);
+					store_pv_move(&m, ply, si->pv);
+				if (!is_capture(pos, &m) && move_flag(&m) != 2)
+					store_history_move(pos, &m, depth, si->history_moves);
 
 				if (pv_node && eval < beta) {
 					alpha = eval;
 				}
 				else {
-					if (!is_capture(pos, ptr) && move_flag(ptr) != 2)
-						store_killer_move(ptr, ply, si->killer_moves);
+					if (!is_capture(pos, &m) && move_flag(&m) != 2)
+						store_killer_move(&m, ply, si->killers);
 					break;
 				}
 			}
@@ -306,9 +307,9 @@ int16_t negamax(struct position *pos, uint8_t depth, uint16_t ply, int16_t alpha
 	return best_eval;
 }
 
-int16_t aspiration_window(struct position *pos, uint8_t depth, int16_t last, struct searchinfo *si) {
+int16_t aspiration_window(struct position *pos, uint8_t depth, int32_t last, struct searchinfo *si) {
 	int16_t evaluation;
-	int16_t delta = 25 + last * last / 16384;
+	int32_t delta = 25 + last * last / 16384;
 	int16_t alpha = MAX(last - delta, -VALUE_MATE);
 	int16_t beta = MIN(last + delta, VALUE_MATE);
 
@@ -374,7 +375,7 @@ int16_t search(struct position *pos, uint8_t depth, int verbose, int etime, int 
 		}
 		si.evaluation_list[d] = evaluation;
 
-		bestmove = si.pv_moves[0][0];
+		bestmove = si.pv[0][0];
 
 		time_point tp = time_now() - ts;
 		if (verbose) {
@@ -388,7 +389,7 @@ int16_t search(struct position *pos, uint8_t depth, int verbose, int etime, int 
 			printf(" nodes %ld time %ld ", si.nodes, tp / 1000);
 			printf("nps %ld ", tp ? 1000000 * si.nodes / tp : 0);
 			printf("pv");
-			print_pv(pos, si.pv_moves[0], 0);
+			print_pv(pos, si.pv[0], 0);
 			printf("\n");
 		}
 		if (etime && stop_searching(&si))

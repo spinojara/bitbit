@@ -12,7 +12,7 @@ ifeq ($(DEBUG), yes)
 	COPTIMIZE =
 else
 	CDEBUG = -DNDEBUG
-	COPTIMIZE = -O3 -march=$(ARCH) -flto
+	COPTIMIZE = -O2 -march=$(ARCH) -flto
 endif
 
 CFLAGS = $(CSTANDARD) $(CWARNINGS) $(COPTIMIZE) $(CDEBUG)
@@ -42,14 +42,15 @@ SRC_BITBIT    = bitboard.c magicbitboard.c attackgen.c \
                 move.c util.c position.c movegen.c perft.c \
                 search.c evaluate.c tables.c interface.c \
                 transposition.c init.c timeman.c interrupt.c \
-                pawn.c history.c moveorder.c material.c \
-                option.c bitbit.c
+                pawn.c history.c movepicker.c material.c \
+                moveorder.c option.c bitbit.c
 
 SRC_NNUEGEN   = bitboard.c magicbitboard.c attackgen.c \
                 move.c util.c position.c movegen.c evaluate.c \
                 tables.c init.c timeman.c interrupt.c pawn.c \
                 moveorder.c material.c transposition.c \
-                history.c option.c nnue.c search.c nnuegen.c
+                movepicker.c history.c option.c nnue.c search.c \
+                nnuegen.c
 
 SRC_TEXELGEN  = bitboard.c magicbitboard.c attackgen.c \
                 move.c util.c position.c movegen.c init.c \
@@ -59,7 +60,7 @@ SRC_TEXELTUNE = bitboard.c magicbitboard.c attackgen.c \
                 move.c util.c position.c movegen.c evaluate.c \
                 tables.c init.c timeman.c history.c \
                 interrupt.c pawn.c moveorder.c transposition.c \
-                option.c search.c nnue.c texeltune.c
+                movepicker.c option.c search.c nnue.c texeltune.c
 
 SRC_BATCH     = bitboard.c magicbitboard.c attackgen.c \
                 move.c util.c position.c movegen.c init.c \
