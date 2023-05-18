@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <time.h>
 
 #include "position.h"
 #include "util.h"
@@ -49,6 +50,14 @@ static inline void append_active_indices_p(struct position *pos, struct index *a
 	}
 }
 
+static inline int bernoulli(double p) {
+	return ((double)rand() / RAND_MAX) < p;
+}
+
+static inline int random_skip() {
+	return bernoulli(0.75f);
+}
+
 struct batch *next_batch(void *ptr, int requested_size) {
 	struct data *data = (struct data *)ptr;
 	struct batch *batch = malloc(sizeof(struct batch));
@@ -62,22 +71,27 @@ struct batch *next_batch(void *ptr, int requested_size) {
 	move m;
 
 	for (int i = 0; i < requested_size; i++) {
-		uint16_t t = read_le_uint(data->f, 2);
+		int16_t t = (int16_t)read_le_uint(data->f, 2);
 		if (feof(data->f))
 			break;
-		append_active_indices(data->pos, active_indices1 + i, data->pos->turn);
-		append_active_indices(data->pos, active_indices2 + i, 1 - data->pos->turn);
-		append_active_indices_p(data->pos, active_indices1_p + i, data->pos->turn);
-		append_active_indices_p(data->pos, active_indices2_p + i, 1 - data->pos->turn);
-
-		batch->ind_active += active_indices1[i].size + active_indices1_p[i].size;
-		batch->size++;
-		eval[i] = FV_SCALE * (float)*(int16_t *)(&t) / (127 * 64);
 		m = read_le_uint(data->f, 2);
+		int skip = random_skip() || is_capture(data->pos, &m) || generate_checkers(data->pos, data->pos->turn);
+		if (!skip) {
+			eval[i] = (float)FV_SCALE * t / (127 * 64);
+			append_active_indices(data->pos, active_indices1 + i, data->pos->turn);
+			append_active_indices(data->pos, active_indices2 + i, 1 - data->pos->turn);
+			append_active_indices_p(data->pos, active_indices1_p + i, data->pos->turn);
+			append_active_indices_p(data->pos, active_indices2_p + i, 1 - data->pos->turn);
+
+			batch->ind_active += active_indices1[i].size + active_indices1_p[i].size;
+			batch->size++;
+		}
 		if (m)
 			do_move(data->pos, &m);
 		else
 			startpos(data->pos);
+		if (skip)
+			i--;
 	}
 
 	batch->ind1 = malloc(2 * batch->ind_active * sizeof(int32_t));
@@ -161,4 +175,5 @@ void batch_init(void) {
 	attackgen_init();
 	bitboard_init();
 	position_init();
+	srand(time(NULL));
 }

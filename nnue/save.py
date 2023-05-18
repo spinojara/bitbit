@@ -15,4 +15,4 @@ def save_model(model):
     
     os.rename("out.pt", hashvalue + ".pt")
 
-    print("Saving network to file: " + hashvalue + ".pt")
+    print("saving network to file: " + hashvalue + ".pt")

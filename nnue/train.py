@@ -31,13 +31,14 @@ def inverse_sigmoid(y):
 
 batch.lib.batch_init()
 training_data = batch.lib.batch_open(b'train.bin')
-validation_data = batch.lib.batch_open(b'train.bin')
+validation_data = batch.lib.batch_open(b'val.bin')
 
 scaling = 400 * 16 / (127 * 64)
 
-epochs = 100
+epochs = 2000
 
-#batch_size = 32768
+save_every = 10
+
 batch_size = 16384
 
 total_time = time.time()
@@ -47,18 +48,20 @@ for epoch in range(1, epochs + 1):
 
     batch.lib.batch_reset(validation_data)
     loss = 0
+    total = 0
     while True:
         batchptr = batch.lib.next_batch(validation_data, batch_size)
         if (batchptr.contents.is_empty()):
             batch.lib.free_batch(batchptr)
             break
         f1, f2, target = batchptr.contents.get_tensors(device)
+        total += batchptr.contents.size
         output = model(f1, f2)
         wdl_output = torch.sigmoid(output / scaling)
         wdl_target = torch.sigmoid(target / scaling)
         loss += loss_sum(wdl_output, wdl_target).item()
         batch.lib.free_batch(batchptr)
-    loss /= batch.lib.batch_total(validation_data)
+    loss /= total
     loss = math.sqrt(loss)
     before_lr = optimizer.param_groups[0]['lr']
     #optimizer.param_groups[0]['lr'] = lr_lambda(loss)
@@ -95,7 +98,11 @@ for epoch in range(1, epochs + 1):
     epoch_time = time.time() - epoch_time
     eta = time.time() + (epochs - epoch) * epoch_time
     print(f"epoch elapsed {round(epoch_time, 2)} seconds")
-    print(f"estimated time of arrival is {time.strftime('%Y-%m-%d %H:%M', time.localtime(eta))} \n")
+    print(f"estimated time of arrival is {time.strftime('%Y-%m-%d %H:%M', time.localtime(eta))}\n")
+
+    if (epoch % save_every == 0):
+        print(f"saving network to temporary file: nnue.pt")
+        torch.save(model.state_dict(), "nnue.pt")
 
 print(f"training elapsed {round(time.time() - total_time, 2)} seconds")
 
