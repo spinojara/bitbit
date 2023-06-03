@@ -42,7 +42,7 @@ struct position {
 	alignas(64) int16_t accumulation[1][2][K_HALF_DIMENSIONS];
 };
 
-struct compressedposition {
+struct partialposition {
 	uint64_t piece[2][7];
 
 	uint8_t turn;

@@ -35,13 +35,12 @@
 #define MACRO_NAME(x) #x
 #define MACRO_VALUE(x) MACRO_NAME(x)
 
-uint64_t xorshift64();
+uint64_t gxorshift64();
+uint64_t xorshift64(uint64_t *seed);
 
 uint64_t power(uint64_t m, uint64_t n);
 
 uint64_t log_2(uint64_t m);
-
-int nearint(double f);
 
 int find_char(const char *s, char c);
 

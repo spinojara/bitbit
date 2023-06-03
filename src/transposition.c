@@ -27,8 +27,11 @@
 #include "init.h"
 #include "bitboard.h"
 #include "history.h"
+#include "position.h"
 
 struct transposition_table *transposition_table;
+
+static uint64_t start;
 
 void transposition_table_size_print(uint64_t t) {
 	int s = MIN(t / 10, 3);
@@ -55,6 +58,7 @@ int allocate_transposition_table(uint64_t t) {
 	
 	if (!transposition_table->table)
 		return 3;
+	assert(!clear_ls1b(transposition_table->size));
 	transposition_table->index = transposition_table->size - 1;
 	transposition_table_clear();
 	return 0;
@@ -71,16 +75,20 @@ int transposition_table_occupancy(int bound) {
 
 void zobrist_key_init(void) {
 	for (int i = 0; i < 12 * 64 + 1 + 16 + 8; i++) {
-		transposition_table->zobrist_key[i] = xorshift64();
+		transposition_table->zobrist_key[i] = gxorshift64();
 		init_status("generating zobrist keys");
 	}
+	struct position pos;
+	startpos(&pos);
+	set_zobrist_key(&pos);
+	start = pos.zobrist_key;
 }
 
 /* should be called before do_move */
 void do_zobrist_key(struct position *pos, const move *m) {
 	assert(*m);
 	assert(pos->mailbox[move_from(m)]);
-	if (!option_transposition)
+	if (!option_transposition && !option_history)
 		return;
 	uint8_t source_square = move_from(m);
 	uint8_t target_square = move_to(m);
@@ -146,7 +154,7 @@ void undo_zobrist_key(struct position *pos, const move *m) {
 	assert(*m);
 	assert(!pos->mailbox[move_from(m)]);
 	assert(pos->mailbox[move_to(m)]);
-	if (!option_transposition)
+	if (!option_transposition && !option_history)
 		return;
 	uint8_t source_square = move_from(m);
 	uint8_t target_square = move_to(m);
@@ -209,7 +217,7 @@ void undo_zobrist_key(struct position *pos, const move *m) {
 
 /* should be called before do_null_move and then again before (un)do_null_move */
 void do_null_zobrist_key(struct position *pos, int en_passant) {
-	if (!option_transposition)
+	if (!option_transposition && !option_history)
 		return;
 	pos->zobrist_key ^= zobrist_en_passant_key(pos->en_passant);
 	pos->zobrist_key ^= zobrist_en_passant_key(en_passant);
@@ -229,6 +237,10 @@ int transposition_init(void) {
 	zobrist_key_init();
 
 	return 0;
+}
+
+void startkey(struct position *pos) {
+	pos->zobrist_key = start;
 }
 
 void set_zobrist_key(struct position *pos) {

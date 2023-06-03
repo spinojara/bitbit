@@ -28,7 +28,7 @@
 #include "history.h"
 #include "interface.h"
 
-struct position start[1];
+static struct position start;
 
 void print_position(const struct position *pos, int flip) {
 	int i, j, t;
@@ -218,7 +218,7 @@ void setpos(struct position *pos, uint8_t turn, int8_t en_passant, uint8_t castl
 }
 
 void startpos(struct position *pos) {
-	memcpy(pos, start, sizeof(struct position));
+	memcpy(pos, &start, sizeof(struct position));
 }
 
 /* assumes that fen is ok */
@@ -761,43 +761,26 @@ void print_history_pgn(const struct history *h) {
 	if (!h)
 		return;
 
-	struct position pos[1];
-	memcpy(pos, &h->start, sizeof(struct position));
+	struct position pos;
+	memcpy(&pos, &h->start, sizeof(struct position));
 	move m[POSITIONS_MAX];
 	memcpy(m, h->move, sizeof(m));
 
 	char str[8];
 	for (int i = 0; i < h->ply; i++) {
-		if (pos->turn) {
-			printf("%i. ", pos->fullmove);
+		if (pos.turn) {
+			printf("%i. ", pos.fullmove);
 		}
-		else if (!i && !pos->turn) {
-			printf("%i. ... ", pos->fullmove);
+		else if (!i && !pos.turn) {
+			printf("%i. ... ", pos.fullmove);
 		}
-		printf("%s ", move_str_pgn(str, pos, m + i));
-		if (!pos->turn)
+		printf("%s ", move_str_pgn(str, &pos, m + i));
+		if (!pos.turn)
 			printf("\n");
-		do_move(pos, m + i);
+		do_move(&pos, m + i);
 	}
 	if (h->ply)
 		printf("\n");
-}
-
-void print_history_algebraic(const struct history *h, FILE *file) {
-	if (!h)
-		return;
-
-	struct position pos[1];
-	memcpy(pos, &h->start, sizeof(struct position));
-	move m[POSITIONS_MAX];
-	memcpy(m, h->move, sizeof(m));
-
-	char str[8];
-	for (int i = 0; i < h->ply; i++) {
-		if (!i)
-			fprintf(file, " ");
-		fprintf(file, "%s", move_str_algebraic(str, m + i));
-	}
 }
 
 int has_big_piece(const struct position *pos) {
@@ -817,5 +800,5 @@ int is_repetition(const struct position *pos, const struct history *h, int ply, 
 
 void position_init(void) {
 	char *fen[] = { "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR", "w", "KQkq", "-", "0", "1", };
-	pos_from_fen(start, SIZE(fen), fen);
+	pos_from_fen(&start, SIZE(fen), fen);
 }

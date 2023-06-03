@@ -43,10 +43,10 @@ int main(int argc, char **argv) {
 	tables_init();
 	search_init();
 	moveorder_init();
+	position_init();
 	/* transposition table size == 0 */
 	if ((ret = transposition_init()))
 		goto term;
-	position_init();
 	if ((ret = pawn_init()))
 		goto term;
 	interface_init();

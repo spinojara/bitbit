@@ -234,7 +234,7 @@ uint64_t bishop_magic_calc(int square) {
 	}
 
 	for (i = 0; i < 100000000; i++) {
-		uint64_t magic_number = xorshift64() & xorshift64() & xorshift64();
+		uint64_t magic_number = gxorshift64() & gxorshift64() & gxorshift64();
 		if (popcount((attack_mask * magic_number) & 0xFF00000000000000) < 6)
 			continue;
 
@@ -269,7 +269,7 @@ uint64_t rook_magic_calc(int square) {
 	}
 
 	for (i = 0; i < 100000000; i++) {
-		uint64_t magic_number = xorshift64() & xorshift64() & xorshift64();
+		uint64_t magic_number = gxorshift64() & gxorshift64() & gxorshift64();
 		if (popcount((attack_mask * magic_number) & 0xFF00000000000000) < 6)
 			continue;
 

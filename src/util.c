@@ -25,25 +25,21 @@
 #include "bitboard.h"
 
 /* <http://vigna.di.unimi.it/ftp/papers/xorshift.pdf> */
-uint64_t seed = 1274012836ull;
-uint64_t xorshift64() {
-	seed ^= seed >> 12;
-	seed ^= seed << 25;
-	seed ^= seed >> 27;
-	return seed * 2685821657736338717ull;
+uint64_t gseed = 1274012836ull;
+uint64_t gxorshift64() {
+	return xorshift64(&gseed);
+}
+uint64_t xorshift64(uint64_t *seed) {
+	*seed ^= *seed >> 12;
+	*seed ^= *seed << 25;
+	*seed ^= *seed >> 27;
+	return *seed * 2685821657736338717ull;
 }
 
 uint64_t log_2(uint64_t m) {
 	if (m <= 2)
 		return 1;
 	return 1 + log_2(m / 2);
-}
-
-int nearint(double f) {
-	if (f < 0)
-		return -nearint(-f);
-	int ret = (int)f;
-	return ret + (f - ret >= 0.5);
 }
 
 int find_char(const char *s, char c) {

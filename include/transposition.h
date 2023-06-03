@@ -148,6 +148,7 @@ void undo_zobrist_key(struct position *pos, const move *m);
 
 void do_null_zobrist_key(struct position *pos, int en_passant);
 
+void startkey(struct position *pos);
 void set_zobrist_key(struct position *pos);
 
 int transposition_init(void);

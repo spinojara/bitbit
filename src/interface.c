@@ -78,8 +78,8 @@ struct func func_arr[] = {
 	{ "ucinewgame" , interface_ucinewgame , },
 };
 
-struct position pos[1];
-struct history history[1];
+struct position pos;
+struct history history;
 
 int interface_help(int argc, char **argv) {
 	UNUSED(argc);
@@ -98,9 +98,9 @@ int interface_move(int argc, char **argv) {
 		return ERR_MISS_ARG;
 	}
 	else {
-		move m = string_to_move(pos, argv[1]);
+		move m = string_to_move(&pos, argv[1]);
 		if (m)
-			history_next(pos, history, m);
+			history_next(&pos, &history, m);
 		else
 			return ERR_BAD_ARG;
 	}
@@ -110,17 +110,17 @@ int interface_move(int argc, char **argv) {
 int interface_undo(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
-	if (history->ply)
-		history_previous(pos, history);
+	if (history.ply)
+		history_previous(&pos, &history);
 	return DONE;
 }
 
 int interface_flip(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
-	if (!generate_checkers(pos, pos->turn)) {
-		do_null_move(pos, 0);
-		history_reset(pos, history);
+	if (!generate_checkers(&pos, pos.turn)) {
+		do_null_move(&pos, 0);
+		history_reset(&pos, &history);
 	}
 	else {
 		printf("error: cannot flip the move\n");
@@ -135,7 +135,7 @@ int interface_perft(int argc, char **argv) {
 		return ERR_MISS_ARG;
 
 	clock_t t = clock();
-	uint64_t p = perft(pos, strint(argv[1]), 1);
+	uint64_t p = perft(&pos, strint(argv[1]), 1);
 	t = clock() - t;
 	if (interrupt)
 		return DONE;
@@ -156,38 +156,38 @@ int interface_position(int argc, char **argv) {
 		if (strcmp(argv[n], "moves") == 0)
 			break;
 	if (argc < 2) {
-		print_position(pos, 0);
+		print_position(&pos, 0);
 		char t[128];
-		printf("turn: %c\n", "bw"[pos->turn]);
-		printf("castling: %s\n", castle_string(t, pos->castle));
-		printf("en passant: %s\n", pos->en_passant ? algebraic(t, pos->en_passant) : "-");
-		printf("halfmove: %i\n", pos->halfmove);
-		printf("fullmove: %i\n", pos->fullmove);
-		printf("zobrist key: 0x%" PRIX64 "\n", pos->zobrist_key);
-		printf("fen: %s\n", pos_to_fen(t, pos));
-		print_history_pgn(history);
+		printf("turn: %c\n", "bw"[pos.turn]);
+		printf("castling: %s\n", castle_string(t, pos.castle));
+		printf("en passant: %s\n", pos.en_passant ? algebraic(t, pos.en_passant) : "-");
+		printf("halfmove: %i\n", pos.halfmove);
+		printf("fullmove: %i\n", pos.fullmove);
+		printf("zobrist key: 0x%" PRIX64 "\n", pos.zobrist_key);
+		printf("fen: %s\n", pos_to_fen(t, &pos));
+		print_history_pgn(&history);
 	}
 	else if (strcmp(argv[1], "startpos") == 0) {
-		startpos(pos);
-		set_zobrist_key(pos);
-		history_reset(pos, history);
+		startpos(&pos);
+		startkey(&pos);
+		history_reset(&pos, &history);
 		for (int i = n + 1; i < argc; i++) {
-			move m = string_to_move(pos, argv[i]);
+			move m = string_to_move(&pos, argv[i]);
 			if (m)
-				history_next(pos, history, m);
+				history_next(&pos, &history, m);
 			else
 				break;
 		}
 	}
 	else if (strcmp(argv[1], "fen") == 0) {
 		if (fen_is_ok(n - 2, argv + 2)) {
-			pos_from_fen(pos, n - 2, argv + 2);
-			set_zobrist_key(pos);
-			history_reset(pos, history);
+			pos_from_fen(&pos, n - 2, argv + 2);
+			set_zobrist_key(&pos);
+			history_reset(&pos, &history);
 			for (int i = n + 1; i < argc; i++) {
-				move m = string_to_move(pos, argv[i]);
+				move m = string_to_move(&pos, argv[i]);
 				if (m)
-					history_next(pos, history, m);
+					history_next(&pos, &history, m);
 				else
 					break;
 			}
@@ -227,7 +227,7 @@ int interface_quit(int argc, char **argv) {
 int interface_eval(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
-	evaluate_print(pos);
+	evaluate_print(&pos);
 	return DONE;
 }
 
@@ -257,7 +257,7 @@ int interface_go(int argc, char **argv) {
 			movetime = strint(argv[i + 1]);
 	}
 
-	search(pos, depth, 1, pos->turn ? wtime : btime, movetime, NULL, history, 1);
+	search(&pos, depth, 1, pos.turn ? wtime : btime, movetime, NULL, &history, 1);
 	return DONE;
 }
 
@@ -333,9 +333,9 @@ int interface_setoption(int argc, char **argv) {
 int interface_ucinewgame(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
-	startpos(pos);
-	set_zobrist_key(pos);
-	history_reset(pos, history);
+	startpos(&pos);
+	startkey(&pos);
+	history_reset(&pos, &history);
 	transposition_table_clear();
 	return DONE;
 }
@@ -438,9 +438,9 @@ int interface(int argc, char **argv) {
 }
 
 void interface_init(void) {
-	startpos(pos);
-	set_zobrist_key(pos);
-	history_reset(pos, history);
+	startpos(&pos);
+	startkey(&pos);
+	history_reset(&pos, &history);
 }
 
 void interface_term(void) {

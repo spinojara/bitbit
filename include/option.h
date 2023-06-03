@@ -20,6 +20,8 @@
 
 extern int option_nnue;
 extern int option_transposition;
+extern int option_history;
+extern int option_pawn;
 
 void print_options();
 

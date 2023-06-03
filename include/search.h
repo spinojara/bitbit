@@ -36,7 +36,6 @@ struct searchinfo {
 	time_point time_optimal;
 	time_point time_stop;
 
-	int16_t evaluation_list[256];
 	move pv[256][256];
 	move killers[256][2];
 	int64_t history_moves[13][64];

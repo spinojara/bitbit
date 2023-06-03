@@ -26,28 +26,31 @@
 #include "pawn.h"
 #include "tables.h"
 
-mevalue king_on_open_file     = S(-8, 3);
-mevalue outpost_bonus  	      = S(38, 11);
-mevalue outpost_attack        = S(15, 9);
-mevalue minor_behind_pawn     = S(3, 7);
-mevalue knight_far_from_king  = S(-5, -1);
-mevalue bishop_far_from_king  = S(-6, 0);
-mevalue bishop_pair           = S(17, 50);
-mevalue pawn_on_bishop_square = S(-6, -8);
-mevalue rook_on_open_file     = S(18, 9);
-mevalue blocked_rook          = S(-28, -9);
-mevalue undeveloped_piece     = S(-12, -17);
-mevalue defended_minor        = S(4, 5);
+mevalue king_on_open_file     = S(-13, -4);
+mevalue outpost_bonus  	      = S(47, 16);
+mevalue outpost_attack        = S(16, 15);
+mevalue minor_behind_pawn     = S(6, 4);
+mevalue knight_far_from_king  = S(-5, -8);
+mevalue bishop_far_from_king  = S(-6, -3);
+mevalue bishop_pair           = S(20, 63);
+mevalue pawn_on_bishop_square = S(-4, -10);
+mevalue rook_on_open_file     = S(16, 11);
+mevalue blocked_rook          = S(-28, -4);
+mevalue undeveloped_piece     = S(-8, -32);
+mevalue defended_minor        = S(4, 9);
 
 /* king danger */
-int weak_squares_danger       = 34;
-int enemy_no_queen_bonus      = 206;
-int knight_king_attack_danger = 61;
-int bishop_king_attack_danger = 53;
-int rook_king_attack_danger   = 69;
+int weak_squares_danger       = 29;
+int enemy_no_queen_bonus      = 261;
+int knight_king_attack_danger = 77;
+int bishop_king_attack_danger = 71;
+int rook_king_attack_danger   = 77;
 int queen_king_attack_danger  = 78;
 
-int tempo_bonus               = 7;
+int tempo_bonus               = 5;
+
+int phase_max_material        = 7901;
+int phase_min_material        = 874;
 
 mevalue evaluate_mobility(const struct position *pos, struct evaluationinfo *ei, int turn) {
 	UNUSED(pos);
@@ -114,6 +117,7 @@ mevalue evaluate_knights(const struct position *pos, struct evaluationinfo *ei, 
 	uint64_t outpost = turn ? (RANK_4 | RANK_5 | RANK_6) : (RANK_3 | RANK_4 | RANK_5);
 
 	while (b) {
+		ei->material += knight_mg;
 		int square = ctz(b);
 		uint64_t squareb = bitboard(square);
 		
@@ -154,6 +158,7 @@ mevalue evaluate_bishops(const struct position *pos, struct evaluationinfo *ei, 
 	mevalue eval = 0;
 	uint64_t b = pos->piece[turn][bishop];
 	while (b) {
+		ei->material += bishop_mg;
 		int square = ctz(b);
 		uint64_t squareb = bitboard(square);
 		
@@ -195,6 +200,7 @@ mevalue evaluate_rooks(const struct position *pos, struct evaluationinfo *ei, in
 	mevalue eval = 0;
 	uint64_t b = pos->piece[turn][rook];
 	while (b) {
+		ei->material += rook_mg;
 		int square = ctz(b);
 		
 		uint64_t attacks = rook_attacks(square, 0, all_pieces(pos) ^ pos->piece[turn][rook] ^ pos->piece[turn][queen]);
@@ -229,6 +235,7 @@ mevalue evaluate_queens(const struct position *pos, struct evaluationinfo *ei, i
 	mevalue eval = 0;
 	uint64_t b = pos->piece[turn][queen];
 	while (b) {
+		ei->material += queen_mg;
 		int square = ctz(b);
 		
 		uint64_t attacks = queen_attacks(square, 0, all_pieces(pos));
@@ -269,17 +276,6 @@ mevalue evaluate_space(const struct position *pos, struct evaluationinfo *ei, in
 	return S(bonus * weight * weight / 16, 0);
 }
 
-double game_phase(const struct position *pos) {
-	const int piece_phase[] = { 0, -1, 5, 5, 10, 20 };
-	double phase = 0;
-	for (int color = black; color <= white; color++)
-		for (int piece = pawn; piece < king; piece++)
-			phase += (double)popcount(pos->piece[color][piece]) * piece_phase[piece];
-	phase = (phase - 30) / 70;
-	phase = CLAMP(phase, 0, 1);
-	return phase;
-}
-
 void evaluationinfo_init(const struct position *pos, struct evaluationinfo *ei) {
 	memset(ei->attacked_squares, 0, sizeof(ei->attacked_squares));
 
@@ -289,6 +285,7 @@ void evaluationinfo_init(const struct position *pos, struct evaluationinfo *ei) 
 	ei->pawn_attack_span[white] = fill_north(ei->attacked_squares[white][pawn]);
 	ei->pawn_attack_span[black] = fill_south(ei->attacked_squares[black][pawn]);
 
+	ei->material = 0;
 
 	for (int turn = 0; turn < 2; turn++) {
 		ei->mobility[turn] = 0;
@@ -320,16 +317,22 @@ mevalue evaluate_psqtable(const struct position *pos, struct evaluationinfo *ei,
 	mevalue eval = 0;
 	uint64_t bitboard;
 	int square;
-	for (int j = pawn; j <= king; j++) {
-		bitboard = pos->piece[turn][j];
+	for (int piece = pawn; piece <= king; piece++) {
+		bitboard = pos->piece[turn][piece];
 		while (bitboard) {
 			square = ctz(bitboard);
-			eval += psqtable[turn][j][square];
+			eval += psqtable[turn][piece][square];
 			bitboard = clear_ls1b(bitboard);
 		}
 	}
 
 	return eval;
+}
+
+double phase(int32_t material) {
+	double phase = CLAMP(material, phase_min_material, phase_max_material);
+	phase = (phase - phase_min_material) / (phase_max_material - phase_min_material);
+	return phase;
 }
 
 int16_t evaluate_classical(const struct position *pos) {
@@ -347,10 +350,9 @@ int16_t evaluate_classical(const struct position *pos) {
 	eval += evaluate_king(pos, &ei, white) - evaluate_king(pos, &ei, black);
 	
 	eval += evaluate_mobility(pos, &ei, white) - evaluate_mobility(pos, &ei, black);
-
 	eval += evaluate_space(pos, &ei, white) - evaluate_space(pos, &ei, black);
 
-	int16_t ret = mevalue_evaluation(eval, game_phase(pos));
+	int16_t ret = mevalue_evaluation(eval, phase(ei.material));
 
 	return (pos->turn ? ret : -ret) + tempo_bonus;
 }
@@ -383,8 +385,8 @@ void evaluate_print(const struct position *pos) {
 	print_mevalue(eval);
 	printf(" |\n");
 	printf("+-------------+-------------+-------------+-------------+\n");
-	printf("Phase: %.2f\n", game_phase(pos));
-	printf("Evaluation: %+.2f\n", (float)mevalue_evaluation(eval, game_phase(pos)) / 100);
+	printf("Phase: %.2f\n", phase(ei.material));
+	printf("Evaluation: %+.2f\n", (float)mevalue_evaluation(eval, phase(ei.material)) / 100);
 }
 
 void print_mevalue(mevalue eval) {

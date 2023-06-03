@@ -48,6 +48,8 @@ static inline void move_set_halfmove(move *m, uint64_t i) { *m |= (i << 0x1E); }
 
 #define MOVES_MAX 256
 
+#define M(source_square, target_square, flag, promotion) ((source_square) | ((target_square) << 0x6) | ((flag) << 0xC) | ((promotion) << 0xE))
+
 void do_move(struct position *pos, move *m);
 
 void undo_move(struct position *pos, const move *m);

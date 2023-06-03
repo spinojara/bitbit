@@ -45,6 +45,7 @@
 #define FT_OUT_DIMS (K_HALF_DIMENSIONS * 2)
 
 #define SHIFT (6)
+#define FT_SHIFT (3)
 
 typedef int16_t ft_weight_t;
 typedef int16_t ft_bias_t;
@@ -121,16 +122,16 @@ static inline void transform(struct position *pos, int16_t (*accumulation)[2][K_
 		for (int i = 0; i < 8 * K_HALF_DIMENSIONS / SIMD_WIDTH; i++) {
 			vec_t p0 = ((vec_t *)(*accumulation)[perspective[j]])[2 * i];
 			vec_t p1 = ((vec_t *)(*accumulation)[perspective[j]])[2 * i + 1];
-			out[i] = vec_max(vec_packs(vec_sr(p0, SHIFT), vec_sr(p1, SHIFT)), zero);
+			out[i] = vec_max(vec_packs(vec_sr(p0, FT_SHIFT), vec_sr(p1, FT_SHIFT)), zero);
 		}
 	}
 #else
 	int16_t sum;
 	for (int i = 0; i < K_HALF_DIMENSIONS; i++) {
 		sum = (*accumulation)[pos->turn][i];
-		output[i] = CLAMP(sum >> SHIFT, 0, 127);
+		output[i] = CLAMP(sum >> FT_SHIFT, 0, 127);
 		sum = (*accumulation)[1 - pos->turn][i];
-		output[K_HALF_DIMENSIONS + i] = CLAMP(sum >> SHIFT, 0, 127);
+		output[K_HALF_DIMENSIONS + i] = CLAMP(sum >> FT_SHIFT, 0, 127);
 	}
 #endif
 }

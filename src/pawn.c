@@ -23,17 +23,18 @@
 
 #include "bitboard.h"
 #include "util.h"
+#include "option.h"
 
 /* around 100 KiB with hitrate of ~80% */
 #define PAWN_TABLE_SIZE ((uint64_t)1 << 12)
 
-mevalue backward_pawn  = S(-5, -3);
-mevalue supported_pawn = S(7, 5);
-mevalue passed_pawn    = S(8, 26);
-mevalue passed_file    = S(-8, -15);
+mevalue backward_pawn  = S(-7, 2);
+mevalue supported_pawn = S(8, 2);
+mevalue passed_pawn    = S(12, 20);
+mevalue passed_file    = S(-14, -11);
 mevalue isolated_pawn  = S(-11, -14);
-mevalue doubled_pawn   = S(-11, -16);
-mevalue phalanx_pawn   = S(6, 5);
+mevalue doubled_pawn   = S(-14, -21);
+mevalue phalanx_pawn   = S(5, 6);
 
 struct pawn {
 	uint64_t pawns[2];
@@ -53,6 +54,8 @@ struct pawn *pawn_get(uint64_t *pawns) {
 }
 
 struct pawn *pawn_attempt_get(uint64_t *pawns) {
+	if (!option_pawn)
+		return NULL;
 	struct pawn *p = pawn_get(pawns);
 	if (p->pawns[white] != pawns[white] || p->pawns[black] != pawns[black])
 		return NULL;
@@ -60,6 +63,8 @@ struct pawn *pawn_attempt_get(uint64_t *pawns) {
 }
 
 void pawn_store(uint64_t *pawns, mevalue evaluation) {
+	if (!option_pawn)
+		return;
 	struct pawn *e = pawn_get(pawns);
 	e->pawns[white] = pawns[white];
 	e->pawns[black] = pawns[black];

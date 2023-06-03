@@ -211,35 +211,25 @@ char *move_str_pgn(char *str, const struct position *pos, const move *m) {
 	int x = move_from(m) % 8;
 	int y = move_from(m) / 8;
 	int i = 0;
-	uint64_t attackers = 0;
 
 	str[i] = '\0';
-	switch((pos->mailbox[move_from(m)] - 1) % 6) {
-	case 0:
-		if (is_capture(pos, m) || move_flag(m) == 1)
-			attackers = rank(move_from(m));
+	switch ((pos->mailbox[move_from(m)]) % 6) {
+	case pawn:
 		break;
-	case 1:
+	case knight:
 		str[i++] = 'N';
-		attackers = knight_attacks(move_to(m), 0) &
-			(pos->turn ? pos->piece[white][knight] : pos->piece[black][knight]);
 		break;
-	case 2:
+	case bishop:
 		str[i++] = 'B';
-		attackers = bishop_attacks(move_to(m), 0, pos->piece[white][all] | pos->piece[black][all]) &
-			(pos->turn ? pos->piece[white][bishop] : pos->piece[black][bishop]);
 		break;
-	case 3:
+	case rook:
 		str[i++] = 'R';
-		attackers = rook_attacks(move_to(m), 0, pos->piece[white][all] | pos->piece[black][all]) &
-			(pos->turn ? pos->piece[white][rook] : pos->piece[black][rook]);
 		break;
-	case 4:
+	case queen:
 		str[i++] = 'Q';
-		attackers = queen_attacks(move_to(m), 0, pos->piece[white][all] | pos->piece[black][all]) &
-			(pos->turn ? pos->piece[white][queen] : pos->piece[black][queen]);
 		break;
-	case 5:
+	/* king */
+	case 0:
 		if (x == 4 && move_to(m) % 8 == 6) {
 			sprintf(str, "O-O");
 			i = 3;
@@ -251,7 +241,24 @@ char *move_str_pgn(char *str, const struct position *pos, const move *m) {
 		else {
 			str[i++] = 'K';
 		}
+		break;
 	}
+
+	uint64_t attackers = 0;
+	if (pos->mailbox[move_from(m)] % 6 == pawn) {
+		if (is_capture(pos, m) || move_flag(m) == 1)
+			attackers = rank(move_from(m));
+	}
+	else {
+		move move_list[MOVES_MAX];
+		generate_all(pos, move_list);
+		for (move *ptr = move_list; *ptr; ptr++) {
+			if (move_to(ptr) == move_to(m) && pos->mailbox[move_from(ptr)] == pos->mailbox[move_from(m)])
+				attackers |= bitboard(move_from(ptr));
+		}
+	}
+	assert(attackers);
+
 	if (popcount(attackers & file(move_from(m))) > 1) {
 		if (popcount(attackers & rank(move_from(m))) > 1) {
 			str[i++] = "abcdefgh"[x];
@@ -277,18 +284,16 @@ char *move_str_pgn(char *str, const struct position *pos, const move *m) {
 		str[i++] = "NBRQ"[move_promote(m)];
 	}
 	
-	struct position pos_t[1];
-	move m_t[1];
-	*m_t = *m;
-	memcpy(pos_t, pos, sizeof(struct position));
-	do_move(pos_t, m_t);
-	int ma = mate(pos_t);
-	uint64_t checkers = generate_checkers(pos_t, pos_t->turn);
+	struct position pos_t;
+	move m_t;
+	m_t = *m;
+	memcpy(&pos_t, pos, sizeof(struct position));
+	do_move(&pos_t, &m_t);
+	int ma = mate(&pos_t);
+	uint64_t checkers = generate_checkers(&pos_t, pos_t.turn);
 
 	if (ma == 2)
 		str[i++] = '#';
-	else if (ma == 1)
-		str[i++] = '=';
 	else if (checkers)
 		str[i++] = '+';
 	str[i] = '\0';
@@ -297,6 +302,8 @@ char *move_str_pgn(char *str, const struct position *pos, const move *m) {
 
 /* str can be illegal */
 move string_to_move(const struct position *pos, const char *str) {
+	if (!str)
+		return 0;
 	move move_list[MOVES_MAX];
 	generate_all(pos, move_list);
 	char str_t[8];

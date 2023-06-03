@@ -52,7 +52,7 @@ static uint32_t piece_to_index[2][13] = {
 	     PS_B_PAWN, PS_B_KNIGHT, PS_B_BISHOP, PS_B_ROOK, PS_B_QUEEN, 0, },
 };
 
-/* should use horizontal symmetry */
+/* horizontal symmetry */
 static inline int orient(int turn, int square) {
 	return square ^ (turn ? 0x0 : 0x38);
 }

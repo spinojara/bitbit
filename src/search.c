@@ -172,7 +172,7 @@ int16_t negamax(struct position *pos, uint8_t depth, uint16_t ply, int16_t alpha
 
 	if (!root_node) {
 		/* draws */
-		if (pos->halfmove >= 100 || (option_transposition && is_repetition(pos, si->history, ply, 1 + pv_node)))
+		if (pos->halfmove >= 100 || (option_history && is_repetition(pos, si->history, ply, 1 + pv_node)))
 			return draw(si);
 
 		/* mate distance pruning */
@@ -214,7 +214,7 @@ int16_t negamax(struct position *pos, uint8_t depth, uint16_t ply, int16_t alpha
 		int t = pos->en_passant;
 		do_null_zobrist_key(pos, 0);
 		do_null_move(pos, 0);
-		if (option_transposition)
+		if (option_history)
 			si->history->zobrist_key[si->history->ply + ply] = pos->zobrist_key;
 		eval = -negamax(pos, depth - 3, ply + 1, -beta, -beta + 1, !cut_node, FLAG_NULL_MOVE, si);
 		do_null_zobrist_key(pos, t);
@@ -236,7 +236,7 @@ int16_t negamax(struct position *pos, uint8_t depth, uint16_t ply, int16_t alpha
 	move m;
 	while ((m = next_move(&mp))) {
 		int move_number = mp.index - 1;
-		if (option_transposition)
+		if (option_history)
 			si->history->zobrist_key[si->history->ply + ply] = pos->zobrist_key;
 		do_zobrist_key(pos, &m);
 		do_move(pos, &m);
@@ -335,6 +335,8 @@ int16_t aspiration_window(struct position *pos, uint8_t depth, int32_t last, str
 }
 
 int16_t search(struct position *pos, uint8_t depth, int verbose, int etime, int movetime, move *m, struct history *history, int iterative) {
+	assert(option_history == (history != NULL));
+
 	time_point ts = time_now();
 	if (etime && !movetime)
 		movetime = etime / 5;
@@ -347,16 +349,16 @@ int16_t search(struct position *pos, uint8_t depth, int verbose, int etime, int 
 	time_init(pos, etime, &si);
 
 	char str[8];
-	int16_t evaluation = 0;
+	int16_t eval = VALUE_NONE, best_eval = VALUE_NONE;
 
 	refresh_accumulator(pos, pos->accumulation, 0);
 	refresh_accumulator(pos, pos->accumulation, 1);
 
 	if (depth == 0) {
-		evaluation = evaluate(pos);
+		eval = evaluate(pos);
 		if (verbose)
-			printf("info depth 0 score cp %d\n", evaluation);
-		return evaluation;
+			printf("info depth 0 score cp %d\n", eval);
+		return eval;
 	}
 
 	move bestmove = 0;
@@ -367,27 +369,28 @@ int16_t search(struct position *pos, uint8_t depth, int verbose, int etime, int 
 			reset_seldepth(si.history);
 
 		if (d <= 6 || !iterative)
-			evaluation = negamax(pos, d, 0, -VALUE_MATE, VALUE_MATE, 0, 0, &si);
+			eval = negamax(pos, d, 0, -VALUE_MATE, VALUE_MATE, 0, 0, &si);
 		else
-			evaluation = aspiration_window(pos, d, evaluation, &si);
+			eval = aspiration_window(pos, d, eval, &si);
 
 		if (interrupt || si.interrupt) {
 			d--;
 			break;
 		}
-		si.evaluation_list[d] = evaluation;
+
+		best_eval = eval;
 
 		bestmove = si.pv[0][0];
 
 		time_point tp = time_now() - ts;
 		if (verbose) {
 			printf("info depth %d seldepth %d score ", d, seldepth(si.history));
-			if (evaluation >= VALUE_MATE_IN_MAX_PLY)
-				printf("mate %d", (VALUE_MATE - evaluation + 1) / 2);
-			else if (evaluation <= -VALUE_MATE_IN_MAX_PLY)
-				printf("mate %d", (-VALUE_MATE - evaluation) / 2);
+			if (eval >= VALUE_MATE_IN_MAX_PLY)
+				printf("mate %d", (VALUE_MATE - eval + 1) / 2);
+			else if (eval <= -VALUE_MATE_IN_MAX_PLY)
+				printf("mate %d", (-VALUE_MATE - eval) / 2);
 			else
-				printf("cp %d", evaluation);
+				printf("cp %d", eval);
 			printf(" nodes %ld time %ld ", si.nodes, tp / 1000);
 			printf("nps %ld ", tp ? 1000000 * si.nodes / tp : 0);
 			printf("pv");
@@ -398,13 +401,12 @@ int16_t search(struct position *pos, uint8_t depth, int verbose, int etime, int 
 			break;
 	}
 
-	assert(bestmove || interrupt || si.interrupt);
-
 	if (verbose && !interrupt)
 		printf("bestmove %s\n", move_str_algebraic(str, &bestmove));
 	if (m && !interrupt)
 		*m = bestmove;
-	return si.evaluation_list[d - 1];
+
+	return best_eval;
 }
 
 void search_init(void) {

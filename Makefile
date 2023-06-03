@@ -4,7 +4,7 @@ VERSION = $(MAJOR).$(MINOR)
 
 CC = cc
 CSTANDARD = -std=c11
-CWARNINGS = -Wall -Wextra -Wshadow -pedantic
+CWARNINGS = -Wall -Wextra -Wshadow -pedantic -Wno-unused-result
 ARCH = native
 
 ifeq ($(DEBUG), yes)
@@ -52,9 +52,16 @@ SRC_NNUEGEN   = bitboard.c magicbitboard.c attackgen.c \
                 movepicker.c history.c option.c nnue.c search.c \
                 nnuegen.c
 
-SRC_TEXELGEN  = bitboard.c magicbitboard.c attackgen.c \
+SRC_HISTOGRAM = bitboard.c magicbitboard.c attackgen.c \
+                move.c util.c position.c movegen.c evaluate.c \
+                tables.c init.c timeman.c interrupt.c pawn.c \
+                moveorder.c material.c transposition.c \
+                movepicker.c history.c option.c nnue.c search.c \
+                histogram.c
+
+SRC_PGNBIN    = bitboard.c magicbitboard.c attackgen.c \
                 move.c util.c position.c movegen.c init.c \
-                option.c transposition.c texelgen.c
+                option.c transposition.c pgnbin.c
 
 SRC_TEXELTUNE = bitboard.c magicbitboard.c attackgen.c \
                 move.c util.c position.c movegen.c evaluate.c \
@@ -66,11 +73,12 @@ SRC_BATCH     = bitboard.c magicbitboard.c attackgen.c \
                 move.c util.c position.c movegen.c init.c \
                 batch.c
 
-SRC = $(SRC_BITBIT) $(SRC_NNUEGEN) $(SRC_TEXELGEN) $(SRC_TEXELTUNE) $(SRC_BATCH)
+SRC = $(SRC_BITBIT) $(SRC_NNUEGEN) $(SRC_HISTOGRAM) $(SRC_PGNBIN) $(SRC_TEXELTUNE) $(SRC_BATCH)
 
 OBJ_BITBIT    = $(addprefix obj/,$(SRC_BITBIT:.c=.o)) obj/incbin.o obj/incbinnnue.o
 OBJ_NNUEGEN   = $(addprefix obj/,$(SRC_NNUEGEN:.c=.o))
-OBJ_TEXELGEN  = $(addprefix obj/,$(SRC_TEXELGEN:.c=.o))
+OBJ_HISTOGRAM = $(addprefix obj/,$(SRC_HISTOGRAM:.c=.o))
+OBJ_PGNBIN    = $(addprefix obj/,$(SRC_PGNBIN:.c=.o))
 OBJ_TEXELTUNE = $(addprefix obj/,$(SRC_TEXELTUNE:.c=.o))
 OBJ_BATCH     = $(addprefix obj/pic,$(SRC_BATCH:.c=.o))
 
@@ -80,7 +88,7 @@ MANPREFIX = $(PREFIX)/share
 MANDIR = $(MANPREFIX)/man
 MAN6DIR = $(MANDIR)/man6
 
-all: bitbit nnuegen texelgen texeltune libbatch.so
+all: bitbit nnuegen histogram pgnbin texeltune libbatch.so
 
 bitbit: $(OBJ_BITBIT)
 	$(CC) $(LDFLAGS) -lm $^ -o $@
@@ -88,7 +96,10 @@ bitbit: $(OBJ_BITBIT)
 nnuegen: $(OBJ_NNUEGEN)
 	$(CC) $(LDFLAGS) -lm -pthread $^ -o $@
 
-texelgen: $(OBJ_TEXELGEN)
+histogram: $(OBJ_HISTOGRAM)
+	$(CC) $(LDFLAGS) -lm $^ -o $@
+
+pgnbin: $(OBJ_PGNBIN)
 	$(CC) $(LDFLAGS) -lm -pthread $^ -o $@
 
 texeltune: $(OBJ_TEXELTUNE)
@@ -96,6 +107,9 @@ texeltune: $(OBJ_TEXELTUNE)
 
 libbatch.so: $(OBJ_BATCH)
 	$(CC) $(LDFLAGS) -shared $^ -o $@
+
+batch: $(OBJ_BATCH)
+	$(CC) $(LDFLAGS) $^ -o $@
 
 obj/init.o: src/init.c dep/init.d Makefile
 	@mkdir -p obj
@@ -147,3 +161,4 @@ options:
 	@echo "LDFLAGS = $(LDFLAGS)"
 
 .PHONY: all clean install uninstall options
+.SECONDARY:

@@ -1,2 +1,2 @@
 add checks for malloc
-own fixed rng
+optimize libbatch.so by combining the 4 append_active_indices

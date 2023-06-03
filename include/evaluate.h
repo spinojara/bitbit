@@ -22,7 +22,8 @@
 
 #include "position.h"
 
-#define VALUE_INFINITE (0x7FFF)
+#define VALUE_NONE (0x7FFF)
+#define VALUE_INFINITE (0x7FFE)
 #define VALUE_MATE (0x7F00)
 #define VALUE_MATE_IN_MAX_PLY (VALUE_MATE - 128)
 
@@ -52,6 +53,9 @@ extern int queen_king_attack_danger;
 
 extern int tempo_bonus;
 
+extern int phase_max_material;
+extern int phase_min_material;
+
 struct evaluationinfo {
 	mevalue mobility[2];
 
@@ -63,14 +67,16 @@ struct evaluationinfo {
 
 	uint64_t king_ring[2];
 	int king_attack_units[2];
+
+	int32_t material;
 };
 
 enum {
-	pawn_mg   =   80, pawn_eg   =  118,
-	knight_mg =  405, knight_eg =  370,
-	bishop_mg =  436, bishop_eg =  383,
-	rook_mg   =  565, rook_eg   =  649,
-	queen_mg  = 1289, queen_eg  = 1254,
+	pawn_mg   =   90, pawn_eg   =  125,
+	knight_mg =  420, knight_eg =  351,
+	bishop_mg =  450, bishop_eg =  352,
+	rook_mg   =  576, rook_eg   =  597,
+	queen_mg  = 1237, queen_eg  = 1077,
 };
 
 #define S(a, b) ((mevalue)((a) + ((uint32_t)(b) << 16)))
