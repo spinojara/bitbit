@@ -25,6 +25,7 @@
 #include "movegen.h"
 #include "pawn.h"
 #include "tables.h"
+#include "nnue.h"
 
 mevalue king_on_open_file     = S(-13, -4);
 mevalue outpost_bonus  	      = S(47, 16);
@@ -361,7 +362,7 @@ void print_mevalue(mevalue eval);
 mevalue evaluate_print_x(const char *name, const struct position *pos, struct evaluationinfo *ei,
 		mevalue (*evaluate_x)(const struct position *, struct evaluationinfo *ei, int));
 
-void evaluate_print(const struct position *pos) {
+void evaluate_print(struct position *pos) {
 	struct evaluationinfo ei;
 	evaluationinfo_init(pos, &ei);
 
@@ -380,31 +381,75 @@ void evaluate_print(const struct position *pos) {
 	eval += evaluate_print_x("King", pos, &ei, &evaluate_king);
 	eval += evaluate_print_x("Mobility", pos, &ei, &evaluate_mobility);
 	eval += evaluate_print_x("Space", pos, &ei, &evaluate_space);
+	double wt = (double)(pos->turn == white) * tempo_bonus / 100;
+	double bt = (double)(pos->turn == black) * tempo_bonus / 100;
+	eval += (2 * pos->turn - 1) * S(tempo_bonus, tempo_bonus);
+	printf("| Tempo       | %+.2f %+.2f | %+.2f %+.2f | %+.2f %+.2f |\n", wt, wt, bt, bt, wt - bt, wt - bt);
 	printf("+-------------+-------------+-------------+-------------+\n");
 	printf("| Total       |             |             | ");
 	print_mevalue(eval);
 	printf(" |\n");
 	printf("+-------------+-------------+-------------+-------------+\n");
 	printf("Phase: %.2f\n", phase(ei.material));
-	printf("Evaluation: %+.2f\n", (float)mevalue_evaluation(eval, phase(ei.material)) / 100);
+	
+	char pieces[] = " PNBRQKpnbrqk";
+
+	alignas(64) int16_t accumulation[2][K_HALF_DIMENSIONS];
+	alignas(64) int32_t psqtaccumulation[2] = { 0 };
+	printf("\n+-------+-------+-------+-------+-------+-------+-------+-------+\n");
+	for (int y = 7; y >= 0; y--) {
+		printf("|");
+		for (int x = 0; x < 8; x++) {
+			printf("   %c   |", pieces[pos->mailbox[x + 8 * y]]);
+		}
+		printf("\n|");
+		for (int x = 0; x < 8; x++) {
+			int square = x + 8 * y;
+			int piece = pos->mailbox[square];
+			if (piece % 6) {
+				int16_t oldeval = psqtaccumulation[white] - psqtaccumulation[black];
+				for (int color = 0; color < 2; color++) {
+					int king_square = ctz(pos->piece[color][king]);
+					king_square = orient(color, king_square);
+					int index = make_index(color, square, piece, king_square);
+					add_index_slow(index, accumulation, psqtaccumulation, color);
+				}
+				int16_t neweval = psqtaccumulation[white] - psqtaccumulation[black] - oldeval;
+				
+				if (ABS(neweval) >= 2000)
+					printf(" %+.1f |", (double)neweval / 200);
+				else
+					printf(" %+.2f |", (double)neweval / 200);
+			}
+			else {
+				printf("       |");
+			}
+		}
+		printf("\n+-------+-------+-------+-------+-------+-------+-------+-------+\n");
+	}
+	printf("Psqt: %+.2f\n", (double)(psqtaccumulation[white] - psqtaccumulation[black]) / 200);
+	printf("Positional %+.2f\n", (double)((2 * pos->turn - 1) * evaluate_nnue(pos) - (psqtaccumulation[white] - psqtaccumulation[black]) / 2) / 100);
+	printf("\n");
+	printf("Classical Evaluation: %+.2f\n", (double)mevalue_evaluation(eval, phase(ei.material)) / 100);
+	printf("NNUE Evaluation: %+.2f\n", (double)(2 * pos->turn - 1) * evaluate_nnue(pos) / 100);
 }
 
 void print_mevalue(mevalue eval) {
 	int m = mevalue_mg(eval);
 	int e = mevalue_eg(eval);
 	if (ABS(m) >= 10000)
-		printf("%+.0f ", (float)m / 100);
+		printf("%+.0f ", (double)m / 100);
 	else if (ABS(m) >= 1000)
-		printf("%+.1f", (float)m / 100);
+		printf("%+.1f", (double)m / 100);
 	else
-		printf("%+.2f", (float)m / 100);
+		printf("%+.2f", (double)m / 100);
 	printf(" ");
 	if (ABS(e) >= 10000)
-		printf("%+.0f ", (float)e / 100);
+		printf("%+.0f ", (double)e / 100);
 	else if (ABS(e) >= 1000)
-		printf("%+.1f", (float)e / 100);
+		printf("%+.1f", (double)e / 100);
 	else
-		printf("%+.2f", (float)e / 100);
+		printf("%+.2f", (double)e / 100);
 }
 
 mevalue evaluate_print_x(const char *name, const struct position *pos, struct evaluationinfo *ei,

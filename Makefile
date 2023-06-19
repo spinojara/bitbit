@@ -6,13 +6,17 @@ CC = cc
 CSTANDARD = -std=c11
 CWARNINGS = -Wall -Wextra -Wshadow -pedantic -Wno-unused-result
 ARCH = native
+COPTIMIZE = -O2 -march=$(ARCH) -flto
 
-ifeq ($(DEBUG), yes)
-	CDEBUG = -fsanitize=address -fsanitize=undefined -g3 -ggdb
+ifeq ($(DEBUG), 1)
+	CDEBUG = -g3 -ggdb
+else ifeq ($(DEBUG), 2)
+	CDEBUG = -g3 -ggdb -fsanitize=address,undefined
+else ifeq ($(DEBUG), 3)
+	CDEBUG = -g3 -ggdb -fsanitize=address,undefined
 	COPTIMIZE =
 else
 	CDEBUG = -DNDEBUG
-	COPTIMIZE = -O2 -march=$(ARCH) -flto
 endif
 
 CFLAGS = $(CSTANDARD) $(CWARNINGS) $(COPTIMIZE) $(CDEBUG)
@@ -73,7 +77,9 @@ SRC_BATCH     = bitboard.c magicbitboard.c attackgen.c \
                 move.c util.c position.c movegen.c init.c \
                 batch.c
 
-SRC = $(SRC_BITBIT) $(SRC_NNUEGEN) $(SRC_HISTOGRAM) $(SRC_PGNBIN) $(SRC_TEXELTUNE) $(SRC_BATCH)
+SRC_VISUALIZE = util.c visualize.c
+
+SRC = $(SRC_BITBIT) $(SRC_NNUEGEN) $(SRC_HISTOGRAM) $(SRC_PGNBIN) $(SRC_TEXELTUNE) $(SRC_BATCH) $(SRC_VISUALIZE)
 
 OBJ_BITBIT    = $(addprefix obj/,$(SRC_BITBIT:.c=.o)) obj/incbin.o obj/incbinnnue.o
 OBJ_NNUEGEN   = $(addprefix obj/,$(SRC_NNUEGEN:.c=.o))
@@ -81,6 +87,7 @@ OBJ_HISTOGRAM = $(addprefix obj/,$(SRC_HISTOGRAM:.c=.o))
 OBJ_PGNBIN    = $(addprefix obj/,$(SRC_PGNBIN:.c=.o))
 OBJ_TEXELTUNE = $(addprefix obj/,$(SRC_TEXELTUNE:.c=.o))
 OBJ_BATCH     = $(addprefix obj/pic,$(SRC_BATCH:.c=.o))
+OBJ_VISUALIZE = $(addprefix obj/pic,$(SRC_VISUALIZE:.c=.o))
 
 PREFIX = /usr/local
 BINDIR = $(PREFIX)/bin
@@ -88,7 +95,7 @@ MANPREFIX = $(PREFIX)/share
 MANDIR = $(MANPREFIX)/man
 MAN6DIR = $(MANDIR)/man6
 
-all: bitbit nnuegen histogram pgnbin texeltune libbatch.so
+all: bitbit nnuegen histogram pgnbin texeltune libbatch.so libvisualize.so
 
 bitbit: $(OBJ_BITBIT)
 	$(CC) $(LDFLAGS) -lm $^ -o $@
@@ -108,8 +115,8 @@ texeltune: $(OBJ_TEXELTUNE)
 libbatch.so: $(OBJ_BATCH)
 	$(CC) $(LDFLAGS) -shared $^ -o $@
 
-batch: $(OBJ_BATCH)
-	$(CC) $(LDFLAGS) $^ -o $@
+libvisualize.so: $(OBJ_VISUALIZE)
+	$(CC) $(LDFLAGS) -shared $^ -o $@
 
 obj/init.o: src/init.c dep/init.d Makefile
 	@mkdir -p obj

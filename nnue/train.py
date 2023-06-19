@@ -14,14 +14,15 @@ device = torch.device('cuda')
 
 model = model.nnue().to(device = device, non_blocking = True)
 
-model.load_state_dict(torch.load('1.pt'))
-
 def lr_lambda(loss):
     ret = 0.001 + (0.05 - 0.001) * loss / sigmoid(1000 / 400)
     return ret
 
+#model.load_state_dict(torch.load("2.pt"))
+
 # learning rate from 0.1 to 0.005
-optimizer = torch.optim.Adam(model.parameters(), lr = 1e-4)
+optimizer = torch.optim.Adam(model.parameters(), lr = 1e-3)
+scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size = 1, gamma = 0.992)
 
 sigmoid_scaling = math.log(10) / 400
 scaling = (127 * 64 / 16)
@@ -37,18 +38,13 @@ def loss_fn(output, target):
     wdl_target = torch.sigmoid(scaling * target * sigmoid_scaling)
     return torch.sum(torch.pow(torch.abs(wdl_output - wdl_target), loss_exponent))
 
-epochs = 2000
+epochs = 400
 save_every = 1
 batch_size = 16384
 
 batch.lib.batch_init()
-training_data = batch.lib.batch_open(b'out.bin', batch_size)
-validation_data = batch.lib.batch_open(b'val.bin', batch_size)
-
-while True:
-    batchptr = batch.lib.next_batch(validation_data)
-    if (batchptr.contents.is_empty()):
-        break
+training_data = batch.lib.batch_open(b'train.bin', batch_size, 0.8)
+validation_data = batch.lib.batch_open(b'val.bin', batch_size, 0)
 
 total_time = time.time()
 for epoch in range(1, epochs + 1):
@@ -68,15 +64,11 @@ for epoch in range(1, epochs + 1):
         loss += loss_fn(output, target).item()
     loss /= total
     loss = loss ** (1 / loss_exponent)
-    before_lr = optimizer.param_groups[0]['lr']
-    #optimizer.param_groups[0]['lr'] = lr_lambda(loss)
-    #optimizer.param_groups[0]['lr'] = 0.001
-    after_lr = optimizer.param_groups[0]['lr']
     # Normalized loss is around 0 centipawns = 1 / 2 wdl
     # and is then the inverse of sigmoid.
     loss = 2 * inverse_sigmoid(1 / 2 + loss / 2)
-    print("learning rate adjusted from {:.1e} to {:.1e}".format(before_lr, after_lr))
     print(f"normalized average centipawn loss is {round(loss)} for validation data")
+    print("learning rate is now {:.2e}".format(optimizer.param_groups[0]['lr']))
 
     batch.lib.batch_reset(training_data)
     while True:
@@ -93,6 +85,7 @@ for epoch in range(1, epochs + 1):
         model.clamp_weights()
         optimizer.step(closure)
 
+    scheduler.step()
     epoch_time = time.time() - epoch_time
     eta = time.time() + (epochs - epoch) * epoch_time
     print(f"epoch elapsed {round(epoch_time, 2)} seconds")

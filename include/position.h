@@ -39,7 +39,8 @@ struct position {
 
 	uint64_t zobrist_key;
 
-	alignas(64) int16_t accumulation[1][2][K_HALF_DIMENSIONS];
+	alignas(64) int16_t accumulation[2][K_HALF_DIMENSIONS];
+	alignas(64) int32_t psqtaccumulation[2];
 };
 
 struct partialposition {

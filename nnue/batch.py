@@ -3,6 +3,7 @@
 import numpy
 import ctypes
 import torch
+import os
 
 import model
 
@@ -38,12 +39,15 @@ class batch(ctypes.Structure):
         return (self.actual_size == 0)
 
 
-lib = ctypes.cdll.LoadLibrary('/usr/src/bitbit/libbatch.so')
+lib = ctypes.cdll.LoadLibrary(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../libbatch.so'))
+
+lib.batch_init.argtypes = None
+lib.batch_init.restype = None
 
 lib.next_batch.argtypes = [ctypes.c_void_p]
 lib.next_batch.restype = ctypes.POINTER(batch)
 
-lib.batch_open.argtypes = [ctypes.c_char_p, ctypes.c_size_t]
+lib.batch_open.argtypes = [ctypes.c_char_p, ctypes.c_size_t, ctypes.c_double]
 lib.batch_open.restype = ctypes.c_void_p
 
 lib.batch_reset.argtypes = [ctypes.c_void_p]

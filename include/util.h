@@ -37,6 +37,8 @@
 
 uint64_t gxorshift64();
 uint64_t xorshift64(uint64_t *seed);
+int gbernoulli(double p);
+int bernoulli(double p, uint64_t *seed);
 
 uint64_t power(uint64_t m, uint64_t n);
 

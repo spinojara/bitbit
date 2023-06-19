@@ -35,10 +35,6 @@
 #include "option.h"
 #include "nnue.h"
 
-static inline int bernoulli(double p) {
-	return ((double)rand() / RAND_MAX) < p;
-}
-
 #define BATCH_SIZE (8192)
 
 #define PARAMETER(x, y, z, w) { x, y, z, NULL, NULL, NULL, NULL, w, MACRO_NAME(x) }
@@ -360,7 +356,7 @@ int grad(FILE *f) {
 		if (feof(f))
 			break;
 
-		int skip = (eval == VALUE_NONE) || bernoulli(0.9);
+		int skip = (eval == VALUE_NONE) || gbernoulli(0.9);
 		if (skip)
 			continue;
 

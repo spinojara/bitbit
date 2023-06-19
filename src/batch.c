@@ -31,6 +31,8 @@
 #include "nnue.h"
 #include "evaluate.h"
 
+uint64_t seed;
+
 struct batch {
 	size_t actual_size;
 	int ind_active;
@@ -47,63 +49,19 @@ struct data {
 	
 	struct index *active_indices1;
 	struct index *active_indices2;
-	struct index *active_indices1_p;
-	struct index *active_indices2_p;
+	struct index *active_indices1_virtual;
+	struct index *active_indices2_virtual;
+
+	double random_skip;
 
 	FILE *f;
 };
 
-void fast_do_move(struct position *pos, move *m) {
-	assert(*m);
-	uint8_t source_square = move_from(m);
-	uint8_t target_square = move_to(m);
-	uint64_t from = bitboard(source_square);
-	uint64_t to = bitboard(target_square);
-	uint64_t from_to = from | to;
-
-	for (int piece = all; piece <= king; piece++) {
-		pos->piece[1 - pos->turn][piece] &= ~to;
-		if (pos->piece[pos->turn][piece] & from)
-			pos->piece[pos->turn][piece] ^= from_to;
-	}
-
-	if (move_flag(m) == 1) {
-		int direction = 2 * pos->turn - 1;
-		pos->piece[1 - pos->turn][pawn] ^= bitboard(target_square - direction * 8);
-		pos->piece[1 - pos->turn][all] ^= bitboard(target_square - direction * 8);
-	}
-	else if (move_flag(m) == 2) {
-		pos->piece[pos->turn][pawn] ^= to;
-		pos->piece[pos->turn][move_promote(m) + 2] ^= to;
-	}
-	else if (move_flag(m) == 3) {
-		switch (target_square) {
-		case g1:
-			pos->piece[white][rook] ^= 0xA0;
-			pos->piece[white][all] ^= 0xA0;
-			break;
-		case c1:
-			pos->piece[white][rook] ^= 0x9;
-			pos->piece[white][all] ^= 0x9;
-			break;
-		case g8:
-			pos->piece[black][rook] ^= 0xA000000000000000;
-			pos->piece[black][all] ^= 0xA000000000000000;
-			break;
-		case c8:
-			pos->piece[black][rook] ^= 0x900000000000000;
-			pos->piece[black][all] ^= 0x900000000000000;
-			break;
-		}
-	}
-	pos->turn = 1 - pos->turn;
-}
-
-static inline uint16_t make_index_p(int turn, int square, int piece) {
+static inline uint16_t make_index_virtual(int turn, int square, int piece) {
 	return orient(turn, square) + piece_to_index[turn][piece] + PS_END * 64;
 }
 
-static inline void append_active_indices_p(struct position *pos, struct index *active, int turn) {
+static inline void append_active_indices_virtual(struct position *pos, struct index *active, int turn) {
 	active->size = 0;
 	uint64_t b;
 	int square;
@@ -112,19 +70,11 @@ static inline void append_active_indices_p(struct position *pos, struct index *a
 			b = pos->piece[color][piece];
 			while (b) {
 				square = ctz(b);
-				active->values[active->size++] = make_index_p(turn, square, piece + 6 * (1 - color));
+				active->values[active->size++] = make_index_virtual(turn, square, piece + 6 * (1 - color));
 				b = clear_ls1b(b);
 			}
 		}
 	}
-}
-
-static inline int bernoulli(double p) {
-	return ((double)rand() / RAND_MAX) < p;
-}
-
-static inline int random_skip() {
-	return bernoulli(0.75);
 }
 
 struct batch *next_batch(void *ptr) {
@@ -137,7 +87,7 @@ struct batch *next_batch(void *ptr) {
 		move m = 0;
 		fread(&m, 2, 1, data->f);
 		if (m)
-			fast_do_move(data->pos, &m);
+			do_move(data->pos, &m);
 		else
 			fread(data->pos, sizeof(struct partialposition), 1, data->f);
 
@@ -146,19 +96,19 @@ struct batch *next_batch(void *ptr) {
 		if (feof(data->f))
 			break;
 
-		int skip = (eval == VALUE_NONE) || random_skip();
+		int skip = (eval == VALUE_NONE) || bernoulli(data->random_skip, &seed);
 		if (skip)
 			continue;
 
 		batch->eval[batch->actual_size] = (float)FV_SCALE * eval / (127 * 64);
 		append_active_indices(data->pos, &data->active_indices1[batch->actual_size], data->pos->turn);
 		append_active_indices(data->pos, &data->active_indices2[batch->actual_size], 1 - data->pos->turn);
-		append_active_indices_p(data->pos, &data->active_indices1_p[batch->actual_size], data->pos->turn);
-		append_active_indices_p(data->pos, &data->active_indices2_p[batch->actual_size], 1 - data->pos->turn);
+		append_active_indices_virtual(data->pos, &data->active_indices1_virtual[batch->actual_size], data->pos->turn);
+		append_active_indices_virtual(data->pos, &data->active_indices2_virtual[batch->actual_size], 1 - data->pos->turn);
 
 		assert(data->active_indices1[batch->actual_size].size == data->active_indices2[batch->actual_size].size);
-		assert(data->active_indices1[batch->actual_size].size == data->active_indices1_p[batch->actual_size].size);
-		assert(data->active_indices1[batch->actual_size].size == data->active_indices2_p[batch->actual_size].size);
+		assert(data->active_indices1[batch->actual_size].size == data->active_indices1_virtual[batch->actual_size].size);
+		assert(data->active_indices1[batch->actual_size].size == data->active_indices2_virtual[batch->actual_size].size);
 
 		batch->ind_active += 2 * data->active_indices1[batch->actual_size].size;
 		batch->actual_size++;
@@ -174,16 +124,16 @@ struct batch *next_batch(void *ptr) {
 		}
 		for (int j = 0; j < data->active_indices1[i].size; j++) {
 			batch->ind1[index + 2 * (j + data->active_indices1[i].size)] = i;
-			batch->ind1[index + 2 * (j + data->active_indices1[i].size) + 1] = data->active_indices1_p[i].values[j];
+			batch->ind1[index + 2 * (j + data->active_indices1[i].size) + 1] = data->active_indices1_virtual[i].values[j];
 			batch->ind2[index + 2 * (j + data->active_indices1[i].size)] = i;
-			batch->ind2[index + 2 * (j + data->active_indices1[i].size) + 1] = data->active_indices2_p[i].values[j];
+			batch->ind2[index + 2 * (j + data->active_indices1[i].size) + 1] = data->active_indices2_virtual[i].values[j];
 		}
 		index += 4 * data->active_indices1[i].size;
 	}
 	return batch;
 }
 
-void *batch_open(const char *s, size_t requested_size) {
+void *batch_open(const char *s, size_t requested_size, double random_skip) {
 	struct data *data = malloc(sizeof(struct data));
 	memset(data, 0, sizeof(*data));
 	data->pos = malloc(sizeof(*data->pos));
@@ -192,11 +142,12 @@ void *batch_open(const char *s, size_t requested_size) {
 	memset(data->batch, 0, sizeof(*data->batch));
 
 	data->requested_size = requested_size;
+	data->random_skip = random_skip;
 
 	data->active_indices1 = malloc(data->requested_size * sizeof(*data->active_indices1));
 	data->active_indices2 = malloc(data->requested_size * sizeof(*data->active_indices2));
-	data->active_indices1_p = malloc(data->requested_size * sizeof(*data->active_indices1_p));
-	data->active_indices2_p = malloc(data->requested_size * sizeof(*data->active_indices2_p));
+	data->active_indices1_virtual = malloc(data->requested_size * sizeof(*data->active_indices1_virtual));
+	data->active_indices2_virtual = malloc(data->requested_size * sizeof(*data->active_indices2_virtual));
 
 	data->batch->ind1 = malloc(4 * 30 * data->requested_size * sizeof(*data->batch->ind1));
 	data->batch->ind2 = malloc(4 * 30 * data->requested_size * sizeof(*data->batch->ind2));
@@ -219,8 +170,8 @@ void batch_close(void *ptr) {
 	free(data->batch);
 	free(data->active_indices1);
 	free(data->active_indices2);
-	free(data->active_indices1_p);
-	free(data->active_indices2_p);
+	free(data->active_indices1_virtual);
+	free(data->active_indices2_virtual);
 	free(data->pos);
 	free(data);
 }
@@ -235,5 +186,5 @@ void batch_init(void) {
 	attackgen_init();
 	bitboard_init();
 	position_init();
-	srand(time(NULL));
+	seed = time(NULL);
 }

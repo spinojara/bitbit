@@ -248,6 +248,8 @@ char *move_str_pgn(char *str, const struct position *pos, const move *m) {
 	if (pos->mailbox[move_from(m)] % 6 == pawn) {
 		if (is_capture(pos, m) || move_flag(m) == 1)
 			attackers = rank(move_from(m));
+		else
+			attackers = bitboard(move_from(m));
 	}
 	else {
 		move move_list[MOVES_MAX];

@@ -72,7 +72,9 @@ int main(int argc, char **argv) {
 	size_t count = 0;
 	size_t games = 0;
 	while (1) {
-		printf("collecting data: %lu\r", ++count);
+		count++;
+		if (count % 20000 == 0)
+			printf("collecting data: %lu\r", count);
 		m = 0;
 		fread(&m, 2, 1, f);
 		if (m) {
@@ -82,6 +84,11 @@ int main(int argc, char **argv) {
 			fread(&pos, sizeof(struct partialposition), 1, f);
 			if (!feof(f))
 				games++;
+		}
+
+		if (!pos.piece[white][king] || !pos.piece[black][king]) {
+			fprintf(stderr, "Missing king in position\n");
+			exit(1);
 		}
 		
 		fread(&eval, 2, 1, f);

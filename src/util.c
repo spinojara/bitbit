@@ -35,6 +35,13 @@ uint64_t xorshift64(uint64_t *seed) {
 	*seed ^= *seed >> 27;
 	return *seed * 2685821657736338717ull;
 }
+int gbernoulli(double p) {
+	return bernoulli(p, &gseed);
+}
+int bernoulli(double p, uint64_t *seed) {
+	const uint64_t max = (uint64_t)1 << 32;
+	return (double)(xorshift64(seed) % max) / max < p;
+}
 
 uint64_t log_2(uint64_t m) {
 	if (m <= 2)

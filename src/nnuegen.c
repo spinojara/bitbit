@@ -23,6 +23,7 @@
 #include <sys/time.h>
 #include <pthread.h>
 #include <stdatomic.h>
+#include <time.h>
 
 #include "position.h"
 #include "move.h"
@@ -41,8 +42,6 @@
 #include "history.h"
 #include "timeman.h"
 
-#define FEN_CHUNKS (512)
-
 /* <x * 1024 * 1024> gives a <8 * x> hash table MiB */
 #define HASH_SIZE (128 * 1024 * 1024)
 
@@ -51,8 +50,10 @@
 atomic_uint_least64_t *hash_table;
 
 const int random_move_max_ply = 25;
+const int random_move_count = 7;
 const int write_min_ply = 16;
 const int write_max_ply = 400;
+const int adj_draw_ply = 80;
 const int eval_limit = 3000;
 
 const int report_dot_every = 10000;
@@ -61,6 +62,7 @@ const int report_every = 200000;
 const move synchronize_threads = M(a1, b4, 0, 0);
 
 struct threadinfo {
+	int threadn;
 	atomic_int available;
 	int depth;
 	uint64_t seed;
@@ -69,7 +71,7 @@ struct threadinfo {
 
 pthread_mutex_t lock;
 
-int stop = 0;
+atomic_int stop = 0;
 
 time_point last_time;
 uint64_t last_fens = 0;
@@ -101,12 +103,48 @@ static inline int position_already_written(struct position *pos) {
 	return 0;
 }
 
+int probable_long_draw(struct position *pos, struct history *h, int16_t eval, int *drawn_score_count) {
+	if (h->ply >= adj_draw_ply && ABS(eval) <= 0)
+		++*drawn_score_count;
+	else
+		*drawn_score_count = 0;
+
+	if (*drawn_score_count >= 8)
+		return 1;
+
+	if (pos->piece[white][rook] || pos->piece[black][rook] ||
+			pos->piece[white][queen] || pos->piece[black][queen] ||
+			pos->piece[white][pawn] || pos->piece[black][pawn])
+		return 0;
+
+	int total_pieces = popcount(pos->piece[white][all] | pos->piece[black][all]);
+	if (total_pieces <= 4)
+		return 1;
+
+	return 0;
+}
+
+void random_move_flags(int random_move[random_move_max_ply], uint64_t *seed) {
+	for (int i = 0; i < random_move_max_ply; i++)
+		random_move[i] = (i < random_move_count);
+
+	for (int i = random_move_max_ply - 1; i > 0; i--) {
+		int j = xorshift64(seed) % (i + 1);
+		int t = random_move[i];
+		random_move[i] = random_move[j];
+		random_move[j] = t;
+	}
+}
+
 struct threadinfo *choose_thread(struct threadinfo *threadinfo, int n_threads) {
 	int thread;
 	int ret;
-	int64_t most = -(FEN_CHUNKS + 1);
+	int64_t most = -1;
 	for (ret = 0, thread = 0; thread < n_threads; thread++) {
 		int available = atomic_load(&threadinfo[thread].available);
+		if (available < 0)
+			printf("%d\n", available);
+		assert(available >= 0);
 		if (available >= most) {
 			most = available;
 			ret = thread;
@@ -125,20 +163,39 @@ void write_thread(FILE *f, struct threadinfo *threadinfo, uint64_t *curr_fens, u
 	struct partialposition pos;
 
 	while (1) {
-		read(fd, &m, 2);
+		if (!read(fd, &m, 2)) {
+			fprintf(stderr, "MAIN THREAD READ ERROR\n");
+			exit(1);
+		}
 		if (m == synchronize_threads) {
-			if (gen_fens >= FEN_CHUNKS)
-				break;
-			read(fd, &m, 2);
+			break;
 		}
-
-		fwrite(&m, 2, 1, f);
+		if (!fwrite(&m, 2, 1, f)) {
+			fprintf(stderr, "MAIN THREAD WRITE ERROR\n");
+			exit(1);
+		}
+		if (move_from(&m) == h8 && move_to(&m) == h8) {
+			fprintf(stderr, "MAIN THREAD GOT BAD MOVE ERROR\n");
+			exit(1);
+		}
 		if (!m) {
-			read(fd, &pos, sizeof(pos));
-			fwrite(&pos, sizeof(pos), 1, f);
+			if (!read(fd, &pos, sizeof(pos))) {
+				fprintf(stderr, "MAIN THREAD READ ERROR\n");
+				exit(1);
+			}
+			if (!fwrite(&pos, sizeof(pos), 1, f)) {
+				fprintf(stderr, "MAIN THREAD WRITE ERROR\n");
+				exit(1);
+			}
 		}
-		read(fd, &eval, sizeof(eval));
-		fwrite(&eval, 2, 1, f);
+		if (!read(fd, &eval, sizeof(eval))) {
+			fprintf(stderr, "MAIN THREAD READ ERROR\n");
+			exit(1);
+		}
+		if (!fwrite(&eval, 2, 1, f)) {
+			fprintf(stderr, "MAIN THREAD WRITE ERROR\n");
+			exit(1);
+		}
 		gen_fens++;
 		if (eval != VALUE_NONE)
 			written_fens++;
@@ -147,14 +204,22 @@ void write_thread(FILE *f, struct threadinfo *threadinfo, uint64_t *curr_fens, u
 		report(*curr_fens + written_fens, fens);
 
 		if (*curr_fens + written_fens >= fens) {
-			pthread_mutex_lock(&lock);
-			stop = 1;
-			pthread_mutex_unlock(&lock);
+			atomic_store(&stop, 1);
 			break;
 		}
 	}
 	*curr_fens += written_fens;
 	atomic_fetch_sub(&threadinfo->available, gen_fens);
+}
+
+void logstring(FILE *f, char *s) {
+	time_t ct;
+	struct tm lt;
+	ct = time(NULL);
+	localtime_r(&ct, &lt);
+	char t[128];
+	strftime(t, sizeof(t), "%H:%M:%S", &lt);
+	fprintf(f, "%s %s", t, s);
 }
 
 void *worker(void *arg) {
@@ -164,7 +229,11 @@ void *worker(void *arg) {
 	int fd = threadinfo->fd[1];
 	int depth = threadinfo->depth;
 	uint64_t seed = threadinfo->seed;
+	int threadn = threadinfo->threadn;
 	pthread_mutex_unlock(&lock);
+	char filename[128];
+	sprintf(filename, "nnuegen.%d.log", threadn);
+	FILE *f = fopen(filename, "w");
 	
 	struct position pos;
 	struct history h;
@@ -172,66 +241,108 @@ void *worker(void *arg) {
 	startkey(&pos);
 	history_reset(&pos, &h);
 	move move_list[MOVES_MAX];
+	int random_move[random_move_max_ply];
+	random_move_flags(random_move, &seed);
 	move m;
 	int16_t eval;
 
 	unsigned int gen_fens = 0;
+	int drawn_score_count = 0;
 	while (1) {
-		gen_fens++;
 		m = 0;
 		/* maybe randomly vary depth */
 		int depth_now = depth;
+		logstring(f, "search\n");
 		eval = search(&pos, depth_now, 0, 0, 0, &m, &h, 0);
+		logstring(f, "done\n");
 
 		/* check for fens that we dont want to write */
-		if (is_capture(&pos, &m) ||
-				generate_checkers(&pos, pos.turn) ||
-				move_flag(&m) == 2 ||
-				position_already_written(&pos))
+		int skip = is_capture(&pos, &m) || generate_checkers(&pos, pos.turn) ||
+			move_flag(&m) || position_already_written(&pos);
+
+		if (skip)
 			eval = VALUE_NONE;
 
+		logstring(f, "stop_game\n");
 		int stop_game = !m || (eval != VALUE_NONE && ABS(eval) > eval_limit) ||
-				pos.halfmove >= 25 || h.ply >= write_max_ply ||
-				is_repetition(&pos, &h, 0, 1);
+				pos.halfmove >= 100 || h.ply >= write_max_ply ||
+				is_repetition(&pos, &h, 0, 2) || probable_long_draw(&pos, &h, eval, &drawn_score_count);
+		logstring(f, "done\n");
 
-		if (h.ply <= random_move_max_ply && !stop_game && xorshift64(&seed) % 3 == 0) {
+		logstring(f, "cmove\n");
+		if (!stop_game && h.ply < random_move_max_ply && random_move[h.ply]) {
 			generate_all(&pos, move_list);
 			m = move_list[xorshift64(&seed) % move_count(move_list)];
 		}
+		logstring(f, "done\n");
 
 		if (stop_game) {
+			logstring(f, "reset\n");
 			eval = VALUE_NONE;
+			if (h.ply >= write_min_ply) {
+				if (!write(fd, &eval, 2)) {
+					fprintf(stderr, "WRITE ERROR ON THREAD %d\n", threadn);
+					exit(1);
+				}
+				if (!write(fd, &synchronize_threads, 2)) {
+					fprintf(stderr, "WRITE ERROR ON THREAD %d\n", threadn);
+					exit(1);
+				}
+
+				atomic_fetch_add(&threadinfo->available, gen_fens);
+				if (atomic_load(&stop)) {
+					fprintf(stderr, "EXITED THREAD %d\n", threadn);
+					break;
+				}
+			}
+			gen_fens = 0;
+
 			startpos(&pos);
 			startkey(&pos);
 			history_reset(&pos, &h);
-			write(fd, &eval, 2);
-			write(fd, &synchronize_threads, 2);
+			random_move_flags(random_move, &seed);
+
+			logstring(f, "done\n");
+			continue;
 		}
 		else {
+			logstring(f, "move\n");
 			history_next(&pos, &h, m);
+			logstring(f, "done\n");
 		}
 
-
-		if (h.ply == write_min_ply && !stop_game) {
+		if (h.ply == write_min_ply) {
+			logstring(f, "wpos\n");
 			m = 0;
-			write(fd, &m, 2);
-			write(fd, &pos, sizeof(struct partialposition));
+			if (!write(fd, &m, 2)) {
+				fprintf(stderr, "WRITE ERROR ON THREAD %d\n", threadn);
+				exit(1);
+			}
+			gen_fens++;
+			if (!write(fd, &pos, sizeof(struct partialposition))) {
+				fprintf(stderr, "WRITE ERROR ON THREAD %d\n", threadn);
+				exit(1);
+			}
+			logstring(f, "done\n");
 		}
-		if (h.ply > write_min_ply && !stop_game) {
-			write(fd, &eval, 2);
-			write(fd, &m, 2);
+		if (h.ply > write_min_ply) {
+			logstring(f, "wmove\n");
+			if (!write(fd, &eval, 2)) {
+				fprintf(stderr, "WRITE ERROR ON THREAD %d\n", threadn);
+				exit(1);
+			}
+			gen_fens++;
+			if (!write(fd, &m, 2)) {
+				fprintf(stderr, "WRITE ERROR ON THREAD %d\n", threadn);
+				exit(1);
+			}
+			logstring(f, "done\n");
 		}
 
-		if (stop_game && gen_fens >= FEN_CHUNKS) {
-			pthread_mutex_lock(&lock);
-			int stop_t = stop;
-			pthread_mutex_unlock(&lock);
-			atomic_fetch_add(&threadinfo->available, gen_fens);
-			gen_fens = 0;
-			if (stop_t)
-				break;
-		}
 	}
+	fclose(f);
+	fprintf(stderr, "EXITED THREAD %d\n", threadn);
+	exit(1);
 	return NULL;
 }
 
@@ -247,6 +358,7 @@ int main(int argc, char **argv) {
 	moveorder_init();
 	position_init();
 	transposition_init();
+	allocate_transposition_table(33);
 	pawn_init();
 
 	hash_table = malloc(HASH_SIZE * sizeof(*hash_table));
@@ -254,12 +366,12 @@ int main(int argc, char **argv) {
 
 	option_history = 1;
 	option_pawn = 0;
-	option_transposition = 0;
+	option_transposition = 1;
 	option_nnue = 0;
 
 	int n_threads = 12;
-	int depth = 3;
-	uint64_t fens = 1000000;
+	int depth = 5;
+	uint64_t fens = 500000000;
 
 	uint64_t seed = time(NULL);
 
@@ -275,6 +387,7 @@ int main(int argc, char **argv) {
 			exit(1);
 		threadinfo[i].depth = depth;
 		threadinfo[i].seed = seed + i;
+		threadinfo[i].threadn = i;
 		pthread_create(&thread[i], NULL, worker, &threadinfo[i]);
 	}
 

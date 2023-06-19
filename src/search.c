@@ -182,14 +182,14 @@ int16_t negamax(struct position *pos, uint8_t depth, uint16_t ply, int16_t alpha
 			return alpha;
 	}
 
-	struct transposition *e = attempt_get(pos);
-	if (e && e->depth >= depth && !pv_node) {
-		eval = adjust_value_mate_get(e->evaluation, ply);
-		if (e->bound == BOUND_EXACT)
+	transposition t = attempt_get(pos);
+	if (t && transposition_depth(t) >= depth && !pv_node) {
+		eval = adjust_value_mate_get(transposition_eval(t), ply);
+		if (transposition_bound(t) == BOUND_EXACT)
 			return eval;
-		else if (e->bound == BOUND_LOWER && eval >= beta)
+		else if (transposition_bound(t) == BOUND_LOWER && eval >= beta)
 			return beta;
-		else if (e->bound == BOUND_UPPER && eval <= alpha)
+		else if (transposition_bound(t) == BOUND_UPPER && eval <= alpha)
 			return alpha;
 	}
 	
@@ -211,14 +211,14 @@ int16_t negamax(struct position *pos, uint8_t depth, uint16_t ply, int16_t alpha
 
 	/* null move pruning */
 	if (!pv_node && !checkers && flag != FLAG_NULL_MOVE && depth >= 3 && has_big_piece(pos)) {
-		int t = pos->en_passant;
+		int ep = pos->en_passant;
 		do_null_zobrist_key(pos, 0);
 		do_null_move(pos, 0);
 		if (option_history)
 			si->history->zobrist_key[si->history->ply + ply] = pos->zobrist_key;
 		eval = -negamax(pos, depth - 3, ply + 1, -beta, -beta + 1, !cut_node, FLAG_NULL_MOVE, si);
-		do_null_zobrist_key(pos, t);
-		do_null_move(pos, t);
+		do_null_zobrist_key(pos, ep);
+		do_null_move(pos, ep);
 		if (eval >= beta)
 			return beta;
 	}
@@ -232,7 +232,7 @@ int16_t negamax(struct position *pos, uint8_t depth, uint16_t ply, int16_t alpha
 	uint16_t bestmove = 0;
 
 	struct movepicker mp;
-	movepicker_init(&mp, pos, move_list, e ? e->move : 0, si->killers[ply][0], si->killers[ply][1], si);
+	movepicker_init(&mp, pos, move_list, t ? transposition_move(t) : 0, si->killers[ply][0], si->killers[ply][1], si);
 	move m;
 	while ((m = next_move(&mp))) {
 		int move_number = mp.index - 1;
@@ -351,8 +351,8 @@ int16_t search(struct position *pos, uint8_t depth, int verbose, int etime, int 
 	char str[8];
 	int16_t eval = VALUE_NONE, best_eval = VALUE_NONE;
 
-	refresh_accumulator(pos, pos->accumulation, 0);
-	refresh_accumulator(pos, pos->accumulation, 1);
+	refresh_accumulator(pos, 0);
+	refresh_accumulator(pos, 1);
 
 	if (depth == 0) {
 		eval = evaluate(pos);

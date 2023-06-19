@@ -19,6 +19,7 @@
 #define TRANSPOSITION_TABLE_H
 
 #include <stdint.h>
+#include <stdatomic.h>
 
 #include "position.h"
 #include "transposition.h"
@@ -35,13 +36,21 @@ enum {
 	BOUND_LOWER = 3,
 };
 
+typedef uint64_t transposition;
+
 struct transposition {
-	uint64_t zobrist_key;
-	int16_t evaluation;
-	uint8_t depth;
-	uint8_t bound;
-	uint16_t move;
+	atomic_uint_least64_t zobrist_key;
+	atomic_uint_least64_t data;
 };
+
+static inline int16_t transposition_eval(transposition e) { return (int16_t)(e & 0xFFFF); }
+static inline uint8_t transposition_depth(transposition e) { return (uint8_t)((e >> 16) & 0xFF); }
+static inline uint8_t transposition_bound(transposition e) { return (uint8_t)((e >> 24) & 0xFF); }
+static inline uint16_t transposition_move(transposition e) { return (uint16_t)((e >> 32) & 0xFFFF); }
+
+static inline transposition new_transposition(int16_t evaluation, uint8_t depth, uint8_t bound, move m) {
+	return (uint16_t)evaluation | (depth << 16) | (bound << 24) | ((m & 0xFFFF) << 32);
+}
 
 struct transposition_table {
 	struct transposition *table;
@@ -62,32 +71,33 @@ static inline struct transposition *get(struct position *pos) {
 	return transposition_table->table + (pos->zobrist_key & transposition_table->index);
 }
 
-static inline struct transposition *attempt_get(struct position *pos) {
+static inline transposition attempt_get(struct position *pos) {
 	if (!option_transposition)
-		return NULL;
+		return 0;
 	struct transposition *e = get(pos);
-	if (e->zobrist_key == pos->zobrist_key)
-		return e;
-	return NULL;
+	if (atomic_load(&e->zobrist_key) == pos->zobrist_key)
+		return atomic_load(&e->data);
+	return 0;
 }
 
 static inline void store(struct transposition *e, struct position *pos, int16_t evaluation, uint8_t depth, uint8_t bound, move m) {
-	e->zobrist_key = pos->zobrist_key;
-	e->evaluation  = evaluation;
-	e->depth       = depth;
-	e->bound        = bound;
-	/* keep old move */
-	if (m || e->zobrist_key != pos->zobrist_key)
-		e->move = m & 0xFFFF;
+	/* keep old move if none available */
+	transposition t = atomic_load(&e->data);
+	if (!m && atomic_load(&e->zobrist_key) == pos->zobrist_key)
+		m = transposition_move(t);
+	t = new_transposition(evaluation, depth, bound, m);
+	atomic_store(&e->zobrist_key, pos->zobrist_key);
+	atomic_store(&e->data, t);
 }
 
 static inline void attempt_store(struct position *pos, int16_t evaluation, uint8_t depth, uint8_t bound, move m) {
 	if (interrupt || !option_transposition)
 		return;
 	struct transposition *e = get(pos);
-	if ((bound == BOUND_EXACT && e->bound != BOUND_EXACT) ||
-			e->bound != pos->zobrist_key ||
-			depth >= e->depth)
+	transposition t = atomic_load(&e->data);
+	if ((bound == BOUND_EXACT && transposition_bound(t) != BOUND_EXACT) ||
+			atomic_load(&e->zobrist_key) != pos->zobrist_key ||
+			depth >= transposition_depth(t))
 		store(e, pos, evaluation, depth, bound, m);
 }
 

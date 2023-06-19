@@ -24,6 +24,12 @@
 #include "position.h"
 #include "move.h"
 
+#define K_HALF_DIMENSIONS (256)
+#define FT_IN_DIMS (64 * PS_END)
+#define FT_OUT_DIMS (K_HALF_DIMENSIONS * 2)
+
+#define SHIFT (6)
+#define FT_SHIFT (3)
 #define FV_SCALE (16)
 
 struct index {
@@ -61,8 +67,12 @@ static inline uint16_t make_index(int turn, int square, int piece, int king_squa
 	return orient(turn, square) + piece_to_index[turn][piece] + PS_END * king_square;
 }
 
+void add_index_slow(unsigned index, int16_t accumulation[2][K_HALF_DIMENSIONS], int32_t psqtaccumulation[2], int turn);
+
 static inline void append_active_indices(struct position *pos, struct index *active, int turn) {
 	active->size = 0;
+	if (!pos->piece[turn][king])
+		print_position(pos, 0);
 	int king_square = ctz(pos->piece[turn][king]);
 	king_square = orient(turn, king_square);
 	uint64_t b;
@@ -79,7 +89,7 @@ static inline void append_active_indices(struct position *pos, struct index *act
 	}
 }
 
-void refresh_accumulator(struct position *pos, int16_t (*accumulation)[2][K_HALF_DIMENSIONS], int turn);
+void refresh_accumulator(struct position *pos, int turn);
 
 void do_update_accumulator(struct position *pos, move *m, int turn);
 void undo_update_accumulator(struct position *pos, move *m, int turn);

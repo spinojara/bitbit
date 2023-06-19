@@ -94,6 +94,6 @@ static inline int16_t mevalue_evaluation(mevalue eval, double phase) {
 
 int16_t evaluate_classical(const struct position *pos);
 
-void evaluate_print(const struct position *pos);
+void evaluate_print(struct position *pos);
 
 #endif

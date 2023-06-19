@@ -66,10 +66,12 @@ int allocate_transposition_table(uint64_t t) {
 
 int transposition_table_occupancy(int bound) {
 	uint64_t occupied = 0;
-	for (uint64_t i = 0; i < transposition_table->size; i++)
-		if (bound ? ((transposition_table->table + i)->bound == bound) :
-			(transposition_table->table + i)->bound > 0)
+	for (uint64_t i = 0; i < transposition_table->size; i++) {
+		transposition t = atomic_load(&transposition_table->table[i].data);
+		if (bound ? (transposition_bound(t) == bound) :
+			transposition_bound(t) > 0)
 			occupied++;
+	}
 	return 1000 * occupied / transposition_table->size;
 }
 
