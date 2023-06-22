@@ -29,13 +29,8 @@
 #define FT_OUT_DIMS (K_HALF_DIMENSIONS * 2)
 
 #define SHIFT (6)
-#define FT_SHIFT (3)
+#define FT_SHIFT (0)
 #define FV_SCALE (16)
-
-struct index {
-	int size;
-	uint16_t values[30];
-};
 
 enum {
 	PS_W_PAWN   =  0 * 64,
@@ -68,26 +63,6 @@ static inline uint16_t make_index(int turn, int square, int piece, int king_squa
 }
 
 void add_index_slow(unsigned index, int16_t accumulation[2][K_HALF_DIMENSIONS], int32_t psqtaccumulation[2], int turn);
-
-static inline void append_active_indices(struct position *pos, struct index *active, int turn) {
-	active->size = 0;
-	if (!pos->piece[turn][king])
-		print_position(pos, 0);
-	int king_square = ctz(pos->piece[turn][king]);
-	king_square = orient(turn, king_square);
-	uint64_t b;
-	int square;
-	for (int color = 0; color < 2; color++) {
-		for (int piece = 1; piece < 6; piece++) {
-			b = pos->piece[color][piece];
-			while (b) {
-				square = ctz(b);
-				active->values[active->size++] = make_index(turn, square, piece + 6 * (1 - color), king_square);
-				b = clear_ls1b(b);
-			}
-		}
-	}
-}
 
 void refresh_accumulator(struct position *pos, int turn);
 

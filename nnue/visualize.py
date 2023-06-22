@@ -21,7 +21,7 @@ def visualize_ft(name):
     image = np.empty((2560, 4096), dtype = np.int32)
     lib.image_ft(image)
     mean = image.mean()
-    tmax = np.percentile(image, 97)
+    tmax = np.percentile(image, 95)
     tmin = 0
 
     plt.imshow(image, aspect = 'auto', cmap = 'viridis', vmin = tmin, vmax = tmax, interpolation = 'bilinear')

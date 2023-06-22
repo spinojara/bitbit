@@ -20,7 +20,6 @@ def lr_lambda(loss):
 
 #model.load_state_dict(torch.load("2.pt"))
 
-# learning rate from 0.1 to 0.005
 optimizer = torch.optim.Adam(model.parameters(), lr = 1e-3)
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size = 1, gamma = 0.992)
 
@@ -63,11 +62,11 @@ for epoch in range(1, epochs + 1):
         output = model(f1, f2)
         loss += loss_fn(output, target).item()
     loss /= total
-    loss = loss ** (1 / loss_exponent)
+    loss **= (1 / loss_exponent)
     # Normalized loss is around 0 centipawns = 1 / 2 wdl
     # and is then the inverse of sigmoid.
-    loss = 2 * inverse_sigmoid(1 / 2 + loss / 2)
-    print(f"normalized average centipawn loss is {round(loss)} for validation data")
+    losscp = 2 * inverse_sigmoid(1 / 2 + loss / 2)
+    print(f"loss is {round(loss, 5)} ({round(losscp)} cp) for validation data")
     print("learning rate is now {:.2e}".format(optimizer.param_groups[0]['lr']))
 
     batch.lib.batch_reset(training_data)

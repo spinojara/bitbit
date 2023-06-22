@@ -47,11 +47,6 @@ struct data {
 
 	struct position *pos;
 	
-	struct index *active_indices1;
-	struct index *active_indices2;
-	struct index *active_indices1_virtual;
-	struct index *active_indices2_virtual;
-
 	double random_skip;
 
 	FILE *f;
@@ -61,27 +56,13 @@ static inline uint16_t make_index_virtual(int turn, int square, int piece) {
 	return orient(turn, square) + piece_to_index[turn][piece] + PS_END * 64;
 }
 
-static inline void append_active_indices_virtual(struct position *pos, struct index *active, int turn) {
-	active->size = 0;
-	uint64_t b;
-	int square;
-	for (int color = 0; color < 2; color++) {
-		for (int piece = 1; piece < 6; piece++) {
-			b = pos->piece[color][piece];
-			while (b) {
-				square = ctz(b);
-				active->values[active->size++] = make_index_virtual(turn, square, piece + 6 * (1 - color));
-				b = clear_ls1b(b);
-			}
-		}
-	}
-}
-
 struct batch *next_batch(void *ptr) {
 	struct data *data = ptr;
 	struct batch *batch = data->batch;
 	batch->actual_size = 0;
 	batch->ind_active = 0;
+
+	size_t counter1 = 0, counter2 = 0;
 
 	while (batch->actual_size < data->requested_size) {
 		move m = 0;
@@ -101,34 +82,104 @@ struct batch *next_batch(void *ptr) {
 			continue;
 
 		batch->eval[batch->actual_size] = (float)FV_SCALE * eval / (127 * 64);
-		append_active_indices(data->pos, &data->active_indices1[batch->actual_size], data->pos->turn);
-		append_active_indices(data->pos, &data->active_indices2[batch->actual_size], 1 - data->pos->turn);
-		append_active_indices_virtual(data->pos, &data->active_indices1_virtual[batch->actual_size], data->pos->turn);
-		append_active_indices_virtual(data->pos, &data->active_indices2_virtual[batch->actual_size], 1 - data->pos->turn);
-
-		assert(data->active_indices1[batch->actual_size].size == data->active_indices2[batch->actual_size].size);
-		assert(data->active_indices1[batch->actual_size].size == data->active_indices1_virtual[batch->actual_size].size);
-		assert(data->active_indices1[batch->actual_size].size == data->active_indices2_virtual[batch->actual_size].size);
-
-		batch->ind_active += 2 * data->active_indices1[batch->actual_size].size;
+#if 1
+		int index, square;
+		const int king_squares[] = { orient(black, ctz(data->pos->piece[black][king])), orient(white, ctz(data->pos->piece[white][king])) };
+		for (int piece = pawn; piece < king; piece++) {
+			for (int turn = 0; turn <= 1; turn++) {
+				uint64_t b = data->pos->piece[turn][piece];
+				while (b) {
+					batch->ind_active += 2;
+					square = ctz(b);
+					index = make_index(data->pos->turn, square, piece + 6 * (1 - turn), king_squares[data->pos->turn]);
+					batch->ind1[counter1++] = batch->actual_size;
+					batch->ind1[counter1++] = index;
+					index = make_index(1 - data->pos->turn, square, piece + 6 * (1 - turn), king_squares[1 - data->pos->turn]);
+					batch->ind2[counter2++] = batch->actual_size;
+					batch->ind2[counter2++] = index;
+					index = make_index_virtual(data->pos->turn, square, piece + 6 * (1 - turn));
+					batch->ind1[counter1++] = batch->actual_size;
+					batch->ind1[counter1++] = index;
+					index = make_index_virtual(1 - data->pos->turn, square, piece + 6 * (1 - turn));
+					batch->ind2[counter2++] = batch->actual_size;
+					batch->ind2[counter2++] = index;
+					b = clear_ls1b(b);
+				}
+			}
+		}
+#else
+		int32_t *const indw = data->pos->turn ? batch->ind1 : batch->ind2;
+		int32_t *const indb = data->pos->turn ? batch->ind2 : batch->ind1;
+		int index, square;
+		const int king_squares[] = { orient(black, ctz(data->pos->piece[black][king])), orient(white, ctz(data->pos->piece[white][king])) };
+		const int perspective[] = { white, black };
+		for (int piece = pawn; piece < king; piece++) {
+			/* white perspective */
+			for (int p = 0; p <= 1; p++) {
+				const int turn = perspective[p];
+				const uint64_t c = data->pos->piece[turn][piece];
+				uint64_t b = c;
+				while (b) {
+					batch->ind_active += 2;
+					square = ctz(b);
+					index = make_index(white, square, piece + 6 * (1 - turn), king_squares[white]);
+					indw[counter1++] = batch->actual_size;
+					indw[counter1++] = index;
+					b = clear_ls1b(b);
+				}
+			}
+			/* black perspective */
+			for (int p = 1; p >= 0; p--) {
+				const int turn = perspective[p];
+				const uint64_t c = data->pos->piece[turn][piece];
+				uint64_t rank = RANK_8;
+				for (int i = 0; i < 8; i++) {
+					uint64_t b = c & rank;
+					while (b) {
+						square = ctz(b);
+						index = make_index(black, square, piece + 6 * (1 - turn), king_squares[black]);
+						indb[counter2++] = batch->actual_size;
+						indb[counter2++] = index;
+						b = clear_ls1b(b);
+					}
+					rank = shift_south(rank);
+				}
+			}
+		}
+		for (int piece = pawn; piece < king; piece++) {
+			/* white perspective */
+			for (int p = 0; p <= 1; p++) {
+				const int turn = perspective[p];
+				const uint64_t c = data->pos->piece[turn][piece];
+				uint64_t b = c;
+				while (b) {
+					square = ctz(b);
+					index = make_index_virtual(white, square, piece + 6 * (1 - turn));
+					indw[counter1++] = batch->actual_size;
+					indw[counter1++] = index;
+					b = clear_ls1b(b);
+				}
+			}
+			/* black perspective */
+			for (int p = 1; p >= 0; p--) {
+				const int turn = perspective[p];
+				const uint64_t c = data->pos->piece[turn][piece];
+				uint64_t rank = RANK_8;
+				for (int i = 0; i < 8; i++) {
+					uint64_t b = c & rank;
+					while (b) {
+						square = ctz(b);
+						index = make_index_virtual(black, square, piece + 6 * (1 - turn));
+						indb[counter2++] = batch->actual_size;
+						indb[counter2++] = index;
+						b = clear_ls1b(b);
+					}
+					rank = shift_south(rank);
+				}
+			}
+		}
+#endif
 		batch->actual_size++;
-	}
-
-	int index = 0;
-	for (size_t i = 0; i < batch->actual_size; i++) {
-		for (int j = 0; j < data->active_indices1[i].size; j++) {
-			batch->ind1[index + 2 * j] = i;
-			batch->ind1[index + 2 * j + 1] = data->active_indices1[i].values[j];
-			batch->ind2[index + 2 * j] = i;
-			batch->ind2[index + 2 * j + 1] = data->active_indices2[i].values[j];
-		}
-		for (int j = 0; j < data->active_indices1[i].size; j++) {
-			batch->ind1[index + 2 * (j + data->active_indices1[i].size)] = i;
-			batch->ind1[index + 2 * (j + data->active_indices1[i].size) + 1] = data->active_indices1_virtual[i].values[j];
-			batch->ind2[index + 2 * (j + data->active_indices1[i].size)] = i;
-			batch->ind2[index + 2 * (j + data->active_indices1[i].size) + 1] = data->active_indices2_virtual[i].values[j];
-		}
-		index += 4 * data->active_indices1[i].size;
 	}
 	return batch;
 }
@@ -143,11 +194,6 @@ void *batch_open(const char *s, size_t requested_size, double random_skip) {
 
 	data->requested_size = requested_size;
 	data->random_skip = random_skip;
-
-	data->active_indices1 = malloc(data->requested_size * sizeof(*data->active_indices1));
-	data->active_indices2 = malloc(data->requested_size * sizeof(*data->active_indices2));
-	data->active_indices1_virtual = malloc(data->requested_size * sizeof(*data->active_indices1_virtual));
-	data->active_indices2_virtual = malloc(data->requested_size * sizeof(*data->active_indices2_virtual));
 
 	data->batch->ind1 = malloc(4 * 30 * data->requested_size * sizeof(*data->batch->ind1));
 	data->batch->ind2 = malloc(4 * 30 * data->requested_size * sizeof(*data->batch->ind2));
@@ -168,10 +214,6 @@ void batch_close(void *ptr) {
 	free(data->batch->ind2);
 	free(data->batch->eval);
 	free(data->batch);
-	free(data->active_indices1);
-	free(data->active_indices2);
-	free(data->active_indices1_virtual);
-	free(data->active_indices2_virtual);
 	free(data->pos);
 	free(data);
 }

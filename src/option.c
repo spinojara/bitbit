@@ -28,7 +28,7 @@ int option_pawn = 1;
 
 void print_options() {
 	printf("option name clear hash type button\n");
-	printf("option name nnue type check default false\n");
+	printf("option name nnue type check default true\n");
 	printf("option name transposition type check default true\n");
 }
 

@@ -10,7 +10,7 @@ FT_OUT_DIMS = 2 * K_HALF_DIMENSIONS
 FV_SCALE = 16
 
 SHIFT = 6
-FT_SHIFT = 3
+FT_SHIFT = 0
 
 weight_limit = 127 / 2 ** SHIFT
 
@@ -53,20 +53,14 @@ class nnue(torch.nn.Module):
         self.relu = torch.nn.ReLU(inplace = True)
         self.sigmoid = torch.nn.Sigmoid()
 
-        torch.nn.init.zeros_(self.ft.weight)
-        torch.nn.init.uniform_(self.ft.weight[:, -VIRTUAL:], -0.3, 0.3)
+        # Initialize virtual features to 0
+        torch.nn.init.zeros_(self.ft.weight[:, -VIRTUAL:])
+        # Psqt Values
         for color in range(0, 2):
             for piece in range(1, 6):
                 for square in range(64):
                     self.ft.weight.data[K_HALF_DIMENSIONS, make_index_virtual(color, square, piece)] = (2 * color - 1) * piece_value[piece] / (127 * 2 ** FT_SHIFT)
-        torch.nn.init.uniform_(self.ft.bias, -0.5, 0.5)
-
-        torch.nn.init.uniform_(self.hidden1.weight, -0.5, 0.5)
-        torch.nn.init.uniform_(self.hidden1.bias, -0.5, 0.5)
-        torch.nn.init.uniform_(self.hidden2.weight, -0.5, 0.5)
-        torch.nn.init.uniform_(self.hidden2.bias, -0.5, 0.5)
-
-        torch.nn.init.zeros_(self.output.weight)
+        # Initialize output bias to 0
         torch.nn.init.zeros_(self.output.bias)
 
     def forward(self, features1, features2):
@@ -78,18 +72,19 @@ class nnue(torch.nn.Module):
         ft_out = self.activation(accumulation)
         hidden1_out = self.activation(self.hidden1(ft_out))
         hidden2_out = self.activation(self.hidden2(hidden1_out))
-        return self.output(hidden2_out) + 2 * psqtaccumulation
+        return self.output(hidden2_out) + FV_SCALE * 2 ** FT_SHIFT * psqtaccumulation / 2 ** SHIFT
 
     def activation(self, x):
-        return self.lclamp(x)
+        return self.clamp(x)
 
     def clamp(self, x):
-        return x.clamp(0.0, 1.0)
+        return x.clamp_(0.0, 1.0)
 
+    # Leaky clamp does not seem to work. The weights diverge to large values.
     def lclamp(self, x):
-        return LRELU_SLOPE * x.clamp_max(0.0) + x.clamp(0.0, 1.0) + LRELU_SLOPE * (x.clamp_min(1.0) - 1)
+        return LRELU_SLOPE * x.clamp_max_(0.0) + x.clamp_(0.0, 1.0) + LRELU_SLOPE * (x.clamp_min_(1.0) - 1.0)
 
     def clamp_weights(self):
-        self.hidden1.weight.data = self.hidden1.weight.data.clamp(-weight_limit, weight_limit)
-        self.hidden2.weight.data = self.hidden2.weight.data.clamp(-weight_limit, weight_limit)
-        self.output.weight.data = self.output.weight.data.clamp(-weight_limit, weight_limit)
+        self.hidden1.weight.data.clamp_(-weight_limit, weight_limit)
+        self.hidden2.weight.data.clamp_(-weight_limit, weight_limit)
+        self.output.weight.data.clamp_(-weight_limit, weight_limit)
