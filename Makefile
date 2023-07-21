@@ -65,7 +65,9 @@ SRC_HISTOGRAM = bitboard.c magicbitboard.c attackgen.c \
 
 SRC_PGNBIN    = bitboard.c magicbitboard.c attackgen.c \
                 move.c util.c position.c movegen.c init.c \
-                option.c transposition.c pgnbin.c
+                evaluate.c option.c transposition.c search.c \
+                movepicker.c nnue.c pawn.c tables.c moveorder.c \
+		pgnbin.c
 
 SRC_TEXELTUNE = bitboard.c magicbitboard.c attackgen.c \
                 move.c util.c position.c movegen.c evaluate.c \

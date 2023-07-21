@@ -116,23 +116,36 @@ mevalue evaluate_pawns(const struct position *pos, struct evaluationinfo *ei, in
 		passed     = !(stoppers ^ lever) || (!(stoppers ^ lever ^ leverpush) && popcount(phalanx) >= popcount(leverpush));
 		passed    &= !(passed_files(square, white) & file(square) & pawns[white]);
 
-		if (backward)
+		if (backward) {
+			ei->backward_pawn[color] += 1;
 			eval += backward_pawn;
+		}
 
-		if (support)
+		if (support) {
+			ei->supported_pawn[color] += (y - 1) * popcount(support);
 			eval += supported_pawn * (y - 1) * popcount(support);
+		}
 
-		if (phalanx)
+		if (phalanx) {
+			ei->phalanx_pawn[color] += y - 1;
 			eval += phalanx_pawn * (y - 1);
+		}
 
-		if (passed)
+		if (passed) {
+			ei->passed_pawn[color] += y;
+			ei->passed_file[color] += MIN(x, 7 - x);
 			eval += passed_pawn * y + passed_file * MIN(x, 7 - x);
+		}
 
-		if (!neighbours)
+		if (!neighbours) {
+			ei->isolated_pawn[color] += 1;
 			eval += isolated_pawn;
+		}
 		
-		if (!support && doubled)
+		if (!support && doubled) {
+			ei->doubled_pawn[color] += 1;
 			eval += doubled_pawn;
+		}
 
 		b = clear_ls1b(b);
 	}

@@ -41,20 +41,28 @@ extern mevalue bishop_pair;
 extern mevalue pawn_on_bishop_square;
 extern mevalue rook_on_open_file;
 extern mevalue blocked_rook;
-extern mevalue undeveloped_piece;
 extern mevalue defended_minor;
+
+extern int undeveloped_piece;
 
 extern int weak_squares_danger;
 extern int enemy_no_queen_bonus;
-extern int knight_king_attack_danger;
-extern int bishop_king_attack_danger;
-extern int rook_king_attack_danger;
-extern int queen_king_attack_danger;
+extern int knight_attack_danger;
+extern int bishop_attack_danger;
+extern int rook_attack_danger;
+extern int queen_attack_danger;
+extern int king_danger;
 
 extern int tempo_bonus;
 
 extern int phase_max_material;
 extern int phase_min_material;
+extern int phase_knight;
+extern int phase_bishop;
+extern int phase_rook;
+extern int phase_queen;
+
+extern int division;
 
 struct evaluationinfo {
 	mevalue mobility[2];
@@ -66,17 +74,40 @@ struct evaluationinfo {
 	uint64_t attacked2_squares[2];
 
 	uint64_t king_ring[2];
-	int king_attack_units[2];
+	int king_attack_units[2][7];
 
 	int32_t material;
-};
 
-enum {
-	pawn_mg   =   90, pawn_eg   =  125,
-	knight_mg =  420, knight_eg =  351,
-	bishop_mg =  450, bishop_eg =  352,
-	rook_mg   =  576, rook_eg   =  597,
-	queen_mg  = 1237, queen_eg  = 1077,
+	uint64_t weak_squares[2];
+	int king_danger[2];
+
+	int king_on_open_file[2];
+	int outpost_bonus[2];
+	int outpost_attack[2];
+	int minor_behind_pawn[2];
+	int knight_far_from_king[2];
+	int bishop_far_from_king[2];
+	int bishop_pair[2];
+	int pawn_on_bishop_square[2];
+	int rook_on_open_file[2];
+	int blocked_rook[2];
+	int undeveloped_piece[2];
+	int defended_minor[2];
+
+	int pawn_shelter[2][28];
+	int unblocked_storm[2][28];
+	int blocked_storm[2][7];
+
+	/* pawns */
+	int backward_pawn[2];
+	int supported_pawn[2];
+	int phalanx_pawn[2];
+	int passed_pawn[2];
+	int passed_file[2];
+	int isolated_pawn[2];
+	int doubled_pawn[2];
+
+	mevalue eval;
 };
 
 #define S(a, b) ((mevalue)((a) + ((uint32_t)(b) << 16)))
@@ -92,6 +123,9 @@ static inline int16_t mevalue_evaluation(mevalue eval, double phase) {
 	return phase * mevalue_mg(eval) + (1 - phase) * mevalue_eg(eval);
 }
 
+double phase(int32_t material);
+
+int16_t evaluate_classical_ei(const struct position *pos, struct evaluationinfo *ei);
 int16_t evaluate_classical(const struct position *pos);
 
 void evaluate_print(struct position *pos);

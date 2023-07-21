@@ -29,10 +29,15 @@
 #include "position.h"
 #include "move.h"
 #include "evaluate.h"
+#include "search.h"
+#include "option.h"
+#include "tables.h"
+#include "moveorder.h"
 
 int skip_mates = 0;
 int shuffle = 0;
 int quiet = 0;
+int skip_first = 0;
 
 int parse_result(FILE *f) {
 	char line[BUFSIZ];
@@ -76,11 +81,10 @@ void start_fen(struct position *pos, FILE *f) {
 void write_fens(struct position *pos, int result, FILE *fin, FILE *fout) {
 	char *ptr[2] = { 0 }, line[BUFSIZ];
 	move m = 0;
+	int moves = 0;
 	int flag = 0;
-
-	fwrite(&m, 2, 1, fout);
-	fwrite(pos, sizeof(struct partialposition), 1, fout);
 	int16_t perspective_result;
+	const uint16_t zero = 0;
 
 	while ((ptr[0] = fgets(line, sizeof(line), fin))) {
 		if (*ptr[0] == '\n' || *ptr[0] == '[') {
@@ -96,7 +100,7 @@ void write_fens(struct position *pos, int result, FILE *fin, FILE *fout) {
 				break;
 			*ptr[1] = '\0';
 
-			/* mate lookahead */
+			/* Mate lookahead. */
 			if (skip_mates)
 				for (int i = 1; ptr[1][i] && ptr[1][i] != '\n' && ptr[1][i] != ' '; i++)
 					if (ptr[1][i] == 'M')
@@ -104,21 +108,37 @@ void write_fens(struct position *pos, int result, FILE *fin, FILE *fout) {
 
 			m = string_to_move(pos, ptr[0]);
 			if (m) {
-				perspective_result = (2 * pos->turn - 1) * VALUE_MATE * result;
-				if (quiet && (move_capture(&m) || move_flag(&m) == 2 || generate_checkers(pos, pos->turn)))
-					perspective_result = VALUE_NONE;
+				if (moves >= skip_first) {
+					perspective_result = (2 * pos->turn - 1) * VALUE_MATE * result;
+					if (quiet) {
+						struct searchinfo si = { 0 };
+						int16_t q = quiescence(pos, 0, -VALUE_MATE, VALUE_MATE, &si);
+						int16_t e = evaluate_classical(pos);
+						if (ABS(q - e) > 50)
+							perspective_result = VALUE_NONE;
+					}
+					/* This is the first written move. */
+					if (moves == skip_first) {
+						fwrite(&zero, 2, 1, fout);
+						fwrite(pos, sizeof(struct partialposition), 1, fout);
+					}
 
-				fwrite(&perspective_result, 2, 1, fout);
-				fwrite(&m, 2, 1, fout);
+					fwrite(&perspective_result, 2, 1, fout);
+					fwrite(&m, 2, 1, fout);
+				}
 				do_move(pos, &m);
+				moves++;
 			}
 
 			ptr[0] = ptr[1] + 1;
 		}
 	}
 
-	perspective_result = VALUE_NONE;
-	fwrite(&perspective_result, 2, 1, fout);
+	/* If at least one move has been written. */
+	if (moves > skip_first) {
+		perspective_result = VALUE_NONE;
+		fwrite(&perspective_result, 2, 1, fout);
+	}
 }
 
 int main(int argc, char **argv) {
@@ -131,6 +151,12 @@ int main(int argc, char **argv) {
 			shuffle = 1;
 		else if (!strcmp(argv[i], "--quiet"))
 			quiet = 1;
+		else if (!strcmp(argv[i], "--skip-first")) {
+			i++;
+			if (!(i < argc))
+				break;
+			skip_first = strint(argv[i]);
+		}
 		else if (strncmp(argv[i], "--", 2)) {
 			if (!infilename)
 				infilename = argv[i];
@@ -156,9 +182,17 @@ int main(int argc, char **argv) {
 		exit(3);
 	}
 
+	option_nnue = 0;
+	option_transposition = 0;
+	option_history = 0;
+	option_pawn = 0;
+
 	magicbitboard_init();
 	attackgen_init();
 	bitboard_init();
+	tables_init();
+	search_init();
+	moveorder_init();
 	position_init();
 	uint64_t seed = time(NULL);
 

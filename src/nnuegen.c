@@ -370,7 +370,7 @@ int main(int argc, char **argv) {
 	option_nnue = 0;
 
 	int n_threads = 12;
-	int depth = 5;
+	int depth = 7;
 	uint64_t fens = 500000000;
 
 	uint64_t seed = time(NULL);

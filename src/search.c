@@ -197,26 +197,30 @@ int16_t negamax(struct position *pos, uint8_t depth, uint16_t ply, int16_t alpha
 	if ((depth == 0 && !checkers) || ply >= 2 * si->root_depth)
 		return quiescence(pos, ply + 1, alpha, beta, si);
 
-#if 0
 	int16_t static_eval = evaluate(pos);
+#if 0
+	/* razoring */
 	if (!pv_node && !checkers && depth <= 6 && static_eval + (160 + 90 * depth * depth) < alpha) {
 		eval = quiescence(pos, ply + 1, alpha - 1, alpha, si);
 		if (eval < alpha)
 			return eval;
 	}
 
-	if (!pv_node && !checkers && depth == 1 && static_eval - 200 > beta)
+	/* futility pruning */
+	if (!pv_node && !checkers && depth <= 6 && static_eval - 200 > beta)
 		return static_eval;
 #endif
 
 	/* null move pruning */
-	if (!pv_node && !checkers && flag != FLAG_NULL_MOVE && depth >= 3 && has_big_piece(pos)) {
+	if (!pv_node && !checkers && flag != FLAG_NULL_MOVE && static_eval >= beta && depth >= 3 && has_big_piece(pos)) {
+		uint8_t reduction = 3;
+		uint8_t new_depth = CLAMP(depth - reduction, 1, depth);
 		int ep = pos->en_passant;
 		do_null_zobrist_key(pos, 0);
 		do_null_move(pos, 0);
 		if (option_history)
 			si->history->zobrist_key[si->history->ply + ply] = pos->zobrist_key;
-		eval = -negamax(pos, depth - 3, ply + 1, -beta, -beta + 1, !cut_node, FLAG_NULL_MOVE, si);
+		eval = -negamax(pos, new_depth, ply + 1, -beta, -beta + 1, !cut_node, FLAG_NULL_MOVE, si);
 		do_null_zobrist_key(pos, ep);
 		do_null_move(pos, ep);
 		if (eval >= beta)
@@ -259,7 +263,6 @@ int16_t negamax(struct position *pos, uint8_t depth, uint16_t ply, int16_t alpha
 			r += !move_capture(&m);
 			r += cut_node;
 			uint8_t lmr_depth = CLAMP(new_depth - r, 1, new_depth);
-
 			eval = -negamax(pos, lmr_depth, ply + 1, -alpha - 1, -alpha, 1, new_flag, si);
 
 			if (eval > alpha)
@@ -310,7 +313,7 @@ int16_t negamax(struct position *pos, uint8_t depth, uint16_t ply, int16_t alpha
 }
 
 int16_t aspiration_window(struct position *pos, uint8_t depth, int32_t last, struct searchinfo *si) {
-	int16_t evaluation;
+	int16_t evaluation = VALUE_NONE;
 	int32_t delta = 25 + last * last / 16384;
 	int16_t alpha = MAX(last - delta, -VALUE_MATE);
 	int16_t beta = MIN(last + delta, VALUE_MATE);
@@ -331,7 +334,7 @@ int16_t aspiration_window(struct position *pos, uint8_t depth, int32_t last, str
 
 		delta += delta / 3;
 	}
-	return 0;
+	return evaluation;
 }
 
 int16_t search(struct position *pos, uint8_t depth, int verbose, int etime, int movetime, move *m, struct history *history, int iterative) {
@@ -362,25 +365,25 @@ int16_t search(struct position *pos, uint8_t depth, int verbose, int etime, int 
 	}
 
 	move bestmove = 0;
-	uint16_t d;
-	for (d = iterative ? 1 : depth; d <= depth; d++) {
+	for (uint16_t d = iterative ? 1 : depth; d <= depth; d++) {
 		si.root_depth = d;
 		if (verbose)
 			reset_seldepth(si.history);
 
-		if (d <= 6 || !iterative)
+		/* Minimum seems to be around d <= 5. */
+		if (d <= 5 || !iterative)
 			eval = negamax(pos, d, 0, -VALUE_MATE, VALUE_MATE, 0, 0, &si);
 		else
 			eval = aspiration_window(pos, d, eval, &si);
 
-		if (interrupt || si.interrupt) {
-			d--;
-			break;
-		}
-
+		/* 16 elo.
+		 * Use move even from a partial and interrupted search.
+		 */
+		bestmove = si.pv[0][0];
 		best_eval = eval;
 
-		bestmove = si.pv[0][0];
+		if (interrupt || si.interrupt)
+			break;
 
 		time_point tp = time_now() - ts;
 		if (verbose) {

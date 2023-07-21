@@ -32,6 +32,7 @@ void do_move(struct position *pos, move *m) {
 	assert(*m);
 	uint8_t source_square = move_from(m);
 	uint8_t target_square = move_to(m);
+	assert(pos->mailbox[source_square]);
 
 	uint64_t from = bitboard(source_square);
 	uint64_t to = bitboard(target_square);
@@ -116,6 +117,7 @@ void undo_move(struct position *pos, const move *m) {
 	assert(*m);
 	uint8_t source_square = move_from(m);
 	uint8_t target_square = move_to(m);
+	assert(pos->mailbox[target_square]);
 
 	uint64_t from = bitboard(source_square);
 	uint64_t to = bitboard(target_square);

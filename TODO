@@ -1,2 +1,3 @@
-add checks for malloc
-optimize libbatch.so by combining the 4 append_active_indices
+Add checks for malloc.
+Unfinished search.
+For texel tuning, don't calculate values that are not used (primarily psqt I think).
