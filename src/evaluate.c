@@ -27,35 +27,35 @@
 #include "tables.h"
 #include "nnue.h"
 
-mevalue king_on_open_file     = S(-13, -4);
-mevalue outpost_bonus  	      = S(47, 16);
-mevalue outpost_attack        = S(16, 15);
-mevalue minor_behind_pawn     = S(6, 4);
-mevalue knight_far_from_king  = S(-5, -8);
-mevalue bishop_far_from_king  = S(-6, -3);
-mevalue bishop_pair           = S(20, 63);
-mevalue pawn_on_bishop_square = S(-4, -10);
-mevalue rook_on_open_file     = S(16, 11);
-mevalue blocked_rook          = S(-28, -4);
-mevalue defended_minor        = S(4, 9);
+mevalue king_on_open_file     = S(-15,-17);
+mevalue outpost_bonus         = S( 71, 30);
+mevalue outpost_attack        = S( 19, 34);
+mevalue minor_behind_pawn     = S(  9, 17);
+mevalue knight_far_from_king  = S( -9, -3);
+mevalue bishop_far_from_king  = S( -7, -4);
+mevalue bishop_pair           = S( 33,169);
+mevalue pawn_on_bishop_square = S( -8,-24);
+mevalue rook_on_open_file     = S( 23, 46);
+mevalue blocked_rook          = S(-52, -3);
+mevalue defended_minor        = S(  6, 31);
 
-int undeveloped_piece         = -8;
+int undeveloped_piece         = -12;
 
-int weak_squares_danger       = 15;
-int enemy_no_queen_bonus      = 131;
-int knight_attack_danger      = 37;
-int bishop_attack_danger      = 35;
-int rook_attack_danger        = 37;
-int queen_attack_danger       = 39;
+int weak_squares_danger       = 83;
+int enemy_no_queen_bonus      = 429;
+int knight_attack_danger      = 58;
+int bishop_attack_danger      = 53;
+int rook_attack_danger        = 58;
+int queen_attack_danger       = 41;
 int king_danger               = 0;
 
-int tempo_bonus               = 5;
-int phase_max_material        = 7918;
-int phase_min_material        = 897;
-int phase_knight              = 420;
-int phase_bishop              = 450;
-int phase_rook                = 576;
-int phase_queen               = 1237;
+int tempo_bonus               = 13;
+int phase_max_material        = 7822;
+int phase_min_material        = 922;
+int phase_knight              = 352;
+int phase_bishop              = 309;
+int phase_rook                = 651;
+int phase_queen               = 1437;
 
 int division = 8;
 
@@ -84,7 +84,7 @@ mevalue evaluate_king(const struct position *pos, struct evaluationinfo *ei, int
 		b = ourpawns & file(f);
 		/* king is on semi open file */
 		if (!b && f == center) {
-			ei->king_on_open_file[turn] += 1;
+			//ei->king_on_open_file[turn] += 1;
 			eval += king_on_open_file;
 		}
 		if (turn)
@@ -101,11 +101,11 @@ mevalue evaluate_king(const struct position *pos, struct evaluationinfo *ei, int
 		ei->pawn_shelter[turn][d * 7 + ourrank] += 1;
 		eval += pawn_shelter[d * 7 + ourrank];
 		if (ourrank && ourrank + 1 == theirrank) {
-			ei->blocked_storm[turn][ourrank] += 1;
+			//ei->blocked_storm[turn][ourrank] += 1;
 			eval += blocked_storm[ourrank];
 		}
 		else {
-			ei->unblocked_storm[turn][d * 7 + theirrank] += 1;
+			//ei->unblocked_storm[turn][d * 7 + theirrank] += 1;
 			eval += unblocked_storm[d * 7 + theirrank];
 		}
 	}
@@ -152,28 +152,28 @@ mevalue evaluate_knights(const struct position *pos, struct evaluationinfo *ei, 
 
 		/* outpost */
 		if (squareb & outpost & ~ei->pawn_attack_span[1 - turn] & ei->attacked_squares[turn][pawn]) {
-			ei->outpost_bonus[turn] += 1;
+			//ei->outpost_bonus[turn] += 1;
 			eval += outpost_bonus;
 		}
 		else if (attacks & outpost & ~ei->pawn_attack_span[1 - turn] & ei->attacked_squares[turn][pawn]) {
-			ei->outpost_attack[turn] += 1;
+			//ei->outpost_attack[turn] += 1;
 			eval += outpost_attack;
 		}
 		
 		/* minor behind pawn */
 		if (squareb & shift_color(pos->piece[turn][pawn], 1 - turn)) {
-			ei->minor_behind_pawn[turn] += 1;
+			//ei->minor_behind_pawn[turn] += 1;
 			eval += minor_behind_pawn;
 		}
 
 		/* defended minor */
 		if (squareb & ei->attacked_squares[turn][pawn]) {
-			ei->defended_minor[turn] += 1;
+			//ei->defended_minor[turn] += 1;
 			eval += defended_minor;
 		}
 		
 		/* penalty if piece is far from own king */
-		ei->knight_far_from_king[turn] += distance(square, ctz(pos->piece[turn][king]));
+		//ei->knight_far_from_king[turn] += distance(square, ctz(pos->piece[turn][king]));
 		eval += knight_far_from_king * distance(square, ctz(pos->piece[turn][king]));
 
 		b = clear_ls1b(b);
@@ -203,28 +203,28 @@ mevalue evaluate_bishops(const struct position *pos, struct evaluationinfo *ei, 
 
 		/* bishop pair */
 		if (popcount(b) >= 2) {
-			ei->bishop_pair[turn] += 1;
+			//ei->bishop_pair[turn] += 1;
 			eval += bishop_pair;
 		}
 
 		/* minor behind pawn */
 		if (squareb & shift_color(pos->piece[turn][pawn], 1 - turn)) {
-			ei->minor_behind_pawn[turn] += 1;
+			//ei->minor_behind_pawn[turn] += 1;
 			eval += minor_behind_pawn;
 		}
 
 		/* defended minor */
 		if (squareb & ei->attacked_squares[turn][pawn]) {
-			ei->defended_minor[turn] += 1;
+			//ei->defended_minor[turn] += 1;
 			eval += defended_minor;
 		}
 		
 		/* penalty if piece is far from own king */
-		ei->bishop_far_from_king[turn] += distance(square, ctz(pos->piece[turn][king]));
+		//ei->bishop_far_from_king[turn] += distance(square, ctz(pos->piece[turn][king]));
 		eval += bishop_far_from_king * distance(square, ctz(pos->piece[turn][king]));
 
 		/* penalty for own pawns on same squares as bishop */
-		ei->pawn_on_bishop_square[turn] += popcount(same_colored_squares(square) & pos->piece[turn][pawn]);
+		//ei->pawn_on_bishop_square[turn] += popcount(same_colored_squares(square) & pos->piece[turn][pawn]);
 		eval += pawn_on_bishop_square * popcount(same_colored_squares(square) & pos->piece[turn][pawn]);
 
 		b = clear_ls1b(b);
@@ -254,7 +254,7 @@ mevalue evaluate_rooks(const struct position *pos, struct evaluationinfo *ei, in
 
 		/* bonus on semiopen files */
 		if (!(pos->piece[turn][pawn] & file(square))) {
-			ei->rook_on_open_file[turn] += 1;
+			//ei->rook_on_open_file[turn] += 1;
 			eval += rook_on_open_file;
 		}
 
@@ -262,7 +262,7 @@ mevalue evaluate_rooks(const struct position *pos, struct evaluationinfo *ei, in
 		else if (mobility <= 5) {
 			int kf = ctz(pos->piece[turn][king]) % 8;
 			if ((kf < e1) == ((square % 8) < kf)) {
-				ei->blocked_rook[turn] += (1 + !(pos->castle & (turn ? 0x3 : 0xC)));
+				//ei->blocked_rook[turn] += (1 + !(pos->castle & (turn ? 0x3 : 0xC)));
 				eval += blocked_rook * (1 + !(pos->castle & (turn ? 0x3 : 0xC)));
 			}
 		}
@@ -294,11 +294,11 @@ mevalue evaluate_queens(const struct position *pos, struct evaluationinfo *ei, i
 
 		/* undeveloped minor pieces when moving queen */
 		if (turn) {
-			ei->undeveloped_piece[white] += (square != d1) * popcount((pos->piece[white][knight] | pos->piece[white][bishop]) & RANK_1);
+			//ei->undeveloped_piece[white] += (square != d1) * popcount((pos->piece[white][knight] | pos->piece[white][bishop]) & RANK_1);
 			eval += (square != d1) * S(undeveloped_piece, 0) * popcount((pos->piece[white][knight] | pos->piece[white][bishop]) & RANK_1);
 		}
 		else {
-			ei->undeveloped_piece[black] += (square != d8) * popcount((pos->piece[black][knight] | pos->piece[black][bishop]) & RANK_8);
+			//ei->undeveloped_piece[black] += (square != d8) * popcount((pos->piece[black][knight] | pos->piece[black][bishop]) & RANK_8);
 			eval += (square != d8) * S(undeveloped_piece, 0) * popcount((pos->piece[black][knight] | pos->piece[black][bishop]) & RANK_8);
 		}
 

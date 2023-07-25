@@ -35,7 +35,8 @@
 #include "option.h"
 #include "nnue.h"
 
-#define BATCH_SIZE (8192)
+//#define BATCH_SIZE (8192)
+#define BATCH_SIZE (32)
 
 #define PARAMETER(x, y, z, w, q) { .ptr = x, .size = y, .type = z, .weight_decay = w, .tune = q }
 
@@ -80,11 +81,11 @@ enum {
 
 	PARAM_BACKWARDPAWN,
 	PARAM_SUPPORTEDPAWN,
-	PARAM_PASSEDPAWN,
-	PARAM_PASSEDFILE,
 	PARAM_ISOLATEDPAWN,
 	PARAM_DOUBLEDPAWN,
-	PARAM_PHALANXPAWN,
+	PARAM_CONNECTEDPAWNS,
+	PARAM_PASSEDPAWN,
+	PARAM_PASSEDFILE,
 
 	PARAM_WEAKSQUARESDANGER,
 	PARAM_ENEMYNOQUEENBONUS,
@@ -115,6 +116,7 @@ enum {
 	WEIGHTDECAY_NO,
 };
 
+double K = 1.0;
 const double beta_1 = 0.9;
 const double beta_2 = 0.999;
 const double epsilon = 1e-7;
@@ -141,59 +143,59 @@ struct parameter {
 /* parameter list has to be in the same order as the enum. */
 struct parameter parameters[] = {
 	PARAMETER(&piece_value[0],            5, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
-	PARAMETER(&white_psqtable[0][8],     48, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&white_psqtable[1][0],     32, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&white_psqtable[2][0],     32, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&white_psqtable[3][0],     32, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&white_psqtable[4][0],     32, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&white_psqtable[5][0],     32, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
+	PARAMETER(&white_psqtable[0][8],     48, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&white_psqtable[1][0],     32, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&white_psqtable[2][0],     32, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&white_psqtable[3][0],     32, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&white_psqtable[4][0],     32, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&white_psqtable[5][0],     32, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
 
-	PARAMETER(&mobility_bonus[0][0],      9, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&mobility_bonus[1][0],     14, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&mobility_bonus[2][0],     15, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&mobility_bonus[3][0],     28, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
+	PARAMETER(&mobility_bonus[0][0],      9, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&mobility_bonus[1][0],     14, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&mobility_bonus[2][0],     15, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&mobility_bonus[3][0],     28, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
 
-	PARAMETER(&pawn_shelter[0],          28, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&unblocked_storm[0],       28, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&blocked_storm[0],          7, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
+	PARAMETER(&pawn_shelter[0],          28, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&unblocked_storm[0],       28, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&blocked_storm[0],          7, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
 
-	PARAMETER(&king_on_open_file,         1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&outpost_bonus,             1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&outpost_attack,            1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&minor_behind_pawn,         1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&knight_far_from_king,      1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&bishop_far_from_king,      1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&bishop_pair,               1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&pawn_on_bishop_square,     1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&rook_on_open_file,         1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&blocked_rook,              1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&defended_minor,            1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
+	PARAMETER(&king_on_open_file,         1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&outpost_bonus,             1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&outpost_attack,            1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&minor_behind_pawn,         1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&knight_far_from_king,      1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&bishop_far_from_king,      1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&bishop_pair,               1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&pawn_on_bishop_square,     1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&rook_on_open_file,         1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&blocked_rook,              1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&defended_minor,            1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
 
-	PARAMETER(&undeveloped_piece,         1, TYPE_INT,     WEIGHTDECAY_YES, TUNE_NO),
+	PARAMETER(&undeveloped_piece,         1, TYPE_INT,     WEIGHTDECAY_YES, TUNE_YES),
 
-	PARAMETER(&backward_pawn,             1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&supported_pawn,            1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&passed_pawn,               1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&passed_file,               1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&isolated_pawn,             1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&doubled_pawn,              1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&phalanx_pawn,              1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
+	PARAMETER(&backward_pawn,             1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&supported_pawn,            1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&isolated_pawn,             1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&doubled_pawn,              1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&connected_pawns[0],        7, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&passed_pawn[0],            7, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&passed_file[0],            4, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
 
-	PARAMETER(&weak_squares_danger,       1, TYPE_INT,     WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&enemy_no_queen_bonus,      1, TYPE_INT,     WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&knight_attack_danger,      1, TYPE_INT,     WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&bishop_attack_danger,      1, TYPE_INT,     WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&rook_attack_danger,        1, TYPE_INT,     WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&queen_attack_danger,       1, TYPE_INT,     WEIGHTDECAY_YES, TUNE_NO),
+	PARAMETER(&weak_squares_danger,       1, TYPE_INT,     WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&enemy_no_queen_bonus,      1, TYPE_INT,     WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&knight_attack_danger,      1, TYPE_INT,     WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&bishop_attack_danger,      1, TYPE_INT,     WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&rook_attack_danger,        1, TYPE_INT,     WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&queen_attack_danger,       1, TYPE_INT,     WEIGHTDECAY_YES, TUNE_YES),
 	PARAMETER(&king_danger,               1, TYPE_INT,     WEIGHTDECAY_YES, TUNE_NO),
 
-	PARAMETER(&tempo_bonus,               1, TYPE_INT,     WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&phase_max_material,        1, TYPE_INT,     WEIGHTDECAY_NO,  TUNE_NO),
-	PARAMETER(&phase_min_material,        1, TYPE_INT,     WEIGHTDECAY_NO,  TUNE_NO),
-	PARAMETER(&phase_knight,              1, TYPE_INT,     WEIGHTDECAY_NO,  TUNE_NO),
-	PARAMETER(&phase_bishop,              1, TYPE_INT,     WEIGHTDECAY_NO,  TUNE_NO),
-	PARAMETER(&phase_rook,                1, TYPE_INT,     WEIGHTDECAY_NO,  TUNE_NO),
-	PARAMETER(&phase_queen,               1, TYPE_INT,     WEIGHTDECAY_NO,  TUNE_NO),
+	PARAMETER(&tempo_bonus,               1, TYPE_INT,     WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&phase_max_material,        1, TYPE_INT,     WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&phase_min_material,        1, TYPE_INT,     WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&phase_knight,              1, TYPE_INT,     WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&phase_bishop,              1, TYPE_INT,     WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&phase_rook,                1, TYPE_INT,     WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&phase_queen,               1, TYPE_INT,     WEIGHTDECAY_NO,  TUNE_YES),
 	PARAMETER(&division,                  1, TYPE_INT,     WEIGHTDECAY_NO,  TUNE_NO),
 };
 
@@ -207,7 +209,6 @@ void parameters_print() {
 		printf("S(%4d,%4d), ", mevalue_mg(piece_value[i]), mevalue_eg(piece_value[i]));
 	}
 	printf("\n");
-	return;
 	for (int i = 8; i < 56; i++) {
 		if (i % 8 == 0)
 			printf("\n");
@@ -362,22 +363,25 @@ void parameters_print() {
 	param = &parameters[PARAM_SUPPORTEDPAWN];
 	printf("\nmevalue supported_pawn = ");
 	mevalue_print(param->ptr[0]);
-	param = &parameters[PARAM_PASSEDPAWN];
-	printf("\nmevalue passed_pawn    = ");
-	mevalue_print(param->ptr[0]);
-	param = &parameters[PARAM_PASSEDFILE];
-	printf("\nmevalue passed_file    = ");
-	mevalue_print(param->ptr[0]);
 	param = &parameters[PARAM_ISOLATEDPAWN];
 	printf("\nmevalue isolated_pawn  = ");
 	mevalue_print(param->ptr[0]);
 	param = &parameters[PARAM_DOUBLEDPAWN];
 	printf("\nmevalue doubled_pawn   = ");
 	mevalue_print(param->ptr[0]);
-	param = &parameters[PARAM_PHALANXPAWN];
-	printf("\nmevalue phalanx_pawn   = ");
-	mevalue_print(param->ptr[0]);
-	printf("\n\n");
+	param = &parameters[PARAM_CONNECTEDPAWNS];
+	printf("\nmevalue connected_pawns = { ");
+	for (size_t i = 0; i < param->size; i++)
+		mevalue_print(param->ptr[i]);
+	param = &parameters[PARAM_PASSEDPAWN];
+	printf("\nmevalue passed_pawn    = { ");
+	for (size_t i = 0; i < param->size; i++)
+		mevalue_print(param->ptr[i]);
+	param = &parameters[PARAM_PASSEDFILE];
+	printf("}\nmevalue passed_file   = { ");
+	for (size_t i = 0; i < param->size; i++)
+		mevalue_print(param->ptr[i]);
+	printf("};\n\n");
 	printf("division = %i\n", division);
 }
 
@@ -404,14 +408,13 @@ void parameters_init() {
 }
 
 double sigmoid(int q) {
-	const double f = -(double)q / 400;
+	const double f = -K * q / 400;
 	return 1.0 / (1.0 + pow(10, f));
 }
 
 double sigmoid_grad(int q) {
-	const double f = -(double)q / 400;
-	const double s = sigmoid(f);
-	return log(10) / 400 * s * (1 - s);
+	const double s = sigmoid(q);
+	return K * log(10) / 400 * s * (1 - s);
 }
 
 void update_value(mevalue *ptr, double value[2], int type) {
@@ -429,22 +432,11 @@ void parameter_step(double value[2], double m[2], double v[2], int type, int wei
 	}
 }
 
-double avgmg = 0;
-double avgeg = 0;
-
 void update_mv(double m[2], double v[2], double grad[2]) {
 	for (int i = 0; i < 2; i++) {
 		m[i] = beta_1 * m[i] + (1 - beta_1) * grad[i];
 		v[i] = beta_2 * v[i] + (1 - beta_2) * grad[i] * grad[i];
 	}
-#if 0
-	if (t > 500) {
-		avgmg += grad[0];
-		avgeg += grad[1];
-		printf("avgmg %e\n", avgmg / (t - 500));
-		printf("avgeg %e\n", avgeg / (t - 500));
-	}
-#endif
 }
 
 void step() {
@@ -522,7 +514,7 @@ double grad_calc(struct position *pos, double result) {
 			param->grad[2 * i + mg] += gradmg;
 			param->grad[2 * i + eg] += gradeg;
 #if 0
-			if (piece != queen)
+			if (piece != rook)
 				continue;
 			piece_value[i] += S(1, 0);
 			tables_init();
@@ -530,14 +522,16 @@ double grad_calc(struct position *pos, double result) {
 			new_eval = pos->turn == white ? new_eval : -new_eval;
 			piece_value[i] -= S(1, 0);
 			tables_init();
-			double gradtest = (sigmoid(new_eval) - result) * (sigmoid(new_eval) - result) - (sigmoid(eval) - result) * (sigmoid(eval) - result);
+			double gradmgtest = (sigmoid(new_eval) - result) * (sigmoid(new_eval) - result) - (sigmoid(eval) - result) * (sigmoid(eval) - result);
+			piece_value[i] += S(0, 1);
+			tables_init();
+			new_eval = evaluate_classical(pos);
+			new_eval = pos->turn == white ? new_eval : -new_eval;
+			piece_value[i] -= S(0, 1);
+			tables_init();
+			double gradegtest = (sigmoid(new_eval) - result) * (sigmoid(new_eval) - result) - (sigmoid(eval) - result) * (sigmoid(eval) - result);
 
-			if (gradmg < gradeg && gradeg < 0) {
-				if (gradmg > gradeg)
-					counter1++;
-				else
-					counter2++;
-				printf("%ld, %ld\n", counter1, counter2);
+			if (gradmg || gradeg || gradmgtest || gradegtest) {
 				struct searchinfo si = { 0 };
 				int16_t q = quiescence(pos, 0, -VALUE_MATE, VALUE_MATE, &si);
 				q = pos->turn == white ? q : -q;
@@ -546,14 +540,15 @@ double grad_calc(struct position *pos, double result) {
 				printf("%s\n", pos_to_fen(fen, pos));
 				printf("gradmg: %e\n", gradmg);
 				printf("gradeg: %e\n", gradeg);
-				printf("gradtest: %e\n", gradtest);
+				printf("gradmgtest: %e\n", gradmgtest);
+				printf("gradegtest: %e\n", gradegtest);
 				printf("phase: %f\n", mgp);
 				printf("eval: %d\n", eval);
 				printf("quiescence: %d\n", q);
 				printf("result: %f\n", result);
 				printf("sigmoid: %f\n", sigmoid(eval));
-				printf("valmg: %d\n", mevalue_mg(piece_value[4]));
-				printf("valeg: %d\n", mevalue_eg(piece_value[4]));
+				printf("valmg: %d\n", mevalue_mg(piece_value[i]));
+				printf("valeg: %d\n", mevalue_eg(piece_value[i]));
 				printf("mgm: %e\n", param->m[2 * 4]);
 				printf("mgv: %e\n", param->v[2 * 4]);
 				printf("egm: %e\n", param->m[2 * 4 + 1]);
@@ -948,39 +943,51 @@ double grad_calc(struct position *pos, double result) {
 		}
 	}
 	if ((param = &parameters[PARAM_PASSEDPAWN])->tune == TUNE_YES) {
-		for (int color = 0; color <= 1; color++) {
-			double dEdp = ei.passed_pawn[color];
-			double grad = factor * dEdp * (2 * color - 1);
-			double gradmg = mgp * grad;
-			double gradeg = egp * grad;
-			param->grad[mg] += gradmg;
-			param->grad[eg] += gradeg;
+		for (size_t i = 0; i < param->size; i++) {
+			for (int color = 0; color <= 1; color++) {
+				double dEdp = ei.passed_pawn[color][i];
+				double grad = factor * dEdp * (2 * color - 1);
+				double gradmg = mgp * grad;
+				double gradeg = egp * grad;
+				param->grad[2 * i + mg] += gradmg;
+				param->grad[2 * i + eg] += gradeg;
+#if 0
+				if (gradmg || gradeg) {
+					print_position(pos, 0);
+					printf("y: %ld\n", i);
+					printf("gradmg: %f\n", gradmg);
+					printf("gradeg: %f\n", gradeg);
+					printf("result: %f\n", result);
+					printf("eval: %d\n", eval);
+					printf("sigmoid(eval): %f\n", sigmoid(eval));
+				}
+#endif
+			}
 		}
 	}
 	if ((param = &parameters[PARAM_PASSEDFILE])->tune == TUNE_YES) {
-		double gradtest[4];
-		for (int color = 0; color <= 1; color++) {
-			double dEdp = ei.passed_file[color];
-			double grad = factor * dEdp * (2 * color - 1);
-			double gradmg = mgp * grad;
-			double gradeg = egp * grad;
-			gradtest[2 * color + mg] = gradmg;
-			gradtest[2 * color + eg] = gradeg;
-			param->grad[mg] += gradmg;
-			param->grad[eg] += gradeg;
-		}
+		for (size_t i = 0; i < param->size; i++) {
+			for (int color = 0; color <= 1; color++) {
+				double dEdp = ei.passed_file[color][i];
+				double grad = factor * dEdp * (2 * color - 1);
+				double gradmg = mgp * grad;
+				double gradeg = egp * grad;
+				param->grad[2 * i + mg] += gradmg;
+				param->grad[2 * i + eg] += gradeg;
+			}
 #if 0
-		if (gradtest[0] + gradtest[1] != 0) {
-			print_position(pos, 0);
-			printf("gradmgb: %f\n", gradtest[0]);
-			printf("gradegb: %f\n", gradtest[1]);
-			printf("gradmgw: %f\n", gradtest[2]);
-			printf("gradegw: %f\n", gradtest[3]);
-			printf("%d\n", ei.passed_file[0]);
-			printf("%d\n", ei.passed_file[1]);
-			printf("result: %f\n", result);
-		}
+			if (gradtest[0] + gradtest[1] != 0) {
+				print_position(pos, 0);
+				printf("gradmgb: %f\n", gradtest[0]);
+				printf("gradegb: %f\n", gradtest[1]);
+				printf("gradmgw: %f\n", gradtest[2]);
+				printf("gradegw: %f\n", gradtest[3]);
+				printf("%d\n", ei.passed_file[0]);
+				printf("%d\n", ei.passed_file[1]);
+				printf("result: %f\n", result);
+			}
 #endif
+		}
 	}
 	if ((param = &parameters[PARAM_ISOLATEDPAWN])->tune == TUNE_YES) {
 		for (int color = 0; color <= 1; color++) {
@@ -1002,14 +1009,16 @@ double grad_calc(struct position *pos, double result) {
 			param->grad[eg] += gradeg;
 		}
 	}
-	if ((param = &parameters[PARAM_PHALANXPAWN])->tune == TUNE_YES) {
-		for (int color = 0; color <= 1; color++) {
-			double dEdp = ei.phalanx_pawn[color];
-			double grad = factor * dEdp * (2 * color - 1);
-			double gradmg = mgp * grad;
-			double gradeg = egp * grad;
-			param->grad[mg] += gradmg;
-			param->grad[eg] += gradeg;
+	if ((param = &parameters[PARAM_CONNECTEDPAWNS])->tune == TUNE_YES) {
+		for (size_t i = 0; i < param->size; i++) {
+			for (int color = 0; color <= 1; color++) {
+				double dEdp = ei.connected_pawns[color][i];
+				double grad = factor * dEdp * (2 * color - 1);
+				double gradmg = mgp * grad;
+				double gradeg = egp * grad;
+				param->grad[2 * i + mg] += gradmg;
+				param->grad[2 * i + eg] += gradeg;
+			}
 		}
 	}
 	/* We want to calculate dE/dw=dE/dr*dr/dk*dk/dw where r is the rectified
@@ -1144,10 +1153,12 @@ double grad_calc(struct position *pos, double result) {
 			print_position(pos, 0);
 			printf("gradb: %f\n", gradtest[0]);
 			printf("gradw: %f\n", gradtest[1]);
-			print_bitboard(ei.king_ring[0]);
-			print_bitboard(ei.king_ring[1]);
-			printf("%d\n", ei.king_attack_units[0][knight]);
-			printf("%d\n", ei.king_attack_units[1][knight]);
+			//print_bitboard(ei.king_ring[0]);
+			//print_bitboard(ei.king_ring[1]);
+			printf("%d\n", ei.king_danger[black]);
+			printf("%d\n", ei.king_danger[white]);
+			printf("%d\n", eval);
+			printf("sigmoid: %f\n", sigmoid(eval));
 			printf("result: %f\n", result);
 		}
 #endif
@@ -1298,7 +1309,7 @@ size_t grad(FILE *f, struct position *pos) {
 		if (feof(f))
 			break;
 
-		int skip = (eval == VALUE_NONE) || gbernoulli(0.9);
+		int skip = (eval == VALUE_NONE);// || gbernoulli(0.9);
 		if (skip)
 			continue;
 
@@ -1310,9 +1321,9 @@ size_t grad(FILE *f, struct position *pos) {
 		actual_size++;
 		total++;
 	}
-	if (!actual_size) {
+	if (actual_size == 0) {
+		parameters_print();
 		printf("%f\n", error / total);
-		printf("printing\n");
 		error = 0;
 		total = 0;
 		return 0;
@@ -1337,7 +1348,7 @@ int main(int argc, char **argv) {
 		printf("could not open %s\n", argv[1]);
 		return 2;
 	}
-	
+
 	option_nnue = 0;
 	option_transposition = 0;
 	option_pawn = 0;
@@ -1356,7 +1367,7 @@ int main(int argc, char **argv) {
 	while (1) {
 		zero_grad();
 		if (!grad(f, &pos)) {
-			parameters_print();
+			//parameters_print();
 			fseek(f, 0, SEEK_SET);
 			continue;
 		}

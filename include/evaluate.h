@@ -101,11 +101,11 @@ struct evaluationinfo {
 	/* pawns */
 	int backward_pawn[2];
 	int supported_pawn[2];
-	int phalanx_pawn[2];
-	int passed_pawn[2];
-	int passed_file[2];
 	int isolated_pawn[2];
 	int doubled_pawn[2];
+	int connected_pawns[2][7];
+	int passed_pawn[2][7];
+	int passed_file[2][4];
 
 	mevalue eval;
 };

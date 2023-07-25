@@ -34,10 +34,19 @@
 #include "tables.h"
 #include "moveorder.h"
 
+const int quiet_eval_delta = 50;
+
 int skip_mates = 0;
 int shuffle = 0;
 int quiet = 0;
 int skip_first = 0;
+
+int quiescence_eval_differs(struct position *pos) {
+	struct searchinfo si = { 0 };
+	int32_t q = quiescence(pos, 0, -VALUE_MATE, VALUE_MATE, &si);
+	int32_t e = evaluate_classical(pos);
+	return ABS(q - e) > quiet_eval_delta;
+}
 
 int parse_result(FILE *f) {
 	char line[BUFSIZ];
@@ -110,13 +119,18 @@ void write_fens(struct position *pos, int result, FILE *fin, FILE *fout) {
 			if (m) {
 				if (moves >= skip_first) {
 					perspective_result = (2 * pos->turn - 1) * VALUE_MATE * result;
-					if (quiet) {
-						struct searchinfo si = { 0 };
-						int16_t q = quiescence(pos, 0, -VALUE_MATE, VALUE_MATE, &si);
-						int16_t e = evaluate_classical(pos);
-						if (ABS(q - e) > 50)
-							perspective_result = VALUE_NONE;
-					}
+					int draw = perspective_result == 0;
+					int skip = 0;
+					if (quiet && (generate_checkers(pos, pos->turn) || quiescence_eval_differs(pos)))
+						skip = 1;
+					if (draw)
+						skip = 1;
+					if (draw && popcount(pos->piece[white][all] | pos->piece[black][all]) <= 6)
+						skip = 1;
+
+					if (skip)
+						perspective_result = VALUE_NONE;
+
 					/* This is the first written move. */
 					if (moves == skip_first) {
 						fwrite(&zero, 2, 1, fout);

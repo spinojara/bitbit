@@ -1,3 +1,2 @@
 Add checks for malloc.
 Unfinished search.
-For texel tuning, don't calculate values that are not used (primarily psqt I think).

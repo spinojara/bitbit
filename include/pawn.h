@@ -25,11 +25,11 @@ mevalue evaluate_pawns(const struct position *pos, struct evaluationinfo *ei, in
 
 extern mevalue backward_pawn;
 extern mevalue supported_pawn;
-extern mevalue passed_pawn;
-extern mevalue passed_file;
 extern mevalue isolated_pawn;
 extern mevalue doubled_pawn;
-extern mevalue phalanx_pawn;
+extern mevalue connected_pawns[7];
+extern mevalue passed_pawn[7];
+extern mevalue passed_file[4];
 
 int pawn_init(void);
 
