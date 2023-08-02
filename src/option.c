@@ -21,7 +21,7 @@
 #include "strings.h"
 #include "transposition.h"
 
-int option_nnue = 1;
+int option_nnue = 0;
 int option_transposition = 1;
 int option_history = 1;
 int option_pawn = 1;

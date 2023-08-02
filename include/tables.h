@@ -24,9 +24,9 @@ extern mevalue psqtable[2][7][64];
 
 extern mevalue white_psqtable[6][64];
 
-extern mevalue pawn_shelter[4][7];
+extern mevalue pawn_shelter[28];
 
-extern mevalue unblocked_storm[4][7];
+extern mevalue unblocked_storm[28];
 
 extern mevalue blocked_storm[7];
 

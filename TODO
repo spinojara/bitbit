@@ -6,3 +6,4 @@ rook and knight pair penalties
 test for integer overflows using clang in real games
 make unit tests for mevalue_mg etc
 use int for ply and depth
+unfinished search

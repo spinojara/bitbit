@@ -37,7 +37,7 @@ void mvv_lva_init(void) {
 			                                         move_order_piece_value[attacker % 6];
 }
 
-int see_geq(struct position *pos, const move *m, int16_t value) {
+int see_geq(struct position *pos, const move *m, int32_t value) {
 	int from = move_from(m);
 	int to = move_to(m);
 	uint64_t fromb = bitboard(from);
@@ -46,7 +46,7 @@ int see_geq(struct position *pos, const move *m, int16_t value) {
 	int attacker = pos->mailbox[from] % 6;
 	int victim = pos->mailbox[to] % 6;
 
-	int16_t swap = move_order_piece_value[victim] - value;
+	int32_t swap = move_order_piece_value[victim] - value;
 	if (swap < 0)
 		return 0;
 

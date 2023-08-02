@@ -28,13 +28,13 @@
 /* around 100 KiB with hitrate of ~80% */
 #define PAWN_TABLE_SIZE ((uint64_t)1 << 12)
 
-mevalue backward_pawn  = S(-7, 2);
-mevalue supported_pawn = S(8, 2);
-mevalue passed_pawn    = S(12, 20);
-mevalue passed_file    = S(-14, -11);
-mevalue isolated_pawn  = S(-11, -14);
-mevalue doubled_pawn   = S(-14, -21);
-mevalue phalanx_pawn   = S(5, 6);
+mevalue backward_pawn  = S(-11, -6);
+mevalue supported_pawn = S( 23, 18);
+mevalue isolated_pawn  = S(-19,-20);
+mevalue doubled_pawn   = S(-15,-52);
+mevalue connected_pawns[7] = { S(  0,  0), S(  3,  1), S(  7,  8), S(  7, 10), S(  7, 22), S( 25, 67), S(220,228), };
+mevalue passed_pawn[7]    = { S(  0,  0), S( 35, 59), S( 26, 82), S( 41,148), S( 84,242), S(101,403), S(-132,-6), };
+mevalue passed_file[4]   = { S(-14, 16), S(-45,  6), S(-62,-45), S(-51,-73), };
 
 struct pawn {
 	uint64_t pawns[2];
@@ -81,8 +81,7 @@ mevalue evaluate_pawns(const struct position *pos, struct evaluationinfo *ei, in
 	}
 	else {
 		pawns[white] = rotate_bytes(pos->piece[black][pawn]);
-		pawns[black] = rotate_bytes(pos->piece[white][pawn]);
-	}
+		pawns[black] = rotate_bytes(pos->piece[white][pawn]); }
 	struct pawn *e = pawn_attempt_get(pawns);
 	if (e)
 		return e->evaluation;
@@ -116,23 +115,32 @@ mevalue evaluate_pawns(const struct position *pos, struct evaluationinfo *ei, in
 		passed     = !(stoppers ^ lever) || (!(stoppers ^ lever ^ leverpush) && popcount(phalanx) >= popcount(leverpush));
 		passed    &= !(passed_files(square, white) & file(square) & pawns[white]);
 
-		if (backward)
+		if (backward) {
+			//ei->backward_pawn[color] += 1;
 			eval += backward_pawn;
+		}
 
-		if (support)
-			eval += supported_pawn * (y - 1) * popcount(support);
+		if (support | phalanx) {
+			//ei->supported_pawn[color] += popcount(support);
+			//ei->connected_pawns[color][y] += 2 + (phalanx != 0);
+			eval += connected_pawns[y] * (2 + (phalanx != 0)) + supported_pawn * popcount(support);
+		}
 
-		if (phalanx)
-			eval += phalanx_pawn * (y - 1);
+		if (passed) {
+			//ei->passed_pawn[color][y] += 1;
+			//ei->passed_file[color][MIN(x, 7 - x)] += 1;
+			eval += passed_pawn[y] + passed_file[MIN(x, 7 - x)];
+		}
 
-		if (passed)
-			eval += passed_pawn * y + passed_file * MIN(x, 7 - x);
-
-		if (!neighbours)
+		if (!neighbours) {
+			//ei->isolated_pawn[color] += 1;
 			eval += isolated_pawn;
+		}
 		
-		if (!support && doubled)
+		if (!support && doubled) {
+			//ei->doubled_pawn[color] += 1;
 			eval += doubled_pawn;
+		}
 
 		b = clear_ls1b(b);
 	}
