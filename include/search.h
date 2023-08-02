@@ -46,9 +46,9 @@ struct searchinfo {
 	int interrupt;
 };
 
-int16_t search(struct position *pos, uint8_t depth, int verbose, int etime, int movetime, move *m, struct history *history, int iterative);
+int32_t search(struct position *pos, uint8_t depth, int verbose, int etime, int movetime, move *m, struct history *history, int iterative);
 
-int16_t quiescence(struct position *pos, uint16_t ply, int16_t alpha, int16_t beta, struct searchinfo *si);
+int32_t quiescence(struct position *pos, uint16_t ply, int32_t alpha, int32_t beta, struct searchinfo *si);
 
 void search_init(void);
 

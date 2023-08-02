@@ -106,7 +106,7 @@ alignas(64) static bias_t hidden2_biases[32];
 alignas(64) static weight_t output_weights[1 * 32];
 alignas(64) static bias_t output_biases[1];
 
-static inline void transform(struct position *pos, int16_t accumulation[2][K_HALF_DIMENSIONS], int8_t *output) {
+static inline void transform(const struct position *pos, const int16_t accumulation[2][K_HALF_DIMENSIONS], int8_t *output) {
 #if defined(AVX2) || defined(SSE4)
 	const vec_t zero = vec_zero();
 	const int perspective[2] = { pos->turn, 1 - pos->turn };
@@ -554,7 +554,7 @@ void undo_accumulator(struct position *pos, move *m) {
 	}
 }
 
-int16_t evaluate_accumulator(struct position *pos) {
+int32_t evaluate_accumulator(const struct position *pos) {
 	struct data buf;
 	transform(pos, pos->accumulation, buf.ft_out);
 	affine_propagate(buf.ft_out, buf.hidden1_out, FT_OUT_DIMS, hidden1_biases, hidden1_weights);
@@ -563,7 +563,7 @@ int16_t evaluate_accumulator(struct position *pos) {
 	return (output_layer(buf.hidden2_out, output_biases, output_weights)) / FV_SCALE + psqt;
 }
 
-int16_t evaluate_nnue(struct position *pos) {
+int32_t evaluate_nnue(struct position *pos) {
 	refresh_accumulator(pos, 0);
 	refresh_accumulator(pos, 1);
 	return evaluate_accumulator(pos);

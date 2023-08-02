@@ -216,7 +216,7 @@ void print_parameter_name(struct parameter *parameter) {
 		printf(" ");
 }
 
-void parameters_print() {
+void parameters_print(void) {
 	for (int i = 0; i < 5; i++) {
 		printf("S(%4d,%4d), ", mevalue_mg(piece_value[i]), mevalue_eg(piece_value[i]));
 	}
@@ -269,7 +269,7 @@ void parameters_print() {
 	printf("\n");
 }
 
-void parameters_init() {
+void parameters_init(void) {
 	for (size_t i = 0; i < SIZE(parameters); i++) {
 		size_t bytes = 2 * parameters[i].size * sizeof(double);
 		parameters[i].value = malloc(bytes);
@@ -317,7 +317,7 @@ void update_mv(double m[2], double v[2], double grad[2]) {
 	}
 }
 
-void step() {
+void step(void) {
 	t++;
 	for (size_t i = 0; i < SIZE(parameters); i++) {
 		for (size_t j = 0; j < parameters[i].size; j++) {
@@ -329,7 +329,7 @@ void step() {
 	tables_init();
 }
 
-void zero_grad() {
+void zero_grad(void) {
 	for (size_t i = 0; i < SIZE(parameters); i++) {
 		size_t bytes = 2 * parameters[i].size * sizeof(double);
 		memset(parameters[i].grad, 0, bytes);

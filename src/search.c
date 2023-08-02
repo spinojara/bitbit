@@ -37,13 +37,13 @@
 #include "evaluate.h"
 #include "history.h"
 #include "movepicker.h"
-#include "material.h"
 #include "option.h"
+#include "endgame.h"
 
 static int reductions[256] = { 0 };
 
 /* We choose r(x,y)=Clog(x)log(y)+D because it is increasing and concave.
- * It is also relatively simple. If x is constant, y > y' we have and by
+ * It is also relatively simple. If x is constant, y > y' and by
  * decreasing the depth we need to have y-1-r(x,y)>y'-1-r(x,y').
  * Simplyfing and using the mean value theorem gives us 1>Clog(x)/y''
  * where 2<=y'<y''<y. The constant C must satisfy C<y''/log(x) for all such
@@ -69,7 +69,7 @@ void print_pv(struct position *pos, move *pv_move, int ply) {
 	*pv_move = *pv_move & 0xFFFF;
 }
 
-static inline void store_killer_move(move *m, uint8_t ply, move killers[][2]) {
+static inline void store_killer_move(const move *m, uint8_t ply, move killers[][2]) {
 	if (interrupt)
 		return;
 	assert(*m);
@@ -79,14 +79,14 @@ static inline void store_killer_move(move *m, uint8_t ply, move killers[][2]) {
 	killers[ply][0] = *m & 0xFFFF;
 }
 
-static inline void store_history_move(struct position *pos, move *m, uint8_t depth, int64_t history_moves[13][64]) {
+static inline void store_history_move(const struct position *pos, const move *m, uint8_t depth, int64_t history_moves[13][64]) {
 	if (interrupt)
 		return;
 	assert(*m);
 	history_moves[pos->mailbox[move_from(m)]][move_to(m)] += (uint64_t)1 << MIN(depth, 32);
 }
 
-static inline void store_pv_move(move *m, uint8_t ply, move pv[256][256]) {
+static inline void store_pv_move(const move *m, uint8_t ply, move pv[256][256]) {
 	if (interrupt)
 		return;
 	assert(*m);
@@ -95,25 +95,24 @@ static inline void store_pv_move(move *m, uint8_t ply, move pv[256][256]) {
 }
 
 /* random drawn score to avoid threefold blindness */
-static inline int16_t draw(struct searchinfo *si) {
+static inline int32_t draw(const struct searchinfo *si) {
 	return (si->nodes & 0x3);
 }
 
-static inline int16_t evaluate(struct position *pos) {
-	int16_t evaluation;
-	if (option_nnue)
-		evaluation = evaluate_accumulator(pos);
-	else
-		evaluation = evaluate_classical(pos);
-	/* damp when shuffling pieces */
-	evaluation = (int32_t)evaluation * (200 - pos->halfmove) / 200;
+static inline int32_t evaluate(const struct position *pos) {
+	struct endgame *e = endgame_probe(pos);
+	if (e)
+		return endgame_evaluate(e, pos);
+	int32_t evaluation = option_nnue ? evaluate_accumulator(pos)
+		                         : evaluate_classical(pos);
+	/* Damp when shuffling pieces. */
+	evaluation = evaluation * (200 - pos->halfmove) / 200;
 	return evaluation;
 }
 
-int16_t quiescence(struct position *pos, uint16_t ply, int16_t alpha, int16_t beta, struct searchinfo *si) {
+int32_t quiescence(struct position *pos, uint16_t ply, int32_t alpha, int32_t beta, struct searchinfo *si) {
 	uint64_t checkers = generate_checkers(pos, pos->turn);
-	int16_t best_eval = -VALUE_INFINITE;
-	int16_t eval = evaluate(pos);
+	int32_t eval = evaluate(pos), best_eval = -VALUE_INFINITE;
 
 	move move_list[MOVES_MAX];
 	generate_quiescence(pos, move_list);
@@ -122,9 +121,8 @@ int16_t quiescence(struct position *pos, uint16_t ply, int16_t alpha, int16_t be
 		return checkers ? -VALUE_MATE + ply : eval;
 
 	if (!checkers) {
-		if (eval >= beta) {
+		if (eval >= beta)
 			return beta;
-		}
 		if (eval > alpha)
 			alpha = eval;
 		best_eval = eval;
@@ -137,10 +135,12 @@ int16_t quiescence(struct position *pos, uint16_t ply, int16_t alpha, int16_t be
 		assert(checkers || is_capture(pos, &m) || move_promote(&m) == 3);
 		if (is_capture(pos, &m) && !checkers && mp.stage > STAGE_OKCAPTURE)
 			continue;
+		do_endgame_key(pos, &m);
 		do_move(pos, &m);
 		si->nodes++;
 		do_accumulator(pos, &m);
 		eval = -quiescence(pos, ply + 1, -beta, -alpha, si);
+		undo_endgame_key(pos, &m);
 		undo_move(pos, &m);
 		undo_accumulator(pos, &m);
 		if (eval > best_eval) {
@@ -152,15 +152,13 @@ int16_t quiescence(struct position *pos, uint16_t ply, int16_t alpha, int16_t be
 			}
 		}
 	}
-	assert(-VALUE_MATE < best_eval && best_eval < VALUE_MATE);
+	assert(-VALUE_INFINITE < best_eval && best_eval < VALUE_INFINITE);
 	return best_eval;
 }
 
 /* check for ply and depth out of bound */
-int16_t negamax(struct position *pos, uint8_t depth, uint16_t ply, int16_t alpha, int16_t beta, int cut_node, int flag, struct searchinfo *si) {
-	int16_t best_eval = -VALUE_INFINITE;
-	/* value is not used but suppresses compiler warning */
-	int16_t eval = -VALUE_INFINITE;
+int32_t negamax(struct position *pos, uint8_t depth, uint16_t ply, int32_t alpha, int32_t beta, int cut_node, int flag, struct searchinfo *si) {
+	int32_t eval, best_eval = -VALUE_INFINITE;
 
 	const int root_node = (ply == 0);
 	const int pv_node = (beta != alpha + 1);
@@ -182,14 +180,14 @@ int16_t negamax(struct position *pos, uint8_t depth, uint16_t ply, int16_t alpha
 			return alpha;
 	}
 
-	transposition t = attempt_get(pos);
-	if (t && transposition_depth(t) >= depth && !pv_node) {
-		eval = adjust_value_mate_get(transposition_eval(t), ply);
-		if (transposition_bound(t) == BOUND_EXACT)
+	struct transposition *e = transposition_probe(pos);
+	if (e && e->depth >= depth && !pv_node) {
+		eval = adjust_value_mate_get(e->eval, ply);
+		if (e->bound == BOUND_EXACT)
 			return eval;
-		else if (transposition_bound(t) == BOUND_LOWER && eval >= beta)
+		else if (e->bound == BOUND_LOWER && eval >= beta)
 			return beta;
-		else if (transposition_bound(t) == BOUND_UPPER && eval <= alpha)
+		else if (e->bound == BOUND_UPPER && eval <= alpha)
 			return alpha;
 	}
 	
@@ -198,7 +196,7 @@ int16_t negamax(struct position *pos, uint8_t depth, uint16_t ply, int16_t alpha
 		return quiescence(pos, ply + 1, alpha, beta, si);
 
 #if 0
-	int16_t static_eval = evaluate(pos);
+	int32_t static_eval = evaluate(pos);
 	if (!pv_node && !checkers && depth <= 6 && static_eval + (160 + 90 * depth * depth) < alpha) {
 		eval = quiescence(pos, ply + 1, alpha - 1, alpha, si);
 		if (eval < alpha)
@@ -232,13 +230,14 @@ int16_t negamax(struct position *pos, uint8_t depth, uint16_t ply, int16_t alpha
 	uint16_t bestmove = 0;
 
 	struct movepicker mp;
-	movepicker_init(&mp, pos, move_list, t ? transposition_move(t) : 0, si->killers[ply][0], si->killers[ply][1], si);
+	movepicker_init(&mp, pos, move_list, e ? e->m : 0, si->killers[ply][0], si->killers[ply][1], si);
 	move m;
 	while ((m = next_move(&mp))) {
 		int move_number = mp.index - 1;
 		if (option_history)
 			si->history->zobrist_key[si->history->ply + ply] = pos->zobrist_key;
 		do_zobrist_key(pos, &m);
+		do_endgame_key(pos, &m);
 		do_move(pos, &m);
 		si->nodes++;
 		do_accumulator(pos, &m);
@@ -276,6 +275,7 @@ int16_t negamax(struct position *pos, uint8_t depth, uint16_t ply, int16_t alpha
 			eval = -negamax(pos, new_depth, ply + 1, -beta, -alpha, 0, new_flag, si);
 
 		undo_zobrist_key(pos, &m);
+		undo_endgame_key(pos, &m);
 		undo_move(pos, &m);
 		undo_accumulator(pos, &m);
 		if (interrupt || si->interrupt)
@@ -304,16 +304,16 @@ int16_t negamax(struct position *pos, uint8_t depth, uint16_t ply, int16_t alpha
 		}
 	}
 	int bound = (best_eval >= beta) ? BOUND_LOWER : (pv_node && bestmove) ? BOUND_EXACT : BOUND_UPPER;
-	attempt_store(pos, adjust_value_mate_store(best_eval, ply), depth, bound, bestmove);
-	assert(-VALUE_MATE < best_eval && best_eval < VALUE_MATE);
+	transposition_store(pos, adjust_value_mate_store(best_eval, ply), depth, bound, bestmove);
+	assert(-VALUE_INFINITE < best_eval && best_eval < VALUE_INFINITE);
 	return best_eval;
 }
 
-int16_t aspiration_window(struct position *pos, uint8_t depth, int32_t last, struct searchinfo *si) {
-	int16_t evaluation;
+int32_t aspiration_window(struct position *pos, uint8_t depth, int32_t last, struct searchinfo *si) {
+	int32_t evaluation;
 	int32_t delta = 25 + last * last / 16384;
-	int16_t alpha = MAX(last - delta, -VALUE_MATE);
-	int16_t beta = MIN(last + delta, VALUE_MATE);
+	int32_t alpha = MAX(last - delta, -VALUE_MATE);
+	int32_t beta = MIN(last + delta, VALUE_MATE);
 
 	while (!si->interrupt || interrupt) {
 		evaluation = negamax(pos, depth, 0, alpha, beta, 0, 0, si);
@@ -334,7 +334,7 @@ int16_t aspiration_window(struct position *pos, uint8_t depth, int32_t last, str
 	return 0;
 }
 
-int16_t search(struct position *pos, uint8_t depth, int verbose, int etime, int movetime, move *m, struct history *history, int iterative) {
+int32_t search(struct position *pos, uint8_t depth, int verbose, int etime, int movetime, move *m, struct history *history, int iterative) {
 	assert(option_history == (history != NULL));
 
 	time_point ts = time_now();
@@ -349,10 +349,11 @@ int16_t search(struct position *pos, uint8_t depth, int verbose, int etime, int 
 	time_init(pos, etime, &si);
 
 	char str[8];
-	int16_t eval = VALUE_NONE, best_eval = VALUE_NONE;
+	int32_t eval = VALUE_NONE, best_eval = VALUE_NONE;
 
 	refresh_accumulator(pos, 0);
 	refresh_accumulator(pos, 1);
+	refresh_endgame_key(pos);
 
 	if (depth == 0) {
 		eval = evaluate(pos);

@@ -35,7 +35,7 @@
 #define MACRO_NAME(x) #x
 #define MACRO_VALUE(x) MACRO_NAME(x)
 
-uint64_t gxorshift64();
+uint64_t gxorshift64(void);
 uint64_t xorshift64(uint64_t *seed);
 int gbernoulli(double p);
 int bernoulli(double p, uint64_t *seed);
@@ -51,7 +51,7 @@ int strint(const char *s);
 
 char *appendstr(char *dest, const char *src);
 
-int variance(int16_t *arr, int len);
+int variance(int32_t *arr, int len);
 
 void printdigits(int d);
 

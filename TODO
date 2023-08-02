@@ -1,2 +1,8 @@
 add checks for malloc
 optimize libbatch.so by combining the 4 append_active_indices
+aspiration window should probably return VALUE_NONE if interrupted
+grain evaluation for better move ordering etc
+rook and knight pair penalties
+test for integer overflows using clang in real games
+make unit tests for mevalue_mg etc
+use int for ply and depth

@@ -182,7 +182,7 @@ int interface_position(int argc, char **argv) {
 	else if (strcmp(argv[1], "fen") == 0) {
 		if (fen_is_ok(n - 2, argv + 2)) {
 			pos_from_fen(&pos, n - 2, argv + 2);
-			set_zobrist_key(&pos);
+			refresh_zobrist_key(&pos);
 			history_reset(&pos, &history);
 			for (int i = n + 1; i < argc; i++) {
 				move m = string_to_move(&pos, argv[i]);
@@ -405,7 +405,7 @@ int parse(int *argc, char ***argv) {
 
 	if (interrupt)
 		ret = EXIT_LOOP;
-	else if (argc) {
+	else if (argc_t) {
 		struct func *f = NULL;
 		for (size_t k = 0; k < SIZE(func_arr); k++)
 			if (strcmp(func_arr[k].name, argv_t[0]) == 0)

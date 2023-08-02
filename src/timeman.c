@@ -22,7 +22,7 @@
 
 #include "util.h"
 
-int time_man(int etime, int16_t saved_evaluation[256], uint8_t depth) {
+int time_man(int etime, int32_t saved_evaluation[256], uint8_t depth) {
 	int var = 0;
 	if (depth > 2)
 		var = variance(saved_evaluation + depth - 3, 3);

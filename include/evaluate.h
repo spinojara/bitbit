@@ -25,6 +25,7 @@
 #define VALUE_NONE (0x7FFF)
 #define VALUE_INFINITE (0x7FFE)
 #define VALUE_MATE (0x7F00)
+#define VALUE_WIN (0x1000)
 #define VALUE_MATE_IN_MAX_PLY (VALUE_MATE - 128)
 
 enum { mg, eg };
@@ -43,6 +44,7 @@ extern mevalue rook_on_open_file;
 extern mevalue blocked_rook;
 extern mevalue undeveloped_piece;
 extern mevalue defended_minor;
+extern mevalue tempo_bonus;
 
 extern int weak_squares_danger;
 extern int enemy_no_queen_bonus;
@@ -51,10 +53,13 @@ extern int bishop_king_attack_danger;
 extern int rook_king_attack_danger;
 extern int queen_king_attack_danger;
 
-extern int tempo_bonus;
-
 extern int phase_max_material;
 extern int phase_min_material;
+
+extern const int material_value[7];
+
+#define PHASE (256)
+#define NORMAL_SCALE (256)
 
 struct evaluationinfo {
 	mevalue mobility[2];
@@ -69,6 +74,7 @@ struct evaluationinfo {
 	int king_attack_units[2];
 
 	int32_t material;
+	int32_t material_value[2];
 };
 
 enum {
@@ -79,20 +85,26 @@ enum {
 	queen_mg  = 1237, queen_eg  = 1077,
 };
 
-#define S(a, b) ((mevalue)((a) + ((uint32_t)(b) << 16)))
 
-static inline int16_t mevalue_mg(mevalue eval) { return (int16_t)((uint32_t)eval & 0xFFFF); }
-static inline int16_t mevalue_eg(mevalue eval) { return (int16_t)((uint32_t)(eval + 0x8000) >> 16); }
+#define S(m, e) ((int32_t)((m) + ((uint32_t)(e) << 16)))
 
-static inline mevalue new_mevalue(int16_t mgeval, int16_t egeval) {
-	return (mevalue)(mgeval + ((uint32_t)egeval << 16));
+static inline int32_t mevalue_mg(mevalue eval) {
+	union {
+		uint16_t u;
+		int16_t v;
+	} ret = { .u = (uint16_t)eval };
+	return (int32_t)ret.v;
 }
 
-static inline int16_t mevalue_evaluation(mevalue eval, double phase) {
-	return phase * mevalue_mg(eval) + (1 - phase) * mevalue_eg(eval);
+static inline int32_t mevalue_eg(mevalue eval) {
+	union {
+		uint16_t u;
+		int16_t v;
+	} ret = { .u = (uint32_t)(eval + 0x8000) >> 16 };
+	return (int32_t)ret.v;
 }
 
-int16_t evaluate_classical(const struct position *pos);
+int32_t evaluate_classical(const struct position *pos);
 
 void evaluate_print(struct position *pos);
 

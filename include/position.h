@@ -38,6 +38,7 @@ struct position {
 	uint8_t mailbox[64];
 
 	uint64_t zobrist_key;
+	uint64_t endgame_key;
 
 	alignas(64) int16_t accumulation[2][K_HALF_DIMENSIONS];
 	alignas(64) int32_t psqtaccumulation[2];

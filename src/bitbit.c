@@ -28,6 +28,7 @@
 #include "tables.h"
 #include "pawn.h"
 #include "nnue.h"
+#include "endgame.h"
 
 int main(int argc, char **argv) {
 	int ret = 0;
@@ -50,6 +51,7 @@ int main(int argc, char **argv) {
 	if ((ret = pawn_init()))
 		goto term;
 	interface_init();
+	endgame_init();
 	nnue_init(argc, argv);
 	ret = interface(argc, argv);
 term:;

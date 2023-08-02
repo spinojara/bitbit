@@ -46,22 +46,19 @@ SRC_BITBIT    = bitboard.c magicbitboard.c attackgen.c \
                 move.c util.c position.c movegen.c perft.c \
                 search.c evaluate.c tables.c interface.c \
                 transposition.c init.c timeman.c interrupt.c \
-                pawn.c history.c movepicker.c material.c \
-                moveorder.c option.c bitbit.c
+                pawn.c history.c movepicker.c moveorder.c \
+                option.c endgame.c bitbit.c
 
 SRC_NNUEGEN   = bitboard.c magicbitboard.c attackgen.c \
                 move.c util.c position.c movegen.c evaluate.c \
                 tables.c init.c timeman.c interrupt.c pawn.c \
-                moveorder.c material.c transposition.c \
-                movepicker.c history.c option.c nnue.c search.c \
-                nnuegen.c
+                moveorder.c transposition.c movepicker.c \
+                history.c option.c nnue.c search.c \
+                endgame.c nnuegen.c
 
-SRC_HISTOGRAM = bitboard.c magicbitboard.c attackgen.c \
-                move.c util.c position.c movegen.c evaluate.c \
-                tables.c init.c timeman.c interrupt.c pawn.c \
-                moveorder.c material.c transposition.c \
-                movepicker.c history.c option.c nnue.c search.c \
-                histogram.c
+SRC_HISTOGRAM = bitboard.c magicbitboard.c move.c util.c \
+                position.c init.c interrupt.c history.c \
+                option.c histogram.c
 
 SRC_PGNBIN    = bitboard.c magicbitboard.c attackgen.c \
                 move.c util.c position.c movegen.c init.c \
@@ -71,7 +68,8 @@ SRC_TEXELTUNE = bitboard.c magicbitboard.c attackgen.c \
                 move.c util.c position.c movegen.c evaluate.c \
                 tables.c init.c timeman.c history.c \
                 interrupt.c pawn.c moveorder.c transposition.c \
-                movepicker.c option.c search.c nnue.c texeltune.c
+                movepicker.c option.c search.c nnue.c endgame.c \
+                texeltune.c
 
 SRC_BATCH     = bitboard.c magicbitboard.c attackgen.c \
                 move.c util.c position.c movegen.c init.c \
@@ -168,4 +166,3 @@ options:
 	@echo "LDFLAGS = $(LDFLAGS)"
 
 .PHONY: all clean install uninstall options
-.SECONDARY:

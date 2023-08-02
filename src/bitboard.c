@@ -239,7 +239,7 @@ uint64_t same_colored_squares_calc(int square) {
 }
 
 uint64_t distance_calc(int a, int b) {
-	return MAX(ABS(a % 8 - b % 8), ABS(a / 8 - b / 8));
+	return MAX(ABS((a % 8) - (b % 8)), ABS((a / 8) - (b / 8)));
 }
 
 void bitboard_init(void) {

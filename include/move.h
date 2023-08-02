@@ -46,7 +46,10 @@ static inline void move_set_castle(move *m, uint64_t i) { *m |= (i << 0x13); }
 static inline void move_set_en_passant(move *m, uint64_t i) { *m |= (i << 0x18); }
 static inline void move_set_halfmove(move *m, uint64_t i) { *m |= (i << 0x1E); }
 
-#define MOVES_MAX 256
+#define MOVES_MAX (256)
+#define MOVE_EN_PASSANT (1)
+#define MOVE_PROMOTION (2)
+#define MOVE_CASTLE (3)
 
 #define M(source_square, target_square, flag, promotion) ((source_square) | ((target_square) << 0x6) | ((flag) << 0xC) | ((promotion) << 0xE))
 

@@ -26,7 +26,7 @@
 
 /* <http://vigna.di.unimi.it/ftp/papers/xorshift.pdf> */
 uint64_t gseed = 1274012836ull;
-uint64_t gxorshift64() {
+uint64_t gxorshift64(void) {
 	return xorshift64(&gseed);
 }
 uint64_t xorshift64(uint64_t *seed) {
@@ -75,7 +75,7 @@ char *appendstr(char *dest, const char *src) {
 	return dest;
 }
 
-int variance(int16_t *arr, int len) {
+int variance(int32_t *arr, int len) {
 	if (len < 2)
 		return -1;
 	int variance = 0;

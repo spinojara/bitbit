@@ -39,6 +39,7 @@ mevalue rook_on_open_file     = S(16, 11);
 mevalue blocked_rook          = S(-28, -4);
 mevalue undeveloped_piece     = S(-8, -32);
 mevalue defended_minor        = S(4, 9);
+mevalue tempo_bonus           = S(5, 5);
 
 /* king danger */
 int weak_squares_danger       = 29;
@@ -48,10 +49,10 @@ int bishop_king_attack_danger = 71;
 int rook_king_attack_danger   = 77;
 int queen_king_attack_danger  = 78;
 
-int tempo_bonus               = 5;
-
 int phase_max_material        = 7901;
 int phase_min_material        = 874;
+
+const int material_value[7] = { 0, 1, 3, 3, 5, 9, 0 };
 
 mevalue evaluate_mobility(const struct position *pos, struct evaluationinfo *ei, int turn) {
 	UNUSED(pos);
@@ -119,6 +120,7 @@ mevalue evaluate_knights(const struct position *pos, struct evaluationinfo *ei, 
 
 	while (b) {
 		ei->material += knight_mg;
+		ei->material_value[turn] += material_value[knight];
 		int square = ctz(b);
 		uint64_t squareb = bitboard(square);
 		
@@ -160,6 +162,7 @@ mevalue evaluate_bishops(const struct position *pos, struct evaluationinfo *ei, 
 	uint64_t b = pos->piece[turn][bishop];
 	while (b) {
 		ei->material += bishop_mg;
+		ei->material_value[turn] += material_value[bishop];
 		int square = ctz(b);
 		uint64_t squareb = bitboard(square);
 		
@@ -202,6 +205,7 @@ mevalue evaluate_rooks(const struct position *pos, struct evaluationinfo *ei, in
 	uint64_t b = pos->piece[turn][rook];
 	while (b) {
 		ei->material += rook_mg;
+		ei->material_value[turn] += material_value[rook];
 		int square = ctz(b);
 		
 		uint64_t attacks = rook_attacks(square, 0, all_pieces(pos) ^ pos->piece[turn][rook] ^ pos->piece[turn][queen]);
@@ -237,6 +241,7 @@ mevalue evaluate_queens(const struct position *pos, struct evaluationinfo *ei, i
 	uint64_t b = pos->piece[turn][queen];
 	while (b) {
 		ei->material += queen_mg;
+		ei->material_value[turn] += material_value[queen];
 		int square = ctz(b);
 		
 		uint64_t attacks = queen_attacks(square, 0, all_pieces(pos));
@@ -277,6 +282,11 @@ mevalue evaluate_space(const struct position *pos, struct evaluationinfo *ei, in
 	return S(bonus * weight * weight / 16, 0);
 }
 
+mevalue evaluate_turn(const struct position *pos, struct evaluationinfo *ei, int turn) {
+	UNUSED(ei);
+	return (pos->turn == turn) * tempo_bonus;
+}
+
 void evaluationinfo_init(const struct position *pos, struct evaluationinfo *ei) {
 	memset(ei->attacked_squares, 0, sizeof(ei->attacked_squares));
 
@@ -287,6 +297,8 @@ void evaluationinfo_init(const struct position *pos, struct evaluationinfo *ei) 
 	ei->pawn_attack_span[black] = fill_south(ei->attacked_squares[black][pawn]);
 
 	ei->material = 0;
+	ei->material_value[0] = 0;
+	ei->material_value[1] = 0;
 
 	for (int turn = 0; turn < 2; turn++) {
 		ei->mobility[turn] = 0;
@@ -330,32 +342,48 @@ mevalue evaluate_psqtable(const struct position *pos, struct evaluationinfo *ei,
 	return eval;
 }
 
-double phase(int32_t material) {
-	double phase = CLAMP(material, phase_min_material, phase_max_material);
-	phase = (phase - phase_min_material) / (phase_max_material - phase_min_material);
+int32_t phase(struct evaluationinfo *ei) {
+	int32_t phase = CLAMP(ei->material, phase_min_material, phase_max_material);
+	phase = (phase - phase_min_material) * PHASE / (phase_max_material - phase_min_material);
 	return phase;
 }
 
-int16_t evaluate_classical(const struct position *pos) {
+int32_t scale(const struct position *pos, struct evaluationinfo *ei, int strongside) {
+	int weakside = 1 - strongside;
+	int32_t scale = NORMAL_SCALE;
+	int32_t strongmaterial = ei->material_value[strongside];
+	int32_t weakmaterial = ei->material_value[weakside];
+	/* Scores also KBBKN as a draw. */
+	if (!pos->piece[strongside][pawn] && strongmaterial - weakmaterial <= material_value[bishop])
+		scale = (strongmaterial <= material_value[bishop]) ? 0 : (weakmaterial <= material_value[bishop]) ? 16 : 32;
+	return scale;
+}
+
+int32_t evaluate_tapered(mevalue eval, const struct position *pos, struct evaluationinfo *ei) {
+	int32_t p = phase(ei);
+	int strongside = mevalue_eg(eval) > 0;
+	int32_t s = scale(pos, ei, strongside);
+	int32_t ret = p * mevalue_mg(eval) + (PHASE - p) * s * mevalue_eg(eval) / NORMAL_SCALE;
+	return ret / PHASE;
+}
+
+int32_t evaluate_classical(const struct position *pos) {
 	struct evaluationinfo ei;
 
 	evaluationinfo_init(pos, &ei);
-
 	mevalue eval = evaluate_psqtable(pos, &ei, white) - evaluate_psqtable(pos, &ei, black);
-
 	eval += evaluate_pawns(pos, &ei, white) - evaluate_pawns(pos, &ei, black);
 	eval += evaluate_knights(pos, &ei, white) - evaluate_knights(pos, &ei, black);
 	eval += evaluate_bishops(pos, &ei, white) - evaluate_bishops(pos, &ei, black);
 	eval += evaluate_rooks(pos, &ei, white) - evaluate_rooks(pos, &ei, black);
 	eval += evaluate_queens(pos, &ei, white) - evaluate_queens(pos, &ei, black);
 	eval += evaluate_king(pos, &ei, white) - evaluate_king(pos, &ei, black);
-	
 	eval += evaluate_mobility(pos, &ei, white) - evaluate_mobility(pos, &ei, black);
 	eval += evaluate_space(pos, &ei, white) - evaluate_space(pos, &ei, black);
+	eval += evaluate_turn(pos, &ei, white) - evaluate_turn(pos, &ei, black);
 
-	int16_t ret = mevalue_evaluation(eval, phase(ei.material));
-
-	return (pos->turn ? ret : -ret) + tempo_bonus;
+	int32_t ret = evaluate_tapered(eval, pos, &ei);
+	return pos->turn ? ret : -ret;
 }
 
 void print_mevalue(mevalue eval);
@@ -390,7 +418,7 @@ void evaluate_print(struct position *pos) {
 	print_mevalue(eval);
 	printf(" |\n");
 	printf("+-------------+-------------+-------------+-------------+\n");
-	printf("Phase: %.2f\n", phase(ei.material));
+	printf("Phase: %.2f\n", (double)phase(&ei) / PHASE);
 	
 	char pieces[] = " PNBRQKpnbrqk";
 
@@ -430,7 +458,7 @@ void evaluate_print(struct position *pos) {
 	printf("Psqt: %+.2f\n", (double)(psqtaccumulation[white] - psqtaccumulation[black]) / 200);
 	printf("Positional %+.2f\n", (double)((2 * pos->turn - 1) * evaluate_nnue(pos) - (psqtaccumulation[white] - psqtaccumulation[black]) / 2) / 100);
 	printf("\n");
-	printf("Classical Evaluation: %+.2f\n", (double)mevalue_evaluation(eval, phase(ei.material)) / 100);
+	printf("Classical Evaluation: %+.2f\n", (double)0 / 100);
 	printf("NNUE Evaluation: %+.2f\n", (double)(2 * pos->turn - 1) * evaluate_nnue(pos) / 100);
 }
 

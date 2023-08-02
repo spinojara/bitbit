@@ -27,13 +27,13 @@
 
 typedef int64_t time_point;
 
-int time_man(int etime, int16_t saved_evaluation[256], uint8_t depth);
+int time_man(int etime, int32_t saved_evaluation[256], uint8_t depth);
 
 void time_init(struct position *pos, int etime, struct searchinfo *si);
 
 int stop_searching(struct searchinfo *si);
 
-static inline time_point time_now() {
+static inline time_point time_now(void) {
 	struct timeval t;
 	gettimeofday(&t, NULL);
 	return t.tv_sec * 1000000 + t.tv_usec;

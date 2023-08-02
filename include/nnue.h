@@ -75,8 +75,8 @@ void undo_accumulator(struct position *pos, move *m);
 
 int nnue_init(int argc, char **argv);
 
-int16_t evaluate_nnue(struct position *pos);
+int32_t evaluate_nnue(struct position *pos);
 
-int16_t evaluate_accumulator(struct position *pos);
+int32_t evaluate_accumulator(const struct position *pos);
 
 #endif

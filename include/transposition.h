@@ -20,6 +20,7 @@
 
 #include <stdint.h>
 #include <stdatomic.h>
+#include <assert.h>
 
 #include "position.h"
 #include "transposition.h"
@@ -28,6 +29,7 @@
 #include "search.h"
 #include "interrupt.h"
 #include "option.h"
+#include "util.h"
 
 enum {
 	BOUND_NONE  = 0,
@@ -36,21 +38,13 @@ enum {
 	BOUND_LOWER = 3,
 };
 
-typedef uint64_t transposition;
-
 struct transposition {
-	atomic_uint_least64_t zobrist_key;
-	atomic_uint_least64_t data;
+	uint64_t zobrist_key;
+	int16_t eval;
+	uint8_t depth;
+	uint8_t bound;
+	uint16_t m;
 };
-
-static inline int16_t transposition_eval(transposition e) { return (int16_t)(e & 0xFFFF); }
-static inline uint8_t transposition_depth(transposition e) { return (uint8_t)((e >> 16) & 0xFF); }
-static inline uint8_t transposition_bound(transposition e) { return (uint8_t)((e >> 24) & 0xFF); }
-static inline uint16_t transposition_move(transposition e) { return (uint16_t)((e >> 32) & 0xFFFF); }
-
-static inline transposition new_transposition(int16_t evaluation, uint8_t depth, uint8_t bound, move m) {
-	return (uint16_t)evaluation | (depth << 16) | (bound << 24) | ((m & 0xFFFF) << 32);
-}
 
 struct transposition_table {
 	struct transposition *table;
@@ -67,42 +61,42 @@ struct transposition_table {
 
 extern struct transposition_table *transposition_table;
 
-static inline struct transposition *get(struct position *pos) {
+static inline struct transposition *transposition_get(struct position *pos) {
 	return transposition_table->table + (pos->zobrist_key & transposition_table->index);
 }
 
-static inline transposition attempt_get(struct position *pos) {
+static inline struct transposition *transposition_probe(struct position *pos) {
 	if (!option_transposition)
-		return 0;
-	struct transposition *e = get(pos);
-	if (atomic_load(&e->zobrist_key) == pos->zobrist_key)
-		return atomic_load(&e->data);
-	return 0;
+		return NULL;
+	struct transposition *e = transposition_get(pos);
+	if (e->zobrist_key == pos->zobrist_key)
+		return e;
+	return NULL;
 }
 
-static inline void store(struct transposition *e, struct position *pos, int16_t evaluation, uint8_t depth, uint8_t bound, move m) {
-	/* keep old move if none available */
-	transposition t = atomic_load(&e->data);
-	if (!m && atomic_load(&e->zobrist_key) == pos->zobrist_key)
-		m = transposition_move(t);
-	t = new_transposition(evaluation, depth, bound, m);
-	atomic_store(&e->zobrist_key, pos->zobrist_key);
-	atomic_store(&e->data, t);
+static inline void transposition_set(struct transposition *e, struct position *pos, int32_t evaluation, uint8_t depth, uint8_t bound, move m) {
+	assert(-VALUE_INFINITE < evaluation && evaluation < VALUE_INFINITE);
+	/* Keep old move if none available. */
+	if (m)
+		e->m = (uint16_t)m;
+	e->zobrist_key = pos->zobrist_key;
+	e->eval = evaluation;
+	e->depth = depth;
+	e->bound = bound;
 }
 
-static inline void attempt_store(struct position *pos, int16_t evaluation, uint8_t depth, uint8_t bound, move m) {
+static inline void transposition_store(struct position *pos, int32_t evaluation, uint8_t depth, uint8_t bound, move m) {
 	if (interrupt || !option_transposition)
 		return;
-	struct transposition *e = get(pos);
-	transposition t = atomic_load(&e->data);
-	if ((bound == BOUND_EXACT && transposition_bound(t) != BOUND_EXACT) ||
-			atomic_load(&e->zobrist_key) != pos->zobrist_key ||
-			depth >= transposition_depth(t))
-		store(e, pos, evaluation, depth, bound, m);
+	struct transposition *e = transposition_get(pos);
+	if ((bound == BOUND_EXACT && e->bound != BOUND_EXACT) ||
+			e->zobrist_key != pos->zobrist_key ||
+			depth >= e->depth)
+		transposition_set(e, pos, evaluation, depth, bound, m);
 }
 
-static inline int16_t adjust_value_mate_store(int16_t evaluation, uint8_t ply) {
-	int adjustment = 0;
+static inline int32_t adjust_value_mate_store(int32_t evaluation, uint8_t ply) {
+	int32_t adjustment = 0;
 	if (evaluation >= VALUE_MATE_IN_MAX_PLY)
 		adjustment = ply;
 	else if (evaluation <= -VALUE_MATE_IN_MAX_PLY)
@@ -110,8 +104,8 @@ static inline int16_t adjust_value_mate_store(int16_t evaluation, uint8_t ply) {
 	return evaluation + adjustment;
 }
 
-static inline int16_t adjust_value_mate_get(int16_t evaluation, uint8_t ply) {
-	int adjustment = 0;
+static inline int32_t adjust_value_mate_get(int32_t evaluation, uint8_t ply) {
+	int32_t adjustment = 0;
 	/* should probably be more careful as to not return false mates */
 	if (evaluation >= VALUE_MATE_IN_MAX_PLY)
 		adjustment = -ply;
@@ -159,7 +153,7 @@ void undo_zobrist_key(struct position *pos, const move *m);
 void do_null_zobrist_key(struct position *pos, int en_passant);
 
 void startkey(struct position *pos);
-void set_zobrist_key(struct position *pos);
+void refresh_zobrist_key(struct position *pos);
 
 int transposition_init(void);
 

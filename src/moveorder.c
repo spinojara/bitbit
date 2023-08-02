@@ -30,7 +30,7 @@ int mvv_lva_lookup[13 * 13];
 
 unsigned move_order_piece_value[] = { 0, 100, 300, 300, 500, 900, 0 };
 
-void mvv_lva_init() {
+void mvv_lva_init(void) {
 	for (int attacker = 0; attacker < 13; attacker++)
 		for (int victim = 0; victim < 13; victim++)
 			mvv_lva_lookup[attacker + 13 * victim] = move_order_piece_value[victim % 6] -

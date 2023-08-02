@@ -67,9 +67,9 @@ int allocate_transposition_table(uint64_t t) {
 int transposition_table_occupancy(int bound) {
 	uint64_t occupied = 0;
 	for (uint64_t i = 0; i < transposition_table->size; i++) {
-		transposition t = atomic_load(&transposition_table->table[i].data);
-		if (bound ? (transposition_bound(t) == bound) :
-			transposition_bound(t) > 0)
+		struct transposition *e = &transposition_table->table[i];
+		if (bound ? (e->bound == bound) :
+			e->bound > 0)
 			occupied++;
 	}
 	return 1000 * occupied / transposition_table->size;
@@ -82,11 +82,11 @@ void zobrist_key_init(void) {
 	}
 	struct position pos;
 	startpos(&pos);
-	set_zobrist_key(&pos);
+	refresh_zobrist_key(&pos);
 	start = pos.zobrist_key;
 }
 
-/* should be called before do_move */
+/* Should be called before do_move. */
 void do_zobrist_key(struct position *pos, const move *m) {
 	assert(*m);
 	assert(pos->mailbox[move_from(m)]);
@@ -151,7 +151,7 @@ void do_zobrist_key(struct position *pos, const move *m) {
 	}
 }
 
-/* should be called before undo_move */
+/* Should be called before undo_move. */
 void undo_zobrist_key(struct position *pos, const move *m) {
 	assert(*m);
 	assert(!pos->mailbox[move_from(m)]);
@@ -245,7 +245,7 @@ void startkey(struct position *pos) {
 	pos->zobrist_key = start;
 }
 
-void set_zobrist_key(struct position *pos) {
+void refresh_zobrist_key(struct position *pos) {
 	pos->zobrist_key = 0;
 	for (int i = 0; i < 64; i++)
 		if (pos->mailbox[i])

@@ -23,7 +23,7 @@ extern int option_transposition;
 extern int option_history;
 extern int option_pawn;
 
-void print_options();
+void print_options(void);
 
 void setoption(int argc, char **argv);
 
