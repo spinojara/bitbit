@@ -21,10 +21,12 @@
 #include "strings.h"
 #include "transposition.h"
 
-int option_nnue = 0;
+int option_nnue          = 0;
 int option_transposition = 1;
-int option_history = 1;
-int option_pawn = 1;
+int option_history       = 1;
+int option_pawn          = 1;
+int option_endgame       = 1;
+int option_damp          = 1;
 
 void print_options(void) {
 	printf("option name clear hash type button\n");

@@ -15,18 +15,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef OPTION_H
-#define OPTION_H
+#include "bitbase.h"
 
-extern int option_nnue;
-extern int option_transposition;
-extern int option_history;
-extern int option_pawn;
-extern int option_endgame;
-extern int option_damp;
-
-void print_options(void);
-
-void setoption(int argc, char **argv);
-
-#endif
+uint64_t bitbase[BITBASE_TABLE_SIZE];

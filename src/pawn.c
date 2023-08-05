@@ -28,13 +28,13 @@
 /* around 100 KiB with hitrate of ~80% */
 #define PAWN_TABLE_SIZE ((uint64_t)1 << 12)
 
-mevalue backward_pawn  = S(-11, -6);
-mevalue supported_pawn = S( 23, 18);
-mevalue isolated_pawn  = S(-19,-20);
-mevalue doubled_pawn   = S(-15,-52);
-mevalue connected_pawns[7] = { S(  0,  0), S(  3,  1), S(  7,  8), S(  7, 10), S(  7, 22), S( 25, 67), S(220,228), };
-mevalue passed_pawn[7]    = { S(  0,  0), S( 35, 59), S( 26, 82), S( 41,148), S( 84,242), S(101,403), S(-132,-6), };
-mevalue passed_file[4]   = { S(-14, 16), S(-45,  6), S(-62,-45), S(-51,-73), };
+mevalue backward_pawn  = S(-9, 8);
+mevalue supported_pawn = S( 13, -5);
+mevalue isolated_pawn  = S(-7, -18);
+mevalue doubled_pawn   = S(-11,-17);
+mevalue connected_pawns[7] = { S(  0,  0), S(  1, -1), S(  2,  2), S(  6,  4), S(  8,  7), S( 19, 17), S(106, 47) };
+mevalue passed_pawn[7]    = { S(  0,  0), S(-24, -5), S(-20,  0), S(  0, 14), S( 31, 28), S( 59, 38), S(123, 37), };
+mevalue passed_file[4]   = { S( 34, 31), S( 24, 26), S(  8, 11), S( -4,  6), };
 
 struct pawn {
 	uint64_t pawns[2];
@@ -85,11 +85,11 @@ mevalue evaluate_pawns(const struct position *pos, struct evaluationinfo *ei, in
 	struct pawn *e = pawn_attempt_get(pawns);
 	if (e)
 		return e->evaluation;
-	/* we are now always evaluation from white's perspective */
+	/* we are now always evaluating from white's perspective */
 	mevalue eval = 0;
 
 	uint64_t b = pawns[white];
-	uint64_t neighbours, doubled, stoppers, support, phalanx, lever, leverpush, blockers;
+	uint64_t neighbours, doubled, stoppers, support, phalanx, lever, leverpush, blocker;
 	int backward, passed;
 	int square;
 	uint64_t squareb;
@@ -104,41 +104,41 @@ mevalue evaluate_pawns(const struct position *pos, struct evaluationinfo *ei, in
 		doubled    = pawns[white] & bitboard(square - 8);
 		neighbours = pawns[white] & adjacent_files(square);
 		stoppers   = pawns[black] & passed_files(square, white);
-		blockers   = pawns[black] & bitboard(square + 8);
+		blocker    = pawns[black] & bitboard(square + 8);
 		support    = neighbours & rank(square - 8);
 		phalanx    = neighbours & rank(square);
 		lever      = pawns[black] & (shift_north_west(squareb) | shift_north_east(squareb));
 		leverpush  = pawns[black] & (shift_north(shift_north_west(squareb) | shift_north_east(squareb)));
 
 		/* int */
-		backward   = !(neighbours & passed_files(square + 8, black)) && (leverpush | blockers);
+		backward   = !(neighbours & passed_files(square + 8, black)) && (leverpush | blocker);
 		passed     = !(stoppers ^ lever) || (!(stoppers ^ lever ^ leverpush) && popcount(phalanx) >= popcount(leverpush));
 		passed    &= !(passed_files(square, white) & file(square) & pawns[white]);
 
 		if (backward) {
-			//ei->backward_pawn[color] += 1;
+			ei->backward_pawn[color] += 1;
 			eval += backward_pawn;
 		}
 
 		if (support | phalanx) {
-			//ei->supported_pawn[color] += popcount(support);
-			//ei->connected_pawns[color][y] += 2 + (phalanx != 0);
+			ei->supported_pawn[color] += popcount(support);
+			ei->connected_pawns[color][y] += 2 + (phalanx != 0);
 			eval += connected_pawns[y] * (2 + (phalanx != 0)) + supported_pawn * popcount(support);
 		}
 
 		if (passed) {
-			//ei->passed_pawn[color][y] += 1;
-			//ei->passed_file[color][MIN(x, 7 - x)] += 1;
+			ei->passed_pawn[color][y] += 1;
+			ei->passed_file[color][MIN(x, 7 - x)] += 1;
 			eval += passed_pawn[y] + passed_file[MIN(x, 7 - x)];
 		}
 
 		if (!neighbours) {
-			//ei->isolated_pawn[color] += 1;
+			ei->isolated_pawn[color] += 1;
 			eval += isolated_pawn;
 		}
 		
 		if (!support && doubled) {
-			//ei->doubled_pawn[color] += 1;
+			ei->doubled_pawn[color] += 1;
 			eval += doubled_pawn;
 		}
 

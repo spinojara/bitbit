@@ -42,52 +42,57 @@ LDFLAGS = $(CFLAGS)
 
 DVERSION = -DVERSION=$(VERSION)
 
-SRC_BITBIT    = bitboard.c magicbitboard.c attackgen.c \
-                move.c util.c position.c movegen.c perft.c \
-                search.c evaluate.c tables.c interface.c \
-                transposition.c init.c timeman.c interrupt.c \
-                pawn.c history.c movepicker.c moveorder.c \
-                option.c endgame.c bitbit.c
+SRC_BITBIT     = bitboard.c magicbitboard.c attackgen.c \
+                 move.c util.c position.c movegen.c perft.c \
+                 search.c evaluate.c tables.c interface.c \
+                 transposition.c init.c timeman.c interrupt.c \
+                 pawn.c history.c movepicker.c moveorder.c \
+                 option.c endgame.c bitbase.c bitbit.c
 
-SRC_NNUEGEN   = bitboard.c magicbitboard.c attackgen.c \
-                move.c util.c position.c movegen.c evaluate.c \
-                tables.c init.c timeman.c interrupt.c pawn.c \
-                moveorder.c transposition.c movepicker.c \
-                history.c option.c nnue.c search.c \
-                endgame.c nnuegen.c
+SRC_GENNNUE    = bitboard.c magicbitboard.c attackgen.c \
+                 move.c util.c position.c movegen.c evaluate.c \
+                 tables.c init.c timeman.c interrupt.c pawn.c \
+                 moveorder.c transposition.c movepicker.c \
+                 history.c option.c nnue.c search.c \
+                 endgame.c gennnue.c
 
-SRC_HISTOGRAM = bitboard.c magicbitboard.c move.c util.c \
-                position.c init.c interrupt.c history.c \
-                option.c histogram.c
+SRC_HISTOGRAM  = bitboard.c magicbitboard.c move.c util.c \
+                 position.c init.c interrupt.c history.c \
+                 option.c histogram.c evaluate.c pawn.c \
+                 endgame.c tables.c attackgen.c
 
-SRC_PGNBIN    = bitboard.c magicbitboard.c attackgen.c \
-                move.c util.c position.c movegen.c init.c \
-                evaluate.c option.c transposition.c search.c \
-                movepicker.c nnue.c pawn.c tables.c moveorder.c \
-		endgame.c pgnbin.c
+SRC_PGNBIN     = bitboard.c magicbitboard.c attackgen.c \
+                 move.c util.c position.c movegen.c init.c \
+                 evaluate.c option.c transposition.c search.c \
+                 movepicker.c nnue.c pawn.c tables.c moveorder.c \
+	         endgame.c pgnbin.c
 
-SRC_TEXELTUNE = bitboard.c magicbitboard.c attackgen.c \
-                move.c util.c position.c movegen.c evaluate.c \
-                tables.c init.c timeman.c history.c \
-                interrupt.c pawn.c moveorder.c transposition.c \
-                movepicker.c option.c search.c nnue.c endgame.c \
-                texeltune.c
+SRC_TEXELTUNE  = bitboard.c magicbitboard.c attackgen.c \
+                 move.c util.c position.c movegen.c evaluate.c \
+                 tables.c init.c timeman.c history.c \
+                 interrupt.c pawn.c moveorder.c transposition.c \
+                 movepicker.c option.c search.c nnue.c endgame.c \
+                 texeltune.c
 
-SRC_BATCH     = bitboard.c magicbitboard.c attackgen.c \
-                move.c util.c position.c movegen.c init.c \
-                batch.c
+SRC_GENBITBASE = bitboard.c magicbitboard.c init.c attackgen.c \
+                 bitbase.c util.c position.c genbitbase.c
+
+SRC_BATCH      = bitboard.c magicbitboard.c attackgen.c \
+                 move.c util.c position.c movegen.c init.c \
+                 batch.c
 
 SRC_VISUALIZE = util.c visualize.c
 
-SRC = $(SRC_BITBIT) $(SRC_NNUEGEN) $(SRC_HISTOGRAM) $(SRC_PGNBIN) $(SRC_TEXELTUNE) $(SRC_BATCH) $(SRC_VISUALIZE)
+SRC = $(SRC_BITBIT) $(SRC_GENNNUE) $(SRC_HISTOGRAM) $(SRC_PGNBIN) $(SRC_TEXELTUNE) $(SRC_GENBITBASE) $(SRC_BATCH) $(SRC_VISUALIZE)
 
-OBJ_BITBIT    = $(addprefix obj/,$(SRC_BITBIT:.c=.o)) obj/incbin.o obj/incbinnnue.o
-OBJ_NNUEGEN   = $(addprefix obj/,$(SRC_NNUEGEN:.c=.o))
-OBJ_HISTOGRAM = $(addprefix obj/,$(SRC_HISTOGRAM:.c=.o))
-OBJ_PGNBIN    = $(addprefix obj/,$(SRC_PGNBIN:.c=.o))
-OBJ_TEXELTUNE = $(addprefix obj/,$(SRC_TEXELTUNE:.c=.o))
-OBJ_BATCH     = $(addprefix obj/pic,$(SRC_BATCH:.c=.o))
-OBJ_VISUALIZE = $(addprefix obj/pic,$(SRC_VISUALIZE:.c=.o))
+OBJ_BITBIT     = $(addprefix obj/,$(SRC_BITBIT:.c=.o)) obj/incbin.o obj/incbinnnue.o
+OBJ_GENNNUE    = $(addprefix obj/,$(SRC_GENNNUE:.c=.o))
+OBJ_HISTOGRAM  = $(addprefix obj/,$(SRC_HISTOGRAM:.c=.o))
+OBJ_PGNBIN     = $(addprefix obj/,$(SRC_PGNBIN:.c=.o))
+OBJ_TEXELTUNE  = $(addprefix obj/,$(SRC_TEXELTUNE:.c=.o))
+OBJ_GENBITBASE = $(addprefix obj/,$(SRC_GENBITBASE:.c=.o))
+OBJ_BATCH      = $(addprefix obj/pic,$(SRC_BATCH:.c=.o))
+OBJ_VISUALIZE  = $(addprefix obj/pic,$(SRC_VISUALIZE:.c=.o))
 
 PREFIX = /usr/local
 BINDIR = $(PREFIX)/bin
@@ -95,12 +100,12 @@ MANPREFIX = $(PREFIX)/share
 MANDIR = $(MANPREFIX)/man
 MAN6DIR = $(MANDIR)/man6
 
-all: bitbit nnuegen histogram pgnbin texeltune libbatch.so libvisualize.so
+all: bitbit gennnue histogram pgnbin texeltune genbitbase libbatch.so libvisualize.so
 
 bitbit: $(OBJ_BITBIT)
 	$(CC) $(LDFLAGS) -lm $^ -o $@
 
-nnuegen: $(OBJ_NNUEGEN)
+gennnue: $(OBJ_GENNNUE)
 	$(CC) $(LDFLAGS) -lm -pthread $^ -o $@
 
 histogram: $(OBJ_HISTOGRAM)
@@ -111,6 +116,9 @@ pgnbin: $(OBJ_PGNBIN)
 
 texeltune: $(OBJ_TEXELTUNE)
 	$(CC) $(LDFLAGS) -lm -pthread $^ -o $@
+
+genbitbase: $(OBJ_GENBITBASE)
+	$(CC) $(LDFLAGS) $^ -o $@
 
 libbatch.so: $(OBJ_BATCH)
 	$(CC) $(LDFLAGS) -shared $^ -o $@

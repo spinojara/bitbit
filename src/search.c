@@ -94,19 +94,20 @@ static inline void store_pv_move(const move *m, uint8_t ply, move pv[256][256]) 
 	memcpy(pv[ply] + ply + 1, pv[ply + 1] + ply + 1, sizeof(move) * (255 - ply));
 }
 
-/* random drawn score to avoid threefold blindness */
+/* Random drawn score to avoid threefold blindness. */
 static inline int32_t draw(const struct searchinfo *si) {
 	return (si->nodes & 0x3);
 }
 
 static inline int32_t evaluate(const struct position *pos) {
-	struct endgame *e = endgame_probe(pos);
+	struct endgame *e = option_endgame ? endgame_probe(pos) : NULL;
 	if (e)
 		return endgame_evaluate(e, pos);
 	int32_t evaluation = option_nnue ? evaluate_accumulator(pos)
 		                         : evaluate_classical(pos);
 	/* Damp when shuffling pieces. */
-	evaluation = evaluation * (200 - pos->halfmove) / 200;
+	if (option_damp)
+		evaluation = evaluation * (200 - pos->halfmove) / 200;
 	return evaluation;
 }
 

@@ -56,9 +56,7 @@ int phase_bishop              = 309;
 int phase_rook                = 651;
 int phase_queen               = 1437;
 
-int division = 8;
-
-const int material_value[7] = { 0, 1, 3, 3, 5, 9, 0 };
+const int material_value[7] = { 0, 100, 300, 300, 500, 900, 0 };
 
 mevalue evaluate_mobility(const struct position *pos, struct evaluationinfo *ei, int turn) {
 	UNUSED(pos);
@@ -124,7 +122,7 @@ mevalue evaluate_king(const struct position *pos, struct evaluationinfo *ei, int
 			      - enemy_no_queen_bonus * !pos->piece[1 - turn][queen]
 			      + king_danger;
 	if (ei->king_danger[turn] > 0)
-		eval -= S(ei->king_danger[turn] * ei->king_danger[turn] / 2048, ei->king_danger[turn] / division);
+		eval -= S(ei->king_danger[turn] * ei->king_danger[turn] / 2048, ei->king_danger[turn] / 8);
 
 	return eval;
 }
@@ -331,7 +329,7 @@ mevalue evaluate_space(const struct position *pos, struct evaluationinfo *ei, in
 	return S(bonus * weight * weight / 16, 0);
 }
 
-mevalue evaluate_turn(const struct position *pos, struct evaluationinfo *ei, int turn) {
+mevalue evaluate_tempo(const struct position *pos, struct evaluationinfo *ei, int turn) {
 	UNUSED(ei);
 	return (pos->turn == turn) * tempo_bonus;
 }
@@ -394,9 +392,9 @@ int32_t scale(const struct position *pos, const struct evaluationinfo *ei, int s
 	int32_t scale = NORMAL_SCALE;
 	int32_t strongmaterial = ei->material_value[strongside];
 	int32_t weakmaterial = ei->material_value[weakside];
-	/* Scores also KBBKN as a draw. */
+	/* Scores also KBBKN as a draw which is ok. */
 	if (!pos->piece[strongside][pawn] && strongmaterial - weakmaterial <= material_value[bishop])
-		scale = (strongmaterial <= material_value[bishop]) ? 0 : (weakmaterial <= material_value[bishop]) ? 16 : 32;
+		scale = (strongmaterial <= material_value[bishop]) ? 0 : (weakmaterial < material_value[rook]) ? 16 : 32;
 	return scale;
 }
 
@@ -420,7 +418,7 @@ int32_t evaluate_classical_ei(const struct position *pos, struct evaluationinfo 
 	ei->eval += evaluate_king(pos, ei, white) - evaluate_king(pos, ei, black);
 	ei->eval += evaluate_mobility(pos, ei, white) - evaluate_mobility(pos, ei, black);
 	ei->eval += evaluate_space(pos, ei, white) - evaluate_space(pos, ei, black);
-	ei->eval += evaluate_turn(pos, ei, white) - evaluate_turn(pos, ei, black);
+	ei->eval += evaluate_tempo(pos, ei, white) - evaluate_tempo(pos, ei, black);
 
 	int32_t ret = evaluate_tapered(pos, ei);
 	return pos->turn ? ret : -ret;
@@ -439,31 +437,39 @@ void evaluate_print(struct position *pos) {
 	struct evaluationinfo ei = { 0 };
 	evaluationinfo_init(pos, &ei);
 
-	mevalue eval = 0;
-
 	printf("+-------------+-------------+-------------+-------------+\n"
 	       "| Term        |    White    |    Black    |    Total    |\n"
 	       "|             |   MG    EG  |   MG    EG  |   MG    EG  |\n"
 	       "+-------------+-------------+-------------+-------------+\n");
-	eval += evaluate_print_x("PSQT", pos, &ei, &evaluate_psqtable);
-	eval += evaluate_print_x("Knights", pos, &ei, &evaluate_knights);
-	eval += evaluate_print_x("Bishops", pos, &ei, &evaluate_bishops);
-	eval += evaluate_print_x("Rooks", pos, &ei, &evaluate_rooks);
-	eval += evaluate_print_x("Queens", pos, &ei, &evaluate_queens);
-	eval += evaluate_print_x("Pawns", pos, &ei, &evaluate_pawns);
-	eval += evaluate_print_x("King", pos, &ei, &evaluate_king);
-	eval += evaluate_print_x("Mobility", pos, &ei, &evaluate_mobility);
-	eval += evaluate_print_x("Space", pos, &ei, &evaluate_space);
-	double wt = (double)(pos->turn == white) * tempo_bonus / 100;
-	double bt = (double)(pos->turn == black) * tempo_bonus / 100;
-	eval += (2 * pos->turn - 1) * S(tempo_bonus, tempo_bonus);
-	printf("| Tempo       | %+.2f %+.2f | %+.2f %+.2f | %+.2f %+.2f |\n", wt, wt, bt, bt, wt - bt, wt - bt);
+	ei.eval += evaluate_print_x("PSQT", pos, &ei, &evaluate_psqtable);
+	ei.eval += evaluate_print_x("Knights", pos, &ei, &evaluate_knights);
+	ei.eval += evaluate_print_x("Bishops", pos, &ei, &evaluate_bishops);
+	ei.eval += evaluate_print_x("Rooks", pos, &ei, &evaluate_rooks);
+	ei.eval += evaluate_print_x("Queens", pos, &ei, &evaluate_queens);
+	ei.eval += evaluate_print_x("Pawns", pos, &ei, &evaluate_pawns);
+	ei.eval += evaluate_print_x("King", pos, &ei, &evaluate_king);
+	ei.eval += evaluate_print_x("Mobility", pos, &ei, &evaluate_mobility);
+	ei.eval += evaluate_print_x("Space", pos, &ei, &evaluate_space);
+	ei.eval += evaluate_print_x("Tempo", pos, &ei, &evaluate_tempo);
 	printf("+-------------+-------------+-------------+-------------+\n");
-	printf("| Total       |             |             | ");
-	print_mevalue(eval);
+	printf("| Total                                   | ");
+	print_mevalue(ei.eval);
 	printf(" |\n");
+
+	int32_t p = phase(&ei);
+	int strongside = mevalue_mg(ei.eval) > 0;
+	int32_t s = scale(pos, &ei, strongside);
+
+	int32_t scaledmg = mevalue_mg(ei.eval);
+	int32_t scaledeg = s * mevalue_eg(ei.eval) / NORMAL_SCALE;
+	printf("| Scaled  Where s = %.2f                  | ", (double)s / NORMAL_SCALE);
+	print_mevalue(S(scaledmg, scaledeg));
+	printf(" |\n");
+	printf("| Tapered Where p = %.2f                  | ", (double)p / PHASE);
+	print_mevalue(S(p * scaledmg / PHASE, (PHASE - p) * scaledeg / PHASE));
+	printf(" |\n");
+	printf("| Final                                   |       %+.2f |\n", (double)evaluate_tapered(pos, &ei) / 100);
 	printf("+-------------+-------------+-------------+-------------+\n");
-	printf("Phase: %.2f\n", (double)phase(&ei) / PHASE);
 	
 	char pieces[] = " PNBRQKpnbrqk";
 
@@ -503,7 +509,7 @@ void evaluate_print(struct position *pos) {
 	printf("Psqt: %+.2f\n", (double)(psqtaccumulation[white] - psqtaccumulation[black]) / 200);
 	printf("Positional %+.2f\n", (double)((2 * pos->turn - 1) * evaluate_nnue(pos) - (psqtaccumulation[white] - psqtaccumulation[black]) / 2) / 100);
 	printf("\n");
-	printf("Classical Evaluation: %+.2f\n", (double)0 / 100);
+	printf("Classical Evaluation: %+.2f\n", (double)(2 * pos->turn - 1) * evaluate_classical(pos) / 100);
 	printf("NNUE Evaluation: %+.2f\n", (double)(2 * pos->turn - 1) * evaluate_nnue(pos) / 100);
 }
 

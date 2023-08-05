@@ -62,8 +62,6 @@ extern int phase_bishop;
 extern int phase_rook;
 extern int phase_queen;
 
-extern int division;
-
 extern const int material_value[7];
 
 #define PHASE (256)
@@ -136,8 +134,10 @@ static inline int32_t mevalue_eg(mevalue eval) {
 }
 
 int32_t evaluate_classical(const struct position *pos);
-
 int32_t evaluate_classical_ei(const struct position *pos, struct evaluationinfo *ei);
+
+int32_t phase(const struct evaluationinfo *ei);
+int32_t scale(const struct position *pos, const struct evaluationinfo *ei, int strongside);
 
 void evaluate_print(struct position *pos);
 

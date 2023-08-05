@@ -303,7 +303,7 @@ int fen_is_ok(int argc, char **argv) {
 		goto failure;
 
 	if (argc >= 5)
-		if (strint(argv[4]) >= 100)
+		if (strint(argv[4]) > 100)
 			goto failure;
 	if (argc >= 6)
 		if (strint(argv[5]) > 6000)

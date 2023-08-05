@@ -1,9 +1,19 @@
-add checks for malloc
-optimize libbatch.so by combining the 4 append_active_indices
-aspiration window should probably return VALUE_NONE if interrupted
-grain evaluation for better move ordering etc
-rook and knight pair penalties
-test for integer overflows using clang in real games
-make unit tests for mevalue_mg etc
-use int for ply and depth
-unfinished search
+- Add checks for malloc.
+- Aspiration window should probably return VALUE_NONE if interrupted.
+- Grain evaluation for better move ordering etc.
+- Rook and knight pair penalties.
+- Test for integer overflows using clang in real games.
+- Make unit tests for mevalue_mg etc.
+- Use int for ply and depth.
+- Unfinished search.
+- Check histogram to see which endgames where a material difference >= 3 are drawn.
+  Add most of these endgames to the endgame database.
+- Observed draw with KRRKR which should never happen. This is probably because
+  endgame value is less than middle game value and bitbit refuses to trade. If we
+  manually increase the endgame values above the middle game values and then tune
+  this will most likely be resolved.
+- Add KBPK endgame. This is only lost if the pawn promotes on a corner and this
+  corner is the opposite color of the bishop.
+- Add KRNKR endgame which seems drawn.
+- Bonus for king in endgame being close to pawns. The winning site should maybe
+  get a bonus for having kings close to each other.

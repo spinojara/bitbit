@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <inttypes.h>
 #include <time.h>
+#include <math.h>
 
 #include "util.h"
 #include "bitboard.h"
@@ -33,6 +34,7 @@
 #include "option.h"
 #include "tables.h"
 #include "moveorder.h"
+#include "endgame.h"
 
 const int quiet_eval_delta = 50;
 
@@ -40,6 +42,8 @@ int skip_mates = 0;
 int shuffle = 0;
 int quiet = 0;
 int skip_first = 0;
+int skip_endgames = 0;
+int skip_halfmove = 0;
 
 int quiescence_eval_differs(struct position *pos) {
 	struct searchinfo si = { 0 };
@@ -94,6 +98,7 @@ void write_fens(struct position *pos, int result, FILE *fin, FILE *fout) {
 	int flag = 0;
 	int16_t perspective_result;
 	const uint16_t zero = 0;
+	const int draw = result == 0;
 
 	while ((ptr[0] = fgets(line, sizeof(line), fin))) {
 		if (*ptr[0] == '\n' || *ptr[0] == '[') {
@@ -113,19 +118,23 @@ void write_fens(struct position *pos, int result, FILE *fin, FILE *fout) {
 			if (skip_mates)
 				for (int i = 1; ptr[1][i] && ptr[1][i] != '\n' && ptr[1][i] != ' '; i++)
 					if (ptr[1][i] == 'M')
-						break;
+						goto early_exit;
 
 			m = string_to_move(pos, ptr[0]);
 			if (m) {
 				if (moves >= skip_first) {
 					perspective_result = (2 * pos->turn - 1) * VALUE_MATE * result;
-					int draw = perspective_result == 0;
+					if (skip_endgames) {
+						refresh_endgame_key(pos);
+						if (endgame_probe(pos))
+							goto early_exit;
+					}
+
 					int skip = 0;
+					if (skip_halfmove && !gbernoulli(exp(-pos->halfmove)))
+						skip = 1;
+
 					if (quiet && (generate_checkers(pos, pos->turn) || quiescence_eval_differs(pos)))
-						skip = 1;
-					if (draw)
-						skip = 1;
-					if (draw && popcount(pos->piece[white][all] | pos->piece[black][all]) <= 6)
 						skip = 1;
 
 					if (skip)
@@ -147,6 +156,7 @@ void write_fens(struct position *pos, int result, FILE *fin, FILE *fout) {
 			ptr[0] = ptr[1] + 1;
 		}
 	}
+early_exit:
 
 	/* If at least one move has been written. */
 	if (moves > skip_first) {
@@ -165,6 +175,10 @@ int main(int argc, char **argv) {
 			shuffle = 1;
 		else if (!strcmp(argv[i], "--quiet"))
 			quiet = 1;
+		else if (!strcmp(argv[i], "--skip-endgames"))
+			skip_endgames = 1;
+		else if (!strcmp(argv[i], "--skip-halfmove"))
+			skip_halfmove = 1;
 		else if (!strcmp(argv[i], "--skip-first")) {
 			i++;
 			if (!(i < argc))
@@ -200,6 +214,8 @@ int main(int argc, char **argv) {
 	option_transposition = 0;
 	option_history = 0;
 	option_pawn = 0;
+	option_endgame = 0;
+	option_damp = 0;
 
 	magicbitboard_init();
 	attackgen_init();
@@ -208,6 +224,7 @@ int main(int argc, char **argv) {
 	search_init();
 	moveorder_init();
 	position_init();
+	endgame_init();
 	uint64_t seed = time(NULL);
 
 	size_t total = 0, count;
@@ -216,6 +233,7 @@ int main(int argc, char **argv) {
 		if (strstr(line, "[Round"))
 			total++;
 
+	long *plycount = malloc(total * sizeof(*plycount));
 	long *offset = malloc(total * sizeof(*offset));
 	fseek(fin, 0, SEEK_SET);
 	count = 0;

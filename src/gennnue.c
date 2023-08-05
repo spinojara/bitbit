@@ -364,10 +364,12 @@ int main(int argc, char **argv) {
 	hash_table = malloc(HASH_SIZE * sizeof(*hash_table));
 	memset(hash_table, 0, HASH_SIZE * sizeof(*hash_table));
 
-	option_history = 1;
-	option_pawn = 0;
+	option_history       = 1;
+	option_pawn          = 0;
 	option_transposition = 1;
-	option_nnue = 0;
+	option_nnue          = 0;
+	option_endgame       = 1;
+	option_damp          = 0;
 
 	int n_threads = 12;
 	int depth = 7;

@@ -28,8 +28,7 @@
 #include "evaluate.h"
 #include "bitboard.h"
 #include "move.h"
-
-#define RANKED_WIN(rank) (VALUE_WIN + 0x100 * (rank))
+#include "nnue.h"
 
 uint64_t endgame_keys[2 * 6 * 11];
 struct endgame endgame_table[ENDGAMESIZE] = { 0 };
@@ -141,15 +140,25 @@ void endgame_test(void) {
 	printf("Total KXK: %ld\n", KXK);
 }
 
+/* +---+---+---+---+---+---+---+---+
+ * | 6 | 5 | 4 | 3 | 3 | 4 | 5 | 6 |
+ * +---+---+---+---+---+---+---+---+
+ * | 5 | 4 | 3 | 2 | 2 | 3 | 4 | 5 |
+ * +---+---+---+---+---+---+---+---+
+ * | 4 | 3 | 2 | 1 | 1 | 2 | 3 | 4 |
+ * +---+---+---+---+---+---+---+---+
+ * | 3 | 2 | 1 | 0 | 0 | 1 | 2 | 3 |
+ * +---+---+---+---+---+---+---+---+
+ * | 3 | 2 | 1 | 0 | 0 | 1 | 2 | 3 |
+ * +---+---+---+---+---+---+---+---+
+ * | 4 | 3 | 2 | 1 | 1 | 2 | 3 | 4 |
+ * +---+---+---+---+---+---+---+---+
+ * | 5 | 4 | 3 | 2 | 2 | 3 | 4 | 5 |
+ * +---+---+---+---+---+---+---+---+
+ * | 6 | 5 | 4 | 3 | 3 | 4 | 5 | 6 |
+ * +---+---+---+---+---+---+---+---+
+ */
 static inline int32_t push_toward_edge(int square) {
-	int x = square % 8;
-	int y = square / 8;
-	x = MIN(x, 7 - x);
-	y = MIN(y, 7 - y);
-	return 3 - MIN(x, y);
-}
-
-static inline int32_t push_toward_corner(int square) {
 	int x = square % 8;
 	int y = square / 8;
 	x = MIN(x, 7 - x);
@@ -172,6 +181,30 @@ int32_t evaluate_draw(const struct position *pos, int strongside) {
 	return 0;
 }
 
+int32_t evaluate_KRKN(const struct position *pos, int strongside) {
+	int weakside = 1 - strongside;
+	UNUSED(pos);
+	int weak_king = ctz(pos->piece[weakside][king]);
+	int weak_knight = ctz(pos->piece[weakside][knight]);
+	return push_toward_edge(weak_king) + push_away(weak_king, weak_knight);
+}
+
+int32_t evaluate_KRKB(const struct position *pos, int strongside) {
+	int weakside = 1 - strongside;
+	UNUSED(pos);
+	int weak_king = ctz(pos->piece[weakside][king]);
+	return push_toward_edge(weak_king);
+}
+
+int32_t evaluate_KNNKP(const struct position *pos, int strongside) {
+	int weakside = 1 - strongside;
+	UNUSED(pos);
+	int square = ctz(pos->piece[weakside][pawn]);
+	int weak_king = ctz(pos->piece[weakside][king]);
+	int y = orient(weakside, square) / 8;
+	return 3 * push_toward_edge(weak_king) - 4 * y;
+}
+
 int32_t evaluate_KBNK(const struct position *pos, int strongside) {
 	int weakside = 1 - strongside;
 	UNUSED(pos);
@@ -181,15 +214,31 @@ int32_t evaluate_KBNK(const struct position *pos, int strongside) {
 	int corner1 = darkbishop ? a1 : a8;
 	int corner2 = darkbishop ? h8 : h1;
 	int closest_corner = distance(weak_king, corner1) < distance(weak_king, corner2) ? corner1 : corner2;
-	return RANKED_WIN(0) + push_toward(strong_king, weak_king) + 0x8 * push_toward(closest_corner, weak_king) - pos->halfmove;
+	return VALUE_WIN + material_value[bishop] + material_value[knight] + push_toward(strong_king, weak_king) + 0x8 * push_toward(closest_corner, weak_king) - pos->halfmove;
 }
 
-int32_t evaluate_KBBK(const struct position *pos, int strongside) {
+int32_t evaluate_KQKP(const struct position *pos, int strongside) {
 	int weakside = 1 - strongside;
 	UNUSED(pos);
 	int weak_king = ctz(pos->piece[weakside][king]);
 	int strong_king = ctz(pos->piece[strongside][king]);
-	return RANKED_WIN(1) + push_toward(strong_king, weak_king) + 0x8 * push_toward_corner(weak_king) - pos->halfmove;
+	int32_t eval = push_toward(strong_king, weak_king);
+
+	int square = ctz(pos->piece[weakside][pawn]);
+	int y = orient(weakside, square) / 8;
+	/* y != 7th rank */
+	if (y != 6 || distance(weak_king, square) != 1 ||
+			((FILE_B | FILE_D | FILE_E | FILE_G) & pos->piece[weakside][pawn]))
+		eval += VALUE_WIN + material_value[queen] - material_value[rook] - pos->halfmove;
+	return eval;
+}
+
+int32_t evaluate_KQKR(const struct position *pos, int strongside) {
+	int weakside = 1 - strongside;
+	UNUSED(pos);
+	int weak_king = ctz(pos->piece[weakside][king]);
+	int strong_king = ctz(pos->piece[strongside][king]);
+	return VALUE_WIN + material_value[queen] - material_value[rook] + push_toward(strong_king, weak_king) + 0x8 * push_toward_edge(weak_king) - pos->halfmove;
 }
 
 int32_t evaluate_KXK(const struct position *pos, int strongside) {
@@ -198,12 +247,9 @@ int32_t evaluate_KXK(const struct position *pos, int strongside) {
 	int weak_king = ctz(pos->piece[weakside][king]);
 	int strong_king = ctz(pos->piece[strongside][king]);
 	int32_t material = 0;
-	for (int color = 0; color < 2; color++) {
-		int32_t sign = 2 * (color == strongside) - 1;
-		for (int piece = pawn; piece < king; piece++)
-			material += sign * 100 * material_value[piece] * popcount(pos->piece[color][piece]);
-	}
-	return RANKED_WIN(2) + material + push_toward(strong_king, weak_king) + 0x8 * push_toward_corner(weak_king) - pos->halfmove;
+	for (int piece = pawn; piece < king; piece++)
+		material += material_value[piece] * popcount(pos->piece[strongside][piece]);
+	return VALUE_WIN + material + push_toward(strong_king, weak_king) + 0x8 * push_toward_edge(weak_king) - pos->halfmove;
 }
 
 int is_KXK(const struct position *pos, int color) {
@@ -287,9 +333,16 @@ void endgame_init(void) {
 	for (size_t i = 0; i < SIZE(endgame_keys); i++)
 		endgame_keys[i] = xorshift64(&seed);
 	
-	endgame_store("KNNK", &evaluate_draw);
-	endgame_store("KBNK", &evaluate_KBNK);
-	endgame_store("KBBK", &evaluate_KBBK);
+	//endgame_store("KPK",   NULL);
+	//endgame_store("KBPK", NULL);
+	//endgame_store("KRKP",  NULL);
+	endgame_store("KRKN",  &evaluate_KRKN); /* done */
+	endgame_store("KRKB",  &evaluate_KRKB); /* done */
+	endgame_store("KNNK",  &evaluate_draw); /* done */
+	endgame_store("KNNKP", &evaluate_KNNKP);
+	endgame_store("KBNK",  &evaluate_KBNK); /* done */
+	endgame_store("KQKP",  &evaluate_KQKP); /* done */
+	//endgame_store("KQKR",  &evaluate_KQKR);
 	for (int color = 0; color < 2; color++) {
 		endgame_KXK[color].evaluate = evaluate_KXK;
 		endgame_KXK[color].strongside = color;

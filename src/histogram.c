@@ -22,6 +22,11 @@
 #include "position.h"
 #include "nnue.h"
 #include "evaluate.h"
+#include "util.h"
+#include "magicbitboard.h"
+#include "attackgen.h"
+#include "tables.h"
+#include "option.h"
 
 void store_information(struct position *pos, uint64_t piece_square[7][64]) {
 	for (int color = 0; color < 2; color++) {
@@ -61,6 +66,12 @@ int main(int argc, char **argv) {
 		return 2;
 	}
 
+	option_pawn = 0;
+
+	magicbitboard_init();
+	attackgen_init();
+	bitboard_init();
+	tables_init();
 	position_init();
 	struct position pos;
 
@@ -68,9 +79,11 @@ int main(int argc, char **argv) {
 
 	move m;
 	int16_t eval;
-	uint64_t total = 0;
+	size_t total = 0;
 	size_t count = 0;
 	size_t games = 0;
+	size_t a = 0;
+	size_t c = 0;
 	while (1) {
 		count++;
 		if (count % 20000 == 0)
@@ -85,24 +98,45 @@ int main(int argc, char **argv) {
 			if (!feof(f))
 				games++;
 		}
-
-		if (!pos.piece[white][king] || !pos.piece[black][king]) {
-			fprintf(stderr, "Missing king in position\n");
-			exit(1);
-		}
 		
 		fread(&eval, 2, 1, f);
 		if (feof(f))
 			break;
 
-		if (eval != VALUE_NONE) {
-			store_information(&pos, piece_square);
-			total++;
-		}
-	}
+		if (eval == VALUE_NONE)
+			continue;
 
+		const int material_values[] = { 0, 1, 3, 3, 5, 9, 0 };
+		int material[2] = { 0 };
+		for (int color = 0; color < 2; color++) {
+			for (int piece = pawn; piece < king; piece++) {
+				uint64_t b = pos.piece[color][piece];
+				material[color] += material_values[piece] * popcount(b);
+			}
+		}
+
+		int material_delta = ABS(material[white] - material[black]);
+		if (material_delta >= 1 && eval == 0 && popcount(all_pieces(&pos)) <= 3 && pos.halfmove <= 0) {
+#if 1
+			char fen[128];
+			print_position(&pos, 0);
+			printf("%s\n", pos_to_fen(fen, &pos));
+			printf("%d\n", (2 * pos.turn - 1) * evaluate_classical(&pos));
+			printf("%d\n", pos.turn ? eval : -eval);
+#endif
+			if (eval == 0)
+				c++;
+			a++;
+		}
+
+		store_information(&pos, piece_square);
+		total++;
+	}
+	printf("\033[2K");
 	printf("total positions: %lu\n", total);
+	printf("total positions: %lu\n", count);
 	printf("total games: %lu\n", games);
+	printf("percent: %f\n", (double)c / a);
 	for (int piece = pawn; piece <= king; piece++)
 		print_information(piece_square[piece], total);
 }
