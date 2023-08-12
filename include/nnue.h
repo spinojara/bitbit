@@ -32,6 +32,11 @@
 #define FT_SHIFT (0)
 #define FV_SCALE (16)
 
+typedef int16_t ft_weight_t;
+typedef int16_t ft_bias_t;
+typedef int8_t weight_t;
+typedef int32_t bias_t;
+
 enum {
 	PS_W_PAWN   =  0 * 64,
 	PS_B_PAWN   =  1 * 64,
@@ -53,12 +58,8 @@ static uint32_t piece_to_index[2][13] = {
 	     PS_B_PAWN, PS_B_KNIGHT, PS_B_BISHOP, PS_B_ROOK, PS_B_QUEEN, 0, },
 };
 
-static inline int orient(int turn, int square) {
-	return square ^ (turn ? 0x0 : 0x38);
-}
-
 static inline uint16_t make_index(int turn, int square, int piece, int king_square) {
-	return orient(turn, square) + piece_to_index[turn][piece] + PS_END * king_square;
+	return orient_horizontal(turn, square) + piece_to_index[turn][piece] + PS_END * king_square;
 }
 
 void add_index_slow(unsigned index, int16_t accumulation[2][K_HALF_DIMENSIONS], int32_t psqtaccumulation[2], int turn);
@@ -72,10 +73,10 @@ void do_accumulator(struct position *pos, move *m);
 
 void undo_accumulator(struct position *pos, move *m);
 
-int nnue_init(int argc, char **argv);
-
 int32_t evaluate_nnue(struct position *pos);
 
 int32_t evaluate_accumulator(const struct position *pos);
+
+void nnue_init(void);
 
 #endif

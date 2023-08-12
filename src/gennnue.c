@@ -36,7 +36,6 @@
 #include "search.h"
 #include "evaluate.h"
 #include "tables.h"
-#include "pawn.h"
 #include "option.h"
 #include "transposition.h"
 #include "history.h"
@@ -48,6 +47,8 @@
 #define HASH_INDEX (HASH_SIZE - 1)
 
 atomic_uint_least64_t *hash_table;
+
+const size_t tt_bytes_per_thread = 64 * 1024 * 1024;
 
 const int random_move_max_ply = 25;
 const int random_move_count = 7;
@@ -67,6 +68,8 @@ struct threadinfo {
 	int depth;
 	uint64_t seed;
 	int fd[2];
+
+	struct transpositiontable tt;
 };
 
 pthread_mutex_t lock;
@@ -230,6 +233,7 @@ void *worker(void *arg) {
 	int depth = threadinfo->depth;
 	uint64_t seed = threadinfo->seed;
 	int threadn = threadinfo->threadn;
+	struct transpositiontable tt = threadinfo->tt;
 	pthread_mutex_unlock(&lock);
 	char filename[128];
 	sprintf(filename, "nnuegen.%d.log", threadn);
@@ -253,7 +257,7 @@ void *worker(void *arg) {
 		/* maybe randomly vary depth */
 		int depth_now = depth;
 		logstring(f, "search\n");
-		eval = search(&pos, depth_now, 0, 0, 0, &m, &h, 0);
+		eval = search(&pos, depth_now, 0, 0, 0, &m, &tt, &h, 0);
 		logstring(f, "done\n");
 
 		/* check for fens that we dont want to write */
@@ -358,14 +362,11 @@ int main(int argc, char **argv) {
 	moveorder_init();
 	position_init();
 	transposition_init();
-	allocate_transposition_table(33);
-	pawn_init();
 
 	hash_table = malloc(HASH_SIZE * sizeof(*hash_table));
 	memset(hash_table, 0, HASH_SIZE * sizeof(*hash_table));
 
 	option_history       = 1;
-	option_pawn          = 0;
 	option_transposition = 1;
 	option_nnue          = 0;
 	option_endgame       = 1;
@@ -390,6 +391,7 @@ int main(int argc, char **argv) {
 		threadinfo[i].depth = depth;
 		threadinfo[i].seed = seed + i;
 		threadinfo[i].threadn = i;
+		transposition_alloc(&threadinfo[i].tt, tt_bytes_per_thread);
 		pthread_create(&thread[i], NULL, worker, &threadinfo[i]);
 	}
 
@@ -407,11 +409,12 @@ int main(int argc, char **argv) {
 
 	fclose(f);
 
-	for (int i = 0; i < n_threads; i++)
+	for (int i = 0; i < n_threads; i++) {
 		pthread_join(thread[i], NULL);
+		transposition_free(&threadinfo[i].tt);
+	}
 
 	pthread_mutex_destroy(&lock);
 
-	pawn_term();
 	free(hash_table);
 }

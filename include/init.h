@@ -18,13 +18,7 @@
 #ifndef INIT_H
 #define INIT_H
 
-#include <inttypes.h>
-
 int init(int argc, char **argv);
-
-void term(void);
-
-void init_status(char *str);
 
 void version(void);
 

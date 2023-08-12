@@ -21,6 +21,9 @@
 #include "position.h"
 #include "move.h"
 #include "interface.h"
+#include "transposition.h"
+
+#define DEPTH_MAX (0x100)
 
 typedef int64_t time_point;
 
@@ -36,19 +39,21 @@ struct searchinfo {
 	time_point time_optimal;
 	time_point time_stop;
 
-	move pv[256][256];
-	move killers[256][2];
+	move pv[DEPTH_MAX][DEPTH_MAX];
+	move killers[DEPTH_MAX][2];
 	int64_t history_moves[13][64];
+
+	struct transpositiontable *tt;
 	struct history *history;
 
-	uint8_t root_depth;
+	int root_depth;
 
 	int interrupt;
 };
 
-int32_t search(struct position *pos, uint8_t depth, int verbose, int etime, int movetime, move *m, struct history *history, int iterative);
+int32_t search(struct position *pos, int depth, int verbose, int etime, int movetime, move *m, struct transpositiontable *tt, struct history *history, int iterative);
 
-int32_t quiescence(struct position *pos, uint16_t ply, int32_t alpha, int32_t beta, struct searchinfo *si);
+int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, struct searchinfo *si);
 
 void search_init(void);
 

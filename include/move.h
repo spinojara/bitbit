@@ -19,6 +19,7 @@
 #define MOVE_H
 
 #include <stdint.h>
+#include <assert.h>
 
 #include "position.h"
 
@@ -33,14 +34,14 @@
  */
 typedef uint64_t move;
 
-static inline uint8_t move_from(const move *m) { return *m & 0x3F; }
-static inline uint8_t move_to(const move *m) { return (*m >> 0x6) & 0x3F; }
-static inline uint8_t move_flag(const move *m) { return (*m >> 0xC) & 0x3; }
-static inline uint8_t move_promote(const move *m) { return (*m >> 0xE) & 0x3; }
-static inline uint8_t move_capture(const move *m) { return (*m >> 0x10) & 0x7; }
-static inline uint8_t move_castle(const move *m) { return (*m >> 0x13) & 0xF; }
-static inline uint8_t move_en_passant(const move *m) { return (*m >> 0x18) & 0x3F; }
-static inline uint16_t move_halfmove(const move *m) { return (*m >> 0x1E) & 0x7F; }
+static inline int move_from(const move *m) { return *m & 0x3F; }
+static inline int move_to(const move *m) { return (*m >> 6) & 0x3F; }
+static inline int move_flag(const move *m) { return (*m >> 12) & 0x3; }
+static inline int move_promote(const move *m) { return (*m >> 14) & 0x3; }
+static inline int move_capture(const move *m) { return (*m >> 16) & 0x7; }
+static inline int move_castle(const move *m) { return (*m >> 19) & 0xF; }
+static inline int move_en_passant(const move *m) { return (*m >> 24) & 0x3F; }
+static inline int move_halfmove(const move *m) { return (*m >> 30) & 0x7F; }
 static inline void move_set_captured(move *m, uint64_t i) { *m |= (i << 0x10); }
 static inline void move_set_castle(move *m, uint64_t i) { *m |= (i << 0x13); }
 static inline void move_set_en_passant(move *m, uint64_t i) { *m |= (i << 0x18); }
@@ -51,14 +52,18 @@ static inline void move_set_halfmove(move *m, uint64_t i) { *m |= (i << 0x1E); }
 #define MOVE_PROMOTION (2)
 #define MOVE_CASTLE (3)
 
-#define M(source_square, target_square, flag, promotion) ((source_square) | ((target_square) << 0x6) | ((flag) << 0xC) | ((promotion) << 0xE))
+#define M(source_square, target_square, flag, promotion) ((source_square) | ((target_square) << 6) | ((flag) << 12) | ((promotion) << 14))
 
 void do_move(struct position *pos, move *m);
 
 void undo_move(struct position *pos, const move *m);
 
-static inline move new_move(uint8_t source_square, uint8_t target_square, uint8_t flag, uint8_t promotion) {
-	return source_square | (target_square << 0x6) | (flag << 0xC) | (promotion << 0xE);
+static inline move new_move(int source_square, int target_square, int flag, int promotion) {
+	assert(0 <= source_square && source_square < 64);
+	assert(0 <= target_square && target_square < 64);
+	assert(0 <= flag && flag <= 3);
+	assert(0 <= promotion && promotion <= 3);
+	return source_square | (target_square << 6) | (flag << 12) | (promotion << 14);
 }
 
 static inline int is_capture(const struct position *pos, const move *m) {

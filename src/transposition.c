@@ -24,62 +24,46 @@
 #include <assert.h>
 
 #include "util.h"
-#include "init.h"
 #include "bitboard.h"
 #include "history.h"
 #include "position.h"
 
-struct transposition_table *transposition_table;
+/* 12 * 64: each piece each square
+ * 1: turn to move is white
+ * 16: each castling combination
+ * 8: en passant on file
+ */
+uint64_t zobrist_keys[12 * 64 + 1 + 16 + 8];
 
 static uint64_t start;
 
-void transposition_table_size_print(uint64_t t) {
-	int s = MIN(t / 10, 3);
-	printf("%" PRIu64 "%c", ((uint64_t)1 << t) / ((uint64_t)1 << 10 * s), "BKMG"[s]);
+void transposition_clear(struct transpositiontable *tt) {
+	memset(tt->table, 0, tt->size * sizeof(struct transposition));
 }
 
-uint64_t transposition_table_size(void) {
-	return transposition_table->size;
-}
-
-void transposition_table_clear(void) {
-	memset(transposition_table->table, 0, transposition_table->size * sizeof(struct transposition));
-}
-
-int allocate_transposition_table(uint64_t t) {
-	uint64_t size = (uint64_t)1 << t;
-	if (size < sizeof(struct transposition))
-		return 2;
-	transposition_table->size = size / sizeof(struct transposition);
-	assert(transposition_table->size);
-	if (transposition_table)
-		free(transposition_table->table);
-	transposition_table->table = malloc(transposition_table->size * sizeof(struct transposition));
-	
-	if (!transposition_table->table)
-		return 3;
-	assert(!clear_ls1b(transposition_table->size));
-	transposition_table->index = transposition_table->size - 1;
-	transposition_table_clear();
+int transposition_alloc(struct transpositiontable *tt, size_t bytes) {
+	tt->size = bytes / sizeof(struct transposition);
+	tt->table = malloc(tt->size * sizeof(struct transposition));
+	if (!tt->table)
+		return 1;
+	transposition_clear(tt);
 	return 0;
 }
 
-int transposition_table_occupancy(int bound) {
+int transposition_occupancy(struct transpositiontable *tt, int bound) {
 	uint64_t occupied = 0;
-	for (uint64_t i = 0; i < transposition_table->size; i++) {
-		struct transposition *e = &transposition_table->table[i];
+	for (size_t i = 0; i < tt->size; i++) {
+		struct transposition *e = &tt->table[i];
 		if (bound ? (e->bound == bound) :
 			e->bound > 0)
 			occupied++;
 	}
-	return 1000 * occupied / transposition_table->size;
+	return 1000 * occupied / tt->size;
 }
 
-void zobrist_key_init(void) {
-	for (int i = 0; i < 12 * 64 + 1 + 16 + 8; i++) {
-		transposition_table->zobrist_key[i] = gxorshift64();
-		init_status("generating zobrist keys");
-	}
+void transposition_init(void) {
+	for (int i = 0; i < 12 * 64 + 1 + 16 + 8; i++)
+		zobrist_keys[i] = gxorshift64();
 	struct position pos;
 	startpos(&pos);
 	refresh_zobrist_key(&pos);
@@ -92,8 +76,8 @@ void do_zobrist_key(struct position *pos, const move *m) {
 	assert(pos->mailbox[move_from(m)]);
 	if (!option_transposition && !option_history)
 		return;
-	uint8_t source_square = move_from(m);
-	uint8_t target_square = move_to(m);
+	int source_square = move_from(m);
+	int target_square = move_to(m);
 
 	pos->zobrist_key ^= zobrist_en_passant_key(pos->en_passant);
 
@@ -158,8 +142,8 @@ void undo_zobrist_key(struct position *pos, const move *m) {
 	assert(pos->mailbox[move_to(m)]);
 	if (!option_transposition && !option_history)
 		return;
-	uint8_t source_square = move_from(m);
-	uint8_t target_square = move_to(m);
+	int source_square = move_from(m);
+	int target_square = move_to(m);
 
 	pos->zobrist_key ^= zobrist_en_passant_key(pos->en_passant);
 	pos->zobrist_key ^= zobrist_en_passant_key(move_en_passant(m));
@@ -226,21 +210,6 @@ void do_null_zobrist_key(struct position *pos, int en_passant) {
 	pos->zobrist_key ^= zobrist_turn_key();
 }
 
-int transposition_init(void) {
-	transposition_table = malloc(sizeof(struct transposition_table));
-	transposition_table->table = NULL;
-	int ret = allocate_transposition_table(TT);
-	if (ret) {
-		printf("\33[2Kfatal error: could not allocate transposition table\n");
-		return ret;
-	}
-
-	transposition_table->zobrist_key = malloc((12 * 64 + 1 + 16 + 8) * sizeof(uint64_t));
-	zobrist_key_init();
-
-	return 0;
-}
-
 void startkey(struct position *pos) {
 	pos->zobrist_key = start;
 }
@@ -257,10 +226,6 @@ void refresh_zobrist_key(struct position *pos) {
 		pos->zobrist_key ^= zobrist_en_passant_key(pos->en_passant);
 }
 
-void transposition_term(void) {
-	if (transposition_table) {
-		free(transposition_table->zobrist_key);
-		free(transposition_table->table);
-		free(transposition_table);
-	}
+void transposition_free(struct transpositiontable *tt) {
+	free(tt->table);
 }

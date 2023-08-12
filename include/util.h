@@ -35,6 +35,7 @@
 #define MACRO_NAME(x) #x
 #define MACRO_VALUE(x) MACRO_NAME(x)
 
+extern const uint64_t start_seed;
 uint64_t gxorshift64(void);
 uint64_t xorshift64(uint64_t *seed);
 int gbernoulli(double p);

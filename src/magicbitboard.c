@@ -24,7 +24,6 @@
 #include "bitboard.h"
 #include "util.h"
 #include "position.h"
-#include "init.h"
 
 alignas(64) uint64_t bishop_attacks_lookup[64 * 512];
 alignas(64) uint64_t rook_attacks_lookup[64 * 4096];
@@ -302,7 +301,6 @@ int magicbitboard_init(void) {
 			printf("fatal error: no bishop magic found for %s\n", algebraic(str, square));
 			return 1;
 		}
-		init_status("generating bishop magics");
 	}
 	for (square = 0; square < 64; square++) {
 		rook_magic[square] = rook_magic_calc(square);
@@ -310,27 +308,23 @@ int magicbitboard_init(void) {
 			printf("fatal error: no rook magic found for %s\n", algebraic(str, square));
 			return 1;
 		}
-		init_status("generating rook magics");
 	}
 	for (i = 0; i < 64; i++) {
 		bishop_mask[i] = bishop_mask_calc(i);
 		rook_mask[i] = rook_mask_calc(i);
 		bishop_full_mask[i] = bishop_full_mask_calc(i);
 		rook_full_mask[i] = rook_full_mask_calc(i);
-		init_status("generating attack masks");
 	}
 	for (square = 0; square < 64; square++) {
 		for (i = 0; i < 512; i++) {
 			b = block_mask(i, bishop_mask[square]);
 			bishop_attacks_lookup[bishop_index(square, b)] = bishop_attacks_calc(square, b);
-			init_status("populating bishop attack table");
 		}
 	}
 	for (square = 0; square < 64; square++) {
 		for (i = 0; i < 4096; i++) {
 			b = block_mask(i, rook_mask[square]);
 			rook_attacks_lookup[rook_index(square, b)] = rook_attacks_calc(square, b);
-			init_status("populating rook attack table");
 		}
 	}
 	return 0;

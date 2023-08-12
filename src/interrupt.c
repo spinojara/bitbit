@@ -19,7 +19,6 @@
 
 #include <signal.h>
 
-#include "init.h"
 #include "util.h"
 
 volatile int interrupt = 0;
@@ -32,5 +31,4 @@ void sigint_handler(int num) {
 
 void interrupt_init(void) {
 	signal(SIGINT, sigint_handler);
-	init_status("setting signal handler");
 }

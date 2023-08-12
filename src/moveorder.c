@@ -19,7 +19,6 @@
 
 #include <stdlib.h>
 
-#include "init.h"
 #include "util.h"
 #include "bitboard.h"
 #include "attackgen.h"

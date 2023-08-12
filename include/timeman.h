@@ -27,7 +27,7 @@
 
 typedef int64_t time_point;
 
-int time_man(int etime, int32_t saved_evaluation[256], uint8_t depth);
+int time_man(int etime, int32_t saved_evaluation[256], int depth);
 
 void time_init(struct position *pos, int etime, struct searchinfo *si);
 

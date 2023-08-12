@@ -98,7 +98,6 @@ void write_fens(struct position *pos, int result, FILE *fin, FILE *fout) {
 	int flag = 0;
 	int16_t perspective_result;
 	const uint16_t zero = 0;
-	const int draw = result == 0;
 
 	while ((ptr[0] = fgets(line, sizeof(line), fin))) {
 		if (*ptr[0] == '\n' || *ptr[0] == '[') {
@@ -213,7 +212,6 @@ int main(int argc, char **argv) {
 	option_nnue = 0;
 	option_transposition = 0;
 	option_history = 0;
-	option_pawn = 0;
 	option_endgame = 0;
 	option_damp = 0;
 
@@ -233,7 +231,6 @@ int main(int argc, char **argv) {
 		if (strstr(line, "[Round"))
 			total++;
 
-	long *plycount = malloc(total * sizeof(*plycount));
 	long *offset = malloc(total * sizeof(*offset));
 	fseek(fin, 0, SEEK_SET);
 	count = 0;

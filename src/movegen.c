@@ -28,7 +28,7 @@ int move_count(const move *m) {
 
 move *generate_all(const struct position *pos, move *move_list) {
 	move *move_ptr = move_list;
-	uint8_t i;
+	int i;
 
 	uint64_t temp;
 	uint64_t piece;
@@ -40,9 +40,9 @@ move *generate_all(const struct position *pos, move *move_list) {
 	uint64_t attacked = generate_attacked(pos, pos->turn);
 	uint64_t pinned = generate_pinned(pos, pos->turn);
 
-	uint8_t target_square;
-	uint8_t source_square;
-	uint8_t king_square;
+	int target_square;
+	int source_square;
+	int king_square;
 
 	king_square = ctz(pos->piece[pos->turn][king]);
 
@@ -477,9 +477,9 @@ int mate(const struct position *pos) {
 	uint64_t attacked = generate_attacked(pos, pos->turn);
 	uint64_t pinned = generate_pinned(pos, pos->turn);
 
-	uint8_t target_square;
-	uint8_t source_square;
-	uint8_t king_square;
+	int target_square;
+	int source_square;
+	int king_square;
 
 	king_square = ctz(pos->piece[pos->turn][king]);
 
@@ -724,9 +724,9 @@ move *generate_quiescence(const struct position *pos, move *move_list) {
 	uint64_t attacked = generate_attacked(pos, pos->turn);
 	uint64_t pinned = generate_pinned(pos, pos->turn);
 
-	uint8_t target_square;
-	uint8_t source_square;
-	uint8_t king_square;
+	int target_square;
+	int source_square;
+	int king_square;
 
 	king_square = ctz(pos->piece[pos->turn][king]);
 
@@ -1006,8 +1006,8 @@ int mobility(const struct position *pos, int color) {
 	uint64_t checkers = generate_checkers(pos, color);
 	uint64_t pinned = generate_pinned(pos, color);
 
-	uint8_t source_square;
-	uint8_t king_square;
+	int source_square;
+	int king_square;
 
 	king_square = ctz(pos->piece[color][king]);
 

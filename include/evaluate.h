@@ -137,7 +137,7 @@ int32_t evaluate_classical(const struct position *pos);
 int32_t evaluate_classical_ei(const struct position *pos, struct evaluationinfo *ei);
 
 int32_t phase(const struct evaluationinfo *ei);
-int32_t scale(const struct position *pos, const struct evaluationinfo *ei, int strongside);
+int32_t scale(const struct position *pos, const struct evaluationinfo *ei, int strong_side);
 
 void evaluate_print(struct position *pos);
 

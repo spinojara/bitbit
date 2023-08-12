@@ -31,8 +31,4 @@ extern mevalue connected_pawns[7];
 extern mevalue passed_pawn[7];
 extern mevalue passed_file[4];
 
-int pawn_init(void);
-
-void pawn_term(void);
-
 #endif

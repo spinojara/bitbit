@@ -34,7 +34,6 @@
 #include "pawn.h"
 #include "option.h"
 #include "endgame.h"
-#include "nnue.h"
 
 #define BATCH_SIZE (32)
 
@@ -121,10 +120,6 @@ const double epsilon = 1e-7;
 const double learning_rate = 1e-3;
 const double weight_decay = 0;
 size_t t = 0;
-
-static inline int flip(int square) {
-	return square ^ 0x7;
-}
 
 struct parameter {
 	mevalue *ptr;
@@ -461,10 +456,6 @@ void zero_grad(void) {
 	}
 }
 
-double total_total_grad = 0;
-
-size_t counter1 = 0;
-size_t counter2 = 0;
 /* Calculates the gradient of the error function by hand.
  * The error function is E(x)=(result-sigmoid(evaluate(x)))^2
  * which by the chain rule gives
@@ -476,8 +467,8 @@ double grad_calc(struct position *pos, double result) {
 	eval = pos->turn == white ? eval : -eval;
 
 	int32_t p = phase(&ei);
-	int strongside = mevalue_eg(ei.eval) > 0;
-	int32_t s = scale(pos, &ei, strongside);
+	int strong_side = mevalue_eg(ei.eval) > 0;
+	int32_t s = scale(pos, &ei, strong_side);
 
 	double mgs = (double)p / PHASE;
 	double egs = (double)(PHASE - p) / PHASE * s / NORMAL_SCALE;
@@ -543,7 +534,7 @@ double grad_calc(struct position *pos, double result) {
 			int x = j % 8;
 			int y = j / 8;
 			int square = x + 8 * (7 - y);
-			double grad = factor * ((pos->mailbox[orient(white, square)] == white_pawn) - (pos->mailbox[orient(black, square)] == black_pawn));
+			double grad = factor * ((pos->mailbox[orient_horizontal(white, square)] == white_pawn) - (pos->mailbox[orient_horizontal(black, square)] == black_pawn));
 			double gradmg = mgs * grad;
 			double gradeg = egs * grad;
 			param->grad[2 * i + mg] += gradmg;
@@ -573,9 +564,9 @@ double grad_calc(struct position *pos, double result) {
 			int x = i % 4;
 			int y = i / 4;
 			int square1 = x + 8 * (7 - y);
-			int square2 = flip(square1);
-			int num = (pos->mailbox[orient(white, square1)] == white_knight) + (pos->mailbox[orient(white, square2)] == white_knight) -
-				  (pos->mailbox[orient(black, square1)] == black_knight) - (pos->mailbox[orient(black, square2)] == black_knight);
+			int square2 = orient_vertical(1, square1);
+			int num = (pos->mailbox[orient_horizontal(white, square1)] == white_knight) + (pos->mailbox[orient_horizontal(white, square2)] == white_knight) -
+				  (pos->mailbox[orient_horizontal(black, square1)] == black_knight) - (pos->mailbox[orient_horizontal(black, square2)] == black_knight);
 			double grad = factor * num;
 			double gradmg = mgs * grad;
 			double gradeg = egs * grad;
@@ -610,9 +601,9 @@ double grad_calc(struct position *pos, double result) {
 			int x = i % 4;
 			int y = i / 4;
 			int square1 = x + 8 * (7 - y);
-			int square2 = flip(square1);
-			int num = (pos->mailbox[orient(white, square1)] == white_bishop) + (pos->mailbox[orient(white, square2)] == white_bishop) -
-				  (pos->mailbox[orient(black, square1)] == black_bishop) - (pos->mailbox[orient(black, square2)] == black_bishop);
+			int square2 = orient_vertical(1, square1);
+			int num = (pos->mailbox[orient_horizontal(white, square1)] == white_bishop) + (pos->mailbox[orient_horizontal(white, square2)] == white_bishop) -
+				  (pos->mailbox[orient_horizontal(black, square1)] == black_bishop) - (pos->mailbox[orient_horizontal(black, square2)] == black_bishop);
 			double grad = factor * num;
 			double gradmg = mgs * grad;
 			double gradeg = egs * grad;
@@ -625,9 +616,9 @@ double grad_calc(struct position *pos, double result) {
 			int x = i % 4;
 			int y = i / 4;
 			int square1 = x + 8 * (7 - y);
-			int square2 = flip(square1);
-			int num = (pos->mailbox[orient(white, square1)] == white_rook) + (pos->mailbox[orient(white, square2)] == white_rook) -
-				  (pos->mailbox[orient(black, square1)] == black_rook) - (pos->mailbox[orient(black, square2)] == black_rook);
+			int square2 = orient_vertical(1, square1);
+			int num = (pos->mailbox[orient_horizontal(white, square1)] == white_rook) + (pos->mailbox[orient_horizontal(white, square2)] == white_rook) -
+				  (pos->mailbox[orient_horizontal(black, square1)] == black_rook) - (pos->mailbox[orient_horizontal(black, square2)] == black_rook);
 			double grad = factor * num;
 			double gradmg = mgs * grad;
 			double gradeg = egs * grad;
@@ -640,9 +631,9 @@ double grad_calc(struct position *pos, double result) {
 			int x = i % 4;
 			int y = i / 4;
 			int square1 = x + 8 * (7 - y);
-			int square2 = flip(square1);
-			int num = (pos->mailbox[orient(white, square1)] == white_queen) + (pos->mailbox[orient(white, square2)] == white_queen) -
-				  (pos->mailbox[orient(black, square1)] == black_queen) - (pos->mailbox[orient(black, square2)] == black_queen);
+			int square2 = orient_vertical(1, square1);
+			int num = (pos->mailbox[orient_horizontal(white, square1)] == white_queen) + (pos->mailbox[orient_horizontal(white, square2)] == white_queen) -
+				  (pos->mailbox[orient_horizontal(black, square1)] == black_queen) - (pos->mailbox[orient_horizontal(black, square2)] == black_queen);
 			double grad = factor * num;
 			double gradmg = mgs * grad;
 			double gradeg = egs * grad;
@@ -655,9 +646,9 @@ double grad_calc(struct position *pos, double result) {
 			int x = i % 4;
 			int y = i / 4;
 			int square1 = x + 8 * (7 - y);
-			int square2 = flip(square1);
-			int num = (pos->mailbox[orient(white, square1)] == white_king) + (pos->mailbox[orient(white, square2)] == white_king) -
-				  (pos->mailbox[orient(black, square1)] == black_king) - (pos->mailbox[orient(black, square2)] == black_king);
+			int square2 = orient_vertical(1, square1);
+			int num = (pos->mailbox[orient_horizontal(white, square1)] == white_king) + (pos->mailbox[orient_horizontal(white, square2)] == white_king) -
+				  (pos->mailbox[orient_horizontal(black, square1)] == black_king) - (pos->mailbox[orient_horizontal(black, square2)] == black_king);
 			double grad = factor * num;
 			double gradmg = mgs * grad;
 			double gradeg = egs * grad;
@@ -980,7 +971,6 @@ double grad_calc(struct position *pos, double result) {
 	 * king danger r=MAX(k, 0).
 	 */
 	if ((param = &parameters[PARAM_WEAKSQUARESDANGER])->tune == TUNE_YES) {
-		double total_grad = 0;
 		for (int color = 0; color <= 1; color++) {
 			int r = MAX(ei.king_danger[color], 0);
 			double dEdr = -mgs * 2 * r / 2048 - egs * 1 / 8;
@@ -988,7 +978,6 @@ double grad_calc(struct position *pos, double result) {
 			double dkdw = popcount(ei.weak_squares[color] & ei.king_ring[color]);
 			double dEdw = dEdr * drdk * dkdw;
 			double grad = factor * dEdw * (2 * color - 1);
-			total_grad += grad;
 			param->grad[0] += grad;
 		}
 #if 0
@@ -1008,7 +997,6 @@ double grad_calc(struct position *pos, double result) {
 #endif
 	}
 	if ((param = &parameters[PARAM_ENEMYNOQUEENBONUS])->tune == TUNE_YES) {
-		double total_grad = 0;
 		for (int color = 0; color <= 1; color++) {
 			int r = MAX(ei.king_danger[color], 0);
 			double dEdr = -mgs * 2 * r / 2048 - egs * 1 / 8;
@@ -1016,7 +1004,6 @@ double grad_calc(struct position *pos, double result) {
 			double dkdw = -!pos->piece[1 - color][queen];
 			double dEdw = dEdr * drdk * dkdw;
 			double grad = factor * dEdw * (2 * color - 1);
-			total_grad += grad;
 			param->grad[0] += grad;
 		}
 #if 0
@@ -1034,7 +1021,6 @@ double grad_calc(struct position *pos, double result) {
 #endif
 	}
 	if ((param = &parameters[PARAM_KNIGHTATTACKDANGER])->tune == TUNE_YES) {
-		double gradtest[2];
 		for (int color = 0; color <= 1; color++) {
 			int r = MAX(ei.king_danger[color], 0);
 			double dEdr = -mgs * 2 * r / 2048 - egs * 1 / 8;
@@ -1042,7 +1028,6 @@ double grad_calc(struct position *pos, double result) {
 			double dkdw = ei.king_attack_units[1 - color][knight];
 			double dEdw = dEdr * drdk * dkdw;
 			double grad = factor * dEdw * (2 * color - 1);
-			gradtest[color] = grad;
 			param->grad[0] += grad;
 		}
 #if 0
@@ -1092,7 +1077,6 @@ double grad_calc(struct position *pos, double result) {
 		}
 	}
 	if ((param = &parameters[PARAM_KINGDANGER])->tune == TUNE_YES) {
-		double gradtest[2];
 		for (int color = 0; color <= 1; color++) {
 			int r = MAX(ei.king_danger[color], 0);
 			double dEdr = -mgs * 2 * r / 2048 - egs * 1 / 8;
@@ -1100,7 +1084,6 @@ double grad_calc(struct position *pos, double result) {
 			double dkdw = 1;
 			double dEdw = dEdr * drdk * dkdw;
 			double grad = factor * dEdw * (2 * color - 1);
-			gradtest[color] = grad;
 			param->grad[0] += grad;
 		}
 #if 0
@@ -1120,7 +1103,10 @@ double grad_calc(struct position *pos, double result) {
 	}
 	if ((param = &parameters[PARAM_TEMPOBONUS])->tune == TUNE_YES) {
 		double grad = factor * (2 * pos->turn - 1);
-		param->grad[0] += grad;
+		double gradmg = mgs * grad;
+		double gradeg = egs * grad;
+		param->grad[mg] += gradmg;
+		param->grad[eg] += gradeg;
 #if 0
 		tempo_bonus += 1;
 		int16_t new_eval = evaluate_classical(pos);
@@ -1306,7 +1292,6 @@ int main(int argc, char **argv) {
 
 	option_nnue = 0;
 	option_transposition = 0;
-	option_pawn = 0;
 	option_history = 0;
 
 	magicbitboard_init();
@@ -1316,13 +1301,11 @@ int main(int argc, char **argv) {
 	search_init();
 	moveorder_init();
 	position_init();
-	pawn_init();
 	parameters_init();
 
 	while (1) {
 		zero_grad();
 		if (!grad(f, &pos)) {
-			//parameters_print();
 			fseek(f, 0, SEEK_SET);
 			continue;
 		}

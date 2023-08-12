@@ -21,7 +21,6 @@
 
 #include "magicbitboard.h"
 #include "attackgen.h"
-#include "init.h"
 #include "position.h"
 #include "util.h"
 
@@ -259,7 +258,6 @@ void bitboard_init(void) {
 			between_lookup[i + 64 * j] = between_calc(i, j);
 			line_lookup[i + 64 * j] = line_calc(i, j);
 			ray_lookup[i + 64 * j] = ray_calc(i, j);
-			init_status("populating bitboard lookup table");
 		}
 	}
 
@@ -267,7 +265,6 @@ void bitboard_init(void) {
 		for (int target_square = 0; target_square < 64; target_square++) {
 			for (int castle = 0; castle < 16; castle++) {
 				castle_lookup[source_square + 64 * target_square + 64 * 64 * castle] = castle_calc(source_square, target_square, castle);
-				init_status("populating castling lookup table");
 			}
 		}
 	}

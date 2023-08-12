@@ -188,35 +188,6 @@ char *castle_string(char *str, int castle) {
 	return str;
 }
 
-void setpos(struct position *pos, uint8_t turn, int8_t en_passant, uint8_t castle,
-		uint16_t halfmove, uint16_t fullmove, uint8_t *mailbox) {
-	int i;
-
-	pos->turn = turn;
-	pos->en_passant = en_passant;
-	pos->castle = castle;
-	pos->halfmove = halfmove;
-	pos->fullmove = fullmove;
-
-	memcpy(pos->mailbox, mailbox, 64);
-	for (i = all; i <= king; i++) {
-		pos->piece[white][i] = 0;
-		pos->piece[black][i] = 0;
-	}
-
-	for (i = 0; i < 64; i++) {
-		if (0 < mailbox[i] && mailbox[i] < 7) {
-			pos->piece[white][mailbox[i]] = set_bit(pos->piece[white][mailbox[i]], i);
-			pos->piece[white][all] = set_bit(pos->piece[white][all], i);
-		}
-		else if (6 < mailbox[i]) {
-			pos->piece[black][mailbox[i] - 6] = set_bit(pos->piece[black][mailbox[i] - 6], i);
-			pos->piece[black][all] = set_bit(pos->piece[black][all], i);
-		}
-	}
-
-}
-
 void startpos(struct position *pos) {
 	memcpy(pos, &start, sizeof(struct position));
 }
@@ -294,25 +265,19 @@ void pos_from_fen(struct position *pos, int argc, char **argv) {
 }
 
 int fen_is_ok(int argc, char **argv) {
-	struct position *pos = NULL;
-	int ret = 1;
 	int t = 0;
 	size_t i;
 
 	if (argc < 4)
-		goto failure;
+		return 0;
 
-	if (argc >= 5)
-		if (strint(argv[4]) > 100)
-			goto failure;
-	if (argc >= 6)
-		if (strint(argv[5]) > 6000)
-			goto failure;
+	if (argc >= 5 && strint(argv[4]) > 100)
+		return 0;
+	if (argc >= 6 && strint(argv[5]) > 6000)
+		return 0;
 
 	int counter = 56;
 	int counter_mem = counter + 16;
-	int white_king_counter = 0;
-	int black_king_counter = 0;
 	int current_line = 0;
 
 	int mailbox[64];
@@ -320,14 +285,10 @@ int fen_is_ok(int argc, char **argv) {
 		mailbox[i] = 0;
 	for (i = 0; i < strlen(argv[0]); i++) {
 		if (counter < 0)
-			goto failure;
+			return 0;
 		switch (argv[0][i]) {
 		case 'K':
-			white_king_counter++;
-			/* fallthrough */
 		case 'k':
-			black_king_counter++;
-			/* fallthrough */
 		case 'P':
 		case 'N':
 		case 'B':
@@ -339,38 +300,29 @@ int fen_is_ok(int argc, char **argv) {
 		case 'r':
 		case 'q':
 			if (counter > 63 || current_line >= 8)
-				goto failure;
+				return 0;
 			t = find_char(" PNBRQKpnbrqk", argv[0][i]);
-			if (t < 7) {
-				mailbox[counter] = t;
-			}
-			else {
-				mailbox[counter] = t;
-			}
+			mailbox[counter] = t;
 			counter++;
 			current_line++;
 			break;
 		case '/':
 			if (counter % 8 || counter + 8 != counter_mem)
-				goto failure;
+				return 0;
 			counter_mem = counter;
 			counter -= 16;
 			current_line = 0;
 			break;
 		default:
 			if (find_char("12345678", argv[0][i]) == -1 || current_line >= 8)
-				goto failure;
+				return 0;
 			counter += find_char(" 12345678", argv[0][i]);
 			current_line += find_char(" 12345678", argv[0][i]);
 		}
 	}
 
-	/* black_king != 2 because fallthrough */
-	if (white_king_counter != 1 || black_king_counter != 2)
-		goto failure;
-
 	if (strlen(argv[1]) != 1 || (argv[1][0] != 'w' && argv[1][0] != 'b'))
-		goto failure;
+		return 0;
 
 	for (i = 0; i < strlen(argv[2]); i++) {
 		switch(argv[2][i]) {
@@ -379,29 +331,29 @@ int fen_is_ok(int argc, char **argv) {
 		case 'k':
 		case 'q':
 			if (i > 3)
-				goto failure;
+				return 0;
 			break;
 		case '-':
 			if (strlen(argv[2]) != 1)
-				goto failure;
+				return 0;
 			break;
 		default:
-			goto failure;
+			return 0;
 		}
 	}
 
 	if (find_char(argv[2], 'K') != -1)
 		if (mailbox[e1] != white_king || mailbox[h1] != white_rook)
-			goto failure;
+			return 0;
 	if (find_char(argv[2], 'Q') != -1)
 		if (mailbox[e1] != white_king || mailbox[a1] != white_rook)
-			goto failure;
+			return 0;
 	if (find_char(argv[2], 'k') != -1)
 		if (mailbox[e8] != black_king || mailbox[h8] != black_rook)
-			goto failure;
+			return 0;
 	if (find_char(argv[2], 'q') != -1)
 		if (mailbox[e8] != black_king || mailbox[a8] != black_rook)
-			goto failure;
+			return 0;
 
 	for (i = 0; i < strlen(argv[3]); i++) {
 		switch(argv[3][i]) {
@@ -414,7 +366,7 @@ int fen_is_ok(int argc, char **argv) {
 		case 'g':
 		case 'h':
 			if (i != 0 || strlen(argv[3]) != 2)
-				goto failure;
+				return 0;
 			break;
 		case '1':
 		case '2':
@@ -425,14 +377,14 @@ int fen_is_ok(int argc, char **argv) {
 		case '7':
 		case '8':
 			if (i != 1 || strlen(argv[3]) != 2)
-				goto failure;
+				return 0;
 			break;
 		case '-':
 			if (strlen(argv[3]) != 1)
-				goto failure;
+				return 0;
 			break;
 		default:
-			goto failure;
+			return 0;
 		}
 	}
 
@@ -440,51 +392,46 @@ int fen_is_ok(int argc, char **argv) {
 	if (t != -1) {
 		if (t / 8 == 2) {
 			if (mailbox[t + 8] != white_pawn ||
-				mailbox[t] != empty ||
-				mailbox[t - 8] != empty ||
-				argv[1][0] != 'b')
-				goto failure;
+					mailbox[t] != empty ||
+					mailbox[t - 8] != empty ||
+					argv[1][0] != 'b')
+				return 0;
 		}
 		else if (t / 8 == 5) {
 			if (mailbox[t - 8] != black_pawn ||
-				mailbox[t] != empty ||
-				mailbox[t + 8] != empty ||
-				argv[1][0] != 'w') {
-				goto failure;
-			}
+					mailbox[t] != empty ||
+					mailbox[t + 8] != empty ||
+					argv[1][0] != 'w')
+				return 0;
 		}
 		else {
-			goto failure;
+			return 0;
 		}
 
 	}
 
 	for (i = 0; i < 8; i++)
 		if (mailbox[i] % 6 == pawn || mailbox[i + 56] % 6 == pawn)
-			goto failure;
+			return 0;
 
 	/* now ok to generate preliminary position */
-	pos = malloc(sizeof(struct position));
-	pos_from_fen(pos, argc, argv);
-	swap_turn(pos);
-	uint64_t attacked = generate_attacked(pos, pos->turn);
-	swap_turn(pos);
-	if (pos->turn) {
-		if (attacked & pos->piece[black][king])
-			goto failure;
-	}
-	else {
-		if (attacked & pos->piece[white][king])
-			goto failure;
-	}
-
-	/* check full and half move? */
-	goto no_failure;
-failure:;
-	ret = 0;
-no_failure:;
-	free(pos);
-	return ret;
+	struct position pos;
+	pos_from_fen(&pos, argc, argv);
+	uint64_t checkers = generate_checkers(&pos, 1 - pos.turn);
+	if (checkers)
+		return 0;
+	if (popcount(pos.piece[white][all]) > 16 || popcount(pos.piece[black][all]) > 16)
+		return 0;
+	if (popcount(pos.piece[white][pawn]) > 8 || popcount(pos.piece[black][pawn]) > 8)
+		return 0;
+	for (int piece = knight; piece <= rook; piece++)
+		if (popcount(pos.piece[white][piece]) > 10 || popcount(pos.piece[black][piece]) > 10)
+			return 0;
+	if (popcount(pos.piece[white][queen]) > 9 || popcount(pos.piece[black][queen]) > 9)
+		return 0;
+	if (popcount(pos.piece[white][king]) > 1 || popcount(pos.piece[black][king]) > 1)
+		return 0;
+	return 1;
 }
 
 char *pos_to_fen(char *fen, const struct position *pos) {
@@ -536,191 +483,6 @@ char *pos_to_fen(char *fen, const struct position *pos) {
 		fen[k++] = tmp[i];
 	fen[k++] = '\0';
 	return fen;
-}
-
-int interactive_setpos(struct position *pos) {
-	char *u = " PNBRQKpnbrqk";
-	char turn[2];
-	char en_passant[3];
-	char castling[5];
-	char line[BUFSIZ];
-	int i, j, k, t, mailbox[64];
-	int x, y;
-	char *argv[4];
-	int argc;
-	for (i = 0; i < 64; i++)
-		mailbox[i] = 0;
-	x = y = 0;
-	int quit = 0;
-	while (!quit) {
-		printf("\033[1;1H\033[2J");
-		printf("\n      a   b   c   d   e   f   g   h\n");
-		for (i = 0; i < 8; i++) {
-			printf("    +---+---+---+---+---+---+---+---+\n  %i |", 8 - i);
-			for (j = 0; j < 8; j++) {
-				t = 8 * i + j;
-				printf(" %c |", u[mailbox[t]]);
-			}
-			printf(" %i\n", 8 - i);
-		}
-		printf("    +---+---+---+---+---+---+---+---+\n");
-		printf("      a   b   c   d   e   f   g   h\n\n");
-		printf("\033[1;1H\033[%iB\033[%iC", 3 + 2 * y, 6 + 4 * x);
-
-		if (!fgets(line, sizeof(line), stdin))
-			return DONE;
-		switch (line[0]) {
-		case 's':
-			quit = 1;
-			break;
-		case 'a':
-		case 'b':
-		case 'c':
-		case 'd':
-		case 'e':
-		case 'f':
-		case 'g':
-		case 'h':
-			t = find_char("abcdefgh", line[0]);
-			if (find_char("12345678", line[1]) != -1) {
-				x = t;
-				y = 7 - find_char("12345678", line[1]);
-				break;
-			}
-			if (line[0] != 'b') {
-				break;
-			}
-			/* fallthrough */
-		case 'P':
-		case 'N':
-		case 'B':
-		case 'R':
-		case 'Q':
-		case 'K':
-		case 'p':
-		case 'n':
-		/* case 'b': */
-		case 'r':
-		case 'q':
-		case 'k':
-		case 'x':
-			mailbox[x + 8 * y] = find_char("xPNBRQKpnbrqk", line[0]);
-			/* fallthrough */
-		case '\n':
-			x++;
-			if (x == 8) {
-				y++;
-				x = 0;
-			}
-			if (y == 8)
-				y = 0;
-		}
-	}
-	printf("\033[1;1H\033[2J");
-	printf("\n      a   b   c   d   e   f   g   h\n");
-	for (i = 0; i < 8; i++) {
-		printf("    +---+---+---+---+---+---+---+---+\n  %i |", 8 - i);
-		for (j = 0; j < 8; j++) {
-			t = 8 * i + j;
-			printf(" %c |", u[mailbox[t]]);
-		}
-		printf(" %i\n", 8 - i);
-	}
-	printf("    +---+---+---+---+---+---+---+---+\n");
-	printf("      a   b   c   d   e   f   g   h\n\n");
-
-	turn[0] = turn[1] = '\0';
-	while (1) {
-		printf("\033[22;1H\033[2Kturn: ");
-		if (!fgets(line, sizeof(line), stdin))
-			return DONE;
-		if (line[0] == 'w' || line[0] == 'b')
-			turn[0] = line[0];
-
-		if (line[0] == '\n')
-			turn[0] = 'w';
-		if (turn[0] != '\0')
-			break;
-	}
-
-	while (1) {
-		printf("\033[23;1H\033[2Kcastling: ");
-		if (!fgets(line, sizeof(line), stdin))
-			return DONE;
-
-		for (t = 0; t < 4; t++) {
-			if (find_char("KQkq", line[t]) != -1) {
-				castling[t] = line[t];
-			}
-			else if ((line[t] == '\n' || line[t] == '-') && t == 0) {
-				castling[0] = '-';
-				castling[1] = '\0';
-				break;
-			}
-			else {
-				castling[t] = '\0';
-				break;
-			}
-		}
-
-		castling[4] = '\0';
-		if (castling[0] != '\0')
-			break;
-	}
-
-	while (1) {
-		printf("\033[24;1H\033[2Ken passant: ");
-		if (!fgets(line, sizeof(line), stdin))
-			return DONE;
-		if (find_char("abcdefgh", line[0]) != -1) {
-			if (find_char("12345678", line[1]) != -1) {
-				break;
-			}
-		}
-		else if (line[0] == '\n') {
-			line[0] = '-';
-			break;
-		}
-		else if (line[0] == '-') {
-			break;
-		}
-	}
-
-	en_passant[0] = line[0];
-	en_passant[1] = (en_passant[0] == '-') ? '\0' : line[1];
-	en_passant[2] = '\0';
-	
-	j = k = 0;
-	for (i = 0; i < 64; i++) {
-		if (mailbox[i]) {
-			if (j)
-				line[k++] = "012345678"[j];
-			j = 0;
-			line[k++] = " PNBRQKpnbrqk"[mailbox[i]];
-		}
-		else {
-			j++;
-		}
-		if (i && i % 8 == 7) {
-			if (j)
-				line[k++] = "012345678"[j];
-			j = 0;
-			if (i != 63)
-				line[k++] = '/';
-		}
-	}
-	line[k] = '\0';
-
-	argc = 4;
-	argv[0] = line;
-	argv[1] = turn;
-	argv[2] = castling;
-	argv[3] = en_passant;
-
-	if (!fen_is_ok(argc, argv))
-		return ERR_BAD_ARG;
-	pos_from_fen(pos, argc, argv);
-	return DONE;
 }
 
 int pos_are_equal(const struct position *pos1, const struct position *pos2) {

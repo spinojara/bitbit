@@ -20,7 +20,6 @@
 
 #include "move.h"
 #include "position.h"
-#include "nnue.h"
 #include "evaluate.h"
 #include "util.h"
 #include "magicbitboard.h"
@@ -34,7 +33,7 @@ void store_information(struct position *pos, uint64_t piece_square[7][64]) {
 			uint64_t b = pos->piece[color][piece];
 			while (b) {
 				int square = ctz(b);
-				square = orient(color, square);
+				square = orient_horizontal(color, square);
 				piece_square[piece][square]++;
 				b = clear_ls1b(b);
 			}
@@ -65,8 +64,6 @@ int main(int argc, char **argv) {
 		printf("could not open %s\n", argv[1]);
 		return 2;
 	}
-
-	option_pawn = 0;
 
 	magicbitboard_init();
 	attackgen_init();
@@ -116,7 +113,8 @@ int main(int argc, char **argv) {
 		}
 
 		int material_delta = ABS(material[white] - material[black]);
-		if (material_delta >= 1 && eval == 0 && popcount(all_pieces(&pos)) <= 3 && pos.halfmove <= 0) {
+		
+		if (material_delta >= 3 && eval == 0 && pos.halfmove <= 0) {
 #if 1
 			char fen[128];
 			print_position(&pos, 0);
@@ -134,7 +132,6 @@ int main(int argc, char **argv) {
 	}
 	printf("\033[2K");
 	printf("total positions: %lu\n", total);
-	printf("total positions: %lu\n", count);
 	printf("total games: %lu\n", games);
 	printf("percent: %f\n", (double)c / a);
 	for (int piece = pawn; piece <= king; piece++)

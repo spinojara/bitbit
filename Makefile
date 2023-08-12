@@ -32,67 +32,75 @@ ifeq ($(SIMD), sse2)
 endif
 
 ifeq ($(TT), )
-	TT = 26
+	TT = 64
 endif
 ifeq ($(NNUE), )
 	NNUE = files/current.nnue
+else
+	NEEDWEIGHTS = yes
+endif
+
+ifeq ($(wildcard src/nnueweights.c), )
+	NEEDWEIGHTS = yes
 endif
 
 LDFLAGS = $(CFLAGS)
 
-DVERSION = -DVERSION=$(VERSION)
-
-SRC_BITBIT     = bitboard.c magicbitboard.c attackgen.c \
+SRC_BITBIT     = bitbit.c bitboard.c magicbitboard.c attackgen.c \
                  move.c util.c position.c movegen.c perft.c \
                  search.c evaluate.c tables.c interface.c \
                  transposition.c init.c timeman.c interrupt.c \
                  pawn.c history.c movepicker.c moveorder.c \
-                 option.c endgame.c bitbase.c bitbit.c
+                 option.c endgame.c nnue.c kpk.c kpkp.c krkp.c \
+                 nnueweights.c
 
-SRC_GENNNUE    = bitboard.c magicbitboard.c attackgen.c \
+SRC_GENNNUE    = gennnue.c bitboard.c magicbitboard.c attackgen.c \
                  move.c util.c position.c movegen.c evaluate.c \
-                 tables.c init.c timeman.c interrupt.c pawn.c \
+                 tables.c timeman.c interrupt.c pawn.c \
                  moveorder.c transposition.c movepicker.c \
                  history.c option.c nnue.c search.c \
-                 endgame.c gennnue.c
+                 endgame.c nnueweights.c kpk.c kpkp.c krkp.c
 
-SRC_HISTOGRAM  = bitboard.c magicbitboard.c move.c util.c \
-                 position.c init.c interrupt.c history.c \
-                 option.c histogram.c evaluate.c pawn.c \
-                 endgame.c tables.c attackgen.c
+SRC_HISTOGRAM  = histogram.c bitboard.c magicbitboard.c move.c \
+                 position.c interrupt.c util.c \
+                 option.c evaluate.c pawn.c endgame.c tables.c \
+                 attackgen.c nnue.c nnueweights.c kpk.c kpkp.c krkp.c \
+                 movegen.c transposition.c
 
-SRC_PGNBIN     = bitboard.c magicbitboard.c attackgen.c \
-                 move.c util.c position.c movegen.c init.c \
+SRC_PGNBIN     = pgnbin.c bitboard.c magicbitboard.c attackgen.c \
+                 move.c util.c position.c movegen.c \
                  evaluate.c option.c transposition.c search.c \
                  movepicker.c nnue.c pawn.c tables.c moveorder.c \
-	         endgame.c pgnbin.c
+	         endgame.c kpk.c kpkp.c krkp.c nnueweights.c interrupt.c \
+                 timeman.c history.c
 
-SRC_TEXELTUNE  = bitboard.c magicbitboard.c attackgen.c \
+SRC_TEXELTUNE  = texeltune.c bitboard.c magicbitboard.c attackgen.c \
                  move.c util.c position.c movegen.c evaluate.c \
-                 tables.c init.c timeman.c history.c \
-                 interrupt.c pawn.c moveorder.c transposition.c \
-                 movepicker.c option.c search.c nnue.c endgame.c \
-                 texeltune.c
+                 tables.c timeman.c history.c interrupt.c pawn.c \
+                 moveorder.c transposition.c movepicker.c option.c \
+                 search.c nnue.c endgame.c nnueweights.c kpk.c kpkp.c krkp.c
 
-SRC_GENBITBASE = bitboard.c magicbitboard.c init.c attackgen.c \
-                 bitbase.c util.c position.c genbitbase.c
+SRC_GENBITBASE = genbitbase.c bitboard.c magicbitboard.c attackgen.c \
+                 move.c util.c position.c movegen.c \
 
-SRC_BATCH      = bitboard.c magicbitboard.c attackgen.c \
-                 move.c util.c position.c movegen.c init.c \
-                 batch.c
+SRC_BATCH      = batch.c bitboard.c magicbitboard.c attackgen.c \
+                 move.c util.c position.c movegen.c \
 
-SRC_VISUALIZE = util.c visualize.c
+SRC_VISUALIZE  = visualize.c util.c
 
-SRC = $(SRC_BITBIT) $(SRC_GENNNUE) $(SRC_HISTOGRAM) $(SRC_PGNBIN) $(SRC_TEXELTUNE) $(SRC_GENBITBASE) $(SRC_BATCH) $(SRC_VISUALIZE)
+SRC_NNUESOURCE = nnuesource.c util.c
 
-OBJ_BITBIT     = $(addprefix obj/,$(SRC_BITBIT:.c=.o)) obj/incbin.o obj/incbinnnue.o
-OBJ_GENNNUE    = $(addprefix obj/,$(SRC_GENNNUE:.c=.o))
-OBJ_HISTOGRAM  = $(addprefix obj/,$(SRC_HISTOGRAM:.c=.o))
-OBJ_PGNBIN     = $(addprefix obj/,$(SRC_PGNBIN:.c=.o))
-OBJ_TEXELTUNE  = $(addprefix obj/,$(SRC_TEXELTUNE:.c=.o))
-OBJ_GENBITBASE = $(addprefix obj/,$(SRC_GENBITBASE:.c=.o))
-OBJ_BATCH      = $(addprefix obj/pic,$(SRC_BATCH:.c=.o))
-OBJ_VISUALIZE  = $(addprefix obj/pic,$(SRC_VISUALIZE:.c=.o))
+DEP = $(addprefix dep/,$(addsuffix .d,$(basename $(notdir $(wildcard src/*.c)))))
+
+OBJ_BITBIT     = $(addprefix obj/,$(addsuffix .o,$(basename $(SRC_BITBIT))))
+OBJ_GENNNUE    = $(addprefix obj/,$(addsuffix .o,$(basename $(SRC_GENNNUE))))
+OBJ_NNUESOURCE = $(addprefix obj/,$(addsuffix .o,$(basename $(SRC_NNUESOURCE))))
+OBJ_HISTOGRAM  = $(addprefix obj/,$(addsuffix .o,$(basename $(SRC_HISTOGRAM))))
+OBJ_PGNBIN     = $(addprefix obj/,$(addsuffix .o,$(basename $(SRC_PGNBIN))))
+OBJ_TEXELTUNE  = $(addprefix obj/,$(addsuffix .o,$(basename $(SRC_TEXELTUNE))))
+OBJ_GENBITBASE = $(addprefix obj/,$(addsuffix .o,$(basename $(SRC_GENBITBASE))))
+OBJ_BATCH      = $(addprefix obj/pic,$(addsuffix .o,$(basename $(SRC_BATCH))))
+OBJ_VISUALIZE  = $(addprefix obj/pic,$(addsuffix .o,$(basename $(SRC_VISUALIZE))))
 
 PREFIX = /usr/local
 BINDIR = $(PREFIX)/bin
@@ -112,7 +120,7 @@ histogram: $(OBJ_HISTOGRAM)
 	$(CC) $(LDFLAGS) -lm $^ -o $@
 
 pgnbin: $(OBJ_PGNBIN)
-	$(CC) $(LDFLAGS) -lm -pthread $^ -o $@
+	$(CC) $(LDFLAGS) -lm $^ -o $@
 
 texeltune: $(OBJ_TEXELTUNE)
 	$(CC) $(LDFLAGS) -lm -pthread $^ -o $@
@@ -126,21 +134,20 @@ libbatch.so: $(OBJ_BATCH)
 libvisualize.so: $(OBJ_VISUALIZE)
 	$(CC) $(LDFLAGS) -shared $^ -o $@
 
+nnuesource: $(OBJ_NNUESOURCE)
+	$(CC) $(LDFLAGS) $^ -o $@
+
+obj/nnueweights.o: src/nnueweights.c Makefile
+	@mkdir -p obj
+	$(CC) $(CFLAGS) -Iinclude -c $< -o $@
+
 obj/init.o: src/init.c dep/init.d Makefile
 	@mkdir -p obj
-	$(CC) $(CFLAGS) -Iinclude $(DVERSION) -c $< -o $@
+	$(CC) $(CFLAGS) -Iinclude -DVERSION=$(VERSION) -c $< -o $@
 
-obj/transposition.o: src/transposition.c dep/transposition.d Makefile
+obj/interface.o: src/interface.c dep/interface.d Makefile
 	@mkdir -p obj
-	$(CC) $(CFLAGS) -DTT=$(TT) -Iinclude -c $< -o $@
-
-obj/incbin.o: src/incbin.S Makefile
-	@mkdir -p obj
-	$(CC) $(CFLAGS) -DFILE=\"$(NNUE)\" -c $< -o $@
-
-obj/incbinnnue.o: src/nnue.c Makefile
-	@mkdir -p obj
-	$(CC) $(CFLAGS) -DINCBIN -Iinclude -c $< -o $@
+	$(CC) $(CFLAGS) -Iinclude -DTT=$(TT) -c $< -o $@
 
 obj/pic%.o: src/%.c dep/%.d Makefile
 	@mkdir -p obj
@@ -150,11 +157,15 @@ obj/%.o: src/%.c dep/%.d Makefile
 	@mkdir -p obj
 	$(CC) $(CFLAGS) -Iinclude -c $< -o $@
 
+dep/nnueweights.d:
+src/nnueweights.c: nnuesource $(NNUE)
+	./nnuesource $(NNUE)
+
 dep/%.d: src/%.c
 	@mkdir -p dep
 	@$(CC) -MM -MT "$(<:src/%.c=obj/%.o)" $(CFLAGS) -Iinclude $< -o $@
 
--include $(addprefix dep/,$(SRC:.c=.d))
+-include $(DEP)
 
 install: all
 	mkdir -p $(DESTDIR)$(BINDIR)
@@ -168,11 +179,12 @@ uninstall:
 	rm -f $(DESTDIR)$(BINDIR)/bitbit $(DESTDIR)$(MAN6DIR)/bitbit.6
 
 clean:
-	rm -rf obj dep
+	rm -rf obj dep src/nnueweights.c
 
 options:
 	@echo "CC      = $(CC)"
 	@echo "CFLAGS  = $(CFLAGS)"
 	@echo "LDFLAGS = $(LDFLAGS)"
 
-.PHONY: all clean install uninstall options
+.PHONY: all clean install uninstall options dep/nnueweights.d
+.PRECIOUS: dep/%.d

@@ -53,7 +53,7 @@ struct data {
 };
 
 static inline uint16_t make_index_virtual(int turn, int square, int piece) {
-	return orient(turn, square) + piece_to_index[turn][piece] + PS_END * 64;
+	return orient_horizontal(turn, square) + piece_to_index[turn][piece] + PS_END * 64;
 }
 
 struct batch *next_batch(void *ptr) {
@@ -84,7 +84,7 @@ struct batch *next_batch(void *ptr) {
 		batch->eval[batch->actual_size] = (float)FV_SCALE * eval / (127 * 64);
 #if 1
 		int index, square;
-		const int king_squares[] = { orient(black, ctz(data->pos->piece[black][king])), orient(white, ctz(data->pos->piece[white][king])) };
+		const int king_squares[] = { orient_horizontal(black, ctz(data->pos->piece[black][king])), orient_horizontal(white, ctz(data->pos->piece[white][king])) };
 		for (int piece = pawn; piece < king; piece++) {
 			for (int turn = 0; turn <= 1; turn++) {
 				uint64_t b = data->pos->piece[turn][piece];
@@ -111,7 +111,7 @@ struct batch *next_batch(void *ptr) {
 		int32_t *const indw = data->pos->turn ? batch->ind1 : batch->ind2;
 		int32_t *const indb = data->pos->turn ? batch->ind2 : batch->ind1;
 		int index, square;
-		const int king_squares[] = { orient(black, ctz(data->pos->piece[black][king])), orient(white, ctz(data->pos->piece[white][king])) };
+		const int king_squares[] = { orient_horizontal(black, ctz(data->pos->piece[black][king])), orient_horizontal(white, ctz(data->pos->piece[white][king])) };
 		const int perspective[] = { white, black };
 		for (int piece = pawn; piece < king; piece++) {
 			/* white perspective */

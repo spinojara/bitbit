@@ -9,6 +9,7 @@
 !Makefile
 
 !src
+src/nnueweights.c
 !include
 !man
 !files

@@ -27,15 +27,15 @@
 struct position {
 	uint64_t piece[2][7];
 
-	uint8_t turn;
-	int8_t en_passant;
+	int turn;
+	int en_passant;
 	/* KQkq */
-	uint8_t castle;
+	int castle;
 
-	uint16_t halfmove;
-	uint16_t fullmove;
+	int halfmove;
+	int fullmove;
 
-	uint8_t mailbox[64];
+	int mailbox[64];
 
 	uint64_t zobrist_key;
 	uint64_t endgame_key;
@@ -47,15 +47,15 @@ struct position {
 struct partialposition {
 	uint64_t piece[2][7];
 
-	uint8_t turn;
-	int8_t en_passant;
+	int turn;
+	int en_passant;
 	/* KQkq */
-	uint8_t castle;
+	int castle;
 
-	uint16_t halfmove;
-	uint16_t fullmove;
+	int halfmove;
+	int fullmove;
 
-	uint8_t mailbox[64];
+	int mailbox[64];
 };
 
 enum square {
@@ -69,7 +69,7 @@ enum square {
 	a8, b8, c8, d8, e8, f8, g8, h8,
 };
 
-enum piece { all, pawn, knight, bishop, rook, queen, king };
+enum uncolored_piece { all, pawn, knight, bishop, rook, queen, king };
 
 enum color { black, white };
 
@@ -80,12 +80,24 @@ uint64_t generate_attacked(const struct position *pos, int color);
 uint64_t generate_pinned(const struct position *pos, int color);
 uint64_t generate_pinners(const struct position *pos, uint64_t pinned, int color);
 
-static inline void swap_turn(struct position *pos) {
-	pos->turn = 1 - pos->turn;
+static inline int orient_horizontal(int turn, int square) {
+	return square ^ (turn ? 0x0 : 0x38);
+}
+
+static inline int orient_vertical(int orient, int square) {
+	return square ^ (orient ? 0x7 : 0x0);
 }
 
 static inline uint64_t all_pieces(const struct position *pos) {
 	return pos->piece[black][all] | pos->piece[white][all];
+}
+
+static inline int colored_piece(int piece, int color) {
+	return piece + (color == black) * white_king;
+}
+
+static inline int uncolored_piece(int piece) {
+	return piece - white_king * (piece > white_king);
 }
 
 int square(const char *algebraic);
@@ -104,8 +116,6 @@ char *pos_to_fen(char *fen, const struct position *pos);
 int fen_is_ok(int argc, char **argv);
 
 void print_position(const struct position *pos, int flip);
-
-int interactive_setpos(struct position *pos);
 
 int pos_are_equal(const struct position *pos1, const struct position *pos2);
 

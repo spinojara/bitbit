@@ -4,7 +4,6 @@
 - Rook and knight pair penalties.
 - Test for integer overflows using clang in real games.
 - Make unit tests for mevalue_mg etc.
-- Use int for ply and depth.
 - Unfinished search.
 - Check histogram to see which endgames where a material difference >= 3 are drawn.
   Add most of these endgames to the endgame database.
@@ -13,7 +12,28 @@
   manually increase the endgame values above the middle game values and then tune
   this will most likely be resolved.
 - Add KBPK endgame. This is only lost if the pawn promotes on a corner and this
-  corner is the opposite color of the bishop.
+  corner is the opposite color of the bishop. We can maybe use the KPK bitbase to
+  evaluate this corner.
 - Add KRNKR endgame which seems drawn.
-- Bonus for king in endgame being close to pawns. The winning site should maybe
-  get a bonus for having kings close to each other.
+- Bonus for king in endgame being close to pawns.
+- The winning side should maybe get a bonus for having kings close to each other.
+  This is actually important for mate finding in weird situations like KQKNN if
+  there is a possible mate.
+- Does search have the same repetition problem that we encountered when generating
+  the KPK bitbase? This could potentially lead to some funny things. The problem
+  occurs when storing a value scored as a repetition in the transposition table.
+  This position may or may not be a repetition when encountered the next time.
+- Add bitbases for KPKP and KRKP? Need to add at least KRKP endgame.
+- Is it possible to fix that make does not rebuild when we update variables like
+  DEBUG=2 or NNUE=file?
+- Should all inlined functions be static inline etc?
+- Fix transposition table. Maybe search should take a transposition table pointer
+  so that gennnue can be thread safe.
+- Fix interface parse loop. It really shouldn't have to use malloc.
+- Remove malloc in unnecessary places. For example fen_is_ok.
+- Remove modulo operations. Make functions rank() and file(). This can be done
+  without the modulo operations.
+- Don't use BUFSIZ.
+
+VERY IMPORTANT
+- Verify that the new transposition table works correctly.

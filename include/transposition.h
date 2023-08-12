@@ -46,35 +46,32 @@ struct transposition {
 	uint16_t m;
 };
 
-struct transposition_table {
+struct transpositiontable {
 	struct transposition *table;
-	uint64_t size;
-	uint64_t index;
-
-	/* 12 * 64: each piece each square
-	 * 1: turn to move is white
-	 * 16: each castling combination
-	 * 8: en passant on file
-	 */
-	uint64_t *zobrist_key;
+	uint32_t size;
 };
 
-extern struct transposition_table *transposition_table;
+extern uint64_t zobrist_keys[];
+extern uint64_t *test;
 
-static inline struct transposition *transposition_get(struct position *pos) {
-	return transposition_table->table + (pos->zobrist_key & transposition_table->index);
+static inline uint64_t transposition_index(uint64_t size, uint64_t key) {
+	return ((key & 0xFFFFFFFF) * size) >> 32;
 }
 
-static inline struct transposition *transposition_probe(struct position *pos) {
+static inline struct transposition *transposition_get(const struct transpositiontable *tt, const struct position *pos) {
+	return &tt->table[transposition_index(tt->size, pos->zobrist_key)];
+}
+
+static inline struct transposition *transposition_probe(const struct transpositiontable *tt, const struct position *pos) {
 	if (!option_transposition)
 		return NULL;
-	struct transposition *e = transposition_get(pos);
+	struct transposition *e = transposition_get(tt, pos);
 	if (e->zobrist_key == pos->zobrist_key)
 		return e;
 	return NULL;
 }
 
-static inline void transposition_set(struct transposition *e, struct position *pos, int32_t evaluation, uint8_t depth, uint8_t bound, move m) {
+static inline void transposition_set(struct transposition *e, const struct position *pos, int32_t evaluation, int depth, int bound, move m) {
 	assert(-VALUE_INFINITE < evaluation && evaluation < VALUE_INFINITE);
 	/* Keep old move if none available. */
 	if (m)
@@ -85,17 +82,17 @@ static inline void transposition_set(struct transposition *e, struct position *p
 	e->bound = bound;
 }
 
-static inline void transposition_store(struct position *pos, int32_t evaluation, uint8_t depth, uint8_t bound, move m) {
+static inline void transposition_store(struct transpositiontable *tt, const struct position *pos, int32_t evaluation, int depth, int bound, move m) {
 	if (interrupt || !option_transposition)
 		return;
-	struct transposition *e = transposition_get(pos);
+	struct transposition *e = transposition_get(tt, pos);
 	if ((bound == BOUND_EXACT && e->bound != BOUND_EXACT) ||
 			e->zobrist_key != pos->zobrist_key ||
 			depth >= e->depth)
 		transposition_set(e, pos, evaluation, depth, bound, m);
 }
 
-static inline int32_t adjust_value_mate_store(int32_t evaluation, uint8_t ply) {
+static inline int32_t adjust_value_mate_store(int32_t evaluation, int ply) {
 	int32_t adjustment = 0;
 	if (evaluation >= VALUE_MATE_IN_MAX_PLY)
 		adjustment = ply;
@@ -104,7 +101,7 @@ static inline int32_t adjust_value_mate_store(int32_t evaluation, uint8_t ply) {
 	return evaluation + adjustment;
 }
 
-static inline int32_t adjust_value_mate_get(int32_t evaluation, uint8_t ply) {
+static inline int32_t adjust_value_mate_get(int32_t evaluation, int ply) {
 	int32_t adjustment = 0;
 	/* should probably be more careful as to not return false mates */
 	if (evaluation >= VALUE_MATE_IN_MAX_PLY)
@@ -115,36 +112,32 @@ static inline int32_t adjust_value_mate_get(int32_t evaluation, uint8_t ply) {
 }
 
 static inline uint64_t zobrist_piece_key(int piece, int square) {
-	return transposition_table->zobrist_key[piece + 12 * square];
+	return zobrist_keys[piece + 12 * square];
 }
 
 static inline uint64_t zobrist_turn_key(void) {
-	return transposition_table->zobrist_key[12 * 64];
+	return zobrist_keys[12 * 64];
 }
 
 static inline uint64_t zobrist_castle_key(int castle) {
-	return transposition_table->zobrist_key[12 * 64 + 1 + castle];
+	return zobrist_keys[12 * 64 + 1 + castle];
 }
 
 static inline uint64_t zobrist_en_passant_key(int square) {
 	if (square == 0)
 		return 0;
-	return transposition_table->zobrist_key[12 * 64 + 1 + 16 + square % 8];
+	return zobrist_keys[12 * 64 + 1 + 16 + square % 8];
 }
 
-void transposition_table_size_print(uint64_t t);
+void transposition_clear(struct transpositiontable *tt);
 
-uint64_t transposition_table_size_bytes(char *t);
+int transposition_alloc(struct transpositiontable *tt, size_t bytes);
 
-uint64_t transposition_table_size(void);
+void transposition_free(struct transpositiontable *tt);
 
-void transposition_table_clear(void);
+int transposition_occupancy(struct transpositiontable *tt, int node_type);
 
-int allocate_transposition_table(uint64_t t);
-
-int transposition_table_occupancy(int node_type);
-
-void zobrist_key_init(void);
+void transposition_init(void);
 
 void do_zobrist_key(struct position *pos, const move *m);
 
@@ -153,10 +146,9 @@ void undo_zobrist_key(struct position *pos, const move *m);
 void do_null_zobrist_key(struct position *pos, int en_passant);
 
 void startkey(struct position *pos);
+
 void refresh_zobrist_key(struct position *pos);
 
-int transposition_init(void);
-
-void transposition_term(void);
+void transposition_init(void);
 
 #endif

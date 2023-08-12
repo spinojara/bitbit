@@ -27,13 +27,13 @@
 #include "util.h"
 #include "position.h"
 #include "perft.h"
+#include "init.h"
 #include "search.h"
 #include "evaluate.h"
 #include "transposition.h"
 #include "version.h"
 #include "interrupt.h"
 #include "history.h"
-#include "init.h"
 #include "option.h"
 
 struct func {
@@ -59,7 +59,7 @@ int interface_uci(int argc, char **argv);
 int interface_setoption(int argc, char **argv);
 int interface_ucinewgame(int argc, char **argv);
 
-struct func func_arr[] = {
+static const struct func func_arr[] = {
 	{ "help"       , interface_help       , },
 	{ "move"       , interface_move       , },
 	{ "undo"       , interface_undo       , },
@@ -79,6 +79,7 @@ struct func func_arr[] = {
 };
 
 struct position pos;
+struct transpositiontable tt;
 struct history history;
 
 int interface_help(int argc, char **argv) {
@@ -257,7 +258,7 @@ int interface_go(int argc, char **argv) {
 			movetime = strint(argv[i + 1]);
 	}
 
-	search(&pos, depth, 1, pos.turn ? wtime : btime, movetime, NULL, &history, 1);
+	search(&pos, depth, 1, pos.turn ? wtime : btime, movetime, NULL, &tt, &history, 1);
 	return DONE;
 }
 
@@ -271,9 +272,8 @@ int interface_version(int argc, char **argv) {
 	char t[8];
 	printf("compilation date: %s\n", date(t));
 	printf("simd: %s\n", simd);
-	printf("transposition table size: ");
-	transposition_table_size_print(log_2(sizeof(struct transposition) * transposition_table_size()));
-	printf("\ntransposition entry size: %" PRIu64 "B\n", sizeof(struct transposition));
+	printf("transposition table size: %" PRIu64 "B\n", tt.size * sizeof(struct transposition));
+	printf("transposition entry size: %" PRIu64 "B\n", sizeof(struct transposition));
 
 	return DONE;
 }
@@ -281,28 +281,10 @@ int interface_version(int argc, char **argv) {
 int interface_tt(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
-	if (argc < 2) {
-		transposition_table_size_print(log_2(transposition_table_size() *
-					sizeof(struct transposition)));
-		printf("\npv    nodes: %4d pm\n", transposition_table_occupancy(BOUND_EXACT));
-		printf("cut   nodes: %4d pm\n", transposition_table_occupancy(BOUND_LOWER));
-		printf("all   nodes: %4d pm\n", transposition_table_occupancy(BOUND_UPPER));
-		printf("total nodes: %4d pm\n", transposition_table_occupancy(0));
-	}
-	else if (strcmp(argv[1], "clear") == 0) {
-		transposition_table_clear();
-	}
-	else if (argc >= 3 && strcmp(argv[1], "set") == 0) {
-		int ret = allocate_transposition_table(strint(argv[2]));
-		if (ret == 2)
-			return ERR_BAD_ARG;
-		if (ret == 3)
-			return EXIT_LOOP;
-	}
-	else {
-		return ERR_BAD_ARG;
-	}
-
+	printf("pv    nodes: %4d pm\n", transposition_occupancy(&tt, BOUND_EXACT));
+	printf("cut   nodes: %4d pm\n", transposition_occupancy(&tt, BOUND_LOWER));
+	printf("all   nodes: %4d pm\n", transposition_occupancy(&tt, BOUND_UPPER));
+	printf("total nodes: %4d pm\n", transposition_occupancy(&tt, 0));
 	return DONE;
 }
 
@@ -314,6 +296,8 @@ int interface_isready(int argc, char **argv) {
 }
 
 int interface_uci(int argc, char **argv) {
+	printf("UCI\n");
+	printf("%c.\n", argv[0][0]);
 	UNUSED(argc);
 	UNUSED(argv);
 	printf("id name bitbit\n");
@@ -326,7 +310,7 @@ int interface_uci(int argc, char **argv) {
 int interface_setoption(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
-	setoption(argc, argv);
+	setoption(argc, argv, &tt);
 	return DONE;
 }
 
@@ -336,69 +320,48 @@ int interface_ucinewgame(int argc, char **argv) {
 	startpos(&pos);
 	startkey(&pos);
 	history_reset(&pos, &history);
-	transposition_table_clear();
+	transposition_clear(&tt);
 	return DONE;
 }
 
-/* max amount of args */
-#define ARGC 1024
-/* long arg length */
-#define ARGL 128
-/* short arg length */
-#define ARGLS 6
-
-int arg_len(int argc) {
-	return argc < 8 ? ARGL : ARGLS;
-}
-
+#define ARGC_MAX (BUFSIZ)
 int parse(int *argc, char ***argv) {
+	char line[BUFSIZ];
 	interrupt = 0;
 	int ret = -1;
-	int i, j;
-	char *c;
 	int argc_t = 0;
-	char **argv_t;
-	argv_t = malloc(ARGC * sizeof(char *));
-	for (i = 0; i < ARGC; i++)
-		argv_t[i] = malloc(arg_len(i) * sizeof(char));
-	if (*argc > 1) {
-		for (i = 1; i < *argc; i++) {
-			if (argc_t >= ARGC)
+	char *argv_t[ARGC_MAX];
+
+	if (*argc) {
+		for (argc_t = 0; argc_t < *argc && argc_t < ARGC_MAX; argc_t++) {
+			if ((*argv)[argc_t][0] == ',')
 				break;
-			c = (*argv)[i];
-			/* skip */
-			if (c[0] == ',')
-				break;
-			/* arg */
-			argc_t++;
-			for (j = 0; j < arg_len(argc_t - 1) - 1 && c[j]; j++)
-				argv_t[argc_t - 1][j] = c[j];
-			argv_t[argc_t - 1][j] = '\0';
-			
+			argv_t[argc_t] = (*argv)[argc_t];
 		}
-		
-		*argc -= i;
-		*argv += i;
+		int comma = argc_t < *argc ? (*argv)[argc_t][0] == ',' : 0;
+		*argc -= argc_t + comma;
+		*argv += argc_t + comma;
 	}
 	else {
-		char line[BUFSIZ];
 		if (fgets(line, sizeof(line), stdin)) {
-			c = line;
-			/* assumes always at start of word */
-			for (; *c && *c != '\n'; c++) {
-				if (argc_t >= ARGC)
-					break;
-				/* jump to start of word */
-				while (c[0] == ' ')
-					c = c + 1;
-				/* break at end of line */
-				if (c[0] == '\0' || c[0] == '\n')
-					break;
-				/* arg */
-				argc_t++;
-				for (j = 0; j < arg_len(argc_t - 1) - 1 && c[0] && c[0] != ' ' && c[0] != '\n'; j++, c++)
-					argv_t[argc_t - 1][j] = c[0];
-				argv_t[argc_t - 1][j] = '\0';
+			char *c = line;
+			switch (line[0]) {
+			case '\0':
+			case '\n':
+			case ' ':
+				break;
+			default:
+				argv_t[argc_t++] = line;
+			}
+			for (; *c; c++) {
+				if (*c == ' ') {
+					*c = '\0';
+					if (argc_t >= ARGC_MAX)
+						break;
+					argv_t[argc_t++] = c + 1;
+				}
+				if (*c == '\n')
+					*c = '\0';
 			}
 		}
 	}
@@ -406,42 +369,46 @@ int parse(int *argc, char ***argv) {
 	if (interrupt)
 		ret = EXIT_LOOP;
 	else if (argc_t) {
-		struct func *f = NULL;
+		const struct func *f = NULL;
 		for (size_t k = 0; k < SIZE(func_arr); k++)
 			if (strcmp(func_arr[k].name, argv_t[0]) == 0)
-				f = func_arr + k;
+				f = &func_arr[k];
 		if (f)
 			ret = f->ptr(argc_t, argv_t);
+
 		switch(ret) {
 		case -1:
-			printf("unknown command: %s\n", argv_t[0]);
+			printf("error: %s: command not found\n", argv_t[0]);
 			break;
 		case ERR_MISS_ARG:
-			printf("error: missing argument\n");
+			printf("error: %s: missing argument\n", argv_t[0]);
 			break;
 		case ERR_BAD_ARG:
-			printf("error: bad argument\n");
+			printf("error: %s: bad argument\n", argv_t[0]);
 			break;
 		}
 	}
-	for (i = 0; i < ARGC; i++)
-		free(argv_t[i]);
-	free(argv_t);
 
 	return ret;
 }
 
-int interface(int argc, char **argv) {
-	printf("\33[2Kbitbit Copyright (C) 2022 Isak Ellmer\n");
-	while (parse(&argc, &argv) != 1);
-	return 0;
-}
-
-void interface_init(void) {
+void interface_init(int *argc, char ***argv) {
+	/* Remove ./bitbit argument. */
+	--*argc;
+	++*argv;
 	startpos(&pos);
 	startkey(&pos);
+	transposition_alloc(&tt, TT * 1024 * 1024);
 	history_reset(&pos, &history);
 }
 
 void interface_term(void) {
+	transposition_free(&tt);
+}
+
+int interface(int argc, char **argv) {
+	interface_init(&argc, &argv);
+	while (parse(&argc, &argv) != EXIT_LOOP);
+	interface_term();
+	return 0;
 }

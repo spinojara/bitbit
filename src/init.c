@@ -20,23 +20,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 
 #include "util.h"
 
-#define PRINT_DELAY_MS 1
-
-struct counter {
-	uint64_t done;
-	uint64_t total;
-	clock_t time;
-};
-
-struct counter *counter = NULL;
-
 void version(void) {
-	printf("bitbit " MACRO_VALUE(VERSION) "\n");
-	printf("Copyright (C) 2022 Isak Ellmer  \n");
+	printf("bitbit " MACRO_VALUE(VERSION)"\n");
+	printf("Copyright (C) 2022 Isak Ellmer\n");
 }
 
 int init(int argc, char **argv) {
@@ -46,31 +35,8 @@ int init(int argc, char **argv) {
 			return 1;
 		}
 	}
-	counter = malloc(sizeof(struct counter));
-	counter->total = 359772;
-	counter->done = 0;
-	counter->time = clock();
 	setbuf(stdin, NULL);
 	setbuf(stdout, NULL);
-	init_status("init");
+	printf("bitbit Copyright (C) 2022 Isak Ellmer\n");
 	return 0;
-}
-
-void term(void) {
-	free(counter);
-}
-
-void init_print(char *str) {
-	printf("\033[2K[%" PRIu64 "/%" PRIu64 "] %s\r", counter->done, counter->total, str);
-}
-
-void init_status(char *str) {
-	if (!counter)
-		return;
-	clock_t t = clock();
-	if ((counter->done < counter->total) && 1000 * (t - counter->time) > CLOCKS_PER_SEC * PRINT_DELAY_MS) {
-		init_print(str);
-		counter->time = t;
-	}
-	counter->done++;
 }

@@ -19,11 +19,10 @@
 
 #include <string.h>
 
-#include "init.h"
-
 mevalue psqtable[2][7][64];
 
-mevalue piece_value[6] = { S( 90, 125), S( 420, 351), S( 450, 352), S( 576, 597), S(1237, 1077), };
+//mevalue piece_value[6] = { S( 90, 125), S( 420, 351), S( 450, 352), S( 576, 597), S(1237, 1077), };
+mevalue piece_value[6] = { S( 90, 150), S( 420, 450), S( 450, 500), S( 600, 750), S(1237, 1400), };
 
 /* from white's perspective, files a to d on a regular board */
 mevalue white_psqtable[6][64] = {
@@ -133,7 +132,6 @@ void tables_init(void) {
 					y = 7 - y;
 				psqtable[turn][piece][square] = white_psqtable[piece - 1][factor * y + x] +
 					piece_value[piece - 1];
-				init_status("populating evaluation lookup table");
 			}
 		}
 	}

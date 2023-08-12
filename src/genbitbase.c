@@ -15,127 +15,367 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <stdio.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
+#include <time.h>
+#include <ctype.h>
 
 #include "bitbase.h"
 #include "position.h"
+#include "bitboard.h"
+#include "magicbitboard.h"
 #include "attackgen.h"
+#include "util.h"
+#include "movegen.h"
 
-#define BITBASE_MOVES_MAX (10)
+#define BITBASE_KXKX_INDEX_MAX (2l * 64 * 6 * 64 * 64 * 6 * 64)
+#define BITBASE_KXKX_BITS_PER_POSITION (2)
+#define BITBASE_KXKX_BITS_MASK ((1 << BITBASE_KXKX_BITS_PER_POSITION) - 1)
+#define BITBASE_KXKX_BITS_PER_ENTRY (8 * sizeof(*bitbase_KXKX))
+#define BITBASE_KXKX_POSITIONS_PER_ENTRY (BITBASE_KXKX_BITS_PER_ENTRY / BITBASE_KXKX_BITS_PER_POSITION)
+#define BITBASE_KXKX_TABLE_SIZE (BITBASE_KXKX_INDEX_MAX * BITBASE_KXKX_BITS_PER_POSITION / BITBASE_KXKX_BITS_PER_ENTRY)
 
-uint8_t known[BITBASE_INDEX_MAX] = { 0 };
-uint8_t twofold[BITBASE_INDEX_MAX] = { 0 };
+uint32_t *bitbase_KXKX;
+uint32_t *invalid_KXKX;
+uint32_t bitbase_KPK[BITBASE_KPK_TABLE_SIZE] = { 0 };
+uint32_t bitbase_KPKP[BITBASE_KPKP_TABLE_SIZE] = { 0 };
+uint32_t bitbase_KRKP[BITBASE_KRKP_TABLE_SIZE] = { 0 };
 
-struct bitbasemove {
-	uint8_t piece;
-	uint8_t to;
-	uint8_t from;
-};
+void write_bitbase(char *name, uint32_t *bitbase, size_t table_size);
 
-void bitbase_do_move(struct position *pos, const struct bitbasemove *m) {
-	pos->piece[pos->turn][m->piece] ^= bitboard(m->from) | bitboard(m->to);
-	pos->turn = 1 - pos->turn;
+long bitbase_KXKX_index_by_square(int turn, int king_white, int piece_white, int square_white, int king_black, int piece_black, int square_black) {
+	return 64 * 6 * 64 * 64 * 6 * 64 * turn
+		  + 6 * 64 * 64 * 6 * 64 * king_white
+		      + 64 * 64 * 6 * 64 * piece_white
+		           + 64 * 6 * 64 * square_white
+			        + 6 * 64 * king_black
+				    + 64 * piece_black
+				         + square_black;
 }
 
-void bitbase_undo_move(struct position *pos, const struct bitbasemove *m) {
-	pos->piece[1 - pos->turn][m->piece] ^= bitboard(m->from) | bitboard(m->to);
-	pos->turn = 1 - pos->turn;
-}
-
-static inline void new_bitbasemove(struct bitbasemove *m, int piece, int to, int from) {
-	m->piece = piece;
-	m->to = to;
-	m->from = from;
-}
-
-/* BE CAREFUL WITH PROTECTED SQUARES BY PAWN. */
-/* Before generating moves we should check if the position
- * is trivially won, i.e. the pawn can be captured. */
-void generate_bitbasemoves(const struct position *pos, struct bitbasemove *movelist) {
-	int turn = pos->turn;
-	/* In this case we have the pawn. */
-	if (turn) {
-		if (shift_north(pos->piece[white][pawn]) & ~(pos->piece[black][king] | pos->piece[white][king])) {
-			int square = ctz(pos->piece[white][pawn]);
-			new_bitbasemove(movelist++, pawn, square, square + 8);
+long bitbase_KXKX_index(const struct position *pos) {
+	int king_white = ctz(pos->piece[white][king]);
+	int king_black = ctz(pos->piece[black][king]);
+	int piece_white = 0;
+	int square_white = 0;
+	int piece_black = 0;
+	int square_black = 0;
+	for (int piece = pawn; piece < king; piece++) {
+		if (pos->piece[white][piece]) {
+			piece_white = piece;
+			square_white = ctz(pos->piece[white][piece]);
+		}
+		if (pos->piece[black][piece]) {
+			piece_black = piece;
+			square_black = ctz(pos->piece[black][piece]);
 		}
 	}
+	return bitbase_KXKX_index_by_square(pos->turn, king_white, piece_white, square_white, king_black, piece_black, square_black);
+}
+
+unsigned bitbase_KXKX_probe_by_index(long index) {
+	long lookup_index = index / BITBASE_KXKX_POSITIONS_PER_ENTRY;
+	long bit_index = BITBASE_KXKX_BITS_PER_POSITION * (index % BITBASE_KXKX_POSITIONS_PER_ENTRY);
+	return (bitbase_KXKX[lookup_index] >> bit_index) & BITBASE_KXKX_BITS_MASK;
+}
+
+unsigned bitbase_KXKX_probe(const struct position *pos) {
+	return bitbase_KXKX_probe_by_index(bitbase_KXKX_index(pos));
+}
+
+void bitbase_KXKX_store_by_index(long index, unsigned eval) {
+	long lookup_index = index / BITBASE_KXKX_POSITIONS_PER_ENTRY;
+	long bit_index = BITBASE_KXKX_BITS_PER_POSITION * (index % BITBASE_KXKX_POSITIONS_PER_ENTRY);
+	bitbase_KXKX[lookup_index] &= ~(BITBASE_KXKX_BITS_MASK << bit_index);
+	bitbase_KXKX[lookup_index] |= (eval << bit_index);
+}
+
+void invalid_KXKX_store_by_index(long index) {
+	long lookup_index = index / BITBASE_KXKX_BITS_PER_ENTRY;
+	long bit_index = index % BITBASE_KXKX_BITS_PER_ENTRY;
+	invalid_KXKX[lookup_index] |= (1 << bit_index);
+}
+
+unsigned invalid_KXKX_probe_by_index(long index) {
+	long lookup_index = index / BITBASE_KXKX_BITS_PER_ENTRY;
+	long bit_index = index % BITBASE_KXKX_BITS_PER_ENTRY;
+	return (invalid_KXKX[lookup_index] >> bit_index) & 0x1;
+}
+
+static inline int legal_position(const struct position *pos, int king_white, int piece_white, int square_white, int king_black, int piece_black, int square_black) {
+	UNUSED(king_white);
+	UNUSED(king_black);
+	if ((!piece_white && square_white) || (!piece_black && square_black))
+		return 0;
+
+	/* No pawns on rank 1 and 8. */
+	if ((piece_white == pawn && (square_white < 8 || square_white > 56)) || (piece_black == pawn && (square_black < 8 || square_black > 56)))
+		return 0;
+
+	/* Makes sure that all 2 to 4 squares are distinct. */
+	if (popcount(pos->piece[white][all] | pos->piece[black][all]) != 2ull + (piece_white != 0) + (piece_black != 0))
+		return 0;
 	
-	int our = ctz(pos->piece[turn][king]);
-	int enemy = ctz(pos->piece[1 - turn][king]);
-	uint64_t protected = king_attacks(enemy, 0);
-	/* We never generate the pawn capture because it will be caught
-	 * as a trivial win before move gen. */
-	uint64_t attacks = king_attacks(our, pos->piece[white][pawn] | protected);
-	while (attacks) {
-		int to = ctz(attacks);
-		new_bitbasemove(movelist++, king, our, to);
-	}
-	new_bitbasemove(movelist, 0, 0, 0);
-}
-
-int trivial_draw(const struct position *pos) {
-	if (pos->turn)
+	/* Not legal if we can capture enemy king. */
+	if (generate_checkers(pos, !pos->turn) || distance(king_white, king_black) <= 1)
 		return 0;
-	int pawn_square = ctz(pos->piece[white][pawn]);
-	int strong_king = ctz(pos->piece[white][king]);
-	int weak_king = ctz(pos->piece[black][king]);
-	return distance(weak_king, pawn_square) == 1 && distance(strong_king, pawn_square) > 1;
-}
 
-int trivial_win(const struct position *pos) {
-	if (!pos->turn)
-		return 0;
-	int pawn_square = ctz(pos->piece[white][pawn]);
-	int promotion_square = pawn_square + 8;
-	int strong_king = ctz(pos->piece[white][king]);
-	int weak_king = ctz(pos->piece[black][king]);
-	if (pawn_square / 8 != 6 || promotion_square == strong_king || promotion_square == weak_king)
-		return 0;
-	return distance(strong_king, promotion_square) == 1 || distance(weak_king, promotion_square) >= 2;
-}
-
-int genbitbase_store(const struct position *pos, int win) {
-	bitbase_store(pos, win);
-	int index = bitbase_index(pos);
-	known[index] = 1;
-	return win;
-}
-
-int bitbase_search(struct position *pos) {
-	int index = bitbase_index(pos);
-	if (known[index])
-		return bitbase_probe(pos);
-	if (twofold[index])
-		return BITBASE_DRAW;
-	if (trivial_win(pos))
-		return genbitbase_store(pos, BITBASE_WIN);
-	if (trivial_draw(pos))
-		return genbitbase_store(pos, BITBASE_DRAW);
-	twofold[index] = 1;
-
-	struct bitbasemove movelist[BITBASE_MOVES_MAX];
-	generate_bitbasemoves(pos, movelist);
-
-	for (struct bitbasemove *ptr = movelist; ptr->piece; ptr++) {
-		bitbase_do_move(pos, ptr);
-		int ret = bitbase_search(pos);
-		bitbase_undo_move(pos, ptr);
-		if (ret == pos->turn)
-			return ret;
-	}
-
-	return 1 - pos->turn;
-}
-
-void generate_backward(struct position *pos) {
+	return 1;
 }
 
 int main(void) {
 	magicbitboard_init();
 	attackgen_init();
 	bitboard_init();
-	memset(bitbase, 0, sizeof(bitbase));
+
+	struct position pos;
+	bitbase_KXKX = malloc(BITBASE_KXKX_TABLE_SIZE * sizeof(*bitbase_KXKX));
+	invalid_KXKX = malloc(BITBASE_KXKX_TABLE_SIZE / BITBASE_KXKX_BITS_PER_POSITION * sizeof(*bitbase_KXKX));
+	memset(bitbase_KXKX, 0, BITBASE_KXKX_TABLE_SIZE * sizeof(*bitbase_KXKX));
+	memset(invalid_KXKX, 0, BITBASE_KXKX_TABLE_SIZE / BITBASE_KXKX_BITS_PER_POSITION * sizeof(*invalid_KXKX));
+
+#if 1
+	FILE *file_KXKX = fopen("KXKX.bb", "rb");
+	fread(bitbase_KXKX, sizeof(*bitbase_KXKX), BITBASE_KXKX_TABLE_SIZE, file_KXKX);
+	fclose(file_KXKX);
+#else
+	long total = 0;
+	long counter = 0;
+	for (long index = 0; index < BITBASE_KXKX_INDEX_MAX; index++) {
+		bitbase_KXKX_store_by_index(index, BITBASE_UNKNOWN);
+		int turn = index / (64l * 6 * 64 * 64 * 6 * 64);
+		int king_white = (index % (64 * 6 * 64 * 64 * 6 * 64)) / (6 * 64 * 64 * 6 * 64);
+		int piece_white = (index % (6 * 64 * 64 * 6 * 64)) / (64 * 64 * 6 * 64);
+		int square_white = (index % (64 * 64 * 6 * 64)) / (64 * 6 * 64);
+		int king_black = (index % (64 * 6 * 64)) / (6 * 64);
+		int piece_black = (index % (6 * 64)) / 64;
+		int square_black = (index % (64)) / 1;
+
+		memset(&pos, 0, sizeof(pos));
+		pos.turn = turn;
+		pos.piece[white][king] = bitboard(king_white);
+		pos.mailbox[king_white] = white_king;
+		pos.piece[black][king] = bitboard(king_black);
+		pos.mailbox[king_black] = black_king;
+		if (piece_white) {
+			pos.piece[white][piece_white] = bitboard(square_white);
+			pos.mailbox[square_white] = piece_white;
+		}
+		if (piece_black) {
+			pos.piece[black][piece_black] = bitboard(square_black);
+			pos.mailbox[square_black] = piece_black + 6;
+		}
+		pos.piece[white][all] = pos.piece[white][king] | pos.piece[white][piece_white];
+		pos.piece[black][all] = pos.piece[black][king] | pos.piece[black][piece_black];
+
+		if (!legal_position(&pos, king_white, piece_white, square_white, king_black, piece_black, square_black)) {
+			total++;
+			invalid_KXKX_store_by_index(index);
+			continue;
+		}
+
+		int m = mate(&pos);
+		if (m == 2 && pos.turn == black) {
+			counter++;
+			bitbase_KXKX_store_by_index(index, BITBASE_WIN);
+		}
+		else if (m == 2 && pos.turn == white) {
+			counter++;
+			bitbase_KXKX_store_by_index(index, BITBASE_LOSE);
+		}
+		else if (m == 1) {
+			counter++;
+			bitbase_KXKX_store_by_index(index, BITBASE_DRAW);
+		}
+
+	}
+	printf("There are %ld total legal positions.\n", total);
+	printf("There are %ld positions where a checkmate or stalemate occured.\n", counter);
+
+	int iteration = 1;
+	int changed = 1;
+	while (changed) {
+		changed = 0;
+		total = 0;
+		clock_t t = clock();
+		for (long index = 0; index < BITBASE_KXKX_INDEX_MAX; index++) {
+			if (invalid_KXKX_probe_by_index(index) || bitbase_KXKX_probe_by_index(index) != BITBASE_UNKNOWN)
+				continue;
+
+			int turn = index / (64l * 6 * 64 * 64 * 6 * 64);
+			int king_white = (index % (64 * 6 * 64 * 64 * 6 * 64)) / (6 * 64 * 64 * 6 * 64);
+			int piece_white = (index % (6 * 64 * 64 * 6 * 64)) / (64 * 64 * 6 * 64);
+			int square_white = (index % (64 * 64 * 6 * 64)) / (64 * 6 * 64);
+			int king_black = (index % (64 * 6 * 64)) / (6 * 64);
+			int piece_black = (index % (6 * 64)) / 64;
+			int square_black = (index % (64)) / 1;
+
+			memset(&pos, 0, sizeof(pos));
+			pos.turn = turn;
+			pos.piece[white][king] = bitboard(king_white);
+			pos.mailbox[king_white] = white_king;
+			pos.piece[black][king] = bitboard(king_black);
+			pos.mailbox[king_black] = black_king;
+			if (piece_white) {
+				pos.piece[white][piece_white] = bitboard(square_white);
+				pos.mailbox[square_white] = piece_white;
+			}
+			if (piece_black) {
+				pos.piece[black][piece_black] = bitboard(square_black);
+				pos.mailbox[square_black] = piece_black + 6;
+			}
+			pos.piece[white][all] = pos.piece[white][king] | pos.piece[white][piece_white];
+			pos.piece[black][all] = pos.piece[black][king] | pos.piece[black][piece_black];
+			
+			move movelist[MOVES_MAX];
+			generate_all(&pos, movelist);
+
+			int exists[4] = { 0 };
+			for (move *ptr = movelist; *ptr; ptr++) {
+				do_move(&pos, ptr);
+				unsigned p = bitbase_KXKX_probe(&pos);
+				undo_move(&pos, ptr);
+				exists[p] = 1;
+				if (p == BITBASE_WIN && pos.turn == white)
+					break;
+				else if (p == BITBASE_LOSE && pos.turn == black)
+					break;
+			}
+			
+			if (exists[BITBASE_WIN] && pos.turn == white) {
+				bitbase_KXKX_store_by_index(index, BITBASE_WIN);
+				counter++;
+				total++;
+				changed = 1;
+			}
+			else if (exists[BITBASE_LOSE] && pos.turn == black) {
+				bitbase_KXKX_store_by_index(index, BITBASE_LOSE);
+				counter++;
+				total++;
+				changed = 1;
+			}
+			else if (!exists[BITBASE_UNKNOWN] && exists[BITBASE_DRAW]) {
+				bitbase_KXKX_store_by_index(index, BITBASE_DRAW);
+				counter++;
+				total++;
+				changed = 1;
+			}
+			else if (!exists[BITBASE_UNKNOWN]) {
+				bitbase_KXKX_store_by_index(index, pos.turn == white ? BITBASE_LOSE : BITBASE_WIN);
+				counter++;
+				total++;
+				changed = 1;
+			}
+		}
+		printf("Iteration %d took %ld seconds.\n", iteration++, (clock() - t) / CLOCKS_PER_SEC);
+		printf("Stored %ld positions.\n", total);
+		printf("There are now %ld stored positions.\n", counter);
+	}
+
+	/* Clean up. */
+	for (long index = 0; index < BITBASE_KXKX_INDEX_MAX; index++)
+		if (!invalid_KXKX_probe_by_index(index) && bitbase_KXKX_probe_by_index(index) == BITBASE_UNKNOWN)
+			bitbase_KXKX_store_by_index(index, BITBASE_DRAW);
+#endif
+#if 1
+	/* KPK bitbase. */
+	for (int turn = 0; turn < 2; turn++) {
+		for (int king_white = 0; king_white < 64; king_white++) {
+			for (int pawn_white = 8; pawn_white < 56; pawn_white++) {
+				for (int king_black = 0; king_black < 64; king_black++) {
+					memset(&pos, 0, sizeof(pos));
+					pos.turn = turn;
+					pos.piece[white][king] = bitboard(king_white);
+					pos.piece[white][pawn] = bitboard(pawn_white);
+					pos.piece[black][king] = bitboard(king_black);
+					unsigned p = bitbase_KXKX_probe(&pos);
+					bitbase_KPK_store(&pos, p);
+				}
+			}
+		}
+	}
+
+	/* KPKP bitbase. */
+	for (int turn = 0; turn < 2; turn++) {
+		for (int king_white = 0; king_white < 64; king_white++) {
+			for (int pawn_white = 8; pawn_white < 56; pawn_white++) {
+				for (int king_black = 0; king_black < 64; king_black++) {
+					for (int pawn_black = 8; pawn_black < 56; pawn_black++) {
+						memset(&pos, 0, sizeof(pos));
+						pos.turn = turn;
+						pos.piece[white][king] = bitboard(king_white);
+						pos.piece[white][pawn] = bitboard(pawn_white);
+						pos.piece[black][king] = bitboard(king_black);
+						pos.piece[black][pawn] = bitboard(pawn_black);
+						unsigned p = bitbase_KXKX_probe(&pos);
+						bitbase_KPKP_store(&pos, p);
+					}
+				}
+			}
+		}
+	}
+
+	/* KRKP bitbase. */
+	for (int turn = 0; turn < 2; turn++) {
+		for (int king_white = 0; king_white < 64; king_white++) {
+			for (int rook_white = 0; rook_white < 64; rook_white++) {
+				for (int king_black = 0; king_black < 64; king_black++) {
+					for (int pawn_black = 8; pawn_black < 56; pawn_black++) {
+						memset(&pos, 0, sizeof(pos));
+						pos.turn = turn;
+						pos.piece[white][king] = bitboard(king_white);
+						pos.piece[white][rook] = bitboard(rook_white);
+						pos.piece[black][king] = bitboard(king_black);
+						pos.piece[black][pawn] = bitboard(pawn_black);
+						unsigned p = bitbase_KXKX_probe(&pos);
+						bitbase_KRKP_store(&pos, p);
+					}
+				}
+			}
+		}
+	}
+#endif
+#if 0
+	/* KXKX bitbase seems correct. */
+	FILE *file_KXKX = fopen("KXKX.bb", "wb");
+	fwrite(bitbase_KXKX, sizeof(*bitbase_KXKX), BITBASE_KXKX_TABLE_SIZE, file_KXKX);
+	fclose(file_KXKX);
+#endif
+	write_bitbase("kpk", bitbase_KPK, BITBASE_KPK_TABLE_SIZE);
+	write_bitbase("kpkp", bitbase_KPKP, BITBASE_KPKP_TABLE_SIZE);
+	write_bitbase("krkp", bitbase_KRKP, BITBASE_KRKP_TABLE_SIZE);
+
+	free(bitbase_KXKX);
+	free(invalid_KXKX);
+}
+
+void write_bitbase(char *name, uint32_t *bitbase, size_t table_size) {
+	char path[BUFSIZ] = "src/";
+	char upper_name[BUFSIZ];
+	for (size_t i = 0; i <= strlen(name); i++) {
+		upper_name[i] = toupper(name[i]);
+	}
+	appendstr(path, name);
+	appendstr(path, ".c");
+
+	FILE *f = fopen(path, "w");
+	if (!f)
+		fprintf(stderr, "Failed to open file %s.", path);
+
+	fprintf(f, "/* This file has been autogenerated by genbitbase. */\n\n");
+	fprintf(f, "#include <stdint.h>\n\n");
+	fprintf(f, "const uint32_t bitbase_%s[%ld] = {", upper_name, table_size);
+
+	for (size_t i = 0; i < table_size; i++) {
+		if (i % 8 == 0)
+			fprintf(f, "\n\t");
+		else
+			fprintf(f, " ");
+		fprintf(f, "0x%08X,", bitbase[i]);
+	}
+
+	fprintf(f, "\n};\n");
+
+	fclose(f);
 }

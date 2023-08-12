@@ -23,6 +23,7 @@
 #include "position.h"
 #include "bitboard.h"
 #include "move.h"
+#include "evaluate.h"
 
 #define ENDGAMEBITS (8)
 #define ENDGAMESIZE (1 << ENDGAMEBITS)
@@ -30,8 +31,8 @@
 
 struct endgame {
 	uint64_t endgame_key;
-	int32_t (*evaluate)(const struct position *pos, int strongside);
-	uint8_t strongside;
+	int32_t (*evaluate)(const struct position *pos, int strong_side);
+	uint8_t strong_side;
 };
 
 extern struct endgame endgame_table[ENDGAMESIZE];
@@ -57,8 +58,8 @@ static inline struct endgame *endgame_probe(const struct position *pos) {
  * because we don't have enough time to force a checkmate.
  */
 static inline int32_t endgame_evaluate(const struct endgame *e, const struct position *pos) {
-	int32_t eval = e->evaluate(pos, e->strongside);
-	return pos->turn == e->strongside ? eval : -eval;
+	int32_t eval = e->evaluate(pos, e->strong_side);
+	return eval == VALUE_NONE ? VALUE_NONE : pos->turn == e->strong_side ? eval : -eval;
 }
 
 void refresh_endgame_key(struct position *pos);

@@ -18,7 +18,6 @@
 
 #include <string.h>
 
-#include "init.h"
 #include "bitboard.h"
 #include "util.h"
 #include "attackgen.h"
@@ -26,6 +25,7 @@
 #include "pawn.h"
 #include "tables.h"
 #include "nnue.h"
+#include "option.h"
 
 mevalue king_on_open_file     = S(-13, -4);
 mevalue outpost_bonus  	      = S(47, 16);
@@ -56,7 +56,7 @@ int phase_bishop              = 309;
 int phase_rook                = 651;
 int phase_queen               = 1437;
 
-const int material_value[7] = { 0, 100, 300, 300, 500, 900, 0 };
+const int material_value[7] = { 0, 100, 300, 300, 500, 1000, 0 };
 
 mevalue evaluate_mobility(const struct position *pos, struct evaluationinfo *ei, int turn) {
 	UNUSED(pos);
@@ -387,21 +387,22 @@ int32_t phase(const struct evaluationinfo *ei) {
 	return phase;
 }
 
-int32_t scale(const struct position *pos, const struct evaluationinfo *ei, int strongside) {
-	int weakside = 1 - strongside;
+/* <https://ulthiel.com/math/other/endgames> */
+int32_t scale(const struct position *pos, const struct evaluationinfo *ei, int strong_side) {
+	int weak_side = 1 - strong_side;
 	int32_t scale = NORMAL_SCALE;
-	int32_t strongmaterial = ei->material_value[strongside];
-	int32_t weakmaterial = ei->material_value[weakside];
-	/* Scores also KBBKN as a draw which is ok. */
-	if (!pos->piece[strongside][pawn] && strongmaterial - weakmaterial <= material_value[bishop])
-		scale = (strongmaterial <= material_value[bishop]) ? 0 : (weakmaterial < material_value[rook]) ? 16 : 32;
+	int32_t strong_material = ei->material_value[strong_side];
+	int32_t weak_material = ei->material_value[weak_side];
+	/* Scores also KBBKN as a draw which is ok by the 50 move rule. */
+	if (!pos->piece[strong_side][pawn] && strong_material - weak_material <= material_value[bishop])
+		scale = (strong_material <= material_value[bishop]) ? 0 : (weak_material < material_value[rook]) ? 16 : 32;
 	return scale;
 }
 
 int32_t evaluate_tapered(const struct position *pos, const struct evaluationinfo *ei) {
 	int32_t p = phase(ei);
-	int strongside = mevalue_eg(ei->eval) > 0;
-	int32_t s = scale(pos, ei, strongside);
+	int strong_side = mevalue_eg(ei->eval) > 0;
+	int32_t s = scale(pos, ei, strong_side);
 	int32_t ret = p * mevalue_mg(ei->eval) + (PHASE - p) * s * mevalue_eg(ei->eval) / NORMAL_SCALE;
 	return ret / PHASE;
 }
@@ -434,6 +435,9 @@ mevalue evaluate_print_x(const char *name, const struct position *pos, struct ev
 		mevalue (*evaluate_x)(const struct position *, struct evaluationinfo *ei, int));
 
 void evaluate_print(struct position *pos) {
+	int old_option_nnue = option_nnue;
+	option_nnue = 1;
+
 	struct evaluationinfo ei = { 0 };
 	evaluationinfo_init(pos, &ei);
 
@@ -457,8 +461,8 @@ void evaluate_print(struct position *pos) {
 	printf(" |\n");
 
 	int32_t p = phase(&ei);
-	int strongside = mevalue_mg(ei.eval) > 0;
-	int32_t s = scale(pos, &ei, strongside);
+	int strong_side = mevalue_mg(ei.eval) > 0;
+	int32_t s = scale(pos, &ei, strong_side);
 
 	int32_t scaledmg = mevalue_mg(ei.eval);
 	int32_t scaledeg = s * mevalue_eg(ei.eval) / NORMAL_SCALE;
@@ -489,7 +493,7 @@ void evaluate_print(struct position *pos) {
 				int16_t oldeval = psqtaccumulation[white] - psqtaccumulation[black];
 				for (int color = 0; color < 2; color++) {
 					int king_square = ctz(pos->piece[color][king]);
-					king_square = orient(color, king_square);
+					king_square = orient_horizontal(color, king_square);
 					int index = make_index(color, square, piece, king_square);
 					add_index_slow(index, accumulation, psqtaccumulation, color);
 				}
@@ -511,6 +515,7 @@ void evaluate_print(struct position *pos) {
 	printf("\n");
 	printf("Classical Evaluation: %+.2f\n", (double)(2 * pos->turn - 1) * evaluate_classical(pos) / 100);
 	printf("NNUE Evaluation: %+.2f\n", (double)(2 * pos->turn - 1) * evaluate_nnue(pos) / 100);
+	option_nnue = old_option_nnue;
 }
 
 void print_mevalue(mevalue eval) {

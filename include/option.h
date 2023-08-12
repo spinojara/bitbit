@@ -21,12 +21,11 @@
 extern int option_nnue;
 extern int option_transposition;
 extern int option_history;
-extern int option_pawn;
 extern int option_endgame;
 extern int option_damp;
 
 void print_options(void);
 
-void setoption(int argc, char **argv);
+void setoption(int argc, char **argv, void *p);
 
 #endif

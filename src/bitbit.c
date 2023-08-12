@@ -26,38 +26,27 @@
 #include "interface.h"
 #include "interrupt.h"
 #include "tables.h"
-#include "pawn.h"
-#include "nnue.h"
 #include "endgame.h"
+#include "nnue.h"
 
 int main(int argc, char **argv) {
-	int ret = 0;
+	int ret;
 	/* --version */
 	if (init(argc, argv))
-		goto term;
+		return 0;
 	interrupt_init();
-	/* no magic found */
+	/* No magic found. */
 	if ((ret = magicbitboard_init()))
-		goto term;
+		return ret;
 	attackgen_init();
 	bitboard_init();
 	tables_init();
 	search_init();
 	moveorder_init();
 	position_init();
-	/* transposition table size == 0 */
-	if ((ret = transposition_init()))
-		goto term;
-	if ((ret = pawn_init()))
-		goto term;
-	interface_init();
+	transposition_init();
 	endgame_init();
-	nnue_init(argc, argv);
+	nnue_init();
 	ret = interface(argc, argv);
-term:;
-	interface_term();
-	pawn_term();
-	transposition_term();
-	term();
 	return ret;
 }

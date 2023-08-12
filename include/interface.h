@@ -20,18 +20,16 @@
 
 #include "move.h"
 
-#define DONE 0
-#define EXIT_LOOP 1
-#define ERR_MISS_ARG 2
-#define ERR_BAD_ARG 3
+enum {
+	DONE         = 0,
+	EXIT_LOOP    = 1,
+	ERR_MISS_ARG = 2,
+	ERR_BAD_ARG  = 3,
+};
 
 int interface(int argc, char **argv);
 
 void execute_func(int argc, char **argv);
-
-void interface_init(void);
-
-void interface_term(void);
 
 int interface_version(int argc, char **argv);
 

@@ -17,8 +17,6 @@
 
 #include "attackgen.h"
 
-#include "init.h"
-
 uint64_t knight_attacks_lookup[64];
 uint64_t king_attacks_lookup[64];
 
@@ -53,10 +51,6 @@ uint64_t king_attacks_calc(int square) {
 void attackgen_init(void) {
 	for (int i = 0; i < 64; i++) {
 		knight_attacks_lookup[i] = knight_attacks_calc(i);
-		init_status("populating knight attack table");
-	}
-	for (int i = 0; i < 64; i++) {
 		king_attacks_lookup[i] = king_attacks_calc(i);
-		init_status("populating king attack table");
 	}
 }

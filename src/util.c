@@ -21,11 +21,11 @@
 #include <string.h>
 #include <time.h>
 
-#include "init.h"
 #include "bitboard.h"
 
 /* <http://vigna.di.unimi.it/ftp/papers/xorshift.pdf> */
-uint64_t gseed = 1274012836ull;
+const uint64_t start_seed = 1274012836ull;
+uint64_t gseed = start_seed;
 uint64_t gxorshift64(void) {
 	return xorshift64(&gseed);
 }
@@ -109,7 +109,7 @@ uint32_t read_le_uint(FILE *f, int bytes) {
 	uint8_t buf[4] = { 0 };
 	if (!fread(buf, bytes, 1, f))
 		return 0;
-	return buf[0] | (buf[1] << 8) | (buf[2] << 16) | (buf[3] << 24);
+	return buf[0] | ((uint32_t)buf[1] << 8) | ((uint32_t)buf[2] << 16) | ((uint32_t)buf[3] << 24);
 }
 
 void write_le_uint(FILE *f, uint32_t t, int bytes) {
