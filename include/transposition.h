@@ -126,7 +126,7 @@ static inline uint64_t zobrist_castle_key(int castle) {
 static inline uint64_t zobrist_en_passant_key(int square) {
 	if (square == 0)
 		return 0;
-	return zobrist_keys[12 * 64 + 1 + 16 + square % 8];
+	return zobrist_keys[12 * 64 + 1 + 16 + file_of(square)];
 }
 
 void transposition_clear(struct transpositiontable *tt);

@@ -530,10 +530,9 @@ double grad_calc(struct position *pos, double result) {
 	}
 	if ((param = &parameters[PARAM_PSQTPAWN])->tune == TUNE_YES) {
 		for (size_t i = 0; i < param->size; i++) {
-			int j = i + 8;
-			int x = j % 8;
-			int y = j / 8;
-			int square = x + 8 * (7 - y);
+			int f = file_of(i + 8);
+			int r = rank_of(i + 8);
+			int square = make_square(f, 7 - r);
 			double grad = factor * ((pos->mailbox[orient_horizontal(white, square)] == white_pawn) - (pos->mailbox[orient_horizontal(black, square)] == black_pawn));
 			double gradmg = mgs * grad;
 			double gradeg = egs * grad;
@@ -561,9 +560,9 @@ double grad_calc(struct position *pos, double result) {
 	}
 	if ((param = &parameters[PARAM_PSQTKNIGHT])->tune == TUNE_YES) {
 		for (size_t i = 0; i < param->size; i++) {
-			int x = i % 4;
-			int y = i / 4;
-			int square1 = x + 8 * (7 - y);
+			int f = i % 4;
+			int r = i / 4;
+			int square1 = make_square(f, r);
 			int square2 = orient_vertical(1, square1);
 			int num = (pos->mailbox[orient_horizontal(white, square1)] == white_knight) + (pos->mailbox[orient_horizontal(white, square2)] == white_knight) -
 				  (pos->mailbox[orient_horizontal(black, square1)] == black_knight) - (pos->mailbox[orient_horizontal(black, square2)] == black_knight);
@@ -598,9 +597,9 @@ double grad_calc(struct position *pos, double result) {
 	}
 	if ((param = &parameters[PARAM_PSQTBISHOP])->tune == TUNE_YES) {
 		for (size_t i = 0; i < param->size; i++) {
-			int x = i % 4;
-			int y = i / 4;
-			int square1 = x + 8 * (7 - y);
+			int f = i % 4;
+			int r = i / 4;
+			int square1 = make_square(f, r);
 			int square2 = orient_vertical(1, square1);
 			int num = (pos->mailbox[orient_horizontal(white, square1)] == white_bishop) + (pos->mailbox[orient_horizontal(white, square2)] == white_bishop) -
 				  (pos->mailbox[orient_horizontal(black, square1)] == black_bishop) - (pos->mailbox[orient_horizontal(black, square2)] == black_bishop);
@@ -613,9 +612,9 @@ double grad_calc(struct position *pos, double result) {
 	}
 	if ((param = &parameters[PARAM_PSQTROOK])->tune == TUNE_YES) {
 		for (size_t i = 0; i < param->size; i++) {
-			int x = i % 4;
-			int y = i / 4;
-			int square1 = x + 8 * (7 - y);
+			int f = i % 4;
+			int r = i / 4;
+			int square1 = make_square(f, r);
 			int square2 = orient_vertical(1, square1);
 			int num = (pos->mailbox[orient_horizontal(white, square1)] == white_rook) + (pos->mailbox[orient_horizontal(white, square2)] == white_rook) -
 				  (pos->mailbox[orient_horizontal(black, square1)] == black_rook) - (pos->mailbox[orient_horizontal(black, square2)] == black_rook);
@@ -628,9 +627,9 @@ double grad_calc(struct position *pos, double result) {
 	}
 	if ((param = &parameters[PARAM_PSQTQUEEN])->tune == TUNE_YES) {
 		for (size_t i = 0; i < param->size; i++) {
-			int x = i % 4;
-			int y = i / 4;
-			int square1 = x + 8 * (7 - y);
+			int f = i % 4;
+			int r = i / 4;
+			int square1 = make_square(f, r);
 			int square2 = orient_vertical(1, square1);
 			int num = (pos->mailbox[orient_horizontal(white, square1)] == white_queen) + (pos->mailbox[orient_horizontal(white, square2)] == white_queen) -
 				  (pos->mailbox[orient_horizontal(black, square1)] == black_queen) - (pos->mailbox[orient_horizontal(black, square2)] == black_queen);
@@ -643,9 +642,9 @@ double grad_calc(struct position *pos, double result) {
 	}
 	if ((param = &parameters[PARAM_PSQTKING])->tune == TUNE_YES) {
 		for (size_t i = 0; i < param->size; i++) {
-			int x = i % 4;
-			int y = i / 4;
-			int square1 = x + 8 * (7 - y);
+			int f = i % 4;
+			int r = i / 4;
+			int square1 = make_square(f, r);
 			int square2 = orient_vertical(1, square1);
 			int num = (pos->mailbox[orient_horizontal(white, square1)] == white_king) + (pos->mailbox[orient_horizontal(white, square2)] == white_king) -
 				  (pos->mailbox[orient_horizontal(black, square1)] == black_king) - (pos->mailbox[orient_horizontal(black, square2)] == black_king);
@@ -1001,7 +1000,7 @@ double grad_calc(struct position *pos, double result) {
 			int r = MAX(ei.king_danger[color], 0);
 			double dEdr = -mgs * 2 * r / 2048 - egs * 1 / 8;
 			double drdk = ei.king_danger[color] >= 0;
-			double dkdw = -!pos->piece[1 - color][queen];
+			double dkdw = -!pos->piece[other_color(color)][queen];
 			double dEdw = dEdr * drdk * dkdw;
 			double grad = factor * dEdw * (2 * color - 1);
 			param->grad[0] += grad;
@@ -1025,7 +1024,7 @@ double grad_calc(struct position *pos, double result) {
 			int r = MAX(ei.king_danger[color], 0);
 			double dEdr = -mgs * 2 * r / 2048 - egs * 1 / 8;
 			double drdk = ei.king_danger[color] >= 0;
-			double dkdw = ei.king_attack_units[1 - color][knight];
+			double dkdw = ei.king_attack_units[other_color(color)][knight];
 			double dEdw = dEdr * drdk * dkdw;
 			double grad = factor * dEdw * (2 * color - 1);
 			param->grad[0] += grad;
@@ -1048,7 +1047,7 @@ double grad_calc(struct position *pos, double result) {
 			int r = MAX(ei.king_danger[color], 0);
 			double dEdr = -mgs * 2 * r / 2048 - egs * 1 / 8;
 			double drdk = ei.king_danger[color] >= 0;
-			double dkdw = ei.king_attack_units[1 - color][bishop];
+			double dkdw = ei.king_attack_units[other_color(color)][bishop];
 			double dEdw = dEdr * drdk * dkdw;
 			double grad = factor * dEdw * (2 * color - 1);
 			param->grad[0] += grad;
@@ -1059,7 +1058,7 @@ double grad_calc(struct position *pos, double result) {
 			int r = MAX(ei.king_danger[color], 0);
 			double dEdr = -mgs * 2 * r / 2048 - egs * 1 / 8;
 			double drdk = ei.king_danger[color] >= 0;
-			double dkdw = ei.king_attack_units[1 - color][rook];
+			double dkdw = ei.king_attack_units[other_color(color)][rook];
 			double dEdw = dEdr * drdk * dkdw;
 			double grad = factor * dEdw * (2 * color - 1);
 			param->grad[0] += grad;
@@ -1070,7 +1069,7 @@ double grad_calc(struct position *pos, double result) {
 			int r = MAX(ei.king_danger[color], 0);
 			double dEdr = -mgs * 2 * r / 2048 - egs * 1 / 8;
 			double drdk = ei.king_danger[color] >= 0;
-			double dkdw = ei.king_attack_units[1 - color][queen];
+			double dkdw = ei.king_attack_units[other_color(color)][queen];
 			double dEdw = dEdr * drdk * dkdw;
 			double grad = factor * dEdw * (2 * color - 1);
 			param->grad[0] += grad;

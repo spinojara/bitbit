@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 #include "bitboard.h"
 #include "util.h"
@@ -58,10 +59,10 @@ uint64_t generate_checkers(const struct position *pos, int color) {
 	int square;
 
 	square = ctz(pos->piece[color][king]);
-	checkers |= (shift_color_west(pos->piece[color][king], color) | shift_color_east(pos->piece[color][king], color)) & pos->piece[1 - color][pawn];
-	checkers |= rook_attacks(square, 0, pos->piece[white][all] | pos->piece[black][all]) & (pos->piece[1 - color][rook] | pos->piece[1 - color][queen]);
-	checkers |= bishop_attacks(square, 0, pos->piece[white][all] | pos->piece[black][all]) & (pos->piece[1 - color][bishop] | pos->piece[1 - color][queen]);
-	checkers |= knight_attacks(square, 0) & pos->piece[1 - color][knight];
+	checkers |= (shift_color_west(pos->piece[color][king], color) | shift_color_east(pos->piece[color][king], color)) & pos->piece[other_color(color)][pawn];
+	checkers |= rook_attacks(square, 0, pos->piece[white][all] | pos->piece[black][all]) & (pos->piece[other_color(color)][rook] | pos->piece[other_color(color)][queen]);
+	checkers |= bishop_attacks(square, 0, pos->piece[white][all] | pos->piece[black][all]) & (pos->piece[other_color(color)][bishop] | pos->piece[other_color(color)][queen]);
+	checkers |= knight_attacks(square, 0) & pos->piece[other_color(color)][knight];
 
 	return checkers;
 }
@@ -71,27 +72,27 @@ uint64_t generate_attacked(const struct position *pos, int color) {
 	uint64_t piece;
 	int square;
 
-	square = ctz(pos->piece[1 - color][king]);
+	square = ctz(pos->piece[other_color(color)][king]);
 
 	attacked = king_attacks(square, 0);
-	attacked |= shift_color_west(pos->piece[1 - color][pawn], 1 - color);
-	attacked |= shift_color_east(pos->piece[1 - color][pawn], 1 - color);
+	attacked |= shift_color_west(pos->piece[other_color(color)][pawn], other_color(color));
+	attacked |= shift_color_east(pos->piece[other_color(color)][pawn], other_color(color));
 
-	piece = pos->piece[1 - color][knight];
+	piece = pos->piece[other_color(color)][knight];
 	while (piece) {
 		square = ctz(piece);
 		attacked |= knight_attacks(square, 0);
 		piece = clear_ls1b(piece);
 	}
 
-	piece = pos->piece[1 - color][bishop] | pos->piece[1 - color][queen];
+	piece = pos->piece[other_color(color)][bishop] | pos->piece[other_color(color)][queen];
 	while (piece) {
 		square = ctz(piece);
 		attacked |= bishop_attacks(square, 0, (pos->piece[white][all] | pos->piece[black][all]) ^ pos->piece[color][king]);
 		piece = clear_ls1b(piece);
 	}
 
-	piece = pos->piece[1 - color][rook] | pos->piece[1 - color][queen];
+	piece = pos->piece[other_color(color)][rook] | pos->piece[other_color(color)][queen];
 	while (piece) {
 		square = ctz(piece);
 		attacked |= rook_attacks(square, 0, (pos->piece[white][all] | pos->piece[black][all]) ^ pos->piece[color][king]);
@@ -110,8 +111,8 @@ uint64_t generate_pinned(const struct position *pos, int color) {
 	uint64_t pinned;
 
 	king_square = ctz(pos->piece[color][king]);
-	rook_pinners = rook_attacks(king_square, 0, pos->piece[1 - color][all]) & (pos->piece[1 - color][rook] | pos->piece[1 - color][queen]);
-	bishop_pinners = bishop_attacks(king_square, 0, pos->piece[1 - color][all]) & (pos->piece[1 - color][bishop] | pos->piece[1 - color][queen]);
+	rook_pinners = rook_attacks(king_square, 0, pos->piece[other_color(color)][all]) & (pos->piece[other_color(color)][rook] | pos->piece[other_color(color)][queen]);
+	bishop_pinners = bishop_attacks(king_square, 0, pos->piece[other_color(color)][all]) & (pos->piece[other_color(color)][bishop] | pos->piece[other_color(color)][queen]);
 
 	while (rook_pinners) {
 		square = ctz(rook_pinners);
@@ -142,8 +143,8 @@ uint64_t generate_pinners(const struct position *pos, uint64_t pinned, int color
 	int king_square = ctz(pos->piece[color][king]);
 	int square;
 	uint64_t ret = 0;
-	uint64_t pinners = (rook_attacks(king_square, 0, pos->piece[1 - color][all]) & (pos->piece[1 - color][rook] | pos->piece[1 - color][queen])) |
-		(bishop_attacks(king_square, 0, pos->piece[1 - color][all]) & (pos->piece[1 - color][bishop] | pos->piece[1 - color][queen]));
+	uint64_t pinners = (rook_attacks(king_square, 0, pos->piece[other_color(color)][all]) & (pos->piece[other_color(color)][rook] | pos->piece[other_color(color)][queen])) |
+		(bishop_attacks(king_square, 0, pos->piece[other_color(color)][all]) & (pos->piece[other_color(color)][bishop] | pos->piece[other_color(color)][queen]));
 
 	while (pinned) {
 		square = ctz(pinned);
@@ -170,8 +171,8 @@ char *algebraic(char *str, int square) {
 		str[1] = '\0';
 	}
 	else {
-		str[0] = "abcdefgh"[square % 8];
-		str[1] = "12345678"[square / 8];
+		str[0] = "abcdefgh"[file_of(square)];
+		str[1] = "12345678"[rank_of(square)];
 	}
 	str[2] = '\0';
 	return str;
@@ -411,13 +412,13 @@ int fen_is_ok(int argc, char **argv) {
 	}
 
 	for (i = 0; i < 8; i++)
-		if (mailbox[i] % 6 == pawn || mailbox[i + 56] % 6 == pawn)
+		if (uncolored_piece(mailbox[i]) == pawn || uncolored_piece(mailbox[i + 56]) == pawn)
 			return 0;
 
 	/* now ok to generate preliminary position */
 	struct position pos;
 	pos_from_fen(&pos, argc, argv);
-	uint64_t checkers = generate_checkers(&pos, 1 - pos.turn);
+	uint64_t checkers = generate_checkers(&pos, other_color(pos.turn));
 	if (checkers)
 		return 0;
 	if (popcount(pos.piece[white][all]) > 16 || popcount(pos.piece[black][all]) > 16)

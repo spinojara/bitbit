@@ -21,6 +21,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdalign.h>
+#include <assert.h>
 
 #define K_HALF_DIMENSIONS (256)
 
@@ -80,6 +81,10 @@ uint64_t generate_attacked(const struct position *pos, int color);
 uint64_t generate_pinned(const struct position *pos, int color);
 uint64_t generate_pinners(const struct position *pos, uint64_t pinned, int color);
 
+static inline int other_color(int color) {
+	return color ^ white ^ black;
+}
+
 static inline int orient_horizontal(int turn, int square) {
 	return square ^ (turn ? 0x0 : 0x38);
 }
@@ -93,11 +98,25 @@ static inline uint64_t all_pieces(const struct position *pos) {
 }
 
 static inline int colored_piece(int piece, int color) {
-	return piece + (color == black) * white_king;
+	return piece + other_color(color) * king;
 }
 
 static inline int uncolored_piece(int piece) {
 	return piece - white_king * (piece > white_king);
+}
+
+static inline int rank_of(int square) {
+	assert(0 <= square && square < 64);
+	return square >> 3;
+}
+
+static inline int file_of(int square) {
+	assert(0 <= square && square < 64);
+	return square & 0x7;
+}
+
+static inline int make_square(int file, int rank) {
+	return file + 8 * rank;
 }
 
 int square(const char *algebraic);

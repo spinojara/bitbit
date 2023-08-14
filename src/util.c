@@ -43,12 +43,6 @@ int bernoulli(double p, uint64_t *seed) {
 	return (double)(xorshift64(seed) % max) / max < p;
 }
 
-uint64_t log_2(uint64_t m) {
-	if (m <= 2)
-		return 1;
-	return 1 + log_2(m / 2);
-}
-
 int find_char(const char *s, char c) {
 	for (int i = 0; s[i]; i++)
 		if (s[i] == c)

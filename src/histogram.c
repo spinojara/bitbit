@@ -42,10 +42,10 @@ void store_information(struct position *pos, uint64_t piece_square[7][64]) {
 }
 
 void print_information(uint64_t square[64], uint64_t total) {
-	for (int y = 0; y < 8; y++) {
+	for (int r = 7; r >= 0; r--) {
 		printf("+-------+-------+-------+-------+-------+-------+-------+-------+\n|");
-		for (int x = 0; x < 8; x++) {
-			int sq = 8 * (7 - y) + x;
+		for (int f = 0; f < 8; f++) {
+			int sq = make_square(f, r);
 			printf(" %5.2f |", 100.f * square[sq] / total);
 		}
 		printf("\n");

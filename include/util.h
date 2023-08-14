@@ -43,8 +43,6 @@ int bernoulli(double p, uint64_t *seed);
 
 uint64_t power(uint64_t m, uint64_t n);
 
-uint64_t log_2(uint64_t m);
-
 int find_char(const char *s, char c);
 
 /* returns 0 if s is not a non negative integer */

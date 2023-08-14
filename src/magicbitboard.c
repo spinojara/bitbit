@@ -39,8 +39,8 @@ uint64_t rook_full_mask[64];
 
 uint64_t bishop_attacks_calc(int square, uint64_t b) {
 	uint64_t attacks = 0;
-	int x = square % 8;
-	int y = square / 8;
+	int x = file_of(square);
+	int y = rank_of(square);
 
 	for (int i = x + 1, j = y + 1; i < 8 && j < 8; i++, j++) {
 		attacks |= bitboard(i + j * 8);
@@ -75,8 +75,8 @@ uint64_t bishop_attacks_calc(int square, uint64_t b) {
 
 uint64_t rook_attacks_calc(int square, uint64_t b) {
 	uint64_t attacks = 0;
-	int x = square % 8;
-	int y = square / 8;
+	int x = file_of(square);
+	int y = rank_of(square);
 
 	for (int i = x + 1; i < 8; i++) {
 		attacks |= bitboard(i + 8 * y);
@@ -111,8 +111,8 @@ uint64_t rook_attacks_calc(int square, uint64_t b) {
 
 uint64_t bishop_mask_calc(int square) {
 	uint64_t mask = 0;
-	int x = square % 8;
-	int y = square / 8;
+	int x = file_of(square);
+	int y = rank_of(square);
 
 	for (int i = x + 1, j = y + 1; i < 7 && j < 7; i++, j++) {
 		mask |= bitboard(i + j * 8);
@@ -135,8 +135,8 @@ uint64_t bishop_mask_calc(int square) {
 
 uint64_t rook_mask_calc(int square) {
 	uint64_t mask = 0;
-	int x = square % 8;
-	int y = square / 8;
+	int x = file_of(square);
+	int y = rank_of(square);
 
 	for (int i = x + 1; i < 7; i++) {
 		mask |= bitboard(i + 8 * y);
@@ -159,8 +159,8 @@ uint64_t rook_mask_calc(int square) {
 
 uint64_t bishop_full_mask_calc(int square) {
 	uint64_t mask = 0;
-	int x = square % 8;
-	int y = square / 8;
+	int x = file_of(square);
+	int y = rank_of(square);
 
 	for (int i = x + 1, j = y + 1; i < 8 && j < 8; i++, j++) {
 		mask |= bitboard(i + j * 8);
@@ -183,8 +183,8 @@ uint64_t bishop_full_mask_calc(int square) {
 
 uint64_t rook_full_mask_calc(int square) {
 	uint64_t mask = 0;
-	int x = square % 8;
-	int y = square / 8;
+	int x = file_of(square);
+	int y = rank_of(square);
 
 	for (int i = x + 1; i < 8; i++) {
 		mask |= bitboard(i + 8 * y);

@@ -100,7 +100,7 @@ extern alignas(64) bias_t output_biases[1];
 static inline void transform(const struct position *pos, const int16_t accumulation[2][K_HALF_DIMENSIONS], int8_t *output) {
 #if defined(AVX2) || defined(SSE4)
 	const vec_t zero = vec_zero();
-	const int perspective[2] = { pos->turn, 1 - pos->turn };
+	const int perspective[2] = { pos->turn, other_color(pos->turn) };
 	for (int j = 0; j < 2; j++) {
 		vec_t *out = (vec_t *)(output + j * K_HALF_DIMENSIONS);
 		for (int i = 0; i < 8 * K_HALF_DIMENSIONS / SIMD_WIDTH; i++) {
@@ -114,7 +114,7 @@ static inline void transform(const struct position *pos, const int16_t accumulat
 	for (int i = 0; i < K_HALF_DIMENSIONS; i++) {
 		sum = accumulation[pos->turn][i];
 		output[i] = CLAMP(sum >> FT_SHIFT, 0, 127);
-		sum = accumulation[1 - pos->turn][i];
+		sum = accumulation[other_color(pos->turn)][i];
 		output[K_HALF_DIMENSIONS + i] = CLAMP(sum >> FT_SHIFT, 0, 127);
 	}
 #endif
@@ -303,7 +303,7 @@ void refresh_accumulator(struct position *pos, int turn) {
 			b = pos->piece[color][piece];
 			while (b) {
 				square = ctz(b);
-				int index = make_index(turn, square, piece + 6 * (1 - color), king_square);
+				int index = make_index(turn, square, colored_piece(piece, color), king_square);
 				add_index(index, pos->accumulation, pos->psqtaccumulation, turn);
 				b = clear_ls1b(b);
 			}
@@ -326,7 +326,7 @@ void do_update_accumulator(struct position *pos, move *m, int turn) {
 	add_index(index, pos->accumulation, pos->psqtaccumulation, turn);
 
 	if (move_capture(m)) {
-		index = make_index(turn, target_square, move_capture(m) + 6 * (1 - pos->turn), king_square);
+		index = make_index(turn, target_square, colored_piece(move_capture(m), pos->turn), king_square);
 		remove_index(index, pos->accumulation, pos->psqtaccumulation, turn);
 	}
 
@@ -365,7 +365,7 @@ void undo_update_accumulator(struct position *pos, move *m, int turn) {
 	add_index(index, pos->accumulation, pos->psqtaccumulation, turn);
 
 	if (move_capture(m)) {
-		index = make_index(turn, target_square, move_capture(m) + 6 * pos->turn, king_square);
+		index = make_index(turn, target_square, colored_piece(move_capture(m), other_color(pos->turn)), king_square);
 		add_index(index, pos->accumulation, pos->psqtaccumulation, turn);
 	}
 
@@ -398,14 +398,13 @@ void do_accumulator(struct position *pos, move *m) {
 	if (!option_nnue)
 		return;
 	int target_square = move_to(m);
-	/* king */
-	if (pos->mailbox[target_square] % 6 == 0) {
-		refresh_accumulator(pos, 1 - pos->turn);
+	if (uncolored_piece(pos->mailbox[target_square]) == king) {
+		refresh_accumulator(pos, other_color(pos->turn));
 		if (move_capture(m)) {
 			unsigned index;
 			int turn = pos->turn;
 			int king_square = orient_horizontal(turn, ctz(pos->piece[turn][king]));
-			index = make_index(turn, target_square, move_capture(m) + 6 * (1 - turn), king_square);
+			index = make_index(turn, target_square, colored_piece(move_capture(m), turn), king_square);
 			remove_index(index, pos->accumulation, pos->psqtaccumulation, turn);
 		}
 		else if (move_flag(m) == 3) {
@@ -454,19 +453,18 @@ void undo_accumulator(struct position *pos, move *m) {
 		return;
 	int source_square = move_from(m);
 	int target_square = move_to(m);
-	/* king */
-	if (pos->mailbox[source_square] % 6 == 0) {
+	if (uncolored_piece(pos->mailbox[source_square]) == king) {
 		refresh_accumulator(pos, pos->turn);
 		if (move_capture(m)) {
 			unsigned index;
-			int turn = 1 - pos->turn;
+			int turn = other_color(pos->turn);
 			int king_square = orient_horizontal(turn, ctz(pos->piece[turn][king]));
-			index = make_index(turn, target_square, move_capture(m) + 6 * pos->turn, king_square);
+			index = make_index(turn, target_square, colored_piece(move_capture(m), turn), king_square);
 			add_index(index, pos->accumulation, pos->psqtaccumulation, turn);
 		}
 		else if (move_flag(m) == 3) {
 			unsigned index;
-			int turn = 1 - pos->turn;
+			int turn = other_color(pos->turn);
 			int king_square = orient_horizontal(turn, ctz(pos->piece[turn][king]));
 			switch (target_square) {
 			case g1:
@@ -507,7 +505,7 @@ int32_t evaluate_accumulator(const struct position *pos) {
 	transform(pos, pos->accumulation, buf.ft_out);
 	affine_propagate(buf.ft_out, buf.hidden1_out, FT_OUT_DIMS, hidden1_biases, hidden1_weights);
 	affine_propagate(buf.hidden1_out, buf.hidden2_out, 32, hidden2_biases, hidden2_weights);
-	int32_t psqt = (pos->psqtaccumulation[pos->turn] - pos->psqtaccumulation[1 - pos->turn]) / 2;
+	int32_t psqt = (pos->psqtaccumulation[pos->turn] - pos->psqtaccumulation[other_color(pos->turn)]) / 2;
 	return (output_layer(buf.hidden2_out, output_biases, output_weights)) / FV_SCALE + psqt;
 }
 

@@ -57,8 +57,8 @@ mevalue evaluate_pawns(const struct position *pos, struct evaluationinfo *ei, in
 		square = ctz(b);
 		squareb = bitboard(square);
 
-		int y = square / 8;
-		int x = square % 8;
+		int r = rank_of(square);
+		int f = file_of(square);
 		
 		/* uint64_t */
 		doubled    = pawns[white] & bitboard(square - 8);
@@ -82,14 +82,14 @@ mevalue evaluate_pawns(const struct position *pos, struct evaluationinfo *ei, in
 
 		if (support | phalanx) {
 			//ei->supported_pawn[color] += popcount(support);
-			//ei->connected_pawns[color][y] += 2 + (phalanx != 0);
-			eval += connected_pawns[y] * (2 + (phalanx != 0)) + supported_pawn * popcount(support);
+			//ei->connected_pawns[color][r] += 2 + (phalanx != 0);
+			eval += connected_pawns[r] * (2 + (phalanx != 0)) + supported_pawn * popcount(support);
 		}
 
 		if (passed) {
-			//ei->passed_pawn[color][y] += 1;
-			//ei->passed_file[color][MIN(x, 7 - x)] += 1;
-			eval += passed_pawn[y] + passed_file[MIN(x, 7 - x)];
+			//ei->passed_pawn[color][r] += 1;
+			//ei->passed_file[color][MIN(f, 7 - f)] += 1;
+			eval += passed_pawn[r] + passed_file[MIN(f, 7 - f)];
 		}
 
 		if (!neighbours) {

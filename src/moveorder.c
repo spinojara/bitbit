@@ -32,8 +32,8 @@ unsigned move_order_piece_value[] = { 0, 100, 300, 300, 500, 900, 0 };
 void mvv_lva_init(void) {
 	for (int attacker = 0; attacker < 13; attacker++)
 		for (int victim = 0; victim < 13; victim++)
-			mvv_lva_lookup[attacker + 13 * victim] = move_order_piece_value[victim % 6] -
-			                                         move_order_piece_value[attacker % 6];
+			mvv_lva_lookup[attacker + 13 * victim] = move_order_piece_value[uncolored_piece(victim)] -
+			                                         move_order_piece_value[uncolored_piece(attacker)];
 }
 
 int see_geq(struct position *pos, const move *m, int32_t value) {
@@ -42,8 +42,8 @@ int see_geq(struct position *pos, const move *m, int32_t value) {
 	uint64_t fromb = bitboard(from);
 	uint64_t tob = bitboard(to);
 
-	int attacker = pos->mailbox[from] % 6;
-	int victim = pos->mailbox[to] % 6;
+	int attacker = uncolored_piece(pos->mailbox[from]);
+	int victim = uncolored_piece(pos->mailbox[to]);
 
 	int32_t swap = move_order_piece_value[victim] - value;
 	if (swap < 0)
@@ -53,8 +53,8 @@ int see_geq(struct position *pos, const move *m, int32_t value) {
 	if (swap <= 0)
 		return 1;
 
-	pos->piece[1 - pos->turn][victim] ^= tob;
-	pos->piece[1 - pos->turn][all] ^= tob;
+	pos->piece[other_color(pos->turn)][victim] ^= tob;
+	pos->piece[other_color(pos->turn)][all] ^= tob;
 	pos->piece[pos->turn][attacker] ^= tob | fromb;
 	pos->piece[pos->turn][all] ^= tob | fromb;
 
@@ -86,13 +86,13 @@ int see_geq(struct position *pos, const move *m, int32_t value) {
 	int ret = 1;
 
 	while (1) {
-		turn = 1 - turn;
+		turn = other_color(turn);
 		
 		attackers &= occupied;
 
 		turnattackers = attackers & pos->piece[turn][all];
 
-		if (pinners[1 - turn] & occupied)
+		if (pinners[other_color(turn)] & occupied)
 			turnattackers &= ~pinned[turn];
 
 		if (!turnattackers)
@@ -144,16 +144,16 @@ int see_geq(struct position *pos, const move *m, int32_t value) {
 		}
 		/* king */
 		else {
-			pos->piece[1 - pos->turn][victim] ^= tob;
-			pos->piece[1 - pos->turn][all] ^= tob;
+			pos->piece[other_color(pos->turn)][victim] ^= tob;
+			pos->piece[other_color(pos->turn)][all] ^= tob;
 			pos->piece[pos->turn][attacker] ^= tob | fromb;
 			pos->piece[pos->turn][all] ^= tob | fromb;
 			/* we lose if other side still has attackers */
-			return (attackers & pos->piece[1 - turn][all]) ? 1 - ret : ret;
+			return (attackers & pos->piece[other_color(turn)][all]) ? 1 - ret : ret;
 		}
 	}
-	pos->piece[1 - pos->turn][victim] ^= tob;
-	pos->piece[1 - pos->turn][all] ^= tob;
+	pos->piece[other_color(pos->turn)][victim] ^= tob;
+	pos->piece[other_color(pos->turn)][all] ^= tob;
 	pos->piece[pos->turn][attacker] ^= tob | fromb;
 	pos->piece[pos->turn][all] ^= tob | fromb;
 	return ret;

@@ -82,103 +82,30 @@ struct batch *next_batch(void *ptr) {
 			continue;
 
 		batch->eval[batch->actual_size] = (float)FV_SCALE * eval / (127 * 64);
-#if 1
 		int index, square;
-		const int king_squares[] = { orient_horizontal(black, ctz(data->pos->piece[black][king])), orient_horizontal(white, ctz(data->pos->piece[white][king])) };
+		const int king_square[] = { orient_horizontal(black, ctz(data->pos->piece[black][king])), orient_horizontal(white, ctz(data->pos->piece[white][king])) };
 		for (int piece = pawn; piece < king; piece++) {
 			for (int turn = 0; turn <= 1; turn++) {
 				uint64_t b = data->pos->piece[turn][piece];
 				while (b) {
 					batch->ind_active += 2;
 					square = ctz(b);
-					index = make_index(data->pos->turn, square, piece + 6 * (1 - turn), king_squares[data->pos->turn]);
+					index = make_index(data->pos->turn, square, colored_piece(piece, turn), king_square[data->pos->turn]);
 					batch->ind1[counter1++] = batch->actual_size;
 					batch->ind1[counter1++] = index;
-					index = make_index(1 - data->pos->turn, square, piece + 6 * (1 - turn), king_squares[1 - data->pos->turn]);
+					index = make_index(other_color(data->pos->turn), square, colored_piece(piece, turn), king_square[other_color(data->pos->turn)]);
 					batch->ind2[counter2++] = batch->actual_size;
 					batch->ind2[counter2++] = index;
-					index = make_index_virtual(data->pos->turn, square, piece + 6 * (1 - turn));
+					index = make_index_virtual(data->pos->turn, square, colored_piece(piece, turn));
 					batch->ind1[counter1++] = batch->actual_size;
 					batch->ind1[counter1++] = index;
-					index = make_index_virtual(1 - data->pos->turn, square, piece + 6 * (1 - turn));
+					index = make_index_virtual(other_color(data->pos->turn), square, colored_piece(piece, turn));
 					batch->ind2[counter2++] = batch->actual_size;
 					batch->ind2[counter2++] = index;
 					b = clear_ls1b(b);
 				}
 			}
 		}
-#else
-		int32_t *const indw = data->pos->turn ? batch->ind1 : batch->ind2;
-		int32_t *const indb = data->pos->turn ? batch->ind2 : batch->ind1;
-		int index, square;
-		const int king_squares[] = { orient_horizontal(black, ctz(data->pos->piece[black][king])), orient_horizontal(white, ctz(data->pos->piece[white][king])) };
-		const int perspective[] = { white, black };
-		for (int piece = pawn; piece < king; piece++) {
-			/* white perspective */
-			for (int p = 0; p <= 1; p++) {
-				const int turn = perspective[p];
-				const uint64_t c = data->pos->piece[turn][piece];
-				uint64_t b = c;
-				while (b) {
-					batch->ind_active += 2;
-					square = ctz(b);
-					index = make_index(white, square, piece + 6 * (1 - turn), king_squares[white]);
-					indw[counter1++] = batch->actual_size;
-					indw[counter1++] = index;
-					b = clear_ls1b(b);
-				}
-			}
-			/* black perspective */
-			for (int p = 1; p >= 0; p--) {
-				const int turn = perspective[p];
-				const uint64_t c = data->pos->piece[turn][piece];
-				uint64_t rank = RANK_8;
-				for (int i = 0; i < 8; i++) {
-					uint64_t b = c & rank;
-					while (b) {
-						square = ctz(b);
-						index = make_index(black, square, piece + 6 * (1 - turn), king_squares[black]);
-						indb[counter2++] = batch->actual_size;
-						indb[counter2++] = index;
-						b = clear_ls1b(b);
-					}
-					rank = shift_south(rank);
-				}
-			}
-		}
-		for (int piece = pawn; piece < king; piece++) {
-			/* white perspective */
-			for (int p = 0; p <= 1; p++) {
-				const int turn = perspective[p];
-				const uint64_t c = data->pos->piece[turn][piece];
-				uint64_t b = c;
-				while (b) {
-					square = ctz(b);
-					index = make_index_virtual(white, square, piece + 6 * (1 - turn));
-					indw[counter1++] = batch->actual_size;
-					indw[counter1++] = index;
-					b = clear_ls1b(b);
-				}
-			}
-			/* black perspective */
-			for (int p = 1; p >= 0; p--) {
-				const int turn = perspective[p];
-				const uint64_t c = data->pos->piece[turn][piece];
-				uint64_t rank = RANK_8;
-				for (int i = 0; i < 8; i++) {
-					uint64_t b = c & rank;
-					while (b) {
-						square = ctz(b);
-						index = make_index_virtual(black, square, piece + 6 * (1 - turn));
-						indb[counter2++] = batch->actual_size;
-						indb[counter2++] = index;
-						b = clear_ls1b(b);
-					}
-					rank = shift_south(rank);
-				}
-			}
-		}
-#endif
 		batch->actual_size++;
 	}
 	return batch;

@@ -123,14 +123,14 @@ void tables_init(void) {
 	for (int turn = 0; turn < 2; turn++) {
 		for (int piece = pawn; piece <= king; piece++) {
 			for (int square = 0; square < 64; square++) {
-				int x = square % 8;
-				int y = square / 8;
+				int f = file_of(square);
+				int r = rank_of(square);
 				int factor = (piece == pawn) ? 8 : 4;
-				if (x >= 4 && piece != pawn)
-					x = 7 - x;
+				if (f >= 4 && piece != pawn)
+					f = 7 - f;
 				if (turn == white)
-					y = 7 - y;
-				psqtable[turn][piece][square] = white_psqtable[piece - 1][factor * y + x] +
+					r = 7 - r;
+				psqtable[turn][piece][square] = white_psqtable[piece - 1][factor * r + f] +
 					piece_value[piece - 1];
 			}
 		}

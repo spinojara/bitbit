@@ -36,7 +36,6 @@ uint64_t adjacent_files_lookup[64];
 int distance_lookup[64 * 64];
 uint64_t passed_files_lookup[64 * 2];
 int castle_lookup[64 * 64 * 16];
-uint64_t king_squares_lookup[64 * 2];
 
 void print_bitboard(uint64_t b) {
 	printf("\n       a   b   c   d   e   f   g   h\n");
@@ -56,176 +55,155 @@ void print_bitboard(uint64_t b) {
 	printf("       a   b   c   d   e   f   g   h\n\n");
 }
 
-uint64_t between_calc(int x, int y) {
-	if (x == y)
+uint64_t between_calc(int source, int target) {
+	if (source == target)
 		return 0;
-	int a_x = x % 8;
-	int b_x = x / 8;
-	int a_y = y % 8;
-	int b_y = y / 8;
-	if (a_x == a_y || b_x == b_y) {
-		return rook_attacks(x, 0, bitboard(y)) & rook_attacks(y, 0, bitboard(x));
-	}
-	else if (a_x - a_y == b_x - b_y || a_x - a_y == b_y - b_x) {
-		return bishop_attacks(x, 0, bitboard(y)) & bishop_attacks(y, 0, bitboard(x));
-	}
+	int sourcef = file_of(source);
+	int sourcer = rank_of(source);
+	int targetf = file_of(target);
+	int targetr = rank_of(target);
+	if (sourcef == targetf || sourcer == targetr)
+		return rook_attacks(source, 0, bitboard(target)) & rook_attacks(target, 0, bitboard(source));
+	else if (sourcef - targetf == sourcer - targetr || sourcef - targetf == targetr - sourcer)
+		return bishop_attacks(source, 0, bitboard(target)) & bishop_attacks(target, 0, bitboard(source));
 	return 0;
 }
 
-uint64_t line_calc(int x, int y) {
-	if (x == y)
+uint64_t line_calc(int source, int target) {
+	if (source == target)
 		return 0;
-	if (x % 8 == y % 8 || x / 8 == y / 8) {
-		return rook_full_mask[x] & rook_full_mask[y];
+	if (file_of(source) == file_of(target) || rank_of(source) == rank_of(target)) {
+		return rook_full_mask[source] & rook_full_mask[target];
 	}
 	else {
-		return bishop_full_mask[x] & bishop_full_mask[y];
+		return bishop_full_mask[source] & bishop_full_mask[target];
 	}
 }
 
 uint64_t ray_calc(int source, int target) {
 	uint64_t ret = 0;
 
-	int x = source % 8;
-	int y = source / 8;
+	int f = file_of(source);
+	int r = rank_of(source);
 
-	int v_x = (target % 8) - (source % 8);
-	int v_y = (target / 8) - (source / 8);
+	int vf = file_of(target) - file_of(source);
+	int vr = rank_of(target) - rank_of(source);
 
 	if (source == target)
 		return ret;
 
-	if (v_x != 0 && v_y != 0 && v_x != v_y && v_x != -v_y)
+	if (vf != 0 && vr != 0 && vf != vr && vf != -vr)
 		return ret;
 
-	if (v_x)
-		v_x /= ABS(v_x);
-	if (v_y)
-		v_y /= ABS(v_y);
+	if (vf)
+		vf /= ABS(vf);
+	if (vr)
+		vr /= ABS(vr);
 
-	while (x <= 7 && x >= 0 && y <= 7 && y >= 0) {
-		ret |= bitboard(x + 8 * y);
-		x += v_x;
-		y += v_y;
+	while (f <= 7 && f >= 0 && r <= 7 && r >= 0) {
+		ret |= bitboard(f + 8 * r);
+		f += vf;
+		r += vr;
 	}
 	return ret;
 }
 
-int castle_calc(int source_square, int target_square, int castle) {
-	if (source_square == 0) {
+int castle_calc(int source, int target, int castle) {
+	if (source == 0) {
 		castle = clear_bit(castle, 1);
 	}
-	else if (source_square == 4) {
+	else if (source == 4) {
 		castle = clear_bit(castle, 0);
 		castle = clear_bit(castle, 1);
 	}
-	else if (source_square == 7) {
+	else if (source == 7) {
 		castle = clear_bit(castle, 0);
 	}
-	else if (source_square == 56) {
+	else if (source == 56) {
 		castle = clear_bit(castle, 3);
 	}
-	else if (source_square == 60) {
+	else if (source == 60) {
 		castle = clear_bit(castle, 2);
 		castle = clear_bit(castle, 3);
 	}
-	else if (source_square == 63) {
+	else if (source == 63) {
 		castle = clear_bit(castle, 2);
 	}
-	if (target_square == 0) {
+	if (target == 0) {
 		castle = clear_bit(castle, 1);
 	}
-	else if (target_square == 7) {
+	else if (target == 7) {
 		castle = clear_bit(castle, 0);
 	}
-	else if (target_square == 56) {
+	else if (target == 56) {
 		castle = clear_bit(castle, 3);
 	}
-	else if (target_square == 63) {
+	else if (target == 63) {
 		castle = clear_bit(castle, 2);
 	}
 	return castle;
 }
 
 uint64_t file_calc(int square) {
-	int x = square % 8;
+	int f = file_of(square);
 	uint64_t ret = FILE_A;
 
-	for (int i = 0; i < x; i++)
+	for (int i = 0; i < f; i++)
 		ret = shift_east(ret);
 	return ret;
 }
 
 uint64_t rank_calc(int square) {
-	int y = square / 8;
+	int r = rank_of(square);
 	uint64_t ret = RANK_1;
 
-	for (int i = 0; i < y; i++)
+	for (int i = 0; i < r; i++)
 		ret = shift_north(ret);
 	return ret;
 }
 
 uint64_t file_left_calc(int square) {
-	int x = square % 8;
-	if (x == 0)
+	int f = file_of(square);
+	if (f == 0)
 		return 0;
 	return file_calc(square - 1);
 }
 
 uint64_t file_right_calc(int square) {
-	int x = square % 8;
-	if (x == 7)
+	int f = file_of(square);
+	if (f == 7)
 		return 0;
 	return file_calc(square + 1);
 }
 
 uint64_t adjacent_files_calc(int square) {
-	uint64_t r = 0;
-	int x = square % 8;
+	uint64_t ret = 0;
+	int f = file_of(square);
 	
-	if (x > 0)
-		r |= line_calc(x - 1, x + 7) | bitboard(x - 1) | bitboard(x + 7);
-	if (x < 7)
-		r |= line_calc(x + 1, x + 9) | bitboard(x + 1) | bitboard(x + 9);
-	return r;
+	if (f > 0)
+		ret |= file_left_calc(square);
+	if (f < 7)
+		ret |= file_right_calc(square);
+	return ret;
 }
 
 uint64_t passed_files_calc(int square, int color) {
-	uint64_t r = 0;
-	int x = square % 8;
+	uint64_t ret = 0;
+	int f = file_of(square);
 	
 	if (color) {
-		if (x > 0)
-			r |= between_calc(square - 1, 55 + x);
-		r |= between_calc(square, 56 + x);
-		if (x < 7)
-			r |= between_calc(square + 1, 57 + x);
+		if (f > 0)
+			ret |= between_calc(square - 1, 55 + f);
+		ret |= between_calc(square, 56 + f);
+		if (f < 7)
+			ret |= between_calc(square + 1, 57 + f);
 	}
 	else {
-		if (x > 0)
-			r |= between_calc(square - 1, x - 1);
-		r |= between_calc(square, x);
-		if (x < 7)
-			r |= between_calc(square + 1, x + 1);
-	}
-	return r;
-}
-
-uint64_t king_squares_calc(int square, int turn) {
-	uint64_t attacks = king_attacks(square, 0) | bitboard(square);
-	uint64_t ret = attacks;
-	ret |= shift_west(ret) | shift_east(ret);
-	if (turn) {
-		ret |= shift_north(shift_north(ret));
-		for (int i = 0; i < 3; i++)
-			attacks |= shift_north(attacks);
-		ret |= attacks;
-	}
-	else {
-		ret |= shift_south(shift_south(ret));
-		for (int i = 0; i < 3; i++)
-			attacks |= shift_south(attacks);
-		ret |= attacks;
+		if (f > 0)
+			ret |= between_calc(square - 1, f - 1);
+		ret |= between_calc(square, f);
+		if (f < 7)
+			ret |= between_calc(square + 1, f + 1);
 	}
 	return ret;
 }
@@ -238,7 +216,7 @@ uint64_t same_colored_squares_calc(int square) {
 }
 
 uint64_t distance_calc(int a, int b) {
-	return MAX(ABS((a % 8) - (b % 8)), ABS((a / 8) - (b / 8)));
+	return MAX(ABS(file_of(a) - file_of(b)), ABS(rank_of(a) - rank_of(b)));
 }
 
 void bitboard_init(void) {
@@ -250,8 +228,6 @@ void bitboard_init(void) {
 		adjacent_files_lookup[i] = adjacent_files_calc(i);
 		passed_files_lookup[i] = passed_files_calc(i, white);
 		passed_files_lookup[i + 64] = passed_files_calc(i, black);
-		king_squares_lookup[i] = king_squares_calc(i, white);
-		king_squares_lookup[i + 64] = king_squares_calc(i, black);
 		same_colored_squares_lookup[i] = same_colored_squares_calc(i);
 		for (int j = 0; j < 64; j++) {
 			distance_lookup[i + 64 * j] = distance_calc(i, j);

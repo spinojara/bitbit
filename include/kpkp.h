@@ -31,13 +31,13 @@
 extern uint32_t bitbase_KPKP[];
 
 static inline long bitbase_KPKP_index_by_square(int king_white, int pawn_white, int king_black, int pawn_black) {
-	int orient = pawn_white % 8 > 3;
+	int orient = file_of(pawn_white) > 3;
 	king_white = orient_vertical(orient, king_white);
 	pawn_white = orient_vertical(orient, pawn_white);
 	king_black = orient_vertical(orient, king_black);
 	pawn_black = orient_vertical(orient, pawn_black);
 	return 24 * 64 * 48 * king_white
-		  + 64 * 48 * ((pawn_white % 4) + (pawn_white / 8 - 1) * 4)
+		  + 64 * 48 * (file_of(pawn_white) + (rank_of(pawn_white) - 1) * 4)
 		       + 48 * king_black
 			    + (pawn_black - 8);
 }
@@ -46,8 +46,8 @@ static inline long bitbase_KPKP_index(const struct position *pos) {
 	int turn = pos->turn;
 	int king_white = orient_horizontal(turn, ctz(pos->piece[turn][king]));
 	int pawn_white = orient_horizontal(turn, ctz(pos->piece[turn][pawn]));
-	int king_black = orient_horizontal(turn, ctz(pos->piece[1 - turn][king]));
-	int pawn_black = orient_horizontal(turn, ctz(pos->piece[1 - turn][pawn]));
+	int king_black = orient_horizontal(turn, ctz(pos->piece[other_color(turn)][king]));
+	int pawn_black = orient_horizontal(turn, ctz(pos->piece[other_color(turn)][pawn]));
 	return bitbase_KPKP_index_by_square(king_white, pawn_white, king_black, pawn_black);
 }
 

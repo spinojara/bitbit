@@ -48,9 +48,9 @@ void do_move(struct position *pos, move *m) {
 	pos->castle = castle(source_square, target_square, pos->castle);
 
 	if (pos->mailbox[target_square]) {
-		pos->piece[1 - pos->turn][pos->mailbox[target_square] % 6] ^= to;
-		move_set_captured(m, pos->mailbox[target_square] % 6);
-		pos->piece[1 - pos->turn][all] ^= to;
+		pos->piece[other_color(pos->turn)][uncolored_piece(pos->mailbox[target_square])] ^= to;
+		move_set_captured(m, uncolored_piece(pos->mailbox[target_square]));
+		pos->piece[other_color(pos->turn)][all] ^= to;
 		pos->halfmove = 0;
 	}
 
@@ -59,10 +59,10 @@ void do_move(struct position *pos, move *m) {
 	if (source_square - 16 == target_square && pos->mailbox[source_square] == black_pawn)
 		pos->en_passant = target_square + 8;
 
-	if (pos->mailbox[source_square] % 6 == pawn)
+	if (uncolored_piece(pos->mailbox[source_square]) == pawn)
 		pos->halfmove = 0;
 
-	pos->piece[pos->turn][(pos->mailbox[source_square] - 1) % 6 + 1] ^= from_to;
+	pos->piece[pos->turn][uncolored_piece(pos->mailbox[source_square])] ^= from_to;
 	pos->piece[pos->turn][all] ^= from_to;
 
 	pos->mailbox[target_square] = pos->mailbox[source_square];
@@ -70,14 +70,14 @@ void do_move(struct position *pos, move *m) {
 
 	if (move_flag(m) == 1) {
 		int direction = 2 * pos->turn - 1;
-		pos->piece[1 - pos->turn][pawn] ^= bitboard(target_square - direction * 8);
-		pos->piece[1 - pos->turn][all] ^= bitboard(target_square - direction * 8);
+		pos->piece[other_color(pos->turn)][pawn] ^= bitboard(target_square - direction * 8);
+		pos->piece[other_color(pos->turn)][all] ^= bitboard(target_square - direction * 8);
 		pos->mailbox[target_square - direction * 8] = empty;
 	}
 	else if (move_flag(m) == 2) {
 		pos->piece[pos->turn][pawn] ^= to;
 		pos->piece[pos->turn][move_promote(m) + 2] ^= to;
-		pos->mailbox[target_square] = move_promote(m) + 2 + 6 * (1 - pos->turn);
+		pos->mailbox[target_square] = colored_piece(move_promote(m) + 2, pos->turn);
 	}
 	else if (move_flag(m) == 3) {
 		switch (target_square) {
@@ -110,7 +110,7 @@ void do_move(struct position *pos, move *m) {
 
 	if (!pos->turn)
 		pos->fullmove++;
-	pos->turn = 1 - pos->turn;
+	pos->turn = other_color(pos->turn);
 }
 
 void undo_move(struct position *pos, const move *m) {
@@ -126,19 +126,19 @@ void undo_move(struct position *pos, const move *m) {
 	pos->castle = move_castle(m);
 	pos->en_passant = move_en_passant(m);
 	pos->halfmove = move_halfmove(m);
-	pos->turn = 1 - pos->turn;
+	pos->turn = other_color(pos->turn);
 
 	if (move_flag(m) == 1) {
 		int direction = 2 * pos->turn - 1;
-		pos->piece[1 - pos->turn][pawn] ^= bitboard(target_square - direction * 8);
-		pos->piece[1 - pos->turn][all] ^= bitboard(target_square - direction * 8);
-		pos->mailbox[target_square - direction * 8] = white_pawn + 6 * pos->turn;
+		pos->piece[other_color(pos->turn)][pawn] ^= bitboard(target_square - direction * 8);
+		pos->piece[other_color(pos->turn)][all] ^= bitboard(target_square - direction * 8);
+		pos->mailbox[target_square - direction * 8] = colored_piece(pawn, other_color(pos->turn));
 	}
 	else if (move_flag(m) == 2) {
 		pos->piece[pos->turn][pawn] ^= to;
-		pos->piece[pos->turn][pos->mailbox[target_square] % 6] ^= to;
+		pos->piece[pos->turn][uncolored_piece(pos->mailbox[target_square])] ^= to;
 		/* later gets updated as a normal move would */
-		pos->mailbox[target_square] = white_pawn + 6 * (1 - pos->turn);
+		pos->mailbox[target_square] = colored_piece(pawn, pos->turn);
 	}
 	else if (move_flag(m) == 3) {
 		switch (target_square) {
@@ -169,16 +169,16 @@ void undo_move(struct position *pos, const move *m) {
 		}
 	}
 
-	pos->piece[pos->turn][pos->mailbox[target_square] + 6 * (pos->turn - 1)] ^= from_to;
+	pos->piece[pos->turn][uncolored_piece(pos->mailbox[target_square])] ^= from_to;
 	pos->piece[pos->turn][all] ^= from_to;
 
 	pos->mailbox[source_square] = pos->mailbox[target_square];
 	pos->mailbox[target_square] = empty;
 
 	if (move_capture(m)) {
-		pos->piece[1 - pos->turn][move_capture(m)] ^= to;
-		pos->piece[1 - pos->turn][all] ^= to;
-		pos->mailbox[target_square] = move_capture(m) + 6 * pos->turn;
+		pos->piece[other_color(pos->turn)][move_capture(m)] ^= to;
+		pos->piece[other_color(pos->turn)][all] ^= to;
+		pos->mailbox[target_square] = colored_piece(move_capture(m), other_color(pos->turn));
 	}
 
 	if (!pos->turn)
@@ -210,12 +210,12 @@ char *move_str_algebraic(char *str, const move *m) {
 char *move_str_pgn(char *str, const struct position *pos, const move *m) {
 	if (!is_legal(pos, m))
 		return NULL;
-	int x = move_from(m) % 8;
-	int y = move_from(m) / 8;
+	int f = file_of(move_from(m));
+	int r = rank_of(move_from(m));
 	int i = 0;
 
 	str[i] = '\0';
-	switch ((pos->mailbox[move_from(m)]) % 6) {
+	switch (uncolored_piece(pos->mailbox[move_from(m)])) {
 	case pawn:
 		break;
 	case knight:
@@ -232,11 +232,11 @@ char *move_str_pgn(char *str, const struct position *pos, const move *m) {
 		break;
 	/* king */
 	case 0:
-		if (x == 4 && move_to(m) % 8 == 6) {
+		if (f == 4 && file_of(move_to(m)) == 6) {
 			sprintf(str, "O-O");
 			i = 3;
 		}
-		else if (x == 4 && move_to(m) % 8 == 2) {
+		else if (f == 4 && file_of(move_to(m)) == 2) {
 			sprintf(str, "O-O-O");
 			i = 5;
 		}
@@ -247,7 +247,7 @@ char *move_str_pgn(char *str, const struct position *pos, const move *m) {
 	}
 
 	uint64_t attackers = 0;
-	if (pos->mailbox[move_from(m)] % 6 == pawn) {
+	if (uncolored_piece(pos->mailbox[move_from(m)]) == pawn) {
 		if (is_capture(pos, m) || move_flag(m) == 1)
 			attackers = rank(move_from(m));
 		else
@@ -265,15 +265,15 @@ char *move_str_pgn(char *str, const struct position *pos, const move *m) {
 
 	if (popcount(attackers & file(move_from(m))) > 1) {
 		if (popcount(attackers & rank(move_from(m))) > 1) {
-			str[i++] = "abcdefgh"[x];
-			str[i++] = "12345678"[y];
+			str[i++] = "abcdefgh"[f];
+			str[i++] = "12345678"[r];
 		}
 		else {
-			str[i++] = "12345678"[y];
+			str[i++] = "12345678"[r];
 		}
 	}
 	else if (popcount(attackers) > 1) {
-		str[i++] = "abcdefgh"[x];
+		str[i++] = "abcdefgh"[f];
 	}
 
 	if (pos->mailbox[move_to(m)] || move_flag(m) == 1)
@@ -333,5 +333,5 @@ int is_legal(const struct position *pos, const move *m) {
 
 void do_null_move(struct position *pos, int en_passant) {
 	pos->en_passant = en_passant;
-	pos->turn = 1 - pos->turn;
+	pos->turn = other_color(pos->turn);
 }

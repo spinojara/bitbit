@@ -25,6 +25,8 @@
 #include <intrin.h>
 #endif
 
+#include "position.h"
+
 void bitboard_init(void);
 
 static inline uint64_t ctz(uint64_t b) {
@@ -108,7 +110,6 @@ extern uint64_t same_colored_squares_lookup[64];
 extern uint64_t passed_files_lookup[64 * 2];
 extern int distance_lookup[64 * 64];
 extern int castle_lookup[64 * 64 * 16];
-extern uint64_t king_squares_lookup[64 * 2];
 
 static inline uint64_t between(int source_square, int target_square) {
 	return between_lookup[source_square + target_square * 64];
@@ -151,15 +152,11 @@ static inline uint64_t adjacent_files(int square) {
 }
 
 static inline uint64_t passed_files(int square, int color) {
-	return passed_files_lookup[square + 64 * (1 - color)];
+	return passed_files_lookup[square + 64 * other_color(color)];
 }
 
 static inline int castle(int source_square, int target_square, int castle) {
 	return castle_lookup[source_square + 64 * target_square + 64 * 64 * castle];
-}
-
-static inline uint64_t king_squares(int square, int color) {
-	return king_squares_lookup[square + 64 * (1 - color)];
 }
 
 extern const uint64_t FILE_H;

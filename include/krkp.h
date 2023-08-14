@@ -31,7 +31,7 @@
 extern uint32_t bitbase_KRKP[];
 
 static inline long bitbase_KRKP_index_by_square(int turn, int king_white, int rook_white, int king_black, int pawn_black) {
-	int orient = pawn_black % 8 > 3;
+	int orient = file_of(pawn_black) > 3;
 	king_white = orient_vertical(orient, king_white);
 	rook_white = orient_vertical(orient, rook_white);
 	king_black = orient_vertical(orient, king_black);
@@ -40,12 +40,12 @@ static inline long bitbase_KRKP_index_by_square(int turn, int king_white, int ro
 		  + 64 * 64 * 24 * king_white
 		       + 64 * 24 * rook_white
 		            + 24 * king_black
-			         + ((pawn_black % 4) + (pawn_black / 8 - 1) * 4);
+			         + (file_of(pawn_black) + (rank_of(pawn_black) - 1) * 4);
 }
 
 static inline long bitbase_KRKP_index(const struct position *pos) {
 	int white_side = pos->piece[white][rook] != 0;
-	int black_side = 1 - white_side;
+	int black_side = other_color(white_side);
 	int turn = pos->turn == white_side;
 	int king_white = orient_horizontal(white_side, ctz(pos->piece[white_side][king]));
 	int rook_white = orient_horizontal(white_side, ctz(pos->piece[white_side][rook]));

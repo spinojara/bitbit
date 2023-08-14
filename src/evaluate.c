@@ -69,12 +69,12 @@ mevalue evaluate_king(const struct position *pos, struct evaluationinfo *ei, int
 
 	/* pawn shelter */
 	uint64_t ourpawns = pos->piece[turn][pawn] &
-		~(passed_files(king_square, 1 - turn) | rank(king_square));
-	uint64_t theirpawns = pos->piece[1 - turn][pawn] &
-		~(passed_files(king_square, 1 - turn) | rank(king_square));
+		~(passed_files(king_square, other_color(turn)) | rank(king_square));
+	uint64_t theirpawns = pos->piece[other_color(turn)][pawn] &
+		~(passed_files(king_square, other_color(turn)) | rank(king_square));
 
 	uint64_t b;
-	int center = CLAMP(king_square % 8, 1, 6);
+	int center = CLAMP(file_of(king_square), 1, 6);
 	int ourrank, theirrank;
 	for (int f = center - 1; f <= center + 1; f++) {
 		/* this is a mess but calculates perspective wise
@@ -110,16 +110,16 @@ mevalue evaluate_king(const struct position *pos, struct evaluationinfo *ei, int
 	}
 
 	/* king safety */
-	ei->weak_squares[turn] = ei->attacked_squares[1 - turn][all] &
+	ei->weak_squares[turn] = ei->attacked_squares[other_color(turn)][all] &
 				 ~(ei->attacked2_squares[turn]) &
 				 (~ei->attacked_squares[turn][all] | ei->attacked_squares[turn][king] | ei->attacked_squares[turn][queen]);
 
-	ei->king_danger[turn] = knight_attack_danger * ei->king_attack_units[1 - turn][knight]
-			      + bishop_attack_danger * ei->king_attack_units[1 - turn][bishop]
-			      + rook_attack_danger * ei->king_attack_units[1 - turn][rook]
-			      + queen_attack_danger * ei->king_attack_units[1 - turn][queen]
+	ei->king_danger[turn] = knight_attack_danger * ei->king_attack_units[other_color(turn)][knight]
+			      + bishop_attack_danger * ei->king_attack_units[other_color(turn)][bishop]
+			      + rook_attack_danger * ei->king_attack_units[other_color(turn)][rook]
+			      + queen_attack_danger * ei->king_attack_units[other_color(turn)][queen]
 			      + weak_squares_danger * popcount(ei->weak_squares[turn] & ei->king_ring[turn])
-			      - enemy_no_queen_bonus * !pos->piece[1 - turn][queen]
+			      - enemy_no_queen_bonus * !pos->piece[other_color(turn)][queen]
 			      + king_danger;
 	if (ei->king_danger[turn] > 0)
 		eval -= S(ei->king_danger[turn] * ei->king_danger[turn] / 2048, ei->king_danger[turn] / 8);
@@ -148,21 +148,21 @@ mevalue evaluate_knights(const struct position *pos, struct evaluationinfo *ei, 
 		ei->mobility[turn] += mobility_bonus[knight - 2][popcount(attacks & ei->mobility_squares[turn])];
 
 		/* king attacks */
-		if (ei->king_ring[1 - turn] & attacks)
-			ei->king_attack_units[turn][knight] += popcount(ei->king_ring[1 - turn] & attacks) + 1;
+		if (ei->king_ring[other_color(turn)] & attacks)
+			ei->king_attack_units[turn][knight] += popcount(ei->king_ring[other_color(turn)] & attacks) + 1;
 
 		/* outpost */
-		if (squareb & outpost & ~ei->pawn_attack_span[1 - turn] & ei->attacked_squares[turn][pawn]) {
+		if (squareb & outpost & ~ei->pawn_attack_span[other_color(turn)] & ei->attacked_squares[turn][pawn]) {
 			//ei->outpost_bonus[turn] += 1;
 			eval += outpost_bonus;
 		}
-		else if (attacks & outpost & ~ei->pawn_attack_span[1 - turn] & ei->attacked_squares[turn][pawn]) {
+		else if (attacks & outpost & ~ei->pawn_attack_span[other_color(turn)] & ei->attacked_squares[turn][pawn]) {
 			//ei->outpost_attack[turn] += 1;
 			eval += outpost_attack;
 		}
 		
 		/* minor behind pawn */
-		if (squareb & shift_color(pos->piece[turn][pawn], 1 - turn)) {
+		if (squareb & shift_color(pos->piece[turn][pawn], other_color(turn))) {
 			//ei->minor_behind_pawn[turn] += 1;
 			eval += minor_behind_pawn;
 		}
@@ -201,8 +201,8 @@ mevalue evaluate_bishops(const struct position *pos, struct evaluationinfo *ei, 
 		ei->mobility[turn] += mobility_bonus[bishop - 2][popcount(attacks & ei->mobility_squares[turn])];
 
 		/* king attacks */
-		if (ei->king_ring[1 - turn] & attacks)
-			ei->king_attack_units[turn][bishop] += popcount(ei->king_ring[1 - turn] & attacks) + 1;
+		if (ei->king_ring[other_color(turn)] & attacks)
+			ei->king_attack_units[turn][bishop] += popcount(ei->king_ring[other_color(turn)] & attacks) + 1;
 
 		/* bishop pair */
 		if (popcount(b) >= 2) {
@@ -211,7 +211,7 @@ mevalue evaluate_bishops(const struct position *pos, struct evaluationinfo *ei, 
 		}
 
 		/* minor behind pawn */
-		if (squareb & shift_color(pos->piece[turn][pawn], 1 - turn)) {
+		if (squareb & shift_color(pos->piece[turn][pawn], other_color(turn))) {
 			//ei->minor_behind_pawn[turn] += 1;
 			eval += minor_behind_pawn;
 		}
@@ -254,8 +254,8 @@ mevalue evaluate_rooks(const struct position *pos, struct evaluationinfo *ei, in
 		ei->mobility[turn] += mobility_bonus[rook - 2][mobility];
 
 		/* king attacks */
-		if (ei->king_ring[1 - turn] & attacks)
-			ei->king_attack_units[turn][rook] += popcount(ei->king_ring[1 - turn] & attacks) + 1;
+		if (ei->king_ring[other_color(turn)] & attacks)
+			ei->king_attack_units[turn][rook] += popcount(ei->king_ring[other_color(turn)] & attacks) + 1;
 
 		/* bonus on semiopen files */
 		if (!(pos->piece[turn][pawn] & file(square))) {
@@ -265,8 +265,8 @@ mevalue evaluate_rooks(const struct position *pos, struct evaluationinfo *ei, in
 
 		/* penalty if blocked by uncastled king */
 		else if (mobility <= 5) {
-			int kf = ctz(pos->piece[turn][king]) % 8;
-			if ((kf < e1) == ((square % 8) < kf)) {
+			int kf = file_of(ctz(pos->piece[turn][king]));
+			if ((kf < e1) == (file_of(square) < kf)) {
 				//ei->blocked_rook[turn] += (1 + !(pos->castle & (turn ? 0x3 : 0xC)));
 				eval += blocked_rook * (1 + !(pos->castle & (turn ? 0x3 : 0xC)));
 			}
@@ -296,8 +296,8 @@ mevalue evaluate_queens(const struct position *pos, struct evaluationinfo *ei, i
 		ei->mobility[turn] += mobility_bonus[queen - 2][mobility];
 
 		/* king attacks */
-		if (ei->king_ring[1 - turn] & attacks)
-			ei->king_attack_units[turn][queen] += popcount(ei->king_ring[1 - turn] & attacks) + 1;
+		if (ei->king_ring[other_color(turn)] & attacks)
+			ei->king_attack_units[turn][queen] += popcount(ei->king_ring[other_color(turn)] & attacks) + 1;
 
 		/* undeveloped minor pieces when moving queen */
 		if (turn) {
@@ -318,13 +318,13 @@ mevalue evaluate_queens(const struct position *pos, struct evaluationinfo *ei, i
 mevalue evaluate_space(const struct position *pos, struct evaluationinfo *ei, int turn) {
 	const uint64_t center = (FILE_C | FILE_D | FILE_E | FILE_F) & (turn ? (RANK_2 | RANK_3 | RANK_4) : (RANK_5 | RANK_6 | RANK_7));
 
-	const uint64_t safe_center = center & ~pos->piece[turn][pawn] & ~ei->attacked_squares[1 - turn][pawn];
+	const uint64_t safe_center = center & ~pos->piece[turn][pawn] & ~ei->attacked_squares[other_color(turn)][pawn];
 
-	uint64_t behind = shift_color(pos->piece[turn][pawn], 1 - turn);
-	behind |= shift_color(behind, 1 - turn);
-	behind |= shift_color(behind, 1 - turn);
+	uint64_t behind = shift_color(pos->piece[turn][pawn], other_color(turn));
+	behind |= shift_color(behind, other_color(turn));
+	behind |= shift_color(behind, other_color(turn));
 
-	int bonus = popcount(safe_center) + popcount(behind & safe_center & ~ei->attacked_squares[1 - turn][all]);
+	int bonus = popcount(safe_center) + popcount(behind & safe_center & ~ei->attacked_squares[other_color(turn)][all]);
 	int weight = popcount(pos->piece[turn][all]) - 3 + popcount((shift_north(pos->piece[white][pawn]) & pos->piece[black][pawn]));
 	return S(bonus * weight * weight / 16, 0);
 }
@@ -344,14 +344,14 @@ void evaluationinfo_init(const struct position *pos, struct evaluationinfo *ei) 
 	for (int turn = 0; turn < 2; turn++) {
 		ei->mobility_squares[turn] = ~pos->piece[turn][king];
 		/* enemy pawn attacks */
-		ei->mobility_squares[turn] &= ~ei->attacked_squares[1 - turn][pawn];
+		ei->mobility_squares[turn] &= ~ei->attacked_squares[other_color(turn)][pawn];
 		/* blocked pawns */
-		ei->mobility_squares[turn] &= ~(shift_color(pos->piece[black][all] | pos->piece[white][all], 1 - turn) & pos->piece[turn][pawn]);
+		ei->mobility_squares[turn] &= ~(shift_color(pos->piece[black][all] | pos->piece[white][all], other_color(turn)) & pos->piece[turn][pawn]);
 
 		int king_square = ctz(pos->piece[turn][king]);
-		int x = CLAMP(king_square % 8, 1, 6);
-		int y = CLAMP(king_square / 8, 1, 6);
-		king_square = 8 * y + x;
+		int f = CLAMP(file_of(king_square), 1, 6);
+		int r = CLAMP(rank_of(king_square), 1, 6);
+		king_square = 8 * r + f;
 		/* king ring */
 		ei->king_ring[turn] = king_attacks(king_square, 0) | bitboard(king_square);
 		/* but not defended by two own pawns,
@@ -389,7 +389,7 @@ int32_t phase(const struct evaluationinfo *ei) {
 
 /* <https://ulthiel.com/math/other/endgames> */
 int32_t scale(const struct position *pos, const struct evaluationinfo *ei, int strong_side) {
-	int weak_side = 1 - strong_side;
+	int weak_side = other_color(strong_side);
 	int32_t scale = NORMAL_SCALE;
 	int32_t strong_material = ei->material_value[strong_side];
 	int32_t weak_material = ei->material_value[weak_side];
@@ -480,16 +480,16 @@ void evaluate_print(struct position *pos) {
 	alignas(64) int16_t accumulation[2][K_HALF_DIMENSIONS];
 	alignas(64) int32_t psqtaccumulation[2] = { 0 };
 	printf("\n+-------+-------+-------+-------+-------+-------+-------+-------+\n");
-	for (int y = 7; y >= 0; y--) {
+	for (int r = 7; r >= 0; r--) {
 		printf("|");
-		for (int x = 0; x < 8; x++) {
-			printf("   %c   |", pieces[pos->mailbox[x + 8 * y]]);
+		for (int f = 0; f < 8; f++) {
+			printf("   %c   |", pieces[pos->mailbox[make_square(f, r)]]);
 		}
 		printf("\n|");
-		for (int x = 0; x < 8; x++) {
-			int square = x + 8 * y;
+		for (int f = 0; f < 8; f++) {
+			int square = make_square(f, r);
 			int piece = pos->mailbox[square];
-			if (piece % 6) {
+			if (uncolored_piece(piece)) {
 				int16_t oldeval = psqtaccumulation[white] - psqtaccumulation[black];
 				for (int color = 0; color < 2; color++) {
 					int king_square = ctz(pos->piece[color][king]);
