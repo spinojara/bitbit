@@ -116,9 +116,9 @@ enum {
 const double K = 1.0;
 const double beta_1 = 0.9;
 const double beta_2 = 0.999;
-const double epsilon = 1e-7;
-const double learning_rate = 1e-3;
-const double weight_decay = 0;
+const double epsilon = 1e-8;
+const double alpha = 5e-4;
+const double weight_decay = 1e-5;
 size_t t = 0;
 
 struct parameter {
@@ -136,36 +136,36 @@ struct parameter {
 /* parameter list has to be in the same order as the enum. */
 struct parameter parameters[] = {
 	PARAMETER(&piece_value[0],            5, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
-	PARAMETER(&white_psqtable[0][8],     48, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&white_psqtable[1][0],     32, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&white_psqtable[2][0],     32, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&white_psqtable[3][0],     32, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&white_psqtable[4][0],     32, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&white_psqtable[5][0],     32, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
+	PARAMETER(&white_psqtable[0][8],     48, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&white_psqtable[1][0],     32, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&white_psqtable[2][0],     32, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&white_psqtable[3][0],     32, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&white_psqtable[4][0],     32, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&white_psqtable[5][0],     32, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
 
-	PARAMETER(&mobility_bonus[0][0],      9, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&mobility_bonus[1][0],     14, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&mobility_bonus[2][0],     15, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&mobility_bonus[3][0],     28, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
+	PARAMETER(&mobility_bonus[0][0],      9, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&mobility_bonus[1][0],     14, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&mobility_bonus[2][0],     15, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&mobility_bonus[3][0],     28, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
 
-	PARAMETER(&pawn_shelter[0],          28, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&unblocked_storm[0],       28, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&blocked_storm[0],          7, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
+	PARAMETER(&pawn_shelter[0],          28, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&unblocked_storm[0],       28, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&blocked_storm[0],          7, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
 
-	PARAMETER(&king_on_open_file,         1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&outpost_bonus,             1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&outpost_attack,            1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&minor_behind_pawn,         1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&knight_far_from_king,      1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&bishop_far_from_king,      1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&bishop_pair,               1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&pawn_on_bishop_square,     1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&rook_on_open_file,         1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&blocked_rook,              1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&defended_minor,            1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&tempo_bonus,               1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_NO),
+	PARAMETER(&king_on_open_file,         1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&outpost_bonus,             1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&outpost_attack,            1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&minor_behind_pawn,         1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&knight_far_from_king,      1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&bishop_far_from_king,      1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&bishop_pair,               1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&pawn_on_bishop_square,     1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&rook_on_open_file,         1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&blocked_rook,              1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&defended_minor,            1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&tempo_bonus,               1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
 
-	PARAMETER(&undeveloped_piece,         1, TYPE_INT,     WEIGHTDECAY_YES, TUNE_NO),
+	PARAMETER(&undeveloped_piece,         1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
 
 	PARAMETER(&backward_pawn,             1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
 	PARAMETER(&supported_pawn,            1, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
@@ -175,20 +175,20 @@ struct parameter parameters[] = {
 	PARAMETER(&passed_pawn[0],            7, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
 	PARAMETER(&passed_file[0],            4, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
 
-	PARAMETER(&weak_squares_danger,       1, TYPE_INT,     WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&enemy_no_queen_bonus,      1, TYPE_INT,     WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&knight_attack_danger,      1, TYPE_INT,     WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&bishop_attack_danger,      1, TYPE_INT,     WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&rook_attack_danger,        1, TYPE_INT,     WEIGHTDECAY_YES, TUNE_NO),
-	PARAMETER(&queen_attack_danger,       1, TYPE_INT,     WEIGHTDECAY_YES, TUNE_NO),
+	PARAMETER(&weak_squares_danger,       1, TYPE_INT,     WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&enemy_no_queen_bonus,      1, TYPE_INT,     WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&knight_attack_danger,      1, TYPE_INT,     WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&bishop_attack_danger,      1, TYPE_INT,     WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&rook_attack_danger,        1, TYPE_INT,     WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&queen_attack_danger,       1, TYPE_INT,     WEIGHTDECAY_YES, TUNE_YES),
 	PARAMETER(&king_danger,               1, TYPE_INT,     WEIGHTDECAY_YES, TUNE_NO),
 
-	PARAMETER(&phase_max_material,        1, TYPE_INT,     WEIGHTDECAY_NO,  TUNE_NO),
-	PARAMETER(&phase_min_material,        1, TYPE_INT,     WEIGHTDECAY_NO,  TUNE_NO),
-	PARAMETER(&phase_knight,              1, TYPE_INT,     WEIGHTDECAY_NO,  TUNE_NO),
-	PARAMETER(&phase_bishop,              1, TYPE_INT,     WEIGHTDECAY_NO,  TUNE_NO),
-	PARAMETER(&phase_rook,                1, TYPE_INT,     WEIGHTDECAY_NO,  TUNE_NO),
-	PARAMETER(&phase_queen,               1, TYPE_INT,     WEIGHTDECAY_NO,  TUNE_NO),
+	PARAMETER(&phase_max_material,        1, TYPE_INT,     WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&phase_min_material,        1, TYPE_INT,     WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&phase_knight,              1, TYPE_INT,     WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&phase_bishop,              1, TYPE_INT,     WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&phase_rook,                1, TYPE_INT,     WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&phase_queen,               1, TYPE_INT,     WEIGHTDECAY_NO,  TUNE_YES),
 };
 
 void mevalue_print(mevalue eval) {
@@ -201,7 +201,7 @@ void parameters_print() {
 		printf("S(%4d,%4d), ", mevalue_mg(piece_value[i]), mevalue_eg(piece_value[i]));
 	}
 	printf("\n");
-#if 0
+#if 1
 	for (int i = 8; i < 56; i++) {
 		if (i % 8 == 0)
 			printf("\n");
@@ -271,7 +271,7 @@ void parameters_print() {
 			printf("\n\t");
 		mevalue_print(param->ptr[i]);
 	}
-	printf("\n}\n\n");
+	printf("\n};\n\n");
 	param = &parameters[PARAM_UNBLOCKEDSTORM];
 	printf("mevalue unblocked_storm[28] = {");
 	for (size_t i = 0; i < param->size; i++) {
@@ -279,7 +279,7 @@ void parameters_print() {
 			printf("\n\t");
 		mevalue_print(param->ptr[i]);
 	}
-	printf("\n}\n\n");
+	printf("\n};\n\n");
 	param = &parameters[PARAM_BLOCKEDSTORM];
 	printf("mevalue blocked_storm[7] = {\n\t");
 	for (size_t i = 0; i < param->size; i++)
@@ -315,6 +315,9 @@ void parameters_print() {
 	param = &parameters[PARAM_BLOCKEDROOK];
 	printf("\nmevalue blocked_rook          = ");
 	mevalue_print(param->ptr[0]);
+	param = &parameters[PARAM_UNDEVELOPEDPIECE];
+	printf("\nmevalue undeveloped_piece     = ");
+	mevalue_print(param->ptr[0]);
 	param = &parameters[PARAM_DEFENDEDMINOR];
 	printf("\nmevalue defended_minor        = ");
 	mevalue_print(param->ptr[0]);
@@ -322,8 +325,6 @@ void parameters_print() {
 	printf("\nmevalue tempo_bonus           = ");
 	mevalue_print(param->ptr[0]);
 	printf("\n\n");
-	param = &parameters[PARAM_UNDEVELOPEDPIECE];
-	printf("int undeveloped_piece         = %d;\n\n", param->ptr[0]);
 	param = &parameters[PARAM_WEAKSQUARESDANGER];
 	printf("int weak_squares_danger       = %d;\n", param->ptr[0]);
 	param = &parameters[PARAM_ENEMYNOQUEENBONUS];
@@ -339,8 +340,6 @@ void parameters_print() {
 	param = &parameters[PARAM_KINGDANGER];
 	printf("int king_danger               = %d;\n", param->ptr[0]);
 	printf("\n");
-	param = &parameters[PARAM_TEMPOBONUS];
-	printf("int tempo_bonus               = %d;\n", param->ptr[0]);
 	param = &parameters[PARAM_PHASEMAXMATERIAL];
 	printf("int phase_max_material        = %d;\n", param->ptr[0]);
 	param = &parameters[PARAM_PHASEMINMATERIAL];
@@ -354,28 +353,28 @@ void parameters_print() {
 	param = &parameters[PARAM_PHASEQUEEN];
 	printf("int phase_queen               = %d;\n", param->ptr[0]);
 #endif
-	printf("\nmevalue backward_pawn  = ");
+	printf("\nmevalue backward_pawn      = ");
 	param = &parameters[PARAM_BACKWARDPAWN];
 	mevalue_print(param->ptr[0]);
 	param = &parameters[PARAM_SUPPORTEDPAWN];
-	printf("\nmevalue supported_pawn = ");
+	printf("\nmevalue supported_pawn     = ");
 	mevalue_print(param->ptr[0]);
 	param = &parameters[PARAM_ISOLATEDPAWN];
-	printf("\nmevalue isolated_pawn  = ");
+	printf("\nmevalue isolated_pawn      = ");
 	mevalue_print(param->ptr[0]);
 	param = &parameters[PARAM_DOUBLEDPAWN];
-	printf("\nmevalue doubled_pawn   = ");
+	printf("\nmevalue doubled_pawn       = ");
 	mevalue_print(param->ptr[0]);
 	param = &parameters[PARAM_CONNECTEDPAWNS];
-	printf("\nmevalue connected_pawns = { ");
+	printf("\nmevalue connected_pawns[7] = { ");
 	for (size_t i = 0; i < param->size; i++)
 		mevalue_print(param->ptr[i]);
 	param = &parameters[PARAM_PASSEDPAWN];
-	printf("\nmevalue passed_pawn    = { ");
+	printf("};\nmevalue passed_pawn[7]     = { ");
 	for (size_t i = 0; i < param->size; i++)
 		mevalue_print(param->ptr[i]);
 	param = &parameters[PARAM_PASSEDFILE];
-	printf("}\nmevalue passed_file   = { ");
+	printf("};\nmevalue passed_file[4]     = { ");
 	for (size_t i = 0; i < param->size; i++)
 		mevalue_print(param->ptr[i]);
 	printf("};\n\n");
@@ -424,7 +423,7 @@ void parameter_step(double value[2], double m[2], double v[2], int type, int wei
 	for (int i = 0; i <= type ; i++) {
 		double m_hat = m[i] / (1 - pow(beta_1, t));
 		double v_hat = v[i] / (1 - pow(beta_2, t));
-		value[i] -= learning_rate * m_hat / (sqrt(v_hat) + epsilon) + (weight_decay_enabled == WEIGHTDECAY_YES) * weight_decay * value[i];
+		value[i] -= alpha * (m_hat / (sqrt(v_hat) + epsilon) + (weight_decay_enabled == WEIGHTDECAY_YES) * weight_decay * value[i]);
 	}
 }
 
@@ -530,30 +529,36 @@ double grad_calc(struct position *pos, double result) {
 	}
 	if ((param = &parameters[PARAM_PSQTPAWN])->tune == TUNE_YES) {
 		for (size_t i = 0; i < param->size; i++) {
-			int f = file_of(i + 8);
-			int r = rank_of(i + 8);
-			int square = make_square(f, 7 - r);
+			int square = i + 8;
+			int f = file_of(square);
+			int r = rank_of(square);
+			square = make_square(f, 7 - r);
 			double grad = factor * ((pos->mailbox[orient_horizontal(white, square)] == white_pawn) - (pos->mailbox[orient_horizontal(black, square)] == black_pawn));
 			double gradmg = mgs * grad;
 			double gradeg = egs * grad;
 			param->grad[2 * i + mg] += gradmg;
 			param->grad[2 * i + eg] += gradeg;
 #if 0
-			white_psqtable[0][j] += S(100, 0);
+			white_psqtable[0][i + 8] += S(100, 0);
 			tables_init();
 			int16_t new_eval = evaluate_classical(pos);
 			new_eval = pos->turn == white ? new_eval : -new_eval;
-			white_psqtable[0][j] -= S(100, 0);
+			white_psqtable[0][i + 8] -= S(100, 0);
 			tables_init();
 			double gradtest = (sigmoid(new_eval) - result) * (sigmoid(new_eval) - result) - (sigmoid(eval) - result) * (sigmoid(eval) - result);
 
 
-			if ((gradmg == 0) ^ (gradtest == 0)) {
-				printf("square: %d (%ld)\n", square, i);
+			if (gradmg != 0 || gradeg != 0) {
+				char tmp[3];
+				print_position(pos, 0);
+				printf("turn: %s\n", pos->turn ? "white" : "black");
+				printf("eval: %d\n", (2 * pos->turn - 1) * evaluate_classical(pos));
+				printf("square: %s (%d, %ld)\n", algebraic(tmp, square), square, i);
+				printf("num pawns: %d\n", (pos->mailbox[orient_horizontal(white, square)] == white_pawn) - (pos->mailbox[orient_horizontal(black, square)] == black_pawn));
 				printf("gradmg: %e\n", gradmg);
 				printf("gradeg: %e\n", gradeg);
 				printf("gradtest: %e\n", gradtest);
-				exit(2);
+				printf("result: %f\n", result);
 			}
 #endif
 		}
@@ -562,7 +567,7 @@ double grad_calc(struct position *pos, double result) {
 		for (size_t i = 0; i < param->size; i++) {
 			int f = i % 4;
 			int r = i / 4;
-			int square1 = make_square(f, r);
+			int square1 = make_square(f, 7 - r);
 			int square2 = orient_vertical(1, square1);
 			int num = (pos->mailbox[orient_horizontal(white, square1)] == white_knight) + (pos->mailbox[orient_horizontal(white, square2)] == white_knight) -
 				  (pos->mailbox[orient_horizontal(black, square1)] == black_knight) - (pos->mailbox[orient_horizontal(black, square2)] == black_knight);
@@ -599,7 +604,7 @@ double grad_calc(struct position *pos, double result) {
 		for (size_t i = 0; i < param->size; i++) {
 			int f = i % 4;
 			int r = i / 4;
-			int square1 = make_square(f, r);
+			int square1 = make_square(f, 7 - r);
 			int square2 = orient_vertical(1, square1);
 			int num = (pos->mailbox[orient_horizontal(white, square1)] == white_bishop) + (pos->mailbox[orient_horizontal(white, square2)] == white_bishop) -
 				  (pos->mailbox[orient_horizontal(black, square1)] == black_bishop) - (pos->mailbox[orient_horizontal(black, square2)] == black_bishop);
@@ -614,7 +619,7 @@ double grad_calc(struct position *pos, double result) {
 		for (size_t i = 0; i < param->size; i++) {
 			int f = i % 4;
 			int r = i / 4;
-			int square1 = make_square(f, r);
+			int square1 = make_square(f, 7 - r);
 			int square2 = orient_vertical(1, square1);
 			int num = (pos->mailbox[orient_horizontal(white, square1)] == white_rook) + (pos->mailbox[orient_horizontal(white, square2)] == white_rook) -
 				  (pos->mailbox[orient_horizontal(black, square1)] == black_rook) - (pos->mailbox[orient_horizontal(black, square2)] == black_rook);
@@ -629,7 +634,7 @@ double grad_calc(struct position *pos, double result) {
 		for (size_t i = 0; i < param->size; i++) {
 			int f = i % 4;
 			int r = i / 4;
-			int square1 = make_square(f, r);
+			int square1 = make_square(f, 7 - r);
 			int square2 = orient_vertical(1, square1);
 			int num = (pos->mailbox[orient_horizontal(white, square1)] == white_queen) + (pos->mailbox[orient_horizontal(white, square2)] == white_queen) -
 				  (pos->mailbox[orient_horizontal(black, square1)] == black_queen) - (pos->mailbox[orient_horizontal(black, square2)] == black_queen);
@@ -644,7 +649,7 @@ double grad_calc(struct position *pos, double result) {
 		for (size_t i = 0; i < param->size; i++) {
 			int f = i % 4;
 			int r = i / 4;
-			int square1 = make_square(f, r);
+			int square1 = make_square(f, 7 - r);
 			int square2 = orient_vertical(1, square1);
 			int num = (pos->mailbox[orient_horizontal(white, square1)] == white_king) + (pos->mailbox[orient_horizontal(white, square2)] == white_king) -
 				  (pos->mailbox[orient_horizontal(black, square1)] == black_king) - (pos->mailbox[orient_horizontal(black, square2)] == black_king);
@@ -851,8 +856,12 @@ double grad_calc(struct position *pos, double result) {
 	}
 	if ((param = &parameters[PARAM_UNDEVELOPEDPIECE])->tune == TUNE_YES) {
 		double dEdu = ei.undeveloped_piece[white] - ei.undeveloped_piece[black];
-		double grad = factor * mgs * dEdu;
-		param->grad[0] += grad;
+		double grad = factor * dEdu;
+		double gradmg = mgs * grad;
+		double gradeg = egs * grad;
+		param->grad[mg] += gradmg;
+		param->grad[eg] += gradeg;
+
 	}
 	if ((param = &parameters[PARAM_DEFENDEDMINOR])->tune == TUNE_YES) {
 		double dEdd = ei.defended_minor[white] - ei.defended_minor[black];

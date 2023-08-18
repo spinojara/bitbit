@@ -25,13 +25,13 @@
 #include "util.h"
 #include "option.h"
 
-mevalue backward_pawn  = S(-9, 8);
-mevalue supported_pawn = S( 13, -5);
-mevalue isolated_pawn  = S(-7, -18);
-mevalue doubled_pawn   = S(-11,-17);
-mevalue connected_pawns[7] = { S(  0,  0), S(  1, -1), S(  2,  2), S(  6,  4), S(  8,  7), S( 19, 17), S(106, 47) };
-mevalue passed_pawn[7]    = { S(  0,  0), S(-24, -5), S(-20,  0), S(  0, 14), S( 31, 28), S( 59, 38), S(123, 37), };
-mevalue passed_file[4]   = { S( 34, 31), S( 24, 26), S(  8, 11), S( -4,  6), };
+mevalue backward_pawn  = S( -4, -2);
+mevalue supported_pawn = S( 11,  6);
+mevalue isolated_pawn  = S(-11,-15);
+mevalue doubled_pawn   = S( -6,-26);
+mevalue connected_pawns[7] = { S(  0,  0), S(  2,  0), S(  5,  2), S(  3,  2), S(  5,  9), S( 18, 39), S( 87, 90), };
+mevalue passed_pawn[7]    = { S(  0,  0), S( -7,-26), S(-16,-20), S( -9, 14), S( 18, 60), S( 49,152), S( 70,120), };
+mevalue passed_file[4]   = { S( 20, 60), S( 16, 58), S(  1, 31), S( -1, 17), };
 
 /* mostly inspiration from stockfish */
 mevalue evaluate_pawns(const struct position *pos, struct evaluationinfo *ei, int color) {
@@ -76,29 +76,29 @@ mevalue evaluate_pawns(const struct position *pos, struct evaluationinfo *ei, in
 		passed    &= !(passed_files(square, white) & file(square) & pawns[white]);
 
 		if (backward) {
-			//ei->backward_pawn[color] += 1;
+			ei->backward_pawn[color] += 1;
 			eval += backward_pawn;
 		}
 
 		if (support | phalanx) {
-			//ei->supported_pawn[color] += popcount(support);
-			//ei->connected_pawns[color][r] += 2 + (phalanx != 0);
+			ei->supported_pawn[color] += popcount(support);
+			ei->connected_pawns[color][r] += 2 + (phalanx != 0);
 			eval += connected_pawns[r] * (2 + (phalanx != 0)) + supported_pawn * popcount(support);
 		}
 
 		if (passed) {
-			//ei->passed_pawn[color][r] += 1;
-			//ei->passed_file[color][MIN(f, 7 - f)] += 1;
+			ei->passed_pawn[color][r] += 1;
+			ei->passed_file[color][MIN(f, 7 - f)] += 1;
 			eval += passed_pawn[r] + passed_file[MIN(f, 7 - f)];
 		}
 
 		if (!neighbours) {
-			//ei->isolated_pawn[color] += 1;
+			ei->isolated_pawn[color] += 1;
 			eval += isolated_pawn;
 		}
 		
 		if (!support && doubled) {
-			//ei->doubled_pawn[color] += 1;
+			ei->doubled_pawn[color] += 1;
 			eval += doubled_pawn;
 		}
 

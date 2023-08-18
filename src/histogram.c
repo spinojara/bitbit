@@ -46,7 +46,7 @@ void print_information(uint64_t square[64], uint64_t total) {
 		printf("+-------+-------+-------+-------+-------+-------+-------+-------+\n|");
 		for (int f = 0; f < 8; f++) {
 			int sq = make_square(f, r);
-			printf(" %5.2f |", 100.f * square[sq] / total);
+			printf(" %5.2f |", 100.f * square[sq] / (2 * total));
 		}
 		printf("\n");
 	}
@@ -103,6 +103,7 @@ int main(int argc, char **argv) {
 		if (eval == VALUE_NONE)
 			continue;
 
+#if 0
 		const int material_values[] = { 0, 1, 3, 3, 5, 9, 0 };
 		int material[2] = { 0 };
 		for (int color = 0; color < 2; color++) {
@@ -115,17 +116,16 @@ int main(int argc, char **argv) {
 		int material_delta = ABS(material[white] - material[black]);
 		
 		if (material_delta >= 3 && eval == 0 && pos.halfmove <= 0) {
-#if 1
 			char fen[128];
 			print_position(&pos, 0);
 			printf("%s\n", pos_to_fen(fen, &pos));
 			printf("%d\n", (2 * pos.turn - 1) * evaluate_classical(&pos));
 			printf("%d\n", pos.turn ? eval : -eval);
-#endif
 			if (eval == 0)
 				c++;
 			a++;
 		}
+#endif
 
 		store_information(&pos, piece_square);
 		total++;

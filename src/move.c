@@ -231,7 +231,7 @@ char *move_str_pgn(char *str, const struct position *pos, const move *m) {
 		str[i++] = 'Q';
 		break;
 	/* king */
-	case 0:
+	case king:
 		if (f == 4 && file_of(move_to(m)) == 6) {
 			sprintf(str, "O-O");
 			i = 3;
