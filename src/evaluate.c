@@ -27,34 +27,33 @@
 #include "nnue.h"
 #include "option.h"
 
-mevalue king_on_open_file     = S(-15, -4);
-mevalue outpost_bonus         = S( 52,  0);
-mevalue outpost_attack        = S( 13,  9);
-mevalue minor_behind_pawn     = S(  2,  4);
-mevalue knight_far_from_king  = S( -6,  0);
-mevalue bishop_far_from_king  = S( -4, -1);
-mevalue bishop_pair           = S( 24, 82);
-mevalue pawn_on_bishop_square = S( -5,-11);
-mevalue rook_on_open_file     = S( 15, 22);
-mevalue blocked_rook          = S(-29, -4);
-mevalue undeveloped_piece     = S( -5,-54);
-mevalue defended_minor        = S(  4, 14);
-mevalue tempo_bonus           = S( 11,  2);
+mevalue king_on_open_file     = S(-18, -4);
+mevalue outpost_bonus         = S( 48, -2);
+mevalue outpost_attack        = S( 16,  7);
+mevalue minor_behind_pawn     = S(  4,  3);
+mevalue knight_far_from_king  = S( -6, -2);
+mevalue bishop_far_from_king  = S( -7, -1);
+mevalue bishop_pair           = S( 29, 71);
+mevalue pawn_on_bishop_square = S( -4,-11);
+mevalue rook_on_open_file     = S( 17, 24);
+mevalue blocked_rook          = S(-19, -3);
+mevalue defended_minor        = S(  4, 16);
+mevalue tempo_bonus           = S(  8,  4);
 
-int weak_squares_danger       = 60;
-int enemy_no_queen_bonus      = 409;
-int knight_attack_danger      = 52;
-int bishop_attack_danger      = 41;
-int rook_attack_danger        = 48;
-int queen_attack_danger       = 29;
+int weak_squares_danger       = 64;
+int enemy_no_queen_bonus      = 420;
+int knight_attack_danger      = 54;
+int bishop_attack_danger      = 42;
+int rook_attack_danger        = 44;
+int queen_attack_danger       = 36;
 int king_danger               = 0;
 
 int phase_max_material        = 7838;
-int phase_min_material        = 743;
-int phase_knight              = 322;
-int phase_bishop              = 245;
-int phase_rook                = 670;
-int phase_queen               = 1445;
+int phase_min_material        = 829;
+int phase_knight              = 293;
+int phase_bishop              = 289;
+int phase_rook                = 639;
+int phase_queen               = 1476;
 
 const int material_value[7] = { 0, 100, 300, 300, 500, 1000, 0 };
 
@@ -298,16 +297,6 @@ mevalue evaluate_queens(const struct position *pos, struct evaluationinfo *ei, i
 		/* king attacks */
 		if (ei->king_ring[other_color(turn)] & attacks)
 			ei->king_attack_units[turn][queen] += popcount(ei->king_ring[other_color(turn)] & attacks) + 1;
-
-		/* undeveloped minor pieces when moving queen */
-		if (turn) {
-			ei->undeveloped_piece[white] += (square != d1) * popcount((pos->piece[white][knight] | pos->piece[white][bishop]) & RANK_1);
-			eval += (square != d1) * S(undeveloped_piece, 0) * popcount((pos->piece[white][knight] | pos->piece[white][bishop]) & RANK_1);
-		}
-		else {
-			ei->undeveloped_piece[black] += (square != d8) * popcount((pos->piece[black][knight] | pos->piece[black][bishop]) & RANK_8);
-			eval += (square != d8) * S(undeveloped_piece, 0) * popcount((pos->piece[black][knight] | pos->piece[black][bishop]) & RANK_8);
-		}
 
 		b = clear_ls1b(b);
 	}

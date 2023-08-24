@@ -27,6 +27,7 @@
   DEBUG=2 or NNUE=file?
 - Should all inlined functions be static inline etc?
 - Don't use BUFSIZ.
+- Rename move to move_t and mevalue to something else.
 
 VERY IMPORTANT
 - Verify that the new transposition table works correctly.

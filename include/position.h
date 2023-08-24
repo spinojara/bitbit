@@ -31,7 +31,7 @@ struct position {
 	int turn;
 	int en_passant;
 	/* KQkq */
-	int castle;
+	unsigned castle;
 
 	int halfmove;
 	int fullmove;
@@ -127,6 +127,8 @@ char *castle_string(char *str, int castle);
 
 void startpos(struct position *pos);
 void pos_from_fen(struct position *pos, int argc, char **argv);
+
+void mirror_position(struct position *pos);
 
 void random_pos(struct position *pos, int n);
 

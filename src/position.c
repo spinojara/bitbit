@@ -265,6 +265,40 @@ void pos_from_fen(struct position *pos, int argc, char **argv) {
 		pos->fullmove = strint(argv[5]);
 }
 
+void mirror_position(struct position *pos) {
+	if (pos->en_passant)
+		pos->en_passant = orient_horizontal(black, pos->en_passant);
+	pos->turn = other_color(pos->turn);
+
+	for (int wsq = a1; wsq <= h4; wsq++) {
+		int bsq = orient_horizontal(black, wsq);
+		int wp = pos->mailbox[wsq];
+		int bp = pos->mailbox[bsq];
+		pos->mailbox[wsq] = bp ? colored_piece(uncolored_piece(bp), white) : empty;
+		pos->mailbox[bsq] = wp ? colored_piece(uncolored_piece(wp), black) : empty;
+	}
+
+	for (int color = 0; color < 2; color++) {
+		for (int piece = all; piece <= king; piece++) {
+			uint64_t b = pos->piece[color][piece];
+			pos->piece[color][piece] = 0;
+			while (b) {
+				int sq = ctz(b);
+				pos->piece[color][piece] |= bitboard(orient_horizontal(black, sq));
+				b = clear_ls1b(b);
+			}
+		}
+	}
+
+	for (int piece = all; piece <= king; piece++) {
+		uint64_t b = pos->piece[white][piece];
+		pos->piece[white][piece] = pos->piece[black][piece];
+		pos->piece[black][piece] = b;
+	}
+
+	pos->castle = ((pos->castle & 0x3) << 2) | ((pos->castle & 0xC) >> 2);
+}
+
 int fen_is_ok(int argc, char **argv) {
 	int t = 0;
 	size_t i;

@@ -18,6 +18,8 @@
 #ifndef TABLES_H
 #define TABLES_H
 
+#include "evaluate.h"
+
 extern mevalue piece_value[6];
 
 extern mevalue psqtable[2][7][64];

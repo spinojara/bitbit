@@ -45,8 +45,6 @@ extern mevalue blocked_rook;
 extern mevalue defended_minor;
 extern mevalue tempo_bonus;
 
-extern int undeveloped_piece;
-
 extern int weak_squares_danger;
 extern int enemy_no_queen_bonus;
 extern int knight_attack_danger;
@@ -95,7 +93,6 @@ struct evaluationinfo {
 	int pawn_on_bishop_square[2];
 	int rook_on_open_file[2];
 	int blocked_rook[2];
-	int undeveloped_piece[2];
 	int defended_minor[2];
 
 	int pawn_shelter[2][28];

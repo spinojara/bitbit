@@ -45,6 +45,7 @@ int interface_help(int argc, char **argv);
 int interface_move(int argc, char **argv);
 int interface_undo(int argc, char **argv);
 int interface_flip(int argc, char **argv);
+int interface_mirror(int argc, char **argv);
 int interface_perft(int argc, char **argv);
 int interface_position(int argc, char **argv);
 int interface_clear(int argc, char **argv);
@@ -64,6 +65,7 @@ static const struct func func_arr[] = {
 	{ "move"       , interface_move       , },
 	{ "undo"       , interface_undo       , },
 	{ "flip"       , interface_flip       , },
+	{ "mirror"     , interface_mirror     , },
 	{ "perft"      , interface_perft      , },
 	{ "position"   , interface_position   , },
 	{ "clear"      , interface_clear      , },
@@ -126,6 +128,13 @@ int interface_flip(int argc, char **argv) {
 	else {
 		printf("error: cannot flip the move\n");
 	}
+	return DONE;
+}
+
+int interface_mirror(int argc, char **argv) {
+	UNUSED(argc);
+	UNUSED(argv);
+	mirror_position(&pos);
 	return DONE;
 }
 

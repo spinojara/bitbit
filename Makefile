@@ -61,6 +61,9 @@ SRC_GENNNUE    = gennnue.c bitboard.c magicbitboard.c attackgen.c \
                  history.c option.c nnue.c search.c \
                  endgame.c nnueweights.c kpk.c kpkp.c krkp.c
 
+SRC_GENEPD     = genepd.c bitboard.c magicbitboard.c attackgen.c \
+                 move.c util.c position.c movegen.c option.c
+
 SRC_HISTOGRAM  = histogram.c bitboard.c magicbitboard.c move.c \
                  position.c interrupt.c util.c \
                  option.c evaluate.c pawn.c endgame.c tables.c \
@@ -94,6 +97,7 @@ DEP = $(addprefix dep/,$(addsuffix .d,$(basename $(notdir $(wildcard src/*.c))))
 
 OBJ_BITBIT     = $(addprefix obj/,$(addsuffix .o,$(basename $(SRC_BITBIT))))
 OBJ_GENNNUE    = $(addprefix obj/,$(addsuffix .o,$(basename $(SRC_GENNNUE))))
+OBJ_GENEPD     = $(addprefix obj/,$(addsuffix .o,$(basename $(SRC_GENEPD))))
 OBJ_NNUESOURCE = $(addprefix obj/,$(addsuffix .o,$(basename $(SRC_NNUESOURCE))))
 OBJ_HISTOGRAM  = $(addprefix obj/,$(addsuffix .o,$(basename $(SRC_HISTOGRAM))))
 OBJ_PGNBIN     = $(addprefix obj/,$(addsuffix .o,$(basename $(SRC_PGNBIN))))
@@ -108,13 +112,16 @@ MANPREFIX = $(PREFIX)/share
 MANDIR = $(MANPREFIX)/man
 MAN6DIR = $(MANDIR)/man6
 
-all: bitbit gennnue histogram pgnbin texeltune genbitbase libbatch.so libvisualize.so
+all: bitbit gennnue genepd histogram pgnbin texeltune genbitbase libbatch.so libvisualize.so
 
 bitbit: $(OBJ_BITBIT)
 	$(CC) $(LDFLAGS) -lm $^ -o $@
 
 gennnue: $(OBJ_GENNNUE)
 	$(CC) $(LDFLAGS) -lm -pthread $^ -o $@
+
+genepd: $(OBJ_GENEPD)
+	$(CC) $(LDFLAGS) -lm $^ -o $@
 
 histogram: $(OBJ_HISTOGRAM)
 	$(CC) $(LDFLAGS) -lm $^ -o $@
@@ -123,7 +130,7 @@ pgnbin: $(OBJ_PGNBIN)
 	$(CC) $(LDFLAGS) -lm $^ -o $@
 
 texeltune: $(OBJ_TEXELTUNE)
-	$(CC) $(LDFLAGS) -lm -pthread $^ -o $@
+	$(CC) $(LDFLAGS) -lm $^ -o $@
 
 genbitbase: $(OBJ_GENBITBASE)
 	$(CC) $(LDFLAGS) $^ -o $@
