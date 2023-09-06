@@ -78,8 +78,8 @@ SRC_PGNBIN     = pgnbin.c bitboard.c magicbitboard.c attackgen.c \
                  timeman.c history.c
 
 SRC_TEXELTUNE  = texeltune.c bitboard.c magicbitboard.c attackgen.c \
-                 move.c util.c position.c movegen.c evaluate.c \
-                 tables.c timeman.c history.c interrupt.c pawn.c \
+                 move.c util.c position.c movegen.c \
+                 tables.c timeman.c history.c interrupt.c \
                  moveorder.c transposition.c movepicker.c option.c \
                  search.c nnue.c endgame.c nnueweights.c kpk.c kpkp.c krkp.c
 
@@ -101,7 +101,7 @@ OBJ_GENEPD     = $(addprefix obj/,$(addsuffix .o,$(basename $(SRC_GENEPD))))
 OBJ_NNUESOURCE = $(addprefix obj/,$(addsuffix .o,$(basename $(SRC_NNUESOURCE))))
 OBJ_HISTOGRAM  = $(addprefix obj/,$(addsuffix .o,$(basename $(SRC_HISTOGRAM))))
 OBJ_PGNBIN     = $(addprefix obj/,$(addsuffix .o,$(basename $(SRC_PGNBIN))))
-OBJ_TEXELTUNE  = $(addprefix obj/,$(addsuffix .o,$(basename $(SRC_TEXELTUNE))))
+OBJ_TEXELTUNE  = $(addprefix obj/,$(addsuffix .o,$(basename $(SRC_TEXELTUNE)))) obj/texelevaluate.o obj/texelpawn.o
 OBJ_GENBITBASE = $(addprefix obj/,$(addsuffix .o,$(basename $(SRC_GENBITBASE))))
 OBJ_BATCH      = $(addprefix obj/pic,$(addsuffix .o,$(basename $(SRC_BATCH))))
 OBJ_VISUALIZE  = $(addprefix obj/pic,$(addsuffix .o,$(basename $(SRC_VISUALIZE))))
@@ -155,6 +155,14 @@ obj/init.o: src/init.c dep/init.d Makefile
 obj/interface.o: src/interface.c dep/interface.d Makefile
 	@mkdir -p obj
 	$(CC) $(CFLAGS) -Iinclude -DTT=$(TT) -c $< -o $@
+
+obj/texelevaluate.o: src/evaluate.c dep/evaluate.d Makefile
+	@mkdir -p obj
+	$(CC) $(CFLAGS) -Iinclude -DTRACE -DTT=$(TT) -c $< -o $@
+
+obj/texelpawn.o: src/pawn.c dep/pawn.d Makefile
+	@mkdir -p obj
+	$(CC) $(CFLAGS) -Iinclude -DTRACE -DTT=$(TT) -c $< -o $@
 
 obj/pic%.o: src/%.c dep/%.d Makefile
 	@mkdir -p obj

@@ -28,6 +28,18 @@
 - Should all inlined functions be static inline etc?
 - Don't use BUFSIZ.
 - Rename move to move_t and mevalue to something else.
+- Make evaluation parameters constant for evaluation but not for texeltuning.
+- Make all functions in evaluate_classical inline and see if we gain some extra
+  speed.
+- Make the enums upper case. pawn -> PAWN etc.
+- Make the shift functions take an argument from an
+  enum { NORTH, SOUTH, EAST, WEST }; This should probably be as fast as
+  shift_north etc since the functions are inlined. Check the generated assembly.
+  Probably better with enum { UP, DOWN, LEFT, RIGHT }; These should also be so
+  that square + dir is the expected square (for white). That is UP = 8 etc.
+- Make a contributions page.
+- Try pgnbin but don't consider pawn captures with --quiet option.
 
 VERY IMPORTANT
 - Verify that the new transposition table works correctly.
+- Verify that the new static exchange evaluation works correctly.

@@ -46,9 +46,13 @@ static inline uint64_t clz(uint64_t b) {
 	return __builtin_clzll(b);
 #elif defined(_MSC_VER)
 	unsigned long ret;
-	_BitScanReverse(&ret, b);
+	_BitScanReverse64(&ret, b);
 	return ret;
 #endif
+}
+
+static inline uint64_t clzm(uint64_t b) {
+	return 63 ^ clz(b);
 }
 
 static inline uint64_t popcount(uint64_t b) {

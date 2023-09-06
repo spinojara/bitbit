@@ -30,11 +30,12 @@
 #include "position.h"
 #include "move.h"
 #include "evaluate.h"
-#include "search.h"
 #include "option.h"
 #include "tables.h"
 #include "moveorder.h"
 #include "endgame.h"
+#include "movegen.h"
+#include "movepicker.h"
 
 const int quiet_eval_delta = 50;
 
@@ -45,11 +46,51 @@ int skip_first = 0;
 int skip_endgames = 0;
 int skip_halfmove = 0;
 
-int quiescence_eval_differs(struct position *pos) {
-	struct searchinfo si = { 0 };
-	int32_t q = quiescence(pos, 0, -VALUE_MATE, VALUE_MATE, &si);
-	int32_t e = evaluate_classical(pos);
-	return ABS(q - e) > quiet_eval_delta;
+static const struct searchinfo gsi = { 0 };
+
+int32_t evaluate_material(const struct position *pos) {
+	int32_t eval = 0;
+	for (int piece = pawn; piece < king; piece++)
+		eval += popcount(pos->piece[white][piece]) * material_value[piece];
+	for (int piece = pawn; piece < king; piece++)
+		eval -= popcount(pos->piece[black][piece]) * material_value[piece];
+	return pos->turn ? eval : -eval;
+}
+
+int32_t search_material(struct position *pos, int ply, int alpha, int beta) {
+	uint64_t checkers = generate_checkers(pos, pos->turn);
+	int32_t eval = evaluate_material(pos), best_eval = -VALUE_INFINITE;
+
+	move move_list[MOVES_MAX];
+	generate_quiescence(pos, move_list);
+
+	if (!checkers) {
+		if (eval >= beta)
+			return beta;
+		if (eval > alpha)
+			alpha = eval;
+		best_eval = eval;
+	}
+
+	struct movepicker mp;
+	movepicker_init(&mp, pos, move_list, 0, 0, 0, &gsi);
+	move m;
+	while ((m = next_move(&mp))) {
+		do_move(pos, &m);
+		eval = -search_material(pos, ply + 1, -beta, -alpha);
+		undo_move(pos, &m);
+
+		if (eval > best_eval) {
+			best_eval = eval;
+			if (eval > alpha) {
+				alpha = eval;
+				if (eval >= beta)
+					break;
+			}
+		}
+	}
+
+	return best_eval;
 }
 
 int parse_result(FILE *f) {
@@ -133,7 +174,8 @@ void write_fens(struct position *pos, int result, FILE *fin, FILE *fout) {
 					if (skip_halfmove && !gbernoulli(exp(-pos->halfmove)))
 						skip = 1;
 
-					if (quiet && (generate_checkers(pos, pos->turn) || quiescence_eval_differs(pos)))
+					if (quiet && (generate_checkers(pos, pos->turn)
+						      || search_material(pos, 0, -VALUE_INFINITE, VALUE_INFINITE) != evaluate_material(pos)))
 						skip = 1;
 
 					if (skip)

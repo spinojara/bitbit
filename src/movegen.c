@@ -37,7 +37,7 @@ move *generate_all(const struct position *pos, move *move_list) {
 	uint64_t all_pieces = pos->piece[white][all] | pos->piece[black][all];
 
 	uint64_t checkers = generate_checkers(pos, pos->turn);
-	uint64_t attacked = generate_attacked(pos, pos->turn);
+	uint64_t attacked = generate_attacked(pos, other_color(pos->turn));
 	uint64_t pinned = generate_pinned(pos, pos->turn);
 
 	int target_square;
@@ -474,7 +474,7 @@ int mate(const struct position *pos) {
 	uint64_t all_pieces = pos->piece[white][all] | pos->piece[black][all];
 
 	uint64_t checkers = generate_checkers(pos, pos->turn);
-	uint64_t attacked = generate_attacked(pos, pos->turn);
+	uint64_t attacked = generate_attacked(pos, other_color(pos->turn));
 	uint64_t pinned = generate_pinned(pos, pos->turn);
 
 	int target_square;
@@ -721,7 +721,7 @@ move *generate_quiescence(const struct position *pos, move *move_list) {
 	uint64_t all_pieces = pos->piece[white][all] | pos->piece[black][all];
 
 	uint64_t checkers = generate_checkers(pos, pos->turn);
-	uint64_t attacked = generate_attacked(pos, pos->turn);
+	uint64_t attacked = generate_attacked(pos, other_color(pos->turn));
 	uint64_t pinned = generate_pinned(pos, pos->turn);
 
 	int target_square;
@@ -993,94 +993,4 @@ move *generate_quiescence(const struct position *pos, move *move_list) {
 	/* set the terminating move */
 	*move_ptr = 0;
 	return move_ptr;
-}
-
-int mobility(const struct position *pos, int color) {
-	int moves = 0, t;
-
-	uint64_t piece;
-	uint64_t attacks;
-	uint64_t pinned_squares;
-	uint64_t all_pieces = pos->piece[white][all] | pos->piece[black][all];
-
-	uint64_t checkers = generate_checkers(pos, color);
-	uint64_t pinned = generate_pinned(pos, color);
-
-	int source_square;
-	int king_square;
-
-	king_square = ctz(pos->piece[color][king]);
-
-	if (!checkers) {
-		piece = pos->piece[color][knight] & ~pinned;
-		while (piece) {
-			source_square = ctz(piece);
-			attacks = knight_attacks(source_square, pos->piece[color][all]);
-			moves += (t = popcount(attacks)) ? t : -3;
-			piece = clear_ls1b(piece);
-		}
-
-		piece = pos->piece[color][bishop] & ~pinned;
-		while (piece) {
-			source_square = ctz(piece);
-			attacks = bishop_attacks(source_square, pos->piece[color][all], all_pieces);
-			moves += (t = popcount(attacks)) ? t : -3;
-			piece = clear_ls1b(piece);
-		}
-
-		piece = pos->piece[color][rook] & ~pinned;
-		while (piece) {
-			source_square = ctz(piece);
-			attacks = rook_attacks(source_square, pos->piece[color][all], all_pieces);
-			moves += (t = popcount(attacks)) ? t : -3;
-			piece = clear_ls1b(piece);
-		}
-
-		piece = pos->piece[color][queen] & ~pinned;
-		while (piece) {
-			source_square = ctz(piece);
-			attacks = queen_attacks(source_square, pos->piece[color][all], all_pieces);
-			moves += popcount(attacks) ? 0 : -3;
-			piece = clear_ls1b(piece);
-		}
-
-	}
-	else if (!(checkers & (checkers - 1))) {
-		source_square = ctz(checkers);
-		pinned_squares = between_lookup[source_square + 64 * king_square] | checkers;
-
-		piece = pos->piece[color][knight] & ~pinned;
-		while (piece) {
-			source_square = ctz(piece);
-			attacks = knight_attacks(source_square, pos->piece[color][all]) & pinned_squares;
-			moves += (t = popcount(attacks)) ? t : -3;
-			piece = clear_ls1b(piece);
-		}
-
-		piece = pos->piece[color][bishop] & ~pinned;
-		while (piece) {
-			source_square = ctz(piece);
-			attacks = bishop_attacks(source_square, pos->piece[color][all], all_pieces) & pinned_squares;
-			moves += (t = popcount(attacks)) ? t : -3;
-			piece = clear_ls1b(piece);
-		}
-
-		piece = pos->piece[color][rook] & ~pinned;
-		while (piece) {
-			source_square = ctz(piece);
-			attacks = rook_attacks(source_square, pos->piece[color][all], all_pieces) & pinned_squares;
-			moves += (t = popcount(attacks)) ? t : -3;
-			piece = clear_ls1b(piece);
-		}
-
-		piece = pos->piece[color][queen] & ~pinned;
-		while (piece) {
-			source_square = ctz(piece);
-			attacks = queen_attacks(source_square, pos->piece[color][all], all_pieces) & pinned_squares;
-			moves += popcount(attacks) ? 0 : -3;
-			piece = clear_ls1b(piece);
-		}
-	}
-
-	return 5 * moves;
 }

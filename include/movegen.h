@@ -29,6 +29,4 @@ int mate(const struct position *pos);
 
 move *generate_quiescence(const struct position *pos, move *move_list);
 
-int mobility(const struct position *pos, int color);
-
 #endif

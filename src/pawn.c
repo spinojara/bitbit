@@ -24,31 +24,30 @@
 #include "bitboard.h"
 #include "util.h"
 #include "option.h"
+#include "texeltune.h"
 
-mevalue backward_pawn      = S( -3, -6);
-mevalue supported_pawn     = S( 11,  9);
-mevalue isolated_pawn      = S( -9, -8);
-mevalue doubled_pawn       = S(  0,-25);
-mevalue connected_pawns[7] = { S(  0,  0), S(  1,  0), S(  4,  3), S(  3,  4), S(  4, 13), S( 18, 37), S( 67, 87), };
-mevalue passed_pawn[7]     = { S(  0,  0), S(  4,-26), S(-10,-17), S( -7, 14), S(  8, 51), S( 41,159), S(127,242), };
-mevalue passed_file[4]     = { S(  7, 56), S(  0, 52), S(  4, 28), S(  5,  9), };
+mevalue supported_pawn     = S(  9, 12);
+mevalue backward_pawn[4]   = { S(  2,  0), S( -6,-10), S( -7, -5), S( -7, -5), };
+mevalue isolated_pawn[4]   = { S( -2,  1), S( -4, -8), S( -6, -3), S( -9, -5), };
+mevalue doubled_pawn[4]    = { S(-10,-55), S(  5,-33), S(  5,-20), S( -3,-12), };
+mevalue connected_pawn[7]  = { S(  0,  0), S(  2,  2), S(  4,  4), S(  4,  4), S(  8,  9), S( 31, 34), S( 70, 87), };
+mevalue passed_pawn[7]     = { S(  0,  0), S( 53, 31), S( 36, 36), S(-34, 73), S(-41,114), S(175,152), S(432,282), };
+mevalue passed_blocked[7]  = { S(  0,  0), S(  1, -1), S(  1,  3), S(  2,-14), S(  0,-17), S(  3,-35), S(-68,-93), };
+mevalue passed_file[4]     = { S( -1, 11), S(-20,  7), S(-22, -5), S(-16,-20), };
+mevalue distance_us[7]     = { S(  0,  0), S( -2, -3), S(  4, -9), S( 18,-18), S( 16,-23), S(-13,-20), S(-37,-20), };
+mevalue distance_them[7]   = { S(  0,  0), S( -8, -2), S(-11,  2), S(-10, 13), S( -5, 25), S(-12, 41), S(  3, 42), };
 
 /* mostly inspiration from stockfish */
 mevalue evaluate_pawns(const struct position *pos, struct evaluationinfo *ei, int color) {
 	UNUSED(ei);
-	uint64_t pawns[2];
-	if (color) {
-		pawns[white] = pos->piece[white][pawn];
-		pawns[black] = pos->piece[black][pawn];
-	}
-	else {
-		pawns[white] = rotate_bytes(pos->piece[black][pawn]);
-		pawns[black] = rotate_bytes(pos->piece[white][pawn]);
-	}
-	/* we are now always evaluating from white's perspective */
 	mevalue eval = 0;
 
-	uint64_t b = pawns[white];
+	unsigned up = color ? 8 : -8;
+	unsigned down = color ? -8 : 8;
+
+	uint64_t ourpawns = pos->piece[color][pawn];
+	uint64_t theirpawns = pos->piece[other_color(color)][pawn];
+	uint64_t b = pos->piece[color][pawn];
 	uint64_t neighbours, doubled, stoppers, support, phalanx, lever, leverpush, blocker;
 	int backward, passed;
 	int square;
@@ -57,47 +56,60 @@ mevalue evaluate_pawns(const struct position *pos, struct evaluationinfo *ei, in
 		square = ctz(b);
 		squareb = bitboard(square);
 
-		int r = rank_of(square);
+		int r = rank_of(orient_horizontal(color, square));
 		int f = file_of(square);
+		int rf = MIN(f, 7 - f);
 		
 		/* uint64_t */
-		doubled    = pawns[white] & bitboard(square - 8);
-		neighbours = pawns[white] & adjacent_files(square);
-		stoppers   = pawns[black] & passed_files(square, white);
-		blocker    = pawns[black] & bitboard(square + 8);
-		support    = neighbours & rank(square - 8);
+		doubled    = ourpawns & bitboard(square + down);
+		neighbours = ourpawns & adjacent_files(square);
+		stoppers   = theirpawns & passed_files(square, color);
+		blocker    = theirpawns & bitboard(square + up);
+		support    = neighbours & rank(square + down);
 		phalanx    = neighbours & rank(square);
-		lever      = pawns[black] & (shift_north_west(squareb) | shift_north_east(squareb));
-		leverpush  = pawns[black] & (shift_north(shift_north_west(squareb) | shift_north_east(squareb)));
+		lever      = theirpawns & shift_color(shift_west(squareb) | shift_east(squareb), color);
+		leverpush  = theirpawns & shift_color2(shift_west(squareb) | shift_east(squareb), color);
 
 		/* int */
-		backward   = !(neighbours & passed_files(square + 8, black)) && (leverpush | blocker);
+		backward   = !(neighbours & passed_files(square + up, other_color(color))) && (leverpush | blocker);
 		passed     = !(stoppers ^ lever) || (!(stoppers ^ lever ^ leverpush) && popcount(phalanx) >= popcount(leverpush));
-		passed    &= !(passed_files(square, white) & file(square) & pawns[white]);
+		passed    &= !(passed_files(square, color) & file(square) & ourpawns);
 
 		if (support | phalanx) {
-			ei->supported_pawn[color] += popcount(support);
-			ei->connected_pawns[color][r] += 2 + (phalanx != 0);
-			eval += connected_pawns[r] * (2 + (phalanx != 0)) + supported_pawn * popcount(support);
+			eval += connected_pawn[r] * (2 + (phalanx != 0)) + supported_pawn * popcount(support);
+			if (TRACE) trace.supported_pawn[color] += popcount(support);
+			if (TRACE) trace.connected_pawn[color][r] += 2 + (phalanx != 0);
 		}
 
 		if (passed) {
-			ei->passed_pawn[color][r] += 1;
-			ei->passed_file[color][MIN(f, 7 - f)] += 1;
-			eval += passed_pawn[r] + passed_file[MIN(f, 7 - f)];
+			eval += passed_pawn[r] + passed_file[rf];
+			if (TRACE) trace.passed_pawn[color][r]++;
+			if (TRACE) trace.passed_file[color][rf]++;
+
+			int i = distance(square + up, ctz(pos->piece[color][king]));
+			eval += i * distance_us[r];
+			if (TRACE) trace.distance_us[color][r] += i;
+			int j = distance(square + up, ctz(pos->piece[other_color(color)][king]));
+			eval += j * distance_them[r];
+			if (TRACE) trace.distance_them[color][r] += j;
+
+			if (pos->mailbox[square + up]) {
+				eval += passed_blocked[r];
+				if (TRACE) trace.passed_blocked[color][r]++;
+			}
 		}
 		else if (!neighbours) {
-			ei->isolated_pawn[color] += 1;
-			eval += isolated_pawn;
-			if (doubled) {
-				ei->doubled_pawn[color] += 1;
-				eval += doubled_pawn;
-			}
+			eval += isolated_pawn[rf];
+			if (TRACE) trace.isolated_pawn[color][rf]++;
+		}
+		if (doubled) {
+			eval += doubled_pawn[rf];
+			if (TRACE) trace.doubled_pawn[color][rf]++;
 		}
 		
 		if (backward) {
-			ei->backward_pawn[color] += 1;
-			eval += backward_pawn;
+			eval += backward_pawn[rf];
+			if (TRACE) trace.backward_pawn[color][rf]++;
 		}
 
 		b = clear_ls1b(b);

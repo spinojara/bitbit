@@ -44,11 +44,11 @@ struct movepicker {
 
 	move ttmove;
 	move killer1, killer2;
-	struct searchinfo *si;
+	const struct searchinfo *si;
 };
 
 move next_move(struct movepicker *mp);
 
-void movepicker_init(struct movepicker *mp, struct position *pos, move *move_list, move ttmove, move killer1, move killer2, struct searchinfo *si);
+void movepicker_init(struct movepicker *mp, struct position *pos, move *move_list, move ttmove, move killer1, move killer2, const struct searchinfo *si);
 
 #endif

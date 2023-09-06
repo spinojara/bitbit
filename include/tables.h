@@ -30,9 +30,11 @@ extern mevalue pawn_shelter[28];
 
 extern mevalue unblocked_storm[28];
 
-extern mevalue blocked_storm[7];
+extern mevalue unblockable_storm[28];
 
-extern mevalue mobility_bonus[4][28];
+extern mevalue blocked_storm[28];
+
+extern mevalue mobility[4][28];
 
 void tables_init(void);
 

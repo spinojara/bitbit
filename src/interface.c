@@ -305,8 +305,6 @@ int interface_isready(int argc, char **argv) {
 }
 
 int interface_uci(int argc, char **argv) {
-	printf("UCI\n");
-	printf("%c.\n", argv[0][0]);
 	UNUSED(argc);
 	UNUSED(argv);
 	printf("id name bitbit\n");

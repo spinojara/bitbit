@@ -77,8 +77,10 @@ enum color { black, white };
 enum colored_piece { empty, white_pawn, white_knight, white_bishop, white_rook, white_queen, white_king, black_pawn, black_knight, black_bishop, black_rook, black_queen, black_king };
 
 uint64_t generate_checkers(const struct position *pos, int color);
+uint64_t generate_attackers(const struct position *pos, int square, int color);
 uint64_t generate_attacked(const struct position *pos, int color);
 uint64_t generate_pinned(const struct position *pos, int color);
+uint64_t generate_blockers(const struct position *pos, uint64_t pinners, int king_square);
 uint64_t generate_pinners(const struct position *pos, uint64_t pinned, int color);
 
 static inline int other_color(int color) {

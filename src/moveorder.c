@@ -60,8 +60,6 @@ int see_geq(struct position *pos, const move *m, int32_t value) {
 
 	int turn = pos->turn;
 
-	uint64_t b;
-	
 	uint64_t attackers = 0, turnattackers, occupied = pos->piece[white][all] | pos->piece[black][all];
 	/* Speed is more important than accuracy so we only
 	 * generate moves which are probably legal.
@@ -80,8 +78,11 @@ int see_geq(struct position *pos, const move *m, int32_t value) {
 	attackers |= queen_attacks(to, 0, occupied) &
 		(pos->piece[white][queen] | pos->piece[black][queen]);
 
-	uint64_t pinned[2] = { generate_pinned(pos, black) & attackers, generate_pinned(pos, white) & attackers };
-	uint64_t pinners[2] = { generate_pinners(pos, pinned[black], black), generate_pinners(pos, pinned[white], white) };
+	attackers |= king_attacks(to, 0) & (pos->piece[white][king] | pos->piece[black][king]);
+
+	uint64_t pinned[2]      = { generate_pinned(pos, black) & attackers, generate_pinned(pos, white) & attackers };
+	uint64_t discovery[2]   = { pinned[white] & pos->piece[black][all], pinned[black] & pos->piece[white][all] };
+	uint64_t pinners[2]     = { generate_pinners(pos, pinned[black], black), generate_pinners(pos, pinned[white], white) };
 
 	int ret = 1;
 
@@ -92,7 +93,7 @@ int see_geq(struct position *pos, const move *m, int32_t value) {
 
 		turnattackers = attackers & pos->piece[turn][all];
 
-		if (pinners[other_color(turn)] & occupied)
+		if (pinners[turn] & occupied)
 			turnattackers &= ~pinned[turn];
 
 		if (!turnattackers)
@@ -100,43 +101,43 @@ int see_geq(struct position *pos, const move *m, int32_t value) {
 
 		ret = 1 - ret;
 
-		if ((b = turnattackers) & pos->piece[turn][pawn]) {
+		if (turnattackers & pos->piece[turn][pawn]) {
 			/* x < ret because x < 1 is same as <= 0 */
 			if ((swap = move_order_piece_value[pawn] - swap) < ret)
 				break;
 
-			occupied ^= ls1b(b);
+			occupied ^= ls1b(turnattackers);
 			/* add x-ray pieces */
 			attackers |= bishop_attacks(to, 0, occupied) & (pos->piece[white][bishop] | pos->piece[white][queen] |
 									pos->piece[black][bishop] | pos->piece[black][queen]);
 		}
-		else if ((b = turnattackers) & pos->piece[turn][knight]) {
+		else if (turnattackers & pos->piece[turn][knight]) {
 			if ((swap = move_order_piece_value[knight] - swap) < ret)
 				break;
 
-			occupied ^= ls1b(b);
+			occupied ^= ls1b(turnattackers);
 		}
-		else if ((b = turnattackers) & pos->piece[turn][bishop]) {
+		else if (turnattackers & pos->piece[turn][bishop]) {
 			if ((swap = move_order_piece_value[bishop] - swap) < ret)
 				break;
 
-			occupied ^= ls1b(b);
+			occupied ^= ls1b(turnattackers);
 			attackers |= bishop_attacks(to, 0, occupied) & (pos->piece[white][bishop] | pos->piece[white][queen] |
 									pos->piece[black][bishop] | pos->piece[black][queen]);
 		}
-		else if ((b = turnattackers) & pos->piece[turn][rook]) {
+		else if (turnattackers & pos->piece[turn][rook]) {
 			if ((swap = move_order_piece_value[rook] - swap) < ret)
 				break;
 
-			occupied ^= ls1b(b);
+			occupied ^= ls1b(turnattackers);
 			attackers |= rook_attacks(to, 0, occupied) & (pos->piece[white][rook] | pos->piece[white][queen] |
 									pos->piece[black][rook] | pos->piece[black][queen]);
 		}
-		else if ((b = turnattackers) & pos->piece[turn][queen]) {
+		else if (turnattackers & pos->piece[turn][queen]) {
 			if ((swap = move_order_piece_value[queen] - swap) < ret)
 				break;
 
-			occupied ^= ls1b(b);
+			occupied ^= ls1b(turnattackers);
 			attackers |= bishop_attacks(to, 0, occupied) & (pos->piece[white][bishop] | pos->piece[white][queen] |
 									pos->piece[black][bishop] | pos->piece[black][queen]);
 			attackers |= rook_attacks(to, 0, occupied) & (pos->piece[white][rook] | pos->piece[white][queen] |
@@ -144,13 +145,14 @@ int see_geq(struct position *pos, const move *m, int32_t value) {
 		}
 		/* king */
 		else {
-			pos->piece[other_color(pos->turn)][victim] ^= tob;
-			pos->piece[other_color(pos->turn)][all] ^= tob;
-			pos->piece[pos->turn][attacker] ^= tob | fromb;
-			pos->piece[pos->turn][all] ^= tob | fromb;
 			/* we lose if other side still has attackers */
-			return (attackers & pos->piece[other_color(turn)][all]) ? 1 - ret : ret;
+			if (attackers & pos->piece[other_color(turn)][all])
+				ret = 1 - ret;
+			break;
 		}
+		/* A discovered check occured. */
+		if (discovery[turn] & ~occupied)
+			break;
 	}
 	pos->piece[other_color(pos->turn)][victim] ^= tob;
 	pos->piece[other_color(pos->turn)][all] ^= tob;
