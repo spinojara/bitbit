@@ -26,16 +26,16 @@
 #include "option.h"
 #include "texeltune.h"
 
-mevalue supported_pawn     = S(  9, 12);
-mevalue backward_pawn[4]   = { S(  2,  0), S( -6,-10), S( -7, -5), S( -7, -5), };
-mevalue isolated_pawn[4]   = { S( -2,  1), S( -4, -8), S( -6, -3), S( -9, -5), };
-mevalue doubled_pawn[4]    = { S(-10,-55), S(  5,-33), S(  5,-20), S( -3,-12), };
-mevalue connected_pawn[7]  = { S(  0,  0), S(  2,  2), S(  4,  4), S(  4,  4), S(  8,  9), S( 31, 34), S( 70, 87), };
-mevalue passed_pawn[7]     = { S(  0,  0), S( 53, 31), S( 36, 36), S(-34, 73), S(-41,114), S(175,152), S(432,282), };
-mevalue passed_blocked[7]  = { S(  0,  0), S(  1, -1), S(  1,  3), S(  2,-14), S(  0,-17), S(  3,-35), S(-68,-93), };
-mevalue passed_file[4]     = { S( -1, 11), S(-20,  7), S(-22, -5), S(-16,-20), };
-mevalue distance_us[7]     = { S(  0,  0), S( -2, -3), S(  4, -9), S( 18,-18), S( 16,-23), S(-13,-20), S(-37,-20), };
-mevalue distance_them[7]   = { S(  0,  0), S( -8, -2), S(-11,  2), S(-10, 13), S( -5, 25), S(-12, 41), S(  3, 42), };
+CONST mevalue supported_pawn     = S(  9, 12);
+CONST mevalue backward_pawn[4]   = { S(  2,  0), S( -6,-10), S( -7, -5), S( -7, -5), };
+CONST mevalue isolated_pawn[4]   = { S( -2,  1), S( -4, -8), S( -6, -3), S( -9, -5), };
+CONST mevalue doubled_pawn[4]    = { S(-10,-55), S(  5,-33), S(  5,-20), S( -3,-12), };
+CONST mevalue connected_pawn[7]  = { S(  0,  0), S(  2,  2), S(  4,  4), S(  4,  4), S(  8,  9), S( 31, 34), S( 70, 87), };
+CONST mevalue passed_pawn[7]     = { S(  0,  0), S( 53, 31), S( 36, 36), S(-34, 73), S(-41,114), S(175,152), S(432,282), };
+CONST mevalue passed_blocked[7]  = { S(  0,  0), S(  1, -1), S(  1,  3), S(  2,-14), S(  0,-17), S(  3,-35), S(-68,-93), };
+CONST mevalue passed_file[4]     = { S( -1, 11), S(-20,  7), S(-22, -5), S(-16,-20), };
+CONST mevalue distance_us[7]     = { S(  0,  0), S( -2, -3), S(  4, -9), S( 18,-18), S( 16,-23), S(-13,-20), S(-37,-20), };
+CONST mevalue distance_them[7]   = { S(  0,  0), S( -8, -2), S(-11,  2), S(-10, 13), S( -5, 25), S(-12, 41), S(  3, 42), };
 
 /* mostly inspiration from stockfish */
 mevalue evaluate_pawns(const struct position *pos, struct evaluationinfo *ei, int color) {

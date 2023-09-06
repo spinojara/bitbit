@@ -164,6 +164,10 @@ obj/texelpawn.o: src/pawn.c dep/pawn.d Makefile
 	@mkdir -p obj
 	$(CC) $(CFLAGS) -Iinclude -DTRACE -DTT=$(TT) -c $< -o $@
 
+obj/texeltune.o: src/texeltune.c dep/texeltune.d Makefile
+	@mkdir -p obj
+	$(CC) $(CFLAGS) -Iinclude -DTRACE -DTT=$(TT) -c $< -o $@
+
 obj/pic%.o: src/%.c dep/%.d Makefile
 	@mkdir -p obj
 	$(CC) $(CFLAGS) -fPIC -Iinclude -c $< -o $@

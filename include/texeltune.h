@@ -20,6 +20,15 @@
 
 #include "evaluate.h"
 
+#ifdef TRACE
+#undef TRACE
+#define TRACE 1
+#define CONST
+#else
+#define TRACE 0
+#define CONST const
+#endif
+
 struct trace {
 	int mobility[2][4][28];
 	int pawn_shelter[2][28];
@@ -87,68 +96,61 @@ struct trace {
 
 extern struct trace trace;
 
-extern mevalue king_on_open_file;
-extern mevalue knight_outpost;
-extern mevalue knight_outpost_attack;
-extern mevalue bishop_outpost;
-extern mevalue bishop_outpost_attack;
-extern mevalue bishop_long_diagonal;
-extern mevalue knight_behind_pawn;
-extern mevalue bishop_behind_pawn;
-extern mevalue defended_knight;
-extern mevalue defended_bishop;
-extern mevalue knight_far_from_king;
-extern mevalue bishop_far_from_king;
-extern mevalue knight_pair;
-extern mevalue bishop_pair;
-extern mevalue rook_pair;
-extern mevalue pawn_blocking_bishop;
-extern mevalue rook_open;
-extern mevalue rook_semi;
-extern mevalue rook_closed;
-extern mevalue rook_blocked;
-extern mevalue bad_queen;
-extern mevalue king_attack_pawn;
-extern mevalue king_defend_pawn;
-extern mevalue tempo_bonus;
+extern CONST mevalue king_on_open_file;
+extern CONST mevalue knight_outpost;
+extern CONST mevalue knight_outpost_attack;
+extern CONST mevalue bishop_outpost;
+extern CONST mevalue bishop_outpost_attack;
+extern CONST mevalue bishop_long_diagonal;
+extern CONST mevalue knight_behind_pawn;
+extern CONST mevalue bishop_behind_pawn;
+extern CONST mevalue defended_knight;
+extern CONST mevalue defended_bishop;
+extern CONST mevalue knight_far_from_king;
+extern CONST mevalue bishop_far_from_king;
+extern CONST mevalue knight_pair;
+extern CONST mevalue bishop_pair;
+extern CONST mevalue rook_pair;
+extern CONST mevalue pawn_blocking_bishop;
+extern CONST mevalue rook_open;
+extern CONST mevalue rook_semi;
+extern CONST mevalue rook_closed;
+extern CONST mevalue rook_blocked;
+extern CONST mevalue bad_queen;
+extern CONST mevalue king_attack_pawn;
+extern CONST mevalue king_defend_pawn;
+extern CONST mevalue tempo_bonus;
 
-extern mevalue pawn_threat;
-extern mevalue push_threat;
-extern mevalue minor_threat[7];
-extern mevalue rook_threat[7];
+extern CONST mevalue pawn_threat;
+extern CONST mevalue push_threat;
+extern CONST mevalue minor_threat[7];
+extern CONST mevalue rook_threat[7];
 
-extern int weak_squares;
-extern int enemy_no_queen;
-extern int knight_attack;
-extern int bishop_attack;
-extern int rook_attack;
-extern int queen_attack;
-extern int discovery;
-extern int checks[12];
+extern CONST int weak_squares;
+extern CONST int enemy_no_queen;
+extern CONST int knight_attack;
+extern CONST int bishop_attack;
+extern CONST int rook_attack;
+extern CONST int queen_attack;
+extern CONST int discovery;
+extern CONST int checks[12];
 
-extern int phase_max;
-extern int phase_min;
-extern int phase_knight;
-extern int phase_bishop;
-extern int phase_rook;
-extern int phase_queen;
+extern CONST int phase_max;
+extern CONST int phase_min;
+extern CONST int phase_knight;
+extern CONST int phase_bishop;
+extern CONST int phase_rook;
+extern CONST int phase_queen;
 
-extern mevalue supported_pawn;
-extern mevalue backward_pawn[4];
-extern mevalue isolated_pawn[4];
-extern mevalue doubled_pawn[4];
-extern mevalue connected_pawn[7];
-extern mevalue passed_pawn[7];
-extern mevalue passed_blocked[7];
-extern mevalue passed_file[4];
-extern mevalue distance_us[7];
-extern mevalue distance_them[7];
-
-#ifdef TRACE
-#undef TRACE
-#define TRACE 1
-#else
-#define TRACE 0
-#endif
+extern CONST mevalue supported_pawn;
+extern CONST mevalue backward_pawn[4];
+extern CONST mevalue isolated_pawn[4];
+extern CONST mevalue doubled_pawn[4];
+extern CONST mevalue connected_pawn[7];
+extern CONST mevalue passed_pawn[7];
+extern CONST mevalue passed_blocked[7];
+extern CONST mevalue passed_file[4];
+extern CONST mevalue distance_us[7];
+extern CONST mevalue distance_them[7];
 
 #endif
