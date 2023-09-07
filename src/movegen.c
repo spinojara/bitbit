@@ -20,14 +20,14 @@
 #include "bitboard.h"
 #include "attackgen.h"
 
-int move_count(const move *m) {
-	const move *n;
+int move_count(const move_t *m) {
+	const move_t *n;
 	for (n = m; *n; n++);
 	return n - m;
 }
 
-move *generate_all(const struct position *pos, move *move_list) {
-	move *move_ptr = move_list;
+move_t *generate_all(const struct position *pos, move_t *move_list) {
+	move_t *move_ptr = move_list;
 	int i;
 
 	uint64_t temp;
@@ -461,7 +461,7 @@ move *generate_all(const struct position *pos, move *move_list) {
 	}
 
 
-	/* set the terminating move */
+	/* set the terminating move_t */
 	*move_ptr = 0;
 	return move_ptr;
 }
@@ -712,8 +712,8 @@ int mate(const struct position *pos) {
 	return checkers ? 2 : 1;
 }
 
-move *generate_quiescence(const struct position *pos, move *move_list) {
-	move *move_ptr = move_list;
+move_t *generate_quiescence(const struct position *pos, move_t *move_list) {
+	move_t *move_ptr = move_list;
 
 	uint64_t piece;
 	uint64_t attacks;
@@ -990,7 +990,7 @@ move *generate_quiescence(const struct position *pos, move *move_list) {
 		attacks = clear_ls1b(attacks);
 	}
 
-	/* set the terminating move */
+	/* set the terminating move_t */
 	*move_ptr = 0;
 	return move_ptr;
 }

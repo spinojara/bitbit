@@ -30,7 +30,7 @@
 
 enum { mg, eg };
 
-typedef int32_t mevalue;
+typedef int32_t score_t;
 
 extern const int material_value[7];
 
@@ -54,13 +54,13 @@ struct evaluationinfo {
 
 	int king_square[2];
 
-	mevalue eval;
+	score_t eval;
 };
 
 
 #define S(m, e) ((int32_t)((m) + ((uint32_t)(e) << 16)))
 
-static inline int32_t mevalue_mg(mevalue eval) {
+static inline int32_t score_mg(score_t eval) {
 	union {
 		uint16_t u;
 		int16_t v;
@@ -68,7 +68,7 @@ static inline int32_t mevalue_mg(mevalue eval) {
 	return (int32_t)ret.v;
 }
 
-static inline int32_t mevalue_eg(mevalue eval) {
+static inline int32_t score_eg(score_t eval) {
 	union {
 		uint16_t u;
 		int16_t v;

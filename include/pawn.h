@@ -21,6 +21,6 @@
 #include "position.h"
 #include "evaluate.h"
 
-mevalue evaluate_pawns(const struct position *pos, struct evaluationinfo *ei, int color);
+score_t evaluate_pawns(const struct position *pos, struct evaluationinfo *ei, int color);
 
 #endif

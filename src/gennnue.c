@@ -60,7 +60,7 @@ const int eval_limit = 3000;
 const int report_dot_every = 10000;
 const int report_every = 200000;
 
-const move synchronize_threads = M(a1, b4, 0, 0);
+const move_t synchronize_threads = M(a1, b4, 0, 0);
 
 struct threadinfo {
 	int threadn;
@@ -76,12 +76,12 @@ pthread_mutex_t lock;
 
 atomic_int stop = 0;
 
-time_point last_time;
+timepoint_t last_time;
 uint64_t last_fens = 0;
 uint64_t dot_last_fens = 0;
 void report(uint64_t curr_fens, uint64_t fens) {
 	if (curr_fens != last_fens && curr_fens % report_every == 0) {
-		time_point tp = time_now();
+		timepoint_t tp = time_now();
 		printf("\r%ld%% %ld fens at %ld fens/second\n", 100 * curr_fens / fens, curr_fens, tp - last_time ? 1000000 * (curr_fens - last_fens) / (tp - last_time) : 0);
 		fflush(stdout);
 		last_time = tp;
@@ -159,7 +159,7 @@ struct threadinfo *choose_thread(struct threadinfo *threadinfo, int n_threads) {
 void write_thread(FILE *f, struct threadinfo *threadinfo, uint64_t *curr_fens, uint64_t fens) {
 	int fd = threadinfo->fd[0];
 	int16_t eval;
-	move m = 0;
+	move_t m = 0;
 	uint64_t gen_fens = 0;
 	uint64_t written_fens = 0;
 
@@ -244,10 +244,10 @@ void *worker(void *arg) {
 	startpos(&pos);
 	startkey(&pos);
 	history_reset(&pos, &h);
-	move move_list[MOVES_MAX];
+	move_t move_list[MOVES_MAX];
 	int random_move[random_move_max_ply];
 	random_move_flags(random_move, &seed);
-	move m;
+	move_t m;
 	int16_t eval;
 
 	unsigned int gen_fens = 0;

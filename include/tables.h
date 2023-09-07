@@ -20,21 +20,21 @@
 
 #include "evaluate.h"
 
-extern mevalue piece_value[6];
+extern score_t piece_value[6];
 
-extern mevalue psqtable[2][7][64];
+extern score_t psqtable[2][7][64];
 
-extern mevalue white_psqtable[6][64];
+extern score_t white_psqtable[6][64];
 
-extern mevalue pawn_shelter[28];
+extern score_t pawn_shelter[28];
 
-extern mevalue unblocked_storm[28];
+extern score_t unblocked_storm[28];
 
-extern mevalue unblockable_storm[28];
+extern score_t unblockable_storm[28];
 
-extern mevalue blocked_storm[28];
+extern score_t blocked_storm[28];
 
-extern mevalue mobility[4][28];
+extern score_t mobility[4][28];
 
 void tables_init(void);
 

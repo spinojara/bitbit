@@ -101,7 +101,7 @@ int interface_move(int argc, char **argv) {
 		return ERR_MISS_ARG;
 	}
 	else {
-		move m = string_to_move(&pos, argv[1]);
+		move_t m = string_to_move(&pos, argv[1]);
 		if (m)
 			history_next(&pos, &history, m);
 		else
@@ -182,7 +182,7 @@ int interface_position(int argc, char **argv) {
 		startkey(&pos);
 		history_reset(&pos, &history);
 		for (int i = n + 1; i < argc; i++) {
-			move m = string_to_move(&pos, argv[i]);
+			move_t m = string_to_move(&pos, argv[i]);
 			if (m)
 				history_next(&pos, &history, m);
 			else
@@ -195,7 +195,7 @@ int interface_position(int argc, char **argv) {
 			refresh_zobrist_key(&pos);
 			history_reset(&pos, &history);
 			for (int i = n + 1; i < argc; i++) {
-				move m = string_to_move(&pos, argv[i]);
+				move_t m = string_to_move(&pos, argv[i]);
 				if (m)
 					history_next(&pos, &history, m);
 				else

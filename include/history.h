@@ -23,7 +23,7 @@
 #define POSITIONS_MAX 8192
 
 struct history {
-	move move[POSITIONS_MAX];
+	move_t move[POSITIONS_MAX];
 	int irreversible[POSITIONS_MAX];
 	uint64_t zobrist_key[POSITIONS_MAX];
 	struct position start;
@@ -32,7 +32,7 @@ struct history {
 
 void history_reset(const struct position *pos, struct history *h);
 
-void history_next(struct position *pos, struct history *h, move m);
+void history_next(struct position *pos, struct history *h, move_t m);
 
 void history_previous(struct position *pos, struct history *h);
 

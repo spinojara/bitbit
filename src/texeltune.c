@@ -45,7 +45,7 @@ struct trace trace;
 
 enum {
 	TYPE_INT,
-	TYPE_MEVALUE,
+	TYPE_SCORE,
 };
 
 /* enum has to be in the same order as the parameter list. */
@@ -146,7 +146,7 @@ const double weight_decay = 1e-4;
 size_t t = 0;
 
 struct parameter {
-	mevalue *ptr;
+	score_t *ptr;
 	size_t size;
 	int type;
 	int tune;
@@ -159,54 +159,54 @@ struct parameter {
 
 /* parameter list has to be in the same order as the enum. */
 struct parameter parameters[] = {
-	PARAMETER(&piece_value[0],            5, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&piece_value[0],            5, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
 
-	PARAMETER(&white_psqtable[0][8],     48, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
-	PARAMETER(&white_psqtable[1][0],     32, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
-	PARAMETER(&white_psqtable[2][0],     32, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
-	PARAMETER(&white_psqtable[3][0],     32, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
-	PARAMETER(&white_psqtable[4][0],     32, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
-	PARAMETER(&white_psqtable[5][0],     32, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&white_psqtable[0][8],     48, TYPE_SCORE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&white_psqtable[1][0],     32, TYPE_SCORE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&white_psqtable[2][0],     32, TYPE_SCORE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&white_psqtable[3][0],     32, TYPE_SCORE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&white_psqtable[4][0],     32, TYPE_SCORE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&white_psqtable[5][0],     32, TYPE_SCORE, WEIGHTDECAY_YES, TUNE_YES),
 
-	PARAMETER(&mobility[0][0],            9, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
-	PARAMETER(&mobility[1][0],           14, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
-	PARAMETER(&mobility[2][0],           15, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
-	PARAMETER(&mobility[3][0],           28, TYPE_MEVALUE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&mobility[0][0],            9, TYPE_SCORE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&mobility[1][0],           14, TYPE_SCORE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&mobility[2][0],           15, TYPE_SCORE, WEIGHTDECAY_YES, TUNE_YES),
+	PARAMETER(&mobility[3][0],           28, TYPE_SCORE, WEIGHTDECAY_YES, TUNE_YES),
 
-	PARAMETER(&pawn_shelter[0],          28, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
-	PARAMETER(&blocked_storm[0],         28, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
-	PARAMETER(&unblocked_storm[0],       28, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
-	PARAMETER(&unblockable_storm[0],     28, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&pawn_shelter[0],          28, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&blocked_storm[0],         28, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&unblocked_storm[0],       28, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&unblockable_storm[0],     28, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
 
-	PARAMETER(&king_on_open_file,         1, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
-	PARAMETER(&knight_outpost,            1, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
-	PARAMETER(&knight_outpost_attack,     1, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
-	PARAMETER(&bishop_outpost,            1, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
-	PARAMETER(&bishop_outpost_attack,     1, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
-	PARAMETER(&bishop_long_diagonal,      1, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
-	PARAMETER(&knight_behind_pawn,        1, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
-	PARAMETER(&bishop_behind_pawn,        1, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
-	PARAMETER(&defended_knight,           1, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
-	PARAMETER(&defended_bishop,           1, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
-	PARAMETER(&knight_far_from_king,      1, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
-	PARAMETER(&bishop_far_from_king,      1, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
-	PARAMETER(&knight_pair,               1, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
-	PARAMETER(&bishop_pair,               1, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
-	PARAMETER(&rook_pair,                 1, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
-	PARAMETER(&pawn_blocking_bishop,      1, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
-	PARAMETER(&rook_open,                 1, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
-	PARAMETER(&rook_semi,                 1, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
-	PARAMETER(&rook_closed,               1, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
-	PARAMETER(&rook_blocked,              1, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
-	PARAMETER(&bad_queen,                 1, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
-	PARAMETER(&king_attack_pawn,          1, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
-	PARAMETER(&king_defend_pawn,          1, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
-	PARAMETER(&tempo_bonus,               1, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&king_on_open_file,         1, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&knight_outpost,            1, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&knight_outpost_attack,     1, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&bishop_outpost,            1, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&bishop_outpost_attack,     1, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&bishop_long_diagonal,      1, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&knight_behind_pawn,        1, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&bishop_behind_pawn,        1, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&defended_knight,           1, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&defended_bishop,           1, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&knight_far_from_king,      1, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&bishop_far_from_king,      1, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&knight_pair,               1, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&bishop_pair,               1, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&rook_pair,                 1, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&pawn_blocking_bishop,      1, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&rook_open,                 1, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&rook_semi,                 1, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&rook_closed,               1, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&rook_blocked,              1, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&bad_queen,                 1, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&king_attack_pawn,          1, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&king_defend_pawn,          1, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&tempo_bonus,               1, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
 
-	PARAMETER(&pawn_threat,               1, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
-	PARAMETER(&push_threat,               1, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
-	PARAMETER(&minor_threat[0],           6, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
-	PARAMETER(&rook_threat[0],            6, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&pawn_threat,               1, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&push_threat,               1, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&minor_threat[0],           6, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&rook_threat[0],            6, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
 
 	PARAMETER(&weak_squares,              1, TYPE_INT,     WEIGHTDECAY_NO,  TUNE_YES),
 	PARAMETER(&enemy_no_queen,            1, TYPE_INT,     WEIGHTDECAY_NO,  TUNE_YES),
@@ -224,214 +224,214 @@ struct parameter parameters[] = {
 	PARAMETER(&phase_rook,                1, TYPE_INT,     WEIGHTDECAY_NO,  TUNE_YES),
 	PARAMETER(&phase_queen,               1, TYPE_INT,     WEIGHTDECAY_NO,  TUNE_YES),
 
-	PARAMETER(&supported_pawn,            1, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
-	PARAMETER(&backward_pawn[0],          4, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
-	PARAMETER(&isolated_pawn[0],          4, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
-	PARAMETER(&doubled_pawn[0],           4, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
-	PARAMETER(&connected_pawn[0],         7, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
-	PARAMETER(&passed_pawn[0],            7, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
-	PARAMETER(&passed_blocked[0],         7, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
-	PARAMETER(&passed_file[0],            4, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
-	PARAMETER(&distance_us[0],            7, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
-	PARAMETER(&distance_them[0],          7, TYPE_MEVALUE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&supported_pawn,            1, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&backward_pawn[0],          4, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&isolated_pawn[0],          4, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&doubled_pawn[0],           4, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&connected_pawn[0],         7, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&passed_pawn[0],            7, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&passed_blocked[0],         7, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&passed_file[0],            4, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&distance_us[0],            7, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&distance_them[0],          7, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
 };
 
-void mevalue_print(mevalue eval) {
-	printf("S(%3d,%3d), ", mevalue_mg(eval), mevalue_eg(eval));;
+void score_print(score_t eval) {
+	printf("S(%3d,%3d), ", score_mg(eval), score_eg(eval));;
 }
 
 void parameters_print(void) {
 	struct parameter *param;
 	for (int i = 0; i < 5; i++) {
-		printf("S(%4d,%4d), ", mevalue_mg(piece_value[i]), mevalue_eg(piece_value[i]));
+		printf("S(%4d,%4d), ", score_mg(piece_value[i]), score_eg(piece_value[i]));
 	}
 	printf("\n");
 #if 1
 	for (int i = 8; i < 56; i++) {
 		if (i % 8 == 0)
 			printf("\n");
-		mevalue_print(white_psqtable[0][i]);
+		score_print(white_psqtable[0][i]);
 	}
 	printf("\n");
 	for (int i = 0; i < 32; i++) {
 		if (i % 4 == 0)
 			printf("\n");
-		mevalue_print(white_psqtable[1][i]);
+		score_print(white_psqtable[1][i]);
 	}
 	printf("\n");
 	for (int i = 0; i < 32; i++) {
 		if (i % 4 == 0)
 			printf("\n");
-		mevalue_print(white_psqtable[2][i]);
+		score_print(white_psqtable[2][i]);
 	}
 	printf("\n");
 	for (int i = 0; i < 32; i++) {
 		if (i % 4 == 0)
 			printf("\n");
-		mevalue_print(white_psqtable[3][i]);
+		score_print(white_psqtable[3][i]);
 	}
 	printf("\n");
 	for (int i = 0; i < 32; i++) {
 		if (i % 4 == 0)
 			printf("\n");
-		mevalue_print(white_psqtable[4][i]);
+		score_print(white_psqtable[4][i]);
 	}
 	printf("\n");
 	for (int i = 0; i < 32; i++) {
 		if (i % 4 == 0)
 			printf("\n");
-		mevalue_print(white_psqtable[5][i]);
+		score_print(white_psqtable[5][i]);
 	}
 	printf("\n\n");
 	param = &parameters[PARAM_MOBILITYKNIGHT];
-	printf("mevalue mobility[4][28] = {\n\t{\n\t\t");
+	printf("score_t mobility[4][28] = {\n\t{\n\t\t");
 	for (size_t i = 0; i < param->size; i++)
-		mevalue_print(param->ptr[i]);
+		score_print(param->ptr[i]);
 	printf("\n\t}, {\n\t\t");
 	param = &parameters[PARAM_MOBILITYBISHOP];
 	for (size_t i = 0; i < param->size; i++) {
-		mevalue_print(param->ptr[i]);
+		score_print(param->ptr[i]);
 		if (i == 8)
 			printf("\n\t\t");
 	}
 	printf("\n\t}, {\n\t\t");
 	param = &parameters[PARAM_MOBILITYROOK];
 	for (size_t i = 0; i < param->size; i++) {
-		mevalue_print(param->ptr[i]);
+		score_print(param->ptr[i]);
 		if (i == 8)
 			printf("\n\t\t");
 	}
 	printf("\n\t}, {\n\t\t");
 	param = &parameters[PARAM_MOBILITYQUEEN];
 	for (size_t i = 0; i < param->size; i++) {
-		mevalue_print(param->ptr[i]);
+		score_print(param->ptr[i]);
 		if (i == 8 || i == 17 || i == 26)
 			printf("\n\t\t");
 	}
 	printf("\n\t}\n};\n\n");
 	param = &parameters[PARAM_PAWNSHELTER];
-	printf("mevalue pawn_shelter[28] = {");
+	printf("score_t pawn_shelter[28] = {");
 	for (size_t i = 0; i < param->size; i++) {
 		if (i % 7 == 0)
 			printf("\n\t");
-		mevalue_print(param->ptr[i]);
+		score_print(param->ptr[i]);
 	}
 	printf("\n};\n\n");
 	param = &parameters[PARAM_UNBLOCKEDSTORM];
-	printf("mevalue unblocked_storm[28] = {");
+	printf("score_t unblocked_storm[28] = {");
 	for (size_t i = 0; i < param->size; i++) {
 		if (i % 7 == 0)
 			printf("\n\t");
-		mevalue_print(param->ptr[i]);
+		score_print(param->ptr[i]);
 	}
 	printf("\n};\n\n");
 	param = &parameters[PARAM_UNBLOCKABLESTORM];
-	printf("mevalue unblockable_storm[28] = {");
+	printf("score_t unblockable_storm[28] = {");
 	for (size_t i = 0; i < param->size; i++) {
 		if (i % 7 == 0)
 			printf("\n\t");
-		mevalue_print(param->ptr[i]);
+		score_print(param->ptr[i]);
 	}
 	printf("\n};\n\n");
 	param = &parameters[PARAM_BLOCKEDSTORM];
-	printf("mevalue blocked_storm[28] = {");
+	printf("score_t blocked_storm[28] = {");
 	for (size_t i = 0; i < param->size; i++) {
 		if (i % 7 == 0)
 			printf("\n\t");
-		mevalue_print(param->ptr[i]);
+		score_print(param->ptr[i]);
 	}
 	printf("\n};\n\n");
 	param = &parameters[PARAM_KINGONOPENFILE];
-	printf("\nmevalue king_on_open_file     = ");
-	mevalue_print(param->ptr[0]);
+	printf("\nscore_t king_on_open_file     = ");
+	score_print(param->ptr[0]);
 	param = &parameters[PARAM_KNIGHTOUTPOST];
-	printf("\nmevalue knight_outpost        = ");
-	mevalue_print(param->ptr[0]);
+	printf("\nscore_t knight_outpost        = ");
+	score_print(param->ptr[0]);
 	param = &parameters[PARAM_KNIGHTOUTPOSTATTACK];
-	printf("\nmevalue knight_outpost_attack = ");
-	mevalue_print(param->ptr[0]);
+	printf("\nscore_t knight_outpost_attack = ");
+	score_print(param->ptr[0]);
 	param = &parameters[PARAM_BISHOPOUTPOST];
-	printf("\nmevalue bishop_outpost        = ");
-	mevalue_print(param->ptr[0]);
+	printf("\nscore_t bishop_outpost        = ");
+	score_print(param->ptr[0]);
 	param = &parameters[PARAM_BISHOPOUTPOSTATTACK];
-	printf("\nmevalue bishop_outpost_attack = ");
-	mevalue_print(param->ptr[0]);
+	printf("\nscore_t bishop_outpost_attack = ");
+	score_print(param->ptr[0]);
 
 
 	param = &parameters[PARAM_BISHOPLONGDIAGONAL];
-	printf("\nmevalue bishop_long_diagonal  = ");
-	mevalue_print(param->ptr[0]);
+	printf("\nscore_t bishop_long_diagonal  = ");
+	score_print(param->ptr[0]);
 
 	param = &parameters[PARAM_KNIGHTBEHINDPAWN];
-	printf("\nmevalue knight_behind_pawn    = ");
-	mevalue_print(param->ptr[0]);
+	printf("\nscore_t knight_behind_pawn    = ");
+	score_print(param->ptr[0]);
 	param = &parameters[PARAM_BISHOPBEHINDPAWN];
-	printf("\nmevalue bishop_behind_pawn    = ");
-	mevalue_print(param->ptr[0]);
+	printf("\nscore_t bishop_behind_pawn    = ");
+	score_print(param->ptr[0]);
 	param = &parameters[PARAM_DEFENDEDKNIGHT];
-	printf("\nmevalue defended_knight       = ");
-	mevalue_print(param->ptr[0]);
+	printf("\nscore_t defended_knight       = ");
+	score_print(param->ptr[0]);
 	param = &parameters[PARAM_DEFENDEDBISHOP];
-	printf("\nmevalue defended_bishop       = ");
-	mevalue_print(param->ptr[0]);
+	printf("\nscore_t defended_bishop       = ");
+	score_print(param->ptr[0]);
 	param = &parameters[PARAM_KNIGHTFARFROMKING];
-	printf("\nmevalue knight_far_from_king  = ");
-	mevalue_print(param->ptr[0]);
+	printf("\nscore_t knight_far_from_king  = ");
+	score_print(param->ptr[0]);
 	param = &parameters[PARAM_BISHOPFARFROMKING];
-	printf("\nmevalue bishop_far_from_king  = ");
-	mevalue_print(param->ptr[0]);
+	printf("\nscore_t bishop_far_from_king  = ");
+	score_print(param->ptr[0]);
 	param = &parameters[PARAM_KNIGHTPAIR];
-	printf("\nmevalue knight_pair           = ");
-	mevalue_print(param->ptr[0]);
+	printf("\nscore_t knight_pair           = ");
+	score_print(param->ptr[0]);
 	param = &parameters[PARAM_BISHOPPAIR];
-	printf("\nmevalue bishop_pair           = ");
-	mevalue_print(param->ptr[0]);
+	printf("\nscore_t bishop_pair           = ");
+	score_print(param->ptr[0]);
 	param = &parameters[PARAM_ROOKPAIR];
-	printf("\nmevalue rook_pair             = ");
-	mevalue_print(param->ptr[0]);
+	printf("\nscore_t rook_pair             = ");
+	score_print(param->ptr[0]);
 	param = &parameters[PARAM_PAWNBLOCKINGBISHOP];
-	printf("\nmevalue pawn_blocking_bishop  = ");
-	mevalue_print(param->ptr[0]);
+	printf("\nscore_t pawn_blocking_bishop  = ");
+	score_print(param->ptr[0]);
 	param = &parameters[PARAM_ROOKOPEN];
-	printf("\nmevalue rook_open             = ");
-	mevalue_print(param->ptr[0]);
+	printf("\nscore_t rook_open             = ");
+	score_print(param->ptr[0]);
 	param = &parameters[PARAM_ROOKSEMI];
-	printf("\nmevalue rook_semi             = ");
-	mevalue_print(param->ptr[0]);
+	printf("\nscore_t rook_semi             = ");
+	score_print(param->ptr[0]);
 	param = &parameters[PARAM_ROOKCLOSED];
-	printf("\nmevalue rook_closed           = ");
-	mevalue_print(param->ptr[0]);
+	printf("\nscore_t rook_closed           = ");
+	score_print(param->ptr[0]);
 	param = &parameters[PARAM_ROOKBLOCKED];
-	printf("\nmevalue rook_blocked          = ");
-	mevalue_print(param->ptr[0]);
+	printf("\nscore_t rook_blocked          = ");
+	score_print(param->ptr[0]);
 	param = &parameters[PARAM_BADQUEEN];
-	printf("\nmevalue bad_queen             = ");
-	mevalue_print(param->ptr[0]);
+	printf("\nscore_t bad_queen             = ");
+	score_print(param->ptr[0]);
 	param = &parameters[PARAM_KINGATTACKPAWN];
-	printf("\nmevalue king_attack_pawn      = ");
-	mevalue_print(param->ptr[0]);
+	printf("\nscore_t king_attack_pawn      = ");
+	score_print(param->ptr[0]);
 	param = &parameters[PARAM_KINGDEFENDPAWN];
-	printf("\nmevalue king_defend_pawn      = ");
-	mevalue_print(param->ptr[0]);
+	printf("\nscore_t king_defend_pawn      = ");
+	score_print(param->ptr[0]);
 	param = &parameters[PARAM_TEMPOBONUS];
-	printf("\nmevalue tempo_bonus           = ");
-	mevalue_print(param->ptr[0]);
+	printf("\nscore_t tempo_bonus           = ");
+	score_print(param->ptr[0]);
 
 	param = &parameters[PARAM_PAWNTHREAT];
-	printf("\n\nmevalue pawn_threat           = ");
-	mevalue_print(param->ptr[0]);
+	printf("\n\nscore_t pawn_threat           = ");
+	score_print(param->ptr[0]);
 	param = &parameters[PARAM_PUSHTHREAT];
-	printf("\nmevalue push_threat           = ");
-	mevalue_print(param->ptr[0]);
+	printf("\nscore_t push_threat           = ");
+	score_print(param->ptr[0]);
 	param = &parameters[PARAM_MINORTHREAT];
-	printf("\nmevalue minor_threat[7]       = { ");
+	printf("\nscore_t minor_threat[7]       = { ");
 	for (size_t i = 0; i < param->size; i++) {
-		mevalue_print(param->ptr[i]);
+		score_print(param->ptr[i]);
 	}
 	param = &parameters[PARAM_ROOKTHREAT];
-	printf("};\nmevalue rook_threat[7]      = { ");
+	printf("};\nscore_t rook_threat[7]      = { ");
 	for (size_t i = 0; i < param->size; i++)
-		mevalue_print(param->ptr[i]);
+		score_print(param->ptr[i]);
 
 	printf("};\n\n");
 	param = &parameters[PARAM_WEAKSQUARES];
@@ -468,44 +468,44 @@ void parameters_print(void) {
 #endif
 
 	param = &parameters[PARAM_SUPPORTEDPAWN];
-	printf("\nmevalue supported_pawn     = ");
-	mevalue_print(param->ptr[0]);
+	printf("\nscore_t supported_pawn     = ");
+	score_print(param->ptr[0]);
 	param = &parameters[PARAM_BACKWARDPAWN];
-	printf("\nmevalue backward_pawn[4]   = { ");
+	printf("\nscore_t backward_pawn[4]   = { ");
 	for (size_t i = 0; i < param->size; i++)
-		mevalue_print(param->ptr[i]);
+		score_print(param->ptr[i]);
 	param = &parameters[PARAM_ISOLATEDPAWN];
-	printf("};\nmevalue isolated_pawn[4]   = { ");
+	printf("};\nscore_t isolated_pawn[4]   = { ");
 	for (size_t i = 0; i < param->size; i++)
-		mevalue_print(param->ptr[i]);
+		score_print(param->ptr[i]);
 	param = &parameters[PARAM_DOUBLEDPAWN];
-	printf("};\nmevalue doubled_pawn[4]    = { ");
+	printf("};\nscore_t doubled_pawn[4]    = { ");
 	for (size_t i = 0; i < param->size; i++)
-		mevalue_print(param->ptr[i]);
+		score_print(param->ptr[i]);
 	param = &parameters[PARAM_CONNECTEDPAWN];
-	printf("};\nmevalue connected_pawn[7]  = { ");
+	printf("};\nscore_t connected_pawn[7]  = { ");
 	for (size_t i = 0; i < param->size; i++)
-		mevalue_print(param->ptr[i]);
+		score_print(param->ptr[i]);
 	param = &parameters[PARAM_PASSEDPAWN];
-	printf("};\nmevalue passed_pawn[7]     = { ");
+	printf("};\nscore_t passed_pawn[7]     = { ");
 	for (size_t i = 0; i < param->size; i++)
-		mevalue_print(param->ptr[i]);
+		score_print(param->ptr[i]);
 	param = &parameters[PARAM_PASSEDBLOCKED];
-	printf("};\nmevalue passed_blocked[7]  = { ");
+	printf("};\nscore_t passed_blocked[7]  = { ");
 	for (size_t i = 0; i < param->size; i++)
-		mevalue_print(param->ptr[i]);
+		score_print(param->ptr[i]);
 	param = &parameters[PARAM_PASSEDFILE];
-	printf("};\nmevalue passed_file[4]     = { ");
+	printf("};\nscore_t passed_file[4]     = { ");
 	for (size_t i = 0; i < param->size; i++)
-		mevalue_print(param->ptr[i]);
+		score_print(param->ptr[i]);
 	param = &parameters[PARAM_DISTANCEUS];
-	printf("};\nmevalue distance_us[7]     = { ");
+	printf("};\nscore_t distance_us[7]     = { ");
 	for (size_t i = 0; i < param->size; i++)
-		mevalue_print(param->ptr[i]);
+		score_print(param->ptr[i]);
 	param = &parameters[PARAM_DISTANCETHEM];
-	printf("};\nmevalue distance_them[7]   = { ");
+	printf("};\nscore_t distance_them[7]   = { ");
 	for (size_t i = 0; i < param->size; i++)
-		mevalue_print(param->ptr[i]);
+		score_print(param->ptr[i]);
 	printf("};\n\n");
 }
 
@@ -520,9 +520,9 @@ void arrays_init(void) {
 		memset(parameters[i].v, 0, bytes);
 		
 		for (size_t j = 0; j < parameters[i].size; j++) {
-			if (parameters[i].type == TYPE_MEVALUE) {
-				parameters[i].value[2 * j + mg] = mevalue_mg(parameters[i].ptr[j]);
-				parameters[i].value[2 * j + eg] = mevalue_eg(parameters[i].ptr[j]);
+			if (parameters[i].type == TYPE_SCORE) {
+				parameters[i].value[2 * j + mg] = score_mg(parameters[i].ptr[j]);
+				parameters[i].value[2 * j + eg] = score_eg(parameters[i].ptr[j]);
 			}
 			else {
 				parameters[i].value[2 * j] = parameters[i].ptr[j];
@@ -541,8 +541,8 @@ double sigmoid_grad(int q) {
 	return K * log(10) / 400 * s * (1 - s);
 }
 
-void update_value(mevalue *ptr, double value[2], int type) {
-	if (type == TYPE_MEVALUE)
+void update_value(score_t *ptr, double value[2], int type) {
+	if (type == TYPE_SCORE)
 		*ptr = S((int32_t)round(value[mg]), (int32_t)round(value[eg]));
 	else
 		*ptr = round(value[0]);
@@ -646,8 +646,8 @@ double grad_calc(struct position *pos, double result) {
 				printf("eval: %d\n", eval);
 				printf("result: %f\n", result);
 				printf("sigmoid: %f\n", sigmoid(eval));
-				printf("valmg: %d\n", mevalue_mg(piece_value[i]));
-				printf("valeg: %d\n", mevalue_eg(piece_value[i]));
+				printf("valmg: %d\n", score_mg(piece_value[i]));
+				printf("valeg: %d\n", score_eg(piece_value[i]));
 			}
 #endif
 		}
@@ -1251,7 +1251,7 @@ double grad_calc(struct position *pos, double result) {
 	 * but we try a difference quotient.
 	 */
 	if ((param = &parameters[PARAM_PHASEMAX])->tune == TUNE_YES) {
-		double dEdp = mevalue_mg(trace.eval) - mevalue_eg(trace.eval);
+		double dEdp = score_mg(trace.eval) - score_eg(trace.eval);
 		int p_M2 = phase_max + 1;
 		int p_M1 = phase_max - 1;
 		int p_m = phase_min;
@@ -1262,7 +1262,7 @@ double grad_calc(struct position *pos, double result) {
 		param->grad[0] += grad;
 	}
 	if ((param = &parameters[PARAM_PHASEMIN])->tune == TUNE_YES) {
-		double dEdp = mevalue_mg(trace.eval) - mevalue_eg(trace.eval);
+		double dEdp = score_mg(trace.eval) - score_eg(trace.eval);
 		int p_m2 = phase_min + 1;
 		int p_m1 = phase_min - 1;
 		int p_M = phase_max;
@@ -1274,7 +1274,7 @@ double grad_calc(struct position *pos, double result) {
 	}
 	/* Same idea as before. */
 	if ((param = &parameters[PARAM_PHASEKNIGHT])->tune == TUNE_YES) {
-		double dEdp = mevalue_mg(trace.eval) - mevalue_eg(trace.eval);
+		double dEdp = score_mg(trace.eval) - score_eg(trace.eval);
 		int num_knights = popcount(pos->piece[white][knight] | pos->piece[black][knight]);
 		int m2 = trace.material + num_knights * 1;
 		int m1 = trace.material - num_knights * 1;
@@ -1312,7 +1312,7 @@ double grad_calc(struct position *pos, double result) {
 #endif
 	}
 	if ((param = &parameters[PARAM_PHASEBISHOP])->tune == TUNE_YES) {
-		double dEdp = mevalue_mg(trace.eval) - mevalue_eg(trace.eval);
+		double dEdp = score_mg(trace.eval) - score_eg(trace.eval);
 		int num_bishops = popcount(pos->piece[white][bishop] | pos->piece[black][bishop]);
 		int m2 = trace.material + num_bishops * 1;
 		int m1 = trace.material - num_bishops * 1;
@@ -1325,7 +1325,7 @@ double grad_calc(struct position *pos, double result) {
 		param->grad[0] += grad;
 	}
 	if ((param = &parameters[PARAM_PHASEROOK])->tune == TUNE_YES) {
-		double dEdp = mevalue_mg(trace.eval) - mevalue_eg(trace.eval);
+		double dEdp = score_mg(trace.eval) - score_eg(trace.eval);
 		int num_rooks = popcount(pos->piece[white][rook] | pos->piece[black][rook]);
 		int m2 = trace.material + num_rooks * 1;
 		int m1 = trace.material - num_rooks * 1;
@@ -1338,7 +1338,7 @@ double grad_calc(struct position *pos, double result) {
 		param->grad[0] += grad;
 	}
 	if ((param = &parameters[PARAM_PHASEQUEEN])->tune == TUNE_YES) {
-		double dEdp = mevalue_mg(trace.eval) - mevalue_eg(trace.eval);
+		double dEdp = score_mg(trace.eval) - score_eg(trace.eval);
 		int num_queens = popcount(pos->piece[white][queen] | pos->piece[black][queen]);
 		int m2 = trace.material + num_queens * 1;
 		int m1 = trace.material - num_queens * 1;
@@ -1467,7 +1467,7 @@ size_t grad(FILE *f, struct position *pos) {
 
 	size_t actual_size = 0;
 	while (actual_size < BATCH_SIZE) {
-		move m = 0;
+		move_t m = 0;
 		fread(&m, 2, 1, f);
 		if (m)
 			do_move(pos, &m);

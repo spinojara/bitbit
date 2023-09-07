@@ -65,7 +65,7 @@ struct batch *next_batch(void *ptr) {
 	size_t counter1 = 0, counter2 = 0;
 
 	while (batch->actual_size < data->requested_size) {
-		move m = 0;
+		move_t m = 0;
 		fread(&m, 2, 1, data->f);
 		if (m)
 			do_move(data->pos, &m);

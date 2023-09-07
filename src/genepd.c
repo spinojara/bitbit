@@ -92,7 +92,7 @@ void genepd_startpos(struct position *pos, uint64_t *seed) {
 int genepd_position(struct position *pos, uint64_t *seed) {
 	genepd_startpos(pos, seed);
 
-	move movelist[MOVES_MAX];
+	move_t movelist[MOVES_MAX];
 	int moves_num = moves_min;
 	if (moves_max > moves_min)
 		moves_num += xorshift64(seed) % (moves_max - moves_min);
@@ -103,7 +103,7 @@ int genepd_position(struct position *pos, uint64_t *seed) {
 		if (!c)
 			return 1;
 
-		move m = movelist[xorshift64(seed) % c];
+		move_t m = movelist[xorshift64(seed) % c];
 		do_move(pos, &m);
 	}
 

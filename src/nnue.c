@@ -311,8 +311,8 @@ void refresh_accumulator(struct position *pos, int turn) {
 	}
 }
 
-/* m cannot be a king move */
-void do_update_accumulator(struct position *pos, move *m, int turn) {
+/* m cannot be a king move_t */
+void do_update_accumulator(struct position *pos, move_t *m, int turn) {
 	int source_square = move_from(m);
 	int target_square = move_to(m);
 	int king_square = orient_horizontal(turn, ctz(pos->piece[turn][king]));
@@ -351,7 +351,7 @@ void do_update_accumulator(struct position *pos, move *m, int turn) {
 	}
 }
 
-void undo_update_accumulator(struct position *pos, move *m, int turn) {
+void undo_update_accumulator(struct position *pos, move_t *m, int turn) {
 	int source_square = move_from(m);
 	int target_square = move_to(m);
 	int king_square = orient_horizontal(turn, ctz(pos->piece[turn][king]));
@@ -391,7 +391,7 @@ void undo_update_accumulator(struct position *pos, move *m, int turn) {
 }
 
 /* should be called after do_move */
-void do_accumulator(struct position *pos, move *m) {
+void do_accumulator(struct position *pos, move_t *m) {
 	assert(*m);
 	assert(!pos->mailbox[move_from(m)]);
 	assert(pos->mailbox[move_to(m)]);
@@ -446,7 +446,7 @@ void do_accumulator(struct position *pos, move *m) {
 }
 
 /* should be called after undo_move */
-void undo_accumulator(struct position *pos, move *m) {
+void undo_accumulator(struct position *pos, move_t *m) {
 	assert(*m);
 	assert(pos->mailbox[move_from(m)]);
 	if (!option_nnue)

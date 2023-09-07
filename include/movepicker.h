@@ -37,18 +37,18 @@ enum {
 
 struct movepicker {
 	struct position *pos;
-	move *move_list;
+	move_t *move_list;
 	int64_t evaluation_list[MOVES_MAX];
 	int stage;
 	int index;
 
-	move ttmove;
-	move killer1, killer2;
+	move_t ttmove;
+	move_t killer1, killer2;
 	const struct searchinfo *si;
 };
 
-move next_move(struct movepicker *mp);
+move_t next_move(struct movepicker *mp);
 
-void movepicker_init(struct movepicker *mp, struct position *pos, move *move_list, move ttmove, move killer1, move killer2, const struct searchinfo *si);
+void movepicker_init(struct movepicker *mp, struct position *pos, move_t *move_list, move_t ttmove, move_t killer1, move_t killer2, const struct searchinfo *si);
 
 #endif

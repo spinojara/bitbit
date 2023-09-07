@@ -391,7 +391,7 @@ int is_KXK(const struct position *pos, int color) {
 }
 
 /* Should be called before do_move. */
-void do_endgame_key(struct position *pos, const move *m) {
+void do_endgame_key(struct position *pos, const move_t *m) {
 	assert(*m);
 	assert(pos->mailbox[move_from(m)]);
 	int turn = pos->turn;
@@ -426,7 +426,7 @@ void do_endgame_key(struct position *pos, const move *m) {
 }
 
 /* Should be called before undo_move. */
-void undo_endgame_key(struct position *pos, const move *m) {
+void undo_endgame_key(struct position *pos, const move_t *m) {
 	assert(*m);
 	assert(!pos->mailbox[move_from(m)]);
 	assert(pos->mailbox[move_to(m)]);

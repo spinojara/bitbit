@@ -71,9 +71,9 @@ static inline struct transposition *transposition_probe(const struct transpositi
 	return NULL;
 }
 
-static inline void transposition_set(struct transposition *e, const struct position *pos, int32_t evaluation, int depth, int bound, move m) {
+static inline void transposition_set(struct transposition *e, const struct position *pos, int32_t evaluation, int depth, int bound, move_t m) {
 	assert(-VALUE_INFINITE < evaluation && evaluation < VALUE_INFINITE);
-	/* Keep old move if none available. */
+	/* Keep old move_t if none available. */
 	if (m)
 		e->m = (uint16_t)m;
 	e->zobrist_key = pos->zobrist_key;
@@ -82,7 +82,7 @@ static inline void transposition_set(struct transposition *e, const struct posit
 	e->bound = bound;
 }
 
-static inline void transposition_store(struct transpositiontable *tt, const struct position *pos, int32_t evaluation, int depth, int bound, move m) {
+static inline void transposition_store(struct transpositiontable *tt, const struct position *pos, int32_t evaluation, int depth, int bound, move_t m) {
 	if (interrupt || !option_transposition)
 		return;
 	struct transposition *e = transposition_get(tt, pos);
@@ -92,7 +92,7 @@ static inline void transposition_store(struct transpositiontable *tt, const stru
 		transposition_set(e, pos, evaluation, depth, bound, m);
 }
 
-static inline int32_t adjust_value_mate_store(int32_t evaluation, int ply) {
+static inline int32_t adjust_score_mate_store(int32_t evaluation, int ply) {
 	int32_t adjustment = 0;
 	if (evaluation >= VALUE_MATE_IN_MAX_PLY)
 		adjustment = ply;
@@ -101,7 +101,7 @@ static inline int32_t adjust_value_mate_store(int32_t evaluation, int ply) {
 	return evaluation + adjustment;
 }
 
-static inline int32_t adjust_value_mate_get(int32_t evaluation, int ply) {
+static inline int32_t adjust_score_mate_get(int32_t evaluation, int ply) {
 	int32_t adjustment = 0;
 	/* should probably be more careful as to not return false mates */
 	if (evaluation >= VALUE_MATE_IN_MAX_PLY)
@@ -139,9 +139,9 @@ int transposition_occupancy(struct transpositiontable *tt, int node_type);
 
 void transposition_init(void);
 
-void do_zobrist_key(struct position *pos, const move *m);
+void do_zobrist_key(struct position *pos, const move_t *m);
 
-void undo_zobrist_key(struct position *pos, const move *m);
+void undo_zobrist_key(struct position *pos, const move_t *m);
 
 void do_null_zobrist_key(struct position *pos, int en_passant);
 

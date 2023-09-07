@@ -64,8 +64,8 @@ static inline int32_t endgame_evaluate(const struct endgame *e, const struct pos
 
 void refresh_endgame_key(struct position *pos);
 
-void do_endgame_key(struct position *pos, const move *m);
-void undo_endgame_key(struct position *pos, const move *m);
+void do_endgame_key(struct position *pos, const move_t *m);
+void undo_endgame_key(struct position *pos, const move_t *m);
 
 void endgame_init(void);
 

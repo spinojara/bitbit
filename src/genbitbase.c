@@ -228,11 +228,11 @@ int main(void) {
 			pos.piece[white][all] = pos.piece[white][king] | pos.piece[white][piece_white];
 			pos.piece[black][all] = pos.piece[black][king] | pos.piece[black][piece_black];
 			
-			move movelist[MOVES_MAX];
+			move_t movelist[MOVES_MAX];
 			generate_all(&pos, movelist);
 
 			int exists[4] = { 0 };
-			for (move *ptr = movelist; *ptr; ptr++) {
+			for (move_t *ptr = movelist; *ptr; ptr++) {
 				do_move(&pos, ptr);
 				unsigned p = bitbase_KXKX_probe(&pos);
 				undo_move(&pos, ptr);

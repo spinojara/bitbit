@@ -61,7 +61,7 @@ int32_t search_material(struct position *pos, int ply, int alpha, int beta) {
 	uint64_t checkers = generate_checkers(pos, pos->turn);
 	int32_t eval = evaluate_material(pos), best_eval = -VALUE_INFINITE;
 
-	move move_list[MOVES_MAX];
+	move_t move_list[MOVES_MAX];
 	generate_quiescence(pos, move_list);
 
 	if (!checkers) {
@@ -74,7 +74,7 @@ int32_t search_material(struct position *pos, int ply, int alpha, int beta) {
 
 	struct movepicker mp;
 	movepicker_init(&mp, pos, move_list, 0, 0, 0, &gsi);
-	move m;
+	move_t m;
 	while ((m = next_move(&mp))) {
 		do_move(pos, &m);
 		eval = -search_material(pos, ply + 1, -beta, -alpha);
@@ -134,7 +134,7 @@ void start_fen(struct position *pos, FILE *f) {
 
 void write_fens(struct position *pos, int result, FILE *fin, FILE *fout) {
 	char *ptr[2] = { 0 }, line[BUFSIZ];
-	move m = 0;
+	move_t m = 0;
 	int moves = 0;
 	int flag = 0;
 	int16_t perspective_result;
@@ -199,7 +199,7 @@ void write_fens(struct position *pos, int result, FILE *fin, FILE *fout) {
 	}
 early_exit:
 
-	/* If at least one move has been written. */
+	/* If at least one move_t has been written. */
 	if (moves > skip_first) {
 		perspective_result = VALUE_NONE;
 		fwrite(&perspective_result, 2, 1, fout);

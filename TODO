@@ -3,7 +3,7 @@
 - Grain evaluation for better move ordering etc.
   - Tried and does not seem to work.
 - Test for integer overflows using clang in real games.
-- Make unit tests for mevalue_mg etc.
+- Make unit tests for score_mg etc.
 - Unfinished search.
 - The winning side should maybe get a bonus for having kings close to each other.
   This is actually important for mate finding in weird situations like KQKNN if
@@ -16,7 +16,6 @@
   DEBUG=2 or NNUE=file?
 - Should all inlined functions be static inline etc?
 - Don't use BUFSIZ.
-- Rename move to move_t and mevalue to something else.
 - Make the enums upper case. pawn -> PAWN etc.
 - Make the shift functions take an argument from an
   enum { NORTH, SOUTH, EAST, WEST }; This should probably be as fast as

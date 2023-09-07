@@ -25,7 +25,7 @@
 
 #define DEPTH_MAX (0x100)
 
-typedef int64_t time_point;
+typedef int64_t timepoint_t;
 
 enum {
 	FLAG_NONE = 64,
@@ -35,12 +35,12 @@ enum {
 struct searchinfo {
 	uint64_t nodes;
 
-	time_point time_start;
-	time_point time_optimal;
-	time_point time_stop;
+	timepoint_t time_start;
+	timepoint_t time_optimal;
+	timepoint_t time_stop;
 
-	move pv[DEPTH_MAX][DEPTH_MAX];
-	move killers[DEPTH_MAX][2];
+	move_t pv[DEPTH_MAX][DEPTH_MAX];
+	move_t killers[DEPTH_MAX][2];
 	int64_t history_moves[13][64];
 
 	struct transpositiontable *tt;
@@ -51,7 +51,7 @@ struct searchinfo {
 	int interrupt;
 };
 
-int32_t search(struct position *pos, int depth, int verbose, int etime, int movetime, move *m, struct transpositiontable *tt, struct history *history, int iterative);
+int32_t search(struct position *pos, int depth, int verbose, int etime, int movetime, move_t *m, struct transpositiontable *tt, struct history *history, int iterative);
 
 int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, struct searchinfo *si);
 

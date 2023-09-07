@@ -23,19 +23,19 @@
 #include "bitboard.h"
 #include "util.h"
 
-static inline int good_capture(struct position *pos, move *m, int threshold) {
+static inline int good_capture(struct position *pos, move_t *m, int threshold) {
 	return is_capture(pos, m) && see_geq(pos, m, threshold);
 }
 
-static inline int is_quiet(struct position *pos, move *m, int threshold) {
+static inline int is_quiet(struct position *pos, move_t *m, int threshold) {
 	UNUSED(threshold);
 	return !pos->mailbox[move_to(m)];
 }
 
-int find_next(int index, struct position *pos, move *move_list, int (*filter)(struct position *, move *, int), int threshold) {
+int find_next(int index, struct position *pos, move_t *move_list, int (*filter)(struct position *, move_t *, int), int threshold) {
 	for (int i = index; move_list[i]; i++) {
 		if (filter(pos, &move_list[i], threshold)) {
-			move m = move_list[i];
+			move_t m = move_list[i];
 			move_list[i] = move_list[index];
 			move_list[index] = m;
 			return 1;
@@ -44,7 +44,7 @@ int find_next(int index, struct position *pos, move *move_list, int (*filter)(st
 	return 0;
 }
 
-int place_first(int index, move *move_list, move m) {
+int place_first(int index, move_t *move_list, move_t m) {
 	for (int i = index; move_list[i]; i++) {
 		if (m == move_list[i]) {
 			move_list[i] = move_list[index];
@@ -60,7 +60,7 @@ void sort_moves(struct movepicker *mp) {
 		return;
 	for (int i = 1 + mp->index; mp->move_list[i]; i++) {
 		int64_t val = mp->evaluation_list[i];
-		move m = mp->move_list[i];
+		move_t m = mp->move_list[i];
 		int j;
 		for (j = i - 1; j >= mp->index && mp->evaluation_list[j] < val; j--) {
 			mp->evaluation_list[j + 1] = mp->evaluation_list[j];
@@ -73,7 +73,7 @@ void sort_moves(struct movepicker *mp) {
 
 void evaluate_moves(struct movepicker *mp) {
 	for (int i = mp->index; mp->move_list[i]; i++) {
-		move *ptr = &mp->move_list[i];
+		move_t *ptr = &mp->move_list[i];
 		int square_from = move_from(ptr);
 		int square_to = move_to(ptr);
 		int attacker = mp->pos->mailbox[square_from];
@@ -85,7 +85,7 @@ void evaluate_moves(struct movepicker *mp) {
 	}
 }
 
-move next_move(struct movepicker *mp) {
+move_t next_move(struct movepicker *mp) {
 	switch (mp->stage) {
 	case STAGE_TT:
 		mp->stage++;
@@ -134,7 +134,7 @@ move next_move(struct movepicker *mp) {
 	}
 }
 
-void movepicker_init(struct movepicker *mp, struct position *pos, move *move_list, move ttmove, move killer1, move killer2, const struct searchinfo *si) {
+void movepicker_init(struct movepicker *mp, struct position *pos, move_t *move_list, move_t ttmove, move_t killer1, move_t killer2, const struct searchinfo *si) {
 	mp->pos = pos;
 	mp->move_list = move_list;
 	mp->si = si;

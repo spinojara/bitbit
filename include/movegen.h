@@ -21,12 +21,12 @@
 #include "position.h"
 #include "move.h"
 
-move *generate_all(const struct position *pos, move *move_list);
+move_t *generate_all(const struct position *pos, move_t *move_list);
 
-int move_count(const move *m);
+int move_count(const move_t *m);
 
 int mate(const struct position *pos);
 
-move *generate_quiescence(const struct position *pos, move *move_list);
+move_t *generate_quiescence(const struct position *pos, move_t *move_list);
 
 #endif

@@ -29,7 +29,7 @@
 #include "position.h"
 
 /* 12 * 64: each piece each square
- * 1: turn to move is white
+ * 1: turn to move_t is white
  * 16: each castling combination
  * 8: en passant on file
  */
@@ -71,7 +71,7 @@ void transposition_init(void) {
 }
 
 /* Should be called before do_move. */
-void do_zobrist_key(struct position *pos, const move *m) {
+void do_zobrist_key(struct position *pos, const move_t *m) {
 	assert(*m);
 	assert(pos->mailbox[move_from(m)]);
 	if (!option_transposition && !option_history)
@@ -136,7 +136,7 @@ void do_zobrist_key(struct position *pos, const move *m) {
 }
 
 /* Should be called before undo_move. */
-void undo_zobrist_key(struct position *pos, const move *m) {
+void undo_zobrist_key(struct position *pos, const move_t *m) {
 	assert(*m);
 	assert(!pos->mailbox[move_from(m)]);
 	assert(pos->mailbox[move_to(m)]);

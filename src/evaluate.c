@@ -29,35 +29,35 @@
 #include "option.h"
 #include "texeltune.h"
 
-CONST mevalue king_on_open_file     = S( -8, -4);
-CONST mevalue knight_outpost        = S( 33, 13);
-CONST mevalue knight_outpost_attack = S( 17, 10);
-CONST mevalue bishop_outpost        = S( 32, -4);
-CONST mevalue bishop_outpost_attack = S( 15,  4);
-CONST mevalue bishop_long_diagonal  = S( 15, 10);
-CONST mevalue knight_behind_pawn    = S(  2,  7);
-CONST mevalue bishop_behind_pawn    = S(  3, -2);
-CONST mevalue defended_knight       = S(  6,  4);
-CONST mevalue defended_bishop       = S(  2, 20);
-CONST mevalue knight_far_from_king  = S( -7, -2);
-CONST mevalue bishop_far_from_king  = S( -5, -1);
-CONST mevalue knight_pair           = S( -5, 15);
-CONST mevalue bishop_pair           = S( 36, 66);
-CONST mevalue rook_pair             = S( 18,-48);
-CONST mevalue pawn_blocking_bishop  = S( -4, -7);
-CONST mevalue rook_open             = S( 40,  0);
-CONST mevalue rook_semi             = S( 16,  6);
-CONST mevalue rook_closed           = S(  4, -7);
-CONST mevalue rook_blocked          = S(-19,-17);
-CONST mevalue bad_queen             = S(-21, -6);
-CONST mevalue king_attack_pawn      = S( -5, 40);
-CONST mevalue king_defend_pawn      = S( -2, 17);
-CONST mevalue tempo_bonus           = S( 22, 18);
+CONST score_t king_on_open_file     = S( -8, -4);
+CONST score_t knight_outpost        = S( 33, 13);
+CONST score_t knight_outpost_attack = S( 17, 10);
+CONST score_t bishop_outpost        = S( 32, -4);
+CONST score_t bishop_outpost_attack = S( 15,  4);
+CONST score_t bishop_long_diagonal  = S( 15, 10);
+CONST score_t knight_behind_pawn    = S(  2,  7);
+CONST score_t bishop_behind_pawn    = S(  3, -2);
+CONST score_t defended_knight       = S(  6,  4);
+CONST score_t defended_bishop       = S(  2, 20);
+CONST score_t knight_far_from_king  = S( -7, -2);
+CONST score_t bishop_far_from_king  = S( -5, -1);
+CONST score_t knight_pair           = S( -5, 15);
+CONST score_t bishop_pair           = S( 36, 66);
+CONST score_t rook_pair             = S( 18,-48);
+CONST score_t pawn_blocking_bishop  = S( -4, -7);
+CONST score_t rook_open             = S( 40,  0);
+CONST score_t rook_semi             = S( 16,  6);
+CONST score_t rook_closed           = S(  4, -7);
+CONST score_t rook_blocked          = S(-19,-17);
+CONST score_t bad_queen             = S(-21, -6);
+CONST score_t king_attack_pawn      = S( -5, 40);
+CONST score_t king_defend_pawn      = S( -2, 17);
+CONST score_t tempo_bonus           = S( 22, 18);
 
-CONST mevalue pawn_threat           = S( 66, 49);
-CONST mevalue push_threat           = S( 17,  7);
-CONST mevalue minor_threat[7]       = { S(  0,  0), S( -2, 10), S( 17, 36), S( 45, 49), S( 51, 39), S( 41, 58), };
-CONST mevalue rook_threat[7]        = { S(  0,  0), S(  7, 31), S( 31, 32), S( 36, 33), S( 16, 13), S( 55, 58), };
+CONST score_t pawn_threat           = S( 66, 49);
+CONST score_t push_threat           = S( 17,  7);
+CONST score_t minor_threat[7]       = { S(  0,  0), S( -2, 10), S( 17, 36), S( 45, 49), S( 51, 39), S( 41, 58), };
+CONST score_t rook_threat[7]        = { S(  0,  0), S(  7, 31), S( 31, 32), S( 36, 33), S( 16, 13), S( 55, 58), };
 
 CONST int weak_squares              = 40;
 CONST int enemy_no_queen            = 261;
@@ -77,8 +77,8 @@ CONST int phase_queen               = 1454;
 
 const int material_value[7] = { 0, 100, 300, 300, 500, 1000, 0 };
 
-static inline mevalue evaluate_king_shelter(const struct position *pos, struct evaluationinfo *ei, int turn) {
-	mevalue eval = 0;
+static inline score_t evaluate_king_shelter(const struct position *pos, struct evaluationinfo *ei, int turn) {
+	score_t eval = 0;
 
 	uint64_t ourpawns = pos->piece[turn][pawn] &
 		~passed_files(ei->king_square[turn], other_color(turn));
@@ -121,8 +121,8 @@ static inline mevalue evaluate_king_shelter(const struct position *pos, struct e
 	return eval;
 }
 
-static inline mevalue evaluate_king(const struct position *pos, struct evaluationinfo *ei, int turn) {
-	mevalue eval = evaluate_king_shelter(pos, ei, turn);
+static inline score_t evaluate_king(const struct position *pos, struct evaluationinfo *ei, int turn) {
+	score_t eval = evaluate_king_shelter(pos, ei, turn);
 
 	uint64_t weak = ei->attacked[other_color(turn)][all]
 		      & ~(ei->attacked2[turn])
@@ -193,8 +193,8 @@ static inline mevalue evaluate_king(const struct position *pos, struct evaluatio
 	return eval;
 }
 
-static inline mevalue evaluate_knights(const struct position *pos, struct evaluationinfo *ei, int turn) {
-	mevalue eval = 0;
+static inline score_t evaluate_knights(const struct position *pos, struct evaluationinfo *ei, int turn) {
+	score_t eval = 0;
 	uint64_t b = pos->piece[turn][knight];
 	/* knight pair */
 	if (popcount(b) == 2) {
@@ -257,8 +257,8 @@ static inline mevalue evaluate_knights(const struct position *pos, struct evalua
 	return eval;
 }
 
-static inline mevalue evaluate_bishops(const struct position *pos, struct evaluationinfo *ei, int turn) {
-	mevalue eval = 0;
+static inline score_t evaluate_bishops(const struct position *pos, struct evaluationinfo *ei, int turn) {
+	score_t eval = 0;
 	uint64_t b = pos->piece[turn][bishop];
 	/* bishop pair */
 	if (popcount(b) == 2) {
@@ -338,8 +338,8 @@ static inline mevalue evaluate_bishops(const struct position *pos, struct evalua
 	return eval;
 }
 
-static inline mevalue evaluate_rooks(const struct position *pos, struct evaluationinfo *ei, int turn) {
-	mevalue eval = 0;
+static inline score_t evaluate_rooks(const struct position *pos, struct evaluationinfo *ei, int turn) {
+	score_t eval = 0;
 	uint64_t b = pos->piece[turn][rook];
 	/* rook pair */
 	if (popcount(b) == 2) {
@@ -404,8 +404,8 @@ static inline mevalue evaluate_rooks(const struct position *pos, struct evaluati
 	return eval;
 }
 
-static inline mevalue evaluate_queens(const struct position *pos, struct evaluationinfo *ei, int turn) {
-	mevalue eval = 0;
+static inline score_t evaluate_queens(const struct position *pos, struct evaluationinfo *ei, int turn) {
+	score_t eval = 0;
 	uint64_t b = pos->piece[turn][queen];
 	/* Only add the material value of 1 queen per side. */
 	while (b) {
@@ -439,8 +439,8 @@ static inline mevalue evaluate_queens(const struct position *pos, struct evaluat
 	return eval;
 }
 
-static inline mevalue evaluate_threats(const struct position *pos, struct evaluationinfo *ei, int turn) {
-	mevalue eval = 0;
+static inline score_t evaluate_threats(const struct position *pos, struct evaluationinfo *ei, int turn) {
+	score_t eval = 0;
 	uint64_t ourpawns = pos->piece[turn][pawn];
 	uint64_t theirnonpawns = pos->piece[other_color(turn)][all] ^ pos->piece[other_color(turn)][pawn];
 	uint64_t b;
@@ -475,7 +475,7 @@ static inline mevalue evaluate_threats(const struct position *pos, struct evalua
 	return eval;
 }
 
-static inline mevalue evaluate_tempo(const struct position *pos, struct evaluationinfo *ei, int turn) {
+static inline score_t evaluate_tempo(const struct position *pos, struct evaluationinfo *ei, int turn) {
 	UNUSED(ei);
 	return (pos->turn == turn) * tempo_bonus;
 }
@@ -512,9 +512,9 @@ void evaluationinfo_init(const struct position *pos, struct evaluationinfo *ei) 
 	}
 }
 
-static inline mevalue evaluate_psqtable(const struct position *pos, struct evaluationinfo *ei, int turn) {
+static inline score_t evaluate_psqtable(const struct position *pos, struct evaluationinfo *ei, int turn) {
 	UNUSED(ei);
-	mevalue eval = 0;
+	score_t eval = 0;
 	uint64_t bitboard;
 	int square;
 	for (int piece = pawn; piece <= king; piece++) {
@@ -542,8 +542,10 @@ static inline int32_t scale(const struct position *pos, const struct evaluationi
 	int32_t strong_material = ei->material_value[strong_side];
 	int32_t weak_material = ei->material_value[weak_side];
 	/* Scores also KBBKN as a draw which is ok by the 50 move rule. */
-	if (!pos->piece[strong_side][pawn] && strong_material - weak_material <= material_value[bishop])
+	if (!pos->piece[strong_side][pawn] && strong_material - weak_material <= material_value[bishop]) {
 		scale = (strong_material <= material_value[bishop]) ? 0 : (weak_material < material_value[rook]) ? 16 : 32;
+		
+	}
 	return scale;
 }
 
@@ -552,10 +554,10 @@ static inline int32_t evaluate_tapered(const struct position *pos, const struct 
 	int32_t p = phase(ei);
 	if (TRACE) trace.material = ei->material;
 	if (TRACE) trace.p = p;
-	int strong_side = mevalue_eg(ei->eval) > 0;
+	int strong_side = score_eg(ei->eval) > 0;
 	int32_t s = scale(pos, ei, strong_side);
 	if (TRACE) trace.s = s;
-	int32_t ret = p * mevalue_mg(ei->eval) + (PHASE - p) * s * mevalue_eg(ei->eval) / NORMAL_SCALE;
+	int32_t ret = p * score_mg(ei->eval) + (PHASE - p) * s * score_eg(ei->eval) / NORMAL_SCALE;
 	return ret / PHASE;
 }
 
@@ -577,9 +579,9 @@ int32_t evaluate_classical(const struct position *pos) {
 	return pos->turn ? ret : -ret;
 }
 
-void print_mevalue(mevalue eval);
-mevalue evaluate_print_x(const char *name, const struct position *pos, struct evaluationinfo *ei,
-		mevalue (*evaluate_x)(const struct position *, struct evaluationinfo *ei, int));
+void print_score_t(score_t eval);
+score_t evaluate_print_x(const char *name, const struct position *pos, struct evaluationinfo *ei,
+		score_t (*evaluate_x)(const struct position *, struct evaluationinfo *ei, int));
 
 void evaluate_print(struct position *pos) {
 	int old_option_nnue = option_nnue;
@@ -602,20 +604,20 @@ void evaluate_print(struct position *pos) {
 	ei.eval += evaluate_print_x("Tempo", pos, &ei, &evaluate_tempo);
 	printf("+-------------+-------------+-------------+-------------+\n");
 	printf("| Total                                   | ");
-	print_mevalue(ei.eval);
+	print_score_t(ei.eval);
 	printf(" |\n");
 
 	int32_t p = phase(&ei);
-	int strong_side = mevalue_mg(ei.eval) > 0;
+	int strong_side = score_mg(ei.eval) > 0;
 	int32_t s = scale(pos, &ei, strong_side);
 
-	int32_t scaledmg = mevalue_mg(ei.eval);
-	int32_t scaledeg = s * mevalue_eg(ei.eval) / NORMAL_SCALE;
+	int32_t scaledmg = score_mg(ei.eval);
+	int32_t scaledeg = s * score_eg(ei.eval) / NORMAL_SCALE;
 	printf("| Scaled  Where s = %.2f                  | ", (double)s / NORMAL_SCALE);
-	print_mevalue(S(scaledmg, scaledeg));
+	print_score_t(S(scaledmg, scaledeg));
 	printf(" |\n");
 	printf("| Tapered Where p = %.2f                  | ", (double)p / PHASE);
-	print_mevalue(S(p * scaledmg / PHASE, (PHASE - p) * scaledeg / PHASE));
+	print_score_t(S(p * scaledmg / PHASE, (PHASE - p) * scaledeg / PHASE));
 	printf(" |\n");
 	printf("| Final                                   |       %+.2f |\n", (double)evaluate_tapered(pos, &ei) / 100);
 	printf("+-------------+-------------+-------------+-------------+\n");
@@ -663,9 +665,9 @@ void evaluate_print(struct position *pos) {
 	option_nnue = old_option_nnue;
 }
 
-void print_mevalue(mevalue eval) {
-	int m = mevalue_mg(eval);
-	int e = mevalue_eg(eval);
+void print_score_t(score_t eval) {
+	int m = score_mg(eval);
+	int e = score_eg(eval);
 	if (ABS(m) >= 10000)
 		printf("%+.0f ", (double)m / 100);
 	else if (ABS(m) >= 1000)
@@ -681,10 +683,10 @@ void print_mevalue(mevalue eval) {
 		printf("%+.2f", (double)e / 100);
 }
 
-mevalue evaluate_print_x(const char *name, const struct position *pos, struct evaluationinfo *ei,
-		mevalue (*evaluate_x)(const struct position *, struct evaluationinfo *ei, int)) {
-	mevalue w = evaluate_x(pos, ei, white);
-	mevalue b = evaluate_x(pos, ei, black);
+score_t evaluate_print_x(const char *name, const struct position *pos, struct evaluationinfo *ei,
+		score_t (*evaluate_x)(const struct position *, struct evaluationinfo *ei, int)) {
+	score_t w = evaluate_x(pos, ei, white);
+	score_t b = evaluate_x(pos, ei, black);
 	char namepadded[32];
 	strcpy(namepadded, name);
 	int len = strlen(name);
@@ -693,11 +695,11 @@ mevalue evaluate_print_x(const char *name, const struct position *pos, struct ev
 		namepadded[len + i] = ' ';
 	namepadded[len + i] = '\0';
 	printf("| %s | ", namepadded);
-	print_mevalue(w);
+	print_score_t(w);
 	printf(" | ");
-	print_mevalue(b);
+	print_score_t(b);
 	printf(" | ");
-	print_mevalue(w - b);
+	print_score_t(w - b);
 	printf(" |\n");
 	return w - b;
 }

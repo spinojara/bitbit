@@ -548,7 +548,7 @@ void print_history_pgn(const struct history *h) {
 
 	struct position pos;
 	memcpy(&pos, &h->start, sizeof(struct position));
-	move m[POSITIONS_MAX];
+	move_t m[POSITIONS_MAX];
 	memcpy(m, h->move, sizeof(m));
 
 	char str[8];

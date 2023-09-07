@@ -36,7 +36,7 @@ void mvv_lva_init(void) {
 			                                         move_order_piece_value[uncolored_piece(attacker)];
 }
 
-int see_geq(struct position *pos, const move *m, int32_t value) {
+int see_geq(struct position *pos, const move_t *m, int32_t value) {
 	int from = move_from(m);
 	int to = move_to(m);
 	uint64_t fromb = bitboard(from);

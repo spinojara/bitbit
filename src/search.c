@@ -58,7 +58,7 @@ static inline int late_move_reduction(int index, int depth) {
 	return (r >> 10) + 1;
 }
 
-void print_pv(struct position *pos, move *pv_move, int ply) {
+void print_pv(struct position *pos, move_t *pv_move, int ply) {
 	char str[8];
 	if (!(ply < DEPTH_MAX) || !is_legal(pos, pv_move))
 		return;
@@ -69,7 +69,7 @@ void print_pv(struct position *pos, move *pv_move, int ply) {
 	*pv_move = *pv_move & 0xFFFF;
 }
 
-static inline void store_killer_move(const move *m, int ply, move killers[][2]) {
+static inline void store_killer_move(const move_t *m, int ply, move_t killers[][2]) {
 	if (interrupt)
 		return;
 	assert(0 <= ply && ply < DEPTH_MAX);
@@ -80,7 +80,7 @@ static inline void store_killer_move(const move *m, int ply, move killers[][2]) 
 	killers[ply][0] = *m & 0xFFFF;
 }
 
-static inline void store_history_move(const struct position *pos, const move *m, int depth, int64_t history_moves[13][64]) {
+static inline void store_history_move(const struct position *pos, const move_t *m, int depth, int64_t history_moves[13][64]) {
 	if (interrupt)
 		return;
 	assert(*m);
@@ -88,12 +88,12 @@ static inline void store_history_move(const struct position *pos, const move *m,
 	history_moves[pos->mailbox[move_from(m)]][move_to(m)] += (uint64_t)1 << MIN(depth, 32);
 }
 
-static inline void store_pv_move(const move *m, int ply, move pv[DEPTH_MAX][DEPTH_MAX]) {
+static inline void store_pv_move(const move_t *m, int ply, move_t pv[DEPTH_MAX][DEPTH_MAX]) {
 	if (interrupt)
 		return;
 	assert(*m);
 	pv[ply][ply] = *m & 0xFFFF;
-	memcpy(pv[ply] + ply + 1, pv[ply + 1] + ply + 1, sizeof(move) * (DEPTH_MAX - (ply + 1)));
+	memcpy(pv[ply] + ply + 1, pv[ply + 1] + ply + 1, sizeof(move_t) * (DEPTH_MAX - (ply + 1)));
 }
 
 /* Random drawn score to avoid threefold blindness. */
@@ -119,7 +119,7 @@ int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, s
 	uint64_t checkers = generate_checkers(pos, pos->turn);
 	int32_t eval = evaluate(pos), best_eval = -VALUE_INFINITE;
 
-	move move_list[MOVES_MAX];
+	move_t move_list[MOVES_MAX];
 	generate_quiescence(pos, move_list);
 
 	if (!move_list[0])
@@ -135,7 +135,7 @@ int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, s
 
 	struct movepicker mp;
 	movepicker_init(&mp, pos, move_list, 0, 0, 0, si);
-	move m;
+	move_t m;
 	while ((m = next_move(&mp))) {
 		assert(checkers || is_capture(pos, &m) || move_promote(&m) == 3);
 		if (is_capture(pos, &m) && !checkers && mp.stage > STAGE_OKCAPTURE)
@@ -188,7 +188,7 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 
 	struct transposition *e = transposition_probe(si->tt, pos);
 	if (e && e->depth >= depth && !pv_node) {
-		eval = adjust_value_mate_get(e->eval, ply);
+		eval = adjust_score_mate_get(e->eval, ply);
 		if (e->bound == BOUND_EXACT)
 			return eval;
 		else if (e->bound == BOUND_LOWER && eval >= beta)
@@ -215,7 +215,7 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 		return static_eval;
 #endif
 
-	/* null move pruning */
+	/* null move_t pruning */
 	if (!pv_node && !checkers && flag != FLAG_NULL_MOVE && static_eval >= beta && depth >= 3 && has_big_piece(pos)) {
 		int reduction = 3;
 		int new_depth = CLAMP(depth - reduction, 1, depth);
@@ -231,7 +231,7 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 			return beta;
 	}
 
-	move move_list[MOVES_MAX];
+	move_t move_list[MOVES_MAX];
 	generate_all(pos, move_list);
 
 	if (!move_list[0])
@@ -241,7 +241,7 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 
 	struct movepicker mp;
 	movepicker_init(&mp, pos, move_list, e ? e->m : 0, si->killers[ply][0], si->killers[ply][1], si);
-	move m;
+	move_t m;
 	while ((m = next_move(&mp))) {
 		int move_number = mp.index - 1;
 		if (option_history)
@@ -260,7 +260,7 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 		}
 		new_depth += extensions;
 		int new_flag = FLAG_NONE;
-		/* late move reductions */
+		/* late move_t reductions */
 		int full_depth_search = 0;
 		if (depth >= 2 && !checkers && move_number >= (1 + pv_node) && (!move_capture(&m) || cut_node)) {
 			int r = late_move_reduction(move_number, depth);
@@ -313,7 +313,7 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 		}
 	}
 	int bound = (best_eval >= beta) ? BOUND_LOWER : (pv_node && bestmove) ? BOUND_EXACT : BOUND_UPPER;
-	transposition_store(si->tt, pos, adjust_value_mate_store(best_eval, ply), depth, bound, bestmove);
+	transposition_store(si->tt, pos, adjust_score_mate_store(best_eval, ply), depth, bound, bestmove);
 	assert(-VALUE_INFINITE < best_eval && best_eval < VALUE_INFINITE);
 	return best_eval;
 }
@@ -343,11 +343,11 @@ int32_t aspiration_window(struct position *pos, int depth, int32_t last, struct 
 	return evaluation;
 }
 
-int32_t search(struct position *pos, int depth, int verbose, int etime, int movetime, move *m, struct transpositiontable *tt, struct history *history, int iterative) {
+int32_t search(struct position *pos, int depth, int verbose, int etime, int movetime, move_t *m, struct transpositiontable *tt, struct history *history, int iterative) {
 	assert(option_history == (history != NULL));
 	depth = MIN(depth, DEPTH_MAX);
 
-	time_point ts = time_now();
+	timepoint_t ts = time_now();
 	if (etime && !movetime)
 		movetime = etime / 5;
 
@@ -373,7 +373,7 @@ int32_t search(struct position *pos, int depth, int verbose, int etime, int move
 		return eval;
 	}
 
-	move bestmove = 0;
+	move_t bestmove = 0;
 	for (int d = iterative ? 1 : depth; d <= depth; d++) {
 		si.root_depth = d;
 		if (verbose)
@@ -386,7 +386,7 @@ int32_t search(struct position *pos, int depth, int verbose, int etime, int move
 			eval = aspiration_window(pos, d, eval, &si);
 
 		/* 16 elo.
-		 * Use move even from a partial and interrupted search.
+		 * Use move_t even from a partial and interrupted search.
 		 */
 		bestmove = si.pv[0][0];
 		best_eval = eval;
@@ -394,7 +394,7 @@ int32_t search(struct position *pos, int depth, int verbose, int etime, int move
 		if (interrupt || si.interrupt)
 			break;
 
-		time_point tp = time_now() - ts;
+		timepoint_t tp = time_now() - ts;
 		if (verbose) {
 			printf("info depth %d seldepth %d score ", d, seldepth(si.history));
 			if (eval >= VALUE_MATE_IN_MAX_PLY)

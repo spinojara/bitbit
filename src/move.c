@@ -28,7 +28,7 @@
 #include "movegen.h"
 #include "attackgen.h"
 
-void do_move(struct position *pos, move *m) {
+void do_move(struct position *pos, move_t *m) {
 	assert(*m);
 	int source_square = move_from(m);
 	int target_square = move_to(m);
@@ -113,7 +113,7 @@ void do_move(struct position *pos, move *m) {
 	pos->turn = other_color(pos->turn);
 }
 
-void undo_move(struct position *pos, const move *m) {
+void undo_move(struct position *pos, const move_t *m) {
 	assert(*m);
 	int source_square = move_from(m);
 	int target_square = move_to(m);
@@ -137,7 +137,7 @@ void undo_move(struct position *pos, const move *m) {
 	else if (move_flag(m) == 2) {
 		pos->piece[pos->turn][pawn] ^= to;
 		pos->piece[pos->turn][uncolored_piece(pos->mailbox[target_square])] ^= to;
-		/* later gets updated as a normal move would */
+		/* later gets updated as a normal move_t would */
 		pos->mailbox[target_square] = colored_piece(pawn, pos->turn);
 	}
 	else if (move_flag(m) == 3) {
@@ -185,7 +185,7 @@ void undo_move(struct position *pos, const move *m) {
 		pos->fullmove--;
 }
 
-void print_move(const move *m) {
+void print_move(const move_t *m) {
 	char move_from_str[3];
 	char move_to_str[3];
 	algebraic(move_from_str, move_from(m));
@@ -196,7 +196,7 @@ void print_move(const move *m) {
 }
 
 /* str needs to be at least 6 bytes */
-char *move_str_algebraic(char *str, const move *m) {
+char *move_str_algebraic(char *str, const move_t *m) {
 	algebraic(str, move_from(m));
 	algebraic(str + 2, move_to(m));
 	str[4] = str[5] = '\0';
@@ -207,7 +207,7 @@ char *move_str_algebraic(char *str, const move *m) {
 
 /* str needs to be at least 8 bytes */
 /* m can be illegal */
-char *move_str_pgn(char *str, const struct position *pos, const move *m) {
+char *move_str_pgn(char *str, const struct position *pos, const move_t *m) {
 	if (!is_legal(pos, m))
 		return NULL;
 	int f = file_of(move_from(m));
@@ -254,9 +254,9 @@ char *move_str_pgn(char *str, const struct position *pos, const move *m) {
 			attackers = bitboard(move_from(m));
 	}
 	else {
-		move move_list[MOVES_MAX];
+		move_t move_list[MOVES_MAX];
 		generate_all(pos, move_list);
-		for (move *ptr = move_list; *ptr; ptr++) {
+		for (move_t *ptr = move_list; *ptr; ptr++) {
 			if (move_to(ptr) == move_to(m) && pos->mailbox[move_from(ptr)] == pos->mailbox[move_from(m)])
 				attackers |= bitboard(move_from(ptr));
 		}
@@ -289,7 +289,7 @@ char *move_str_pgn(char *str, const struct position *pos, const move *m) {
 	}
 	
 	struct position pos_t;
-	move m_t;
+	move_t m_t;
 	m_t = *m;
 	memcpy(&pos_t, pos, sizeof(struct position));
 	do_move(&pos_t, &m_t);
@@ -305,13 +305,13 @@ char *move_str_pgn(char *str, const struct position *pos, const move *m) {
 }
 
 /* str can be illegal */
-move string_to_move(const struct position *pos, const char *str) {
+move_t string_to_move(const struct position *pos, const char *str) {
 	if (!str)
 		return 0;
-	move move_list[MOVES_MAX];
+	move_t move_list[MOVES_MAX];
 	generate_all(pos, move_list);
 	char str_t[8];
-	for (move *move_ptr = move_list; *move_ptr; move_ptr++) {
+	for (move_t *move_ptr = move_list; *move_ptr; move_ptr++) {
 		move_str_algebraic(str_t, move_ptr);
 		if (strcmp(str_t, str) == 0)
 			return *move_ptr;
@@ -322,10 +322,10 @@ move string_to_move(const struct position *pos, const char *str) {
 	return 0;
 }
 
-int is_legal(const struct position *pos, const move *m) {
-	move move_list[MOVES_MAX];
+int is_legal(const struct position *pos, const move_t *m) {
+	move_t move_list[MOVES_MAX];
 	generate_all(pos, move_list);
-	for (move *move_ptr = move_list; *move_ptr; move_ptr++)
+	for (move_t *move_ptr = move_list; *move_ptr; move_ptr++)
 		if ((*m & 0xFFFF) == (*move_ptr & 0xFFFF))
 			return 1;
 	return 0;
