@@ -3,9 +3,6 @@
 - Test for integer overflows using clang in real games.
 - Make unit tests for score_mg etc.
 - Unfinished search.
-- The winning side should maybe get a bonus for having kings close to each other.
-  This is actually important for mate finding in weird situations like KQKNN if
-  there is a possible mate.
 - Does search have the same repetition problem that we encountered when generating
   the KPK bitbase? This could potentially lead to some funny things. The problem
   occurs when storing a value scored as a repetition in the transposition table.
