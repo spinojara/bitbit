@@ -1,21 +1,10 @@
 - Add checks for malloc.
 - Aspiration window should probably return VALUE_NONE if interrupted.
 - Grain evaluation for better move ordering etc.
-- Rook and knight pair penalties.
+  - Tried and does not seem to work.
 - Test for integer overflows using clang in real games.
 - Make unit tests for mevalue_mg etc.
 - Unfinished search.
-- Check histogram to see which endgames where a material difference >= 3 are drawn.
-  Add most of these endgames to the endgame database.
-- Observed draw with KRRKR which should never happen. This is probably because
-  endgame value is less than middle game value and bitbit refuses to trade. If we
-  manually increase the endgame values above the middle game values and then tune
-  this will most likely be resolved.
-- Add KBPK endgame. This is only lost if the pawn promotes on a corner and this
-  corner is the opposite color of the bishop. We can maybe use the KPK bitbase to
-  evaluate this corner.
-- Add KRNKR endgame which seems drawn.
-- Bonus for king in endgame being close to pawns.
 - The winning side should maybe get a bonus for having kings close to each other.
   This is actually important for mate finding in weird situations like KQKNN if
   there is a possible mate.
@@ -28,9 +17,6 @@
 - Should all inlined functions be static inline etc?
 - Don't use BUFSIZ.
 - Rename move to move_t and mevalue to something else.
-- Make evaluation parameters constant for evaluation but not for texeltuning.
-- Make all functions in evaluate_classical inline and see if we gain some extra
-  speed.
 - Make the enums upper case. pawn -> PAWN etc.
 - Make the shift functions take an argument from an
   enum { NORTH, SOUTH, EAST, WEST }; This should probably be as fast as

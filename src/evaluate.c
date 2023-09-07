@@ -77,7 +77,7 @@ CONST int phase_queen               = 1454;
 
 const int material_value[7] = { 0, 100, 300, 300, 500, 1000, 0 };
 
-mevalue evaluate_king_shelter(const struct position *pos, struct evaluationinfo *ei, int turn) {
+static inline mevalue evaluate_king_shelter(const struct position *pos, struct evaluationinfo *ei, int turn) {
 	mevalue eval = 0;
 
 	uint64_t ourpawns = pos->piece[turn][pawn] &
@@ -121,7 +121,7 @@ mevalue evaluate_king_shelter(const struct position *pos, struct evaluationinfo 
 	return eval;
 }
 
-mevalue evaluate_king(const struct position *pos, struct evaluationinfo *ei, int turn) {
+static inline mevalue evaluate_king(const struct position *pos, struct evaluationinfo *ei, int turn) {
 	mevalue eval = evaluate_king_shelter(pos, ei, turn);
 
 	uint64_t weak = ei->attacked[other_color(turn)][all]
@@ -193,7 +193,7 @@ mevalue evaluate_king(const struct position *pos, struct evaluationinfo *ei, int
 	return eval;
 }
 
-mevalue evaluate_knights(const struct position *pos, struct evaluationinfo *ei, int turn) {
+static inline mevalue evaluate_knights(const struct position *pos, struct evaluationinfo *ei, int turn) {
 	mevalue eval = 0;
 	uint64_t b = pos->piece[turn][knight];
 	/* knight pair */
@@ -257,7 +257,7 @@ mevalue evaluate_knights(const struct position *pos, struct evaluationinfo *ei, 
 	return eval;
 }
 
-mevalue evaluate_bishops(const struct position *pos, struct evaluationinfo *ei, int turn) {
+static inline mevalue evaluate_bishops(const struct position *pos, struct evaluationinfo *ei, int turn) {
 	mevalue eval = 0;
 	uint64_t b = pos->piece[turn][bishop];
 	/* bishop pair */
@@ -338,7 +338,7 @@ mevalue evaluate_bishops(const struct position *pos, struct evaluationinfo *ei, 
 	return eval;
 }
 
-mevalue evaluate_rooks(const struct position *pos, struct evaluationinfo *ei, int turn) {
+static inline mevalue evaluate_rooks(const struct position *pos, struct evaluationinfo *ei, int turn) {
 	mevalue eval = 0;
 	uint64_t b = pos->piece[turn][rook];
 	/* rook pair */
@@ -404,7 +404,7 @@ mevalue evaluate_rooks(const struct position *pos, struct evaluationinfo *ei, in
 	return eval;
 }
 
-mevalue evaluate_queens(const struct position *pos, struct evaluationinfo *ei, int turn) {
+static inline mevalue evaluate_queens(const struct position *pos, struct evaluationinfo *ei, int turn) {
 	mevalue eval = 0;
 	uint64_t b = pos->piece[turn][queen];
 	/* Only add the material value of 1 queen per side. */
@@ -439,7 +439,7 @@ mevalue evaluate_queens(const struct position *pos, struct evaluationinfo *ei, i
 	return eval;
 }
 
-mevalue evaluate_threats(const struct position *pos, struct evaluationinfo *ei, int turn) {
+static inline mevalue evaluate_threats(const struct position *pos, struct evaluationinfo *ei, int turn) {
 	mevalue eval = 0;
 	uint64_t ourpawns = pos->piece[turn][pawn];
 	uint64_t theirnonpawns = pos->piece[other_color(turn)][all] ^ pos->piece[other_color(turn)][pawn];
@@ -475,7 +475,7 @@ mevalue evaluate_threats(const struct position *pos, struct evaluationinfo *ei, 
 	return eval;
 }
 
-mevalue evaluate_tempo(const struct position *pos, struct evaluationinfo *ei, int turn) {
+static inline mevalue evaluate_tempo(const struct position *pos, struct evaluationinfo *ei, int turn) {
 	UNUSED(ei);
 	return (pos->turn == turn) * tempo_bonus;
 }
@@ -512,7 +512,7 @@ void evaluationinfo_init(const struct position *pos, struct evaluationinfo *ei) 
 	}
 }
 
-mevalue evaluate_psqtable(const struct position *pos, struct evaluationinfo *ei, int turn) {
+static inline mevalue evaluate_psqtable(const struct position *pos, struct evaluationinfo *ei, int turn) {
 	UNUSED(ei);
 	mevalue eval = 0;
 	uint64_t bitboard;
@@ -529,14 +529,14 @@ mevalue evaluate_psqtable(const struct position *pos, struct evaluationinfo *ei,
 	return eval;
 }
 
-int32_t phase(const struct evaluationinfo *ei) {
+static inline int32_t phase(const struct evaluationinfo *ei) {
 	int32_t phase = CLAMP(ei->material, phase_min, phase_max);
 	phase = (phase - phase_min) * PHASE / (phase_max - phase_min);
 	return phase;
 }
 
 /* <https://ulthiel.com/math/other/endgames> */
-int32_t scale(const struct position *pos, const struct evaluationinfo *ei, int strong_side) {
+static inline int32_t scale(const struct position *pos, const struct evaluationinfo *ei, int strong_side) {
 	int weak_side = other_color(strong_side);
 	int32_t scale = NORMAL_SCALE;
 	int32_t strong_material = ei->material_value[strong_side];
@@ -547,7 +547,7 @@ int32_t scale(const struct position *pos, const struct evaluationinfo *ei, int s
 	return scale;
 }
 
-int32_t evaluate_tapered(const struct position *pos, const struct evaluationinfo *ei) {
+static inline int32_t evaluate_tapered(const struct position *pos, const struct evaluationinfo *ei) {
 	if (TRACE) trace.eval = ei->eval;
 	int32_t p = phase(ei);
 	if (TRACE) trace.material = ei->material;
