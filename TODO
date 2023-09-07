@@ -1,7 +1,5 @@
 - Add checks for malloc.
 - Aspiration window should probably return VALUE_NONE if interrupted.
-- Grain evaluation for better move ordering etc.
-  - Tried and does not seem to work.
 - Test for integer overflows using clang in real games.
 - Make unit tests for score_mg etc.
 - Unfinished search.
