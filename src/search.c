@@ -215,7 +215,7 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 		return static_eval;
 #endif
 
-	/* null move_t pruning */
+	/* null move pruning */
 	if (!pv_node && !checkers && flag != FLAG_NULL_MOVE && static_eval >= beta && depth >= 3 && has_big_piece(pos)) {
 		int reduction = 3;
 		int new_depth = CLAMP(depth - reduction, 1, depth);
