@@ -10,7 +10,9 @@
 
 !src
 src/nnueweights.c
+src/.*
 !include
+include/.*
 !man
 !files
 !nnue
