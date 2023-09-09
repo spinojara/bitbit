@@ -147,7 +147,7 @@ struct history;
 void print_history_pgn(const struct history *history);
 void print_history_algebraic(const struct history *history, FILE *file);
 
-int has_big_piece(const struct position *pos);
+int has_sliding_piece(const struct position *pos);
 
 int is_repetition(const struct position *pos, const struct history *h, int ply, int count);
 

@@ -3,10 +3,6 @@
 - Test for integer overflows using clang in real games.
 - Make unit tests for score_mg etc.
 - Unfinished search.
-- Does search have the same repetition problem that we encountered when generating
-  the KPK bitbase? This could potentially lead to some funny things. The problem
-  occurs when storing a value scored as a repetition in the transposition table.
-  This position may or may not be a repetition when encountered the next time.
 - Is it possible to fix that make does not rebuild when we update variables like
   DEBUG=2 or NNUE=file?
 - Should all inlined functions be static inline etc?

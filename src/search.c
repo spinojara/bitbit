@@ -169,6 +169,8 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	const int root_node = (ply == 0);
 	const int pv_node = (beta != alpha + 1);
 
+	assert(!(pv_node && cut_node));
+
 	if (interrupt || si->interrupt)
 		return 0;
 	if ((si->nodes & (0x1000 - 1)) == 0)
@@ -187,6 +189,7 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	}
 
 	struct transposition *e = transposition_probe(si->tt, pos);
+	move_t ttmove = e ? e->m : 0;
 	if (e && e->depth >= depth && !pv_node) {
 		eval = adjust_score_mate_get(e->eval, ply);
 		if (e->bound == BOUND_EXACT)
@@ -199,24 +202,17 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	
 	uint64_t checkers = generate_checkers(pos, pos->turn);
 	if (depth == 0 && !checkers)
-		return quiescence(pos, ply + 1, alpha, beta, si);
+		return quiescence(pos, ply, alpha, beta, si);
 
-	int32_t static_eval = evaluate(pos);
+	//int32_t static_eval = evaluate(pos);
 #if 0
-	/* razoring */
-	if (!pv_node && !checkers && depth <= 6 && static_eval + (160 + 90 * depth * depth) < alpha) {
-		eval = quiescence(pos, ply + 1, alpha - 1, alpha, si);
-		if (eval < alpha)
-			return eval;
-	}
-
-	/* futility pruning */
+	/* Futility pruning. */
 	if (!pv_node && !checkers && depth <= 6 && static_eval - 200 > beta)
 		return static_eval;
 #endif
-
-	/* null move pruning */
-	if (!pv_node && !checkers && flag != FLAG_NULL_MOVE && static_eval >= beta && depth >= 3 && has_big_piece(pos)) {
+#if 0
+	/* Null move pruning. */
+	if (cut_node && !checkers && flag != FLAG_NULL_MOVE && static_eval >= beta && depth >= 3 && has_sliding_piece(pos)) {
 		int reduction = 3;
 		int new_depth = CLAMP(depth - reduction, 1, depth);
 		int ep = pos->en_passant;
@@ -230,6 +226,33 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 		if (eval >= beta)
 			return beta;
 	}
+#endif
+#if 0
+	/* Internal iterative deepening. */
+	if (cut_node && depth >= 2 && !ttmove) {
+		int reduction = 1;
+		int new_depth = depth - reduction;
+		negamax(pos, new_depth, ply, alpha, beta, cut_node, FLAG_NONE, si);
+		struct transposition *ne = transposition_probe(si->tt, pos);
+		if (ne)
+			ttmove = ne->m;
+	}
+#endif
+#if 0
+	if (pv_node && depth >= 3 && !ttmove)
+        	depth -= 2;
+
+	if (cut_node && depth >= 8 && !ttmove)
+        	depth--;
+#endif
+#if 0
+	/* Razoring. */
+	if (!pv_node && !cut_node && !checkers && depth <= 1 && static_eval + 26 < alpha) {
+		eval = quiescence(pos, ply + 1, alpha - 1, alpha, si);
+		if (eval < alpha)
+			return eval;
+	}
+#endif
 
 	move_t move_list[MOVES_MAX];
 	generate_all(pos, move_list);
@@ -240,7 +263,7 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	uint16_t bestmove = 0;
 
 	struct movepicker mp;
-	movepicker_init(&mp, pos, move_list, e ? e->m : 0, si->killers[ply][0], si->killers[ply][1], si);
+	movepicker_init(&mp, pos, move_list, ttmove, si->killers[ply][0], si->killers[ply][1], si);
 	move_t m;
 	while ((m = next_move(&mp))) {
 		int move_number = mp.index - 1;
@@ -315,6 +338,15 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	int bound = (best_eval >= beta) ? BOUND_LOWER : (pv_node && bestmove) ? BOUND_EXACT : BOUND_UPPER;
 	transposition_store(si->tt, pos, adjust_score_mate_store(best_eval, ply), depth, bound, bestmove);
 	assert(-VALUE_INFINITE < best_eval && best_eval < VALUE_INFINITE);
+#if 0
+	if (!pv_node && !checkers) {
+		eval = quiescence(pos, ply + 1, razor_alpha - 1, razor_alpha, si);
+		if (eval < razor_alpha) {
+			/* Razoring happens but it is in fact a fail low. */
+			fprintf(f, "%d,%d,%d,%d,%d\n", depth, razor_alpha, static_eval, cut_node, bound == BOUND_UPPER);
+		}
+	}
+#endif
 	return best_eval;
 }
 
@@ -325,7 +357,7 @@ int32_t aspiration_window(struct position *pos, int depth, int32_t last, struct 
 	int32_t beta = MIN(last + delta, VALUE_MATE);
 
 	while (!si->interrupt || interrupt) {
-		evaluation = negamax(pos, depth, 0, alpha, beta, 0, 0, si);
+		evaluation = negamax(pos, depth, 0, alpha, beta, 0, FLAG_NONE, si);
 
 		if (evaluation <= alpha) {
 			alpha = MAX(alpha - delta, -VALUE_MATE);
@@ -381,7 +413,7 @@ int32_t search(struct position *pos, int depth, int verbose, int etime, int move
 
 		/* Minimum seems to be around d <= 5. */
 		if (d <= 5 || !iterative)
-			eval = negamax(pos, d, 0, -VALUE_MATE, VALUE_MATE, 0, 0, &si);
+			eval = negamax(pos, d, 0, -VALUE_MATE, VALUE_MATE, 0, FLAG_NONE, &si);
 		else
 			eval = aspiration_window(pos, d, eval, &si);
 

@@ -568,7 +568,7 @@ void print_history_pgn(const struct history *h) {
 		printf("\n");
 }
 
-int has_big_piece(const struct position *pos) {
+int has_sliding_piece(const struct position *pos) {
 	return pos->piece[pos->turn][queen] || pos->piece[pos->turn][rook] || pos->piece[pos->turn][queen];
 }
 
