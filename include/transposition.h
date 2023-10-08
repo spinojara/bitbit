@@ -33,9 +33,9 @@
 
 enum {
 	BOUND_NONE  = 0,
-	BOUND_EXACT = 1,
+	BOUND_LOWER = 1,
 	BOUND_UPPER = 2,
-	BOUND_LOWER = 3,
+	BOUND_EXACT = 3,
 };
 
 struct transposition {
@@ -43,7 +43,7 @@ struct transposition {
 	int16_t eval;
 	uint8_t depth;
 	uint8_t bound;
-	uint16_t m;
+	uint16_t move;
 };
 
 struct transpositiontable {
@@ -71,11 +71,11 @@ static inline struct transposition *transposition_probe(const struct transpositi
 	return NULL;
 }
 
-static inline void transposition_set(struct transposition *e, const struct position *pos, int32_t evaluation, int depth, int bound, move_t m) {
+static inline void transposition_set(struct transposition *e, const struct position *pos, int32_t evaluation, int depth, int bound, move_t move) {
 	assert(-VALUE_INFINITE < evaluation && evaluation < VALUE_INFINITE);
 	/* Keep old move_t if none available. */
-	if (m)
-		e->m = (uint16_t)m;
+	if (move)
+		e->move = (uint16_t)move;
 	e->zobrist_key = pos->zobrist_key;
 	e->eval = evaluation;
 	e->depth = depth;

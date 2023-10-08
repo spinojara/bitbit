@@ -116,6 +116,8 @@ static inline int32_t evaluate(const struct position *pos) {
 }
 
 int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, struct searchinfo *si) {
+	const int pv_node = (beta != alpha + 1);
+
 	uint64_t checkers = generate_checkers(pos, pos->turn);
 	int32_t eval = evaluate(pos), best_eval = -VALUE_INFINITE;
 
@@ -125,30 +127,52 @@ int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, s
 	if (!move_list[0])
 		return checkers ? -VALUE_MATE + ply : eval;
 
+	if (ply >= DEPTH_MAX)
+		return checkers ? 0 : eval;
+
+	if (pos->halfmove >= 100 || (option_history && is_repetition(pos, si->history, ply, 1 + pv_node)))
+		return draw(si);
+
+
+	struct transposition *e = transposition_probe(si->tt, pos);
+	int32_t tteval = e ? adjust_score_mate_get(e->eval, ply) : VALUE_NONE;
+	move_t ttmove = e ? e->move : 0;
+	if (!pv_node && e && e->bound & (tteval >= beta ? BOUND_LOWER : BOUND_UPPER))
+		return tteval;
+
 	if (!checkers) {
-		if (eval >= beta)
+		if (e && e->bound & (tteval >= beta ? BOUND_LOWER : BOUND_UPPER))
+			best_eval = tteval;
+		else
+			best_eval = eval;
+
+		if (best_eval >= beta)
 			return beta;
-		if (eval > alpha)
-			alpha = eval;
-		best_eval = eval;
+		if (best_eval > alpha)
+			alpha = best_eval;
 	}
 
 	struct movepicker mp;
-	movepicker_init(&mp, pos, move_list, 0, 0, 0, si);
+	movepicker_init(&mp, pos, move_list, ttmove, 0, 0, si);
+	move_t best_move = 0;
 	move_t m;
 	while ((m = next_move(&mp))) {
-		assert(checkers || is_capture(pos, &m) || move_promote(&m) == 3);
-		if (is_capture(pos, &m) && !checkers && mp.stage > STAGE_OKCAPTURE)
+		if (!checkers && mp.stage > STAGE_OKCAPTURE && move_promote(&m) != 3)
 			continue;
+		if (option_history)
+			si->history->zobrist_key[si->history->ply + ply] = pos->zobrist_key;
+		do_zobrist_key(pos, &m);
 		do_endgame_key(pos, &m);
 		do_move(pos, &m);
 		si->nodes++;
 		do_accumulator(pos, &m);
 		eval = -quiescence(pos, ply + 1, -beta, -alpha, si);
+		undo_zobrist_key(pos, &m);
 		undo_endgame_key(pos, &m);
 		undo_move(pos, &m);
 		undo_accumulator(pos, &m);
 		if (eval > best_eval) {
+			best_move = m;
 			best_eval = eval;
 			if (eval > alpha) {
 				alpha = eval;
@@ -158,23 +182,26 @@ int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, s
 		}
 	}
 	assert(-VALUE_INFINITE < best_eval && best_eval < VALUE_INFINITE);
+	int bound = (best_eval >= beta) ? BOUND_LOWER : (pv_node && best_move) ? BOUND_EXACT : BOUND_UPPER;
+	transposition_store(si->tt, pos, adjust_score_mate_store(best_eval, ply), 0, bound, best_move);
 	return best_eval;
 }
 
 /* check for ply and depth out of bound */
 int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t beta, int cut_node, int flag, struct searchinfo *si) {
-	int32_t eval, best_eval = -VALUE_INFINITE;
+	if (interrupt || si->interrupt)
+		return 0;
+	if ((si->nodes & (0x1000 - 1)) == 0)
+		check_time(si);
+
+	int32_t eval = VALUE_NONE, best_eval = -VALUE_INFINITE;
 	depth = MAX(0, depth);
+
 
 	const int root_node = (ply == 0);
 	const int pv_node = (beta != alpha + 1);
 
 	assert(!(pv_node && cut_node));
-
-	if (interrupt || si->interrupt)
-		return 0;
-	if ((si->nodes & (0x1000 - 1)) == 0)
-		check_time(si);
 
 	if (!root_node) {
 		/* draws */
@@ -189,22 +216,16 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	}
 
 	struct transposition *e = transposition_probe(si->tt, pos);
-	move_t ttmove = e ? e->m : 0;
-	if (e && e->depth >= depth && !pv_node) {
-		eval = adjust_score_mate_get(e->eval, ply);
-		if (e->bound == BOUND_EXACT)
-			return eval;
-		else if (e->bound == BOUND_LOWER && eval >= beta)
-			return beta;
-		else if (e->bound == BOUND_UPPER && eval <= alpha)
-			return alpha;
-	}
+	int32_t tteval = e ? adjust_score_mate_get(e->eval, ply) : VALUE_NONE;
+	move_t ttmove = root_node ? si->pv[0][0] : e ? e->move : 0;
+	if (!pv_node && e && e->depth >= depth && e->bound & (tteval >= beta ? BOUND_LOWER : BOUND_UPPER))
+		return tteval;
 	
 	uint64_t checkers = generate_checkers(pos, pos->turn);
 	if (depth == 0 && !checkers)
 		return quiescence(pos, ply, alpha, beta, si);
 
-	//int32_t static_eval = evaluate(pos);
+	int32_t static_eval = evaluate(pos);
 #if 0
 	/* Futility pruning. */
 	if (!pv_node && !checkers && depth <= 6 && static_eval - 200 > beta)
@@ -212,7 +233,7 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 #endif
 #if 0
 	/* Null move pruning. */
-	if (cut_node && !checkers && flag != FLAG_NULL_MOVE && static_eval >= beta && depth >= 3 && has_sliding_piece(pos)) {
+	if (!pv_node && !checkers && flag != FLAG_NULL_MOVE && static_eval >= beta && depth >= 3 && has_sliding_piece(pos)) {
 		int reduction = 3;
 		int new_depth = CLAMP(depth - reduction, 1, depth);
 		int ep = pos->en_passant;
@@ -260,7 +281,7 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	if (!move_list[0])
 		return checkers ? -VALUE_MATE + ply : 0;
 
-	uint16_t bestmove = 0;
+	move_t best_move = 0;
 
 	struct movepicker mp;
 	movepicker_init(&mp, pos, move_list, ttmove, si->killers[ply][0], si->killers[ply][1], si);
@@ -313,11 +334,12 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 		if (interrupt || si->interrupt)
 			return 0;
 
+		assert(eval != VALUE_NONE);
 		if (eval > best_eval) {
 			best_eval = eval;
 
 			if (eval > alpha) {
-				bestmove = m;
+				best_move = m;
 
 				if (pv_node)
 					store_pv_move(&m, ply, si->pv);
@@ -335,8 +357,8 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 			}
 		}
 	}
-	int bound = (best_eval >= beta) ? BOUND_LOWER : (pv_node && bestmove) ? BOUND_EXACT : BOUND_UPPER;
-	transposition_store(si->tt, pos, adjust_score_mate_store(best_eval, ply), depth, bound, bestmove);
+	int bound = (best_eval >= beta) ? BOUND_LOWER : (pv_node && best_move) ? BOUND_EXACT : BOUND_UPPER;
+	transposition_store(si->tt, pos, adjust_score_mate_store(best_eval, ply), depth, bound, best_move);
 	assert(-VALUE_INFINITE < best_eval && best_eval < VALUE_INFINITE);
 #if 0
 	if (!pv_node && !checkers) {
@@ -405,7 +427,7 @@ int32_t search(struct position *pos, int depth, int verbose, int etime, int move
 		return eval;
 	}
 
-	move_t bestmove = 0;
+	move_t best_move = 0;
 	for (int d = iterative ? 1 : depth; d <= depth; d++) {
 		si.root_depth = d;
 		if (verbose)
@@ -420,7 +442,7 @@ int32_t search(struct position *pos, int depth, int verbose, int etime, int move
 		/* 16 elo.
 		 * Use move_t even from a partial and interrupted search.
 		 */
-		bestmove = si.pv[0][0];
+		best_move = si.pv[0][0];
 		best_eval = eval;
 
 		if (interrupt || si.interrupt)
@@ -446,9 +468,9 @@ int32_t search(struct position *pos, int depth, int verbose, int etime, int move
 	}
 
 	if (verbose && !interrupt)
-		printf("bestmove %s\n", move_str_algebraic(str, &bestmove));
+		printf("bestmove %s\n", move_str_algebraic(str, &best_move));
 	if (m && !interrupt)
-		*m = bestmove;
+		*m = best_move;
 
 	return best_eval;
 }
