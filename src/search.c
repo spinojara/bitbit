@@ -163,7 +163,7 @@ int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, s
 
 /* check for ply and depth out of bound */
 int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t beta, int cut_node, int flag, struct searchinfo *si) {
-	int32_t eval, best_eval = -VALUE_INFINITE;
+	int32_t eval = VALUE_NONE, best_eval = -VALUE_INFINITE;
 	depth = MAX(0, depth);
 
 	const int root_node = (ply == 0);
@@ -283,7 +283,7 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 		}
 		new_depth += extensions;
 		int new_flag = FLAG_NONE;
-		/* late move_t reductions */
+		/* late move reductions */
 		int full_depth_search = 0;
 		if (depth >= 2 && !checkers && move_number >= (1 + pv_node) && (!move_capture(&m) || cut_node)) {
 			int r = late_move_reduction(move_number, depth);
@@ -291,19 +291,43 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 			r += !move_capture(&m);
 			r += cut_node;
 			int lmr_depth = CLAMP(new_depth - r, 1, new_depth);
+			/* Since this is a child of either a pv, all, or cut node and it is not the first
+			 * child it is an expected cut node. Instead of searching in [-beta, -alpha], we
+			 * expect there to be a cut and it should suffice to search in [-alpha - 1, -alpha].
+			 */
 			eval = -negamax(pos, lmr_depth, ply + 1, -alpha - 1, -alpha, 1, new_flag, si);
 
+			/* If eval > alpha, then negamax < -alpha but we expected negamax >= -alpha. We
+			 * must therefore research this node.
+			 */
 			if (eval > alpha)
 				full_depth_search = 1;
 		}
 		else {
+			/* If this is not a pv node, then alpha = beta + 1 or, -beta = -alpha - 1.
+			 * Our full depth search will thus search in the full interval [-beta, -alpha].
+			 * If this is a pv node and we are not at the first child, then the child is
+			 * an expected cut node. We should thus do a full depth search.
+			 */
 			full_depth_search = !pv_node || move_number;
 		}
 
+		/* Do a full depth search of our node. This is no longer neccessarily an expected cut node
+		 * since it is possibly the first child of a cut node. !cut_node || move_number.
+		 */
 		if (full_depth_search)
+			//eval = -negamax(pos, new_depth, ply + 1, -alpha - 1, -alpha, !cut_node || move_number, new_flag, si);
 			eval = -negamax(pos, new_depth, ply + 1, -alpha - 1, -alpha, !cut_node, new_flag, si);
 
-		if (pv_node && (!move_number || (eval > alpha && (root_node || eval < beta))))
+		/* We should only do this search for new possible pv nodes. There are two cases.
+		 * For the first case we are in a pv node and it is our first child, this is a pv
+		 * node.
+		 * For the second case we are in a pv node and it is not our first child. Our
+		 * previous full depth search was expected to fail high but it did not. In fact
+		 * eval > alpha again implies negamax < -alpha, but we expected negamax >= -alpha.
+		 */
+		assert((pv_node && !move_number) == (eval == VALUE_NONE));
+		if (pv_node && (!move_number || eval > alpha))
 			eval = -negamax(pos, new_depth, ply + 1, -beta, -alpha, 0, new_flag, si);
 
 		undo_zobrist_key(pos, &m);
