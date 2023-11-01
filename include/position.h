@@ -138,7 +138,7 @@ char *pos_to_fen(char *fen, const struct position *pos);
 
 int fen_is_ok(int argc, char **argv);
 
-void print_position(const struct position *pos, int flip);
+void print_position(const struct position *pos);
 
 int pos_are_equal(const struct position *pos1, const struct position *pos2);
 

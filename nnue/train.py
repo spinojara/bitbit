@@ -42,8 +42,8 @@ save_every = 1
 batch_size = 16384
 
 batch.lib.batch_init()
-training_data = batch.lib.batch_open(b'train.bin', batch_size, 0.8)
-validation_data = batch.lib.batch_open(b'val.bin', batch_size, 0)
+training_data = batch.lib.batch_open(b'5d52m.bin', batch_size, 0.8)
+validation_data = batch.lib.batch_open(b'6d500k.bin', batch_size, 0)
 
 total_time = time.time()
 for epoch in range(1, epochs + 1):

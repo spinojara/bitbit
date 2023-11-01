@@ -1,34 +1,48 @@
-MAJOR = 1
-MINOR = 0
-VERSION = $(MAJOR).$(MINOR)
+MAJOR     = 1
+MINOR     = 0
+VERSION   = $(MAJOR).$(MINOR)
 
-CC = cc
+KERNEL    = $(shell uname -s)
+ARCH      = $(shell uname -m)
+ifneq ($(findstring x86, $(ARCH)), )
+	ARCH = -march=native -mtune=native
+else ifneq ($(findstring arm, $(ARCH)), )
+	ARCH = -march=native -mtune=native
+else ifneq ($(findstring ppc64, $(ARCH)), )
+	ARCH = -mtune=native
+endif
+
+CC        = cc
 CSTANDARD = -std=c11
-CWARNINGS = -Wall -Wextra -Wshadow -pedantic -Wno-unused-result
-ARCH = native
-COPTIMIZE = -O2 -march=$(ARCH) -flto
+CWARNINGS = -Wall -Wextra -Wshadow -pedantic -Wno-unused-result -Wvla
+COPTIMIZE = -O2 $(ARCH) -flto
 
 ifeq ($(DEBUG), 1)
-	CDEBUG = -g3 -ggdb
+	CDEBUG    = -g3 -ggdb
 else ifeq ($(DEBUG), 2)
-	CDEBUG = -g3 -ggdb -fsanitize=address,undefined
+	CDEBUG    = -g3 -ggdb -fsanitize=address,undefined
 else ifeq ($(DEBUG), 3)
-	CDEBUG = -g3 -ggdb -fsanitize=address,undefined
+	CDEBUG    = -g3 -ggdb -fsanitize=address,undefined
 	COPTIMIZE =
 else
-	CDEBUG = -DNDEBUG
+	CDEBUG    = -DNDEBUG
 endif
 
-CFLAGS = $(CSTANDARD) $(CWARNINGS) $(COPTIMIZE) $(CDEBUG)
+CFLAGS  = $(CSTANDARD) $(CWARNINGS) $(COPTIMIZE) $(CDEBUG) -pthread
+LDFLAGS = $(CFLAGS)
+LDLIBS  = -lm
 
 ifeq ($(SIMD), avx2)
-	CFLAGS += -DAVX2 -mavx2
+	CFLAGS  += -DAVX2 -mavx2
+	LDFLAGS += -DAVX2 -mavx2
 endif
 ifeq ($(SIMD), sse4)
-	CFLAGS += -DSSE4 -msse4
+	CFLAGS  += -DSSE4 -msse4
+	LDFLAGS += -DSSE4 -msse4
 endif
 ifeq ($(SIMD), sse2)
-	CFLAGS += -DSSE2 -msse2
+	CFLAGS  += -DSSE2 -msse2
+	LDFLAGS += -DSSE2 -msse2
 endif
 
 ifeq ($(TT), )
@@ -40,11 +54,14 @@ else
 	NEEDWEIGHTS = yes
 endif
 
+ifneq ($(SYZYGY), )
+	LDLIBS += -lfathom
+	DSYZYGY = -DSYZYGY=$(SYZYGY)
+endif
+
 ifeq ($(wildcard src/nnueweights.c), )
 	NEEDWEIGHTS = yes
 endif
-
-LDFLAGS = $(CFLAGS)
 
 SRC_BITBIT     = bitbit.c bitboard.c magicbitboard.c attackgen.c \
                  move.c util.c position.c movegen.c perft.c \
@@ -115,34 +132,34 @@ MAN6DIR = $(MANDIR)/man6
 all: bitbit gennnue genepd histogram pgnbin texeltune genbitbase libbatch.so libvisualize.so
 
 bitbit: $(OBJ_BITBIT)
-	$(CC) $(LDFLAGS) -lm $^ -o $@
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 gennnue: $(OBJ_GENNNUE)
-	$(CC) $(LDFLAGS) -lm -pthread $^ -o $@
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 genepd: $(OBJ_GENEPD)
-	$(CC) $(LDFLAGS) -lm $^ -o $@
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 histogram: $(OBJ_HISTOGRAM)
-	$(CC) $(LDFLAGS) -lm $^ -o $@
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 pgnbin: $(OBJ_PGNBIN)
-	$(CC) $(LDFLAGS) -lm $^ -o $@
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 texeltune: $(OBJ_TEXELTUNE)
-	$(CC) $(LDFLAGS) -lm $^ -o $@
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 genbitbase: $(OBJ_GENBITBASE)
-	$(CC) $(LDFLAGS) $^ -o $@
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 libbatch.so: $(OBJ_BATCH)
-	$(CC) $(LDFLAGS) -shared $^ -o $@
+	$(CC) $(LDFLAGS) -shared $^ $(LDLIBS) -o $@
 
 libvisualize.so: $(OBJ_VISUALIZE)
-	$(CC) $(LDFLAGS) -shared $^ -o $@
+	$(CC) $(LDFLAGS) -shared $^ $(LDLIBS) -o $@
 
 nnuesource: $(OBJ_NNUESOURCE)
-	$(CC) $(LDFLAGS) $^ -o $@
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 obj/nnueweights.o: src/nnueweights.c Makefile
 	@mkdir -p obj
@@ -158,15 +175,19 @@ obj/interface.o: src/interface.c dep/interface.d Makefile
 
 obj/texelevaluate.o: src/evaluate.c dep/evaluate.d Makefile
 	@mkdir -p obj
-	$(CC) $(CFLAGS) -Iinclude -DTRACE -DTT=$(TT) -c $< -o $@
+	$(CC) $(CFLAGS) -Iinclude -DTRACE -c $< -o $@
+
+obj/gennnue.o: src/gennnue.c dep/gennnue.d Makefile
+	@mkdir -p obj
+	$(CC) $(CFLAGS) -Iinclude $(DSYZYGY) -c $< -o $@
 
 obj/texelpawn.o: src/pawn.c dep/pawn.d Makefile
 	@mkdir -p obj
-	$(CC) $(CFLAGS) -Iinclude -DTRACE -DTT=$(TT) -c $< -o $@
+	$(CC) $(CFLAGS) -Iinclude -DTRACE -c $< -o $@
 
 obj/texeltune.o: src/texeltune.c dep/texeltune.d Makefile
 	@mkdir -p obj
-	$(CC) $(CFLAGS) -Iinclude -DTRACE -DTT=$(TT) -c $< -o $@
+	$(CC) $(CFLAGS) -Iinclude -DTRACE -c $< -o $@
 
 obj/pic%.o: src/%.c dep/%.d Makefile
 	@mkdir -p obj
@@ -204,6 +225,7 @@ options:
 	@echo "CC      = $(CC)"
 	@echo "CFLAGS  = $(CFLAGS)"
 	@echo "LDFLAGS = $(LDFLAGS)"
+	@echo "LDLIBS  = $(LDLIBS)"
 
 .PHONY: all clean install uninstall options dep/nnueweights.d
 .PRECIOUS: dep/%.d

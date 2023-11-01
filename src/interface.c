@@ -166,7 +166,7 @@ int interface_position(int argc, char **argv) {
 		if (strcmp(argv[n], "moves") == 0)
 			break;
 	if (argc < 2) {
-		print_position(&pos, 0);
+		print_position(&pos);
 		char t[128];
 		printf("turn: %c\n", "bw"[pos.turn]);
 		printf("castling: %s\n", castle_string(t, pos.castle));

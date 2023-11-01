@@ -115,8 +115,10 @@ static inline int32_t evaluate(const struct position *pos) {
 	return evaluation;
 }
 
-int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, struct searchinfo *si) {
+int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, struct searchinfo *si, struct searchstack *ss) {
 	const int pv_node = (beta != alpha + 1);
+
+	si->history->zobrist_key[si->history->ply + ply] = pos->zobrist_key;
 
 	uint64_t checkers = generate_checkers(pos, pos->turn);
 	int32_t eval = evaluate(pos), best_eval = -VALUE_INFINITE;
@@ -159,14 +161,13 @@ int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, s
 	while ((m = next_move(&mp))) {
 		if (!checkers && mp.stage > STAGE_OKCAPTURE && move_promote(&m) != 3)
 			continue;
-		if (option_history)
-			si->history->zobrist_key[si->history->ply + ply] = pos->zobrist_key;
 		do_zobrist_key(pos, &m);
 		do_endgame_key(pos, &m);
 		do_move(pos, &m);
+		ss->move = m;
 		si->nodes++;
 		do_accumulator(pos, &m);
-		eval = -quiescence(pos, ply + 1, -beta, -alpha, si);
+		eval = -quiescence(pos, ply + 1, -beta, -alpha, si, ss + 1);
 		undo_zobrist_key(pos, &m);
 		undo_endgame_key(pos, &m);
 		undo_move(pos, &m);
@@ -188,15 +189,16 @@ int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, s
 }
 
 /* check for ply and depth out of bound */
-int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t beta, int cut_node, int flag, struct searchinfo *si) {
+int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t beta, int cut_node, struct searchinfo *si, struct searchstack *ss) {
 	if (interrupt || si->interrupt)
 		return 0;
 	if ((si->nodes & (0x1000 - 1)) == 0)
 		check_time(si);
 
+	si->history->zobrist_key[si->history->ply + ply] = pos->zobrist_key;
+
 	int32_t eval = VALUE_NONE, best_eval = -VALUE_INFINITE;
 	depth = MAX(0, depth);
-
 
 	const int root_node = (ply == 0);
 	const int pv_node = (beta != alpha + 1);
@@ -215,9 +217,9 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 			return alpha;
 	}
 
-	move_t excluded_move = 0;
+	move_t excluded_move = ss->excluded_move;
 
-	struct transposition *e = transposition_probe(si->tt, pos);
+	struct transposition *e = excluded_move ? NULL : transposition_probe(si->tt, pos);
 	int32_t tteval = e ? adjust_score_mate_get(e->eval, ply) : VALUE_NONE;
 	move_t ttmove = root_node ? si->pv[0][0] : e ? e->move : 0;
 	if (!pv_node && e && e->depth >= depth && e->bound & (tteval >= beta ? BOUND_LOWER : BOUND_UPPER))
@@ -225,16 +227,18 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	
 	uint64_t checkers = generate_checkers(pos, pos->turn);
 	if (depth == 0 && !checkers)
-		return quiescence(pos, ply, alpha, beta, si);
+		return quiescence(pos, ply, alpha, beta, si, ss);
 
 	if (checkers)
 		goto skip_pruning;
 
+#if 0
 	int32_t static_eval = evaluate(pos);
+#endif
 #if 0
 	/* Razoring. */
 	if (!pv_node && depth <= 8 && static_eval + 300 + 250 * depth * depth < alpha) {
-		eval = quiescence(pos, ply + 1, alpha - 1, alpha, si);
+		eval = quiescence(pos, ply + 1, alpha - 1, alpha, si, ss + 1);
 		if (eval < alpha)
 			return eval;
 	}
@@ -246,15 +250,16 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 #endif
 #if 0
 	/* Null move pruning. */
-	if (!pv_node && flag != FLAG_NULL_MOVE && static_eval >= beta && depth >= 3 && has_sliding_piece(pos)) {
+	if (!pv_node && (ss - 1)->move && static_eval >= beta && depth >= 3 && has_sliding_piece(pos)) {
 		int reduction = 3;
 		int new_depth = CLAMP(depth - reduction, 1, depth);
 		int ep = pos->en_passant;
 		do_null_zobrist_key(pos, 0);
 		do_null_move(pos, 0);
+		ss->move = 0;
 		if (option_history)
 			si->history->zobrist_key[si->history->ply + ply] = pos->zobrist_key;
-		eval = -negamax(pos, new_depth, ply + 1, -beta, -beta + 1, !cut_node, FLAG_NULL_MOVE, si);
+		eval = -negamax(pos, new_depth, ply + 1, -beta, -beta + 1, !cut_node, si, ss + 1);
 		do_null_zobrist_key(pos, ep);
 		do_null_move(pos, ep);
 		if (eval >= beta)
@@ -263,13 +268,18 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 #endif
 #if 1
 	/* Internal iterative deepening. */
-	if ((pv_node || cut_node) && depth >= 5 && !ttmove) {
+	if ((pv_node || cut_node) && !excluded_move && depth >= 4 && !ttmove) {
 		int reduction = 3;
 		int new_depth = depth - reduction;
-		negamax(pos, new_depth, ply, alpha, beta, cut_node, FLAG_NONE, si);
+		negamax(pos, new_depth, ply, alpha, beta, cut_node, si, ss);
 		struct transposition *ne = transposition_probe(si->tt, pos);
-		if (ne)
-			ttmove = ne->move;
+		if (ne) {
+			if (!e || ne->depth >= e->depth) {
+				e = ne;
+				tteval = adjust_score_mate_get(e->eval, ply);
+			}
+			ttmove = e->move;
+		}
 	}
 #endif
 #if 1
@@ -298,26 +308,83 @@ skip_pruning:;
 	while ((m = next_move(&mp))) {
 		int move_number = mp.index - 1;
 
+		if (m == excluded_move)
+			continue;
+
 		/* Extensions. */
 		int extensions = 0;
 		if (ply < 2 * si->root_depth) {
-			if (!root_node && ttmove == m && !excluded_move && e->bound & BOUND_LOWER && e->depth >= depth - 3) {
+			if (checkers || !move_list[1]) {
+				extensions = 1;
 			}
-		}
+#if 1
+			else if (!root_node && depth >= 5 && ttmove == m && !excluded_move && e->bound & BOUND_LOWER && e->depth >= depth - 3) {
+				int reduction = 3;
+				int new_depth = depth - reduction;
 
-		if (option_history)
-			si->history->zobrist_key[si->history->ply + ply] = pos->zobrist_key;
+				int32_t singular_beta = tteval - 4 * depth;
+
+				ss->excluded_move = m;
+				eval = negamax(pos, new_depth, ply, singular_beta - 1, singular_beta, cut_node, si, ss);
+				ss->excluded_move = 0;
+
+				//char fen[128];
+				/* If eval < singular_beta we have the following inequalities,
+				 * eval < singular_beta < tteval < exact_tteval since tteval is
+				 * a lower bound. In particular all moves except ttmove fail
+				 * low on [singular_beta - 1, singular_beta] and ttmove is the
+				 * single best move by some margin.
+				 */
+				if (eval < singular_beta) {
+#if 0
+					printf("%s\n", pos_to_fen(fen, pos));
+					print_move(&ttmove);
+					printf("\n%d\n", tteval);
+					printf("%d\n", singular_beta);
+					printf("%d\n", eval);
+#endif
+					extensions = 1;
+				}
+#if 0
+				/* If singular_beta >= beta and the search did not fail low,
+				 * it failed high. ttmove fails high for the search [alpha, beta]
+				 * and some other move fails high for [singular_beta - 1, singular_beta].
+				 * In particular since singular_beta >= beta, the move fails high also for
+				 * [alpha, beta] and there are at least 2 moves which make the search
+				 * [alpha, beta] fail high. We assume that at least one of the two moves
+				 * fail high also for the higher depth search and we have a beta cutoff.
+				 */
+#if 1
+				else if (singular_beta >= beta) {
+					return singular_beta;
+				}
+#endif
+#if 1
+				/* We get the following inequalities,
+				 * eval < singular_beta < beta < tteval < exact_tteval.
+				 */
+				else if (tteval >= beta) {
+					extensions = -2;
+				}
+				else if (tteval <= alpha && tteval <= eval) {
+					extensions = -1;
+				}
+#endif
+#endif
+			}
+#endif
+		}
 
 		do_zobrist_key(pos, &m);
 		do_endgame_key(pos, &m);
 		do_move(pos, &m);
+		ss->move = m;
 		si->nodes++;
 		do_accumulator(pos, &m);
 
 		int new_depth = depth - 1;
 
 		new_depth += extensions;
-		int new_flag = FLAG_NONE;
 
 		/* Late move reductions. */
 		int full_depth_search = 0;
@@ -336,7 +403,7 @@ skip_pruning:;
 			 * child it is an expected cut node. Instead of searching in [-beta, -alpha], we
 			 * expect there to be a cut and it should suffice to search in [-alpha - 1, -alpha].
 			 */
-			eval = -negamax(pos, lmr_depth, ply + 1, -alpha - 1, -alpha, 1, new_flag, si);
+			eval = -negamax(pos, lmr_depth, ply + 1, -alpha - 1, -alpha, 1, si, ss + 1);
 
 			/* If eval > alpha, then negamax < -alpha but we expected negamax >= -alpha. We
 			 * must therefore research this node.
@@ -357,7 +424,7 @@ skip_pruning:;
 		 * since it is possibly the first child of a cut node.
 		 */
 		if (full_depth_search)
-			eval = -negamax(pos, new_depth, ply + 1, -alpha - 1, -alpha, !cut_node || move_number, new_flag, si);
+			eval = -negamax(pos, new_depth, ply + 1, -alpha - 1, -alpha, !cut_node || move_number, si, ss + 1);
 
 		/* We should only do this search for new possible pv nodes. There are two cases.
 		 * For the first case we are in a pv node and it is our first child, this is a pv
@@ -366,9 +433,8 @@ skip_pruning:;
 		 * previous full depth search was expected to fail high but it did not. In fact
 		 * eval > alpha again implies negamax < -alpha, but we expected negamax >= -alpha.
 		 */
-		assert((pv_node && !move_number) == (eval == VALUE_NONE));
 		if (pv_node && (!move_number || (eval > alpha && (root_node || eval < beta))))
-			eval = -negamax(pos, new_depth, ply + 1, -beta, -alpha, 0, new_flag, si);
+			eval = -negamax(pos, new_depth, ply + 1, -beta, -alpha, 0, si, ss + 1);
 
 		undo_zobrist_key(pos, &m);
 		undo_endgame_key(pos, &m);
@@ -401,28 +467,21 @@ skip_pruning:;
 		}
 	}
 	int bound = (best_eval >= beta) ? BOUND_LOWER : (pv_node && best_move) ? BOUND_EXACT : BOUND_UPPER;
-	transposition_store(si->tt, pos, adjust_score_mate_store(best_eval, ply), depth, bound, best_move);
+	if (!excluded_move)
+		transposition_store(si->tt, pos, adjust_score_mate_store(best_eval, ply), depth, bound, best_move);
 	assert(-VALUE_INFINITE < best_eval && best_eval < VALUE_INFINITE);
-#if 0
-	if (!pv_node && !checkers) {
-		eval = quiescence(pos, ply + 1, razor_alpha - 1, razor_alpha, si);
-		if (eval < razor_alpha) {
-			/* Razoring happens but it is in fact a fail low. */
-			fprintf(f, "%d,%d,%d,%d,%d\n", depth, razor_alpha, static_eval, cut_node, bound == BOUND_UPPER);
-		}
-	}
-#endif
+
 	return best_eval;
 }
 
-int32_t aspiration_window(struct position *pos, int depth, int32_t last, struct searchinfo *si) {
+int32_t aspiration_window(struct position *pos, int depth, int32_t last, struct searchinfo *si, struct searchstack *ss) {
 	int32_t evaluation = VALUE_NONE;
 	int32_t delta = 25 + last * last / 16384;
 	int32_t alpha = MAX(last - delta, -VALUE_MATE);
 	int32_t beta = MIN(last + delta, VALUE_MATE);
 
 	while (!si->interrupt || interrupt) {
-		evaluation = negamax(pos, depth, 0, alpha, beta, 0, FLAG_NONE, si);
+		evaluation = negamax(pos, depth, 0, alpha, beta, 0, si, ss);
 
 		if (evaluation <= alpha) {
 			alpha = MAX(alpha - delta, -VALUE_MATE);
@@ -454,6 +513,8 @@ int32_t search(struct position *pos, int depth, int verbose, int etime, int move
 	si.tt = tt;
 	si.history = history;
 
+	struct searchstack ss[DEPTH_MAX + 1] = { 0 };
+
 	time_init(pos, etime, &si);
 
 	char str[8];
@@ -478,9 +539,9 @@ int32_t search(struct position *pos, int depth, int verbose, int etime, int move
 
 		/* Minimum seems to be around d <= 5. */
 		if (d <= 5 || !iterative)
-			eval = negamax(pos, d, 0, -VALUE_MATE, VALUE_MATE, 0, FLAG_NONE, &si);
+			eval = negamax(pos, d, 0, -VALUE_MATE, VALUE_MATE, 0, &si, ss + 1);
 		else
-			eval = aspiration_window(pos, d, eval, &si);
+			eval = aspiration_window(pos, d, eval, &si, ss + 1);
 
 		/* 16 elo.
 		 * Use move_t even from a partial and interrupted search.

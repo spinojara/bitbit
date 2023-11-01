@@ -24,6 +24,10 @@
 #include <pthread.h>
 #include <stdatomic.h>
 #include <time.h>
+#include <math.h>
+#ifdef SYZYGY
+#include <tbprobe.h>
+#endif
 
 #include "position.h"
 #include "move.h"
@@ -40,15 +44,18 @@
 #include "transposition.h"
 #include "history.h"
 #include "timeman.h"
+#include "endgame.h"
 
-/* <x * 1024 * 1024> gives a <8 * x> hash table MiB */
+/* <x * 1024 * 1024> gives a <8 * x> MiB hash table.
+ * In particular x = 128 gives a 1024 MiB hash table.
+ */
 #define HASH_SIZE (128 * 1024 * 1024)
 
 #define HASH_INDEX (HASH_SIZE - 1)
 
 atomic_uint_least64_t *hash_table;
 
-const size_t tt_bytes_per_thread = 64 * 1024 * 1024;
+const size_t tt_GiB = 12;
 
 const int random_move_max_ply = 25;
 const int random_move_count = 7;
@@ -57,8 +64,11 @@ const int write_max_ply = 400;
 const int adj_draw_ply = 80;
 const int eval_limit = 3000;
 
-const int report_dot_every = 10000;
+const int report_dot_every = 1000;
+const int dots_per_clear = 20;
 const int report_every = 200000;
+
+time_t start = 0;
 
 const move_t synchronize_threads = M(a1, b4, 0, 0);
 
@@ -82,7 +92,10 @@ uint64_t dot_last_fens = 0;
 void report(uint64_t curr_fens, uint64_t fens) {
 	if (curr_fens != last_fens && curr_fens % report_every == 0) {
 		timepoint_t tp = time_now();
-		printf("\r%ld%% %ld fens at %ld fens/second\n", 100 * curr_fens / fens, curr_fens, tp - last_time ? 1000000 * (curr_fens - last_fens) / (tp - last_time) : 0);
+		time_t total = fens * (time(NULL) - start) / curr_fens;
+		time_t done = start + total;
+		printf("\r%ld%% %ld fens at %ld fens/second. Eta is %s", 100 * curr_fens / fens, curr_fens, tp - last_time ? 1000000 * (curr_fens - last_fens) / (tp - last_time) : 0,
+				ctime(&done));
 		fflush(stdout);
 		last_time = tp;
 		last_fens = curr_fens;
@@ -91,6 +104,8 @@ void report(uint64_t curr_fens, uint64_t fens) {
 
 void report_dot(uint64_t curr_fens) {
 	if (curr_fens != dot_last_fens && curr_fens % report_dot_every == 0) {
+		if (curr_fens % (dots_per_clear * report_dot_every) == 0)
+			printf("\33[2K\r");
 		printf(".");
 		fflush(stdout);
 		dot_last_fens = curr_fens;
@@ -106,7 +121,7 @@ static inline int position_already_written(struct position *pos) {
 	return 0;
 }
 
-int probable_long_draw(struct position *pos, struct history *h, int16_t eval, int *drawn_score_count) {
+int probable_long_draw(struct history *h, int32_t eval, int *drawn_score_count) {
 	if (h->ply >= adj_draw_ply && ABS(eval) <= 0)
 		++*drawn_score_count;
 	else
@@ -115,19 +130,10 @@ int probable_long_draw(struct position *pos, struct history *h, int16_t eval, in
 	if (*drawn_score_count >= 8)
 		return 1;
 
-	if (pos->piece[white][rook] || pos->piece[black][rook] ||
-			pos->piece[white][queen] || pos->piece[black][queen] ||
-			pos->piece[white][pawn] || pos->piece[black][pawn])
-		return 0;
-
-	int total_pieces = popcount(pos->piece[white][all] | pos->piece[black][all]);
-	if (total_pieces <= 4)
-		return 1;
-
 	return 0;
 }
 
-void random_move_flags(int random_move[random_move_max_ply], uint64_t *seed) {
+void random_move_flags(int *random_move, uint64_t *seed) {
 	for (int i = 0; i < random_move_max_ply; i++)
 		random_move[i] = (i < random_move_count);
 
@@ -145,8 +151,6 @@ struct threadinfo *choose_thread(struct threadinfo *threadinfo, int n_threads) {
 	int64_t most = -1;
 	for (ret = 0, thread = 0; thread < n_threads; thread++) {
 		int available = atomic_load(&threadinfo[thread].available);
-		if (available < 0)
-			printf("%d\n", available);
 		assert(available >= 0);
 		if (available >= most) {
 			most = available;
@@ -215,16 +219,6 @@ void write_thread(FILE *f, struct threadinfo *threadinfo, uint64_t *curr_fens, u
 	atomic_fetch_sub(&threadinfo->available, gen_fens);
 }
 
-void logstring(FILE *f, char *s) {
-	time_t ct;
-	struct tm lt;
-	ct = time(NULL);
-	localtime_r(&ct, &lt);
-	char t[128];
-	strftime(t, sizeof(t), "%H:%M:%S", &lt);
-	fprintf(f, "%s %s", t, s);
-}
-
 void *worker(void *arg) {
 	struct threadinfo *threadinfo;
 	pthread_mutex_lock(&lock);
@@ -233,11 +227,8 @@ void *worker(void *arg) {
 	int depth = threadinfo->depth;
 	uint64_t seed = threadinfo->seed;
 	int threadn = threadinfo->threadn;
-	struct transpositiontable tt = threadinfo->tt;
+	struct transpositiontable *tt = &threadinfo->tt;
 	pthread_mutex_unlock(&lock);
-	char filename[128];
-	sprintf(filename, "nnuegen.%d.log", threadn);
-	FILE *f = fopen(filename, "w");
 	
 	struct position pos;
 	struct history h;
@@ -245,7 +236,7 @@ void *worker(void *arg) {
 	startkey(&pos);
 	history_reset(&pos, &h);
 	move_t move_list[MOVES_MAX];
-	int random_move[random_move_max_ply];
+	int *random_move = malloc(random_move_max_ply * sizeof(*random_move));
 	random_move_flags(random_move, &seed);
 	move_t m;
 	int16_t eval;
@@ -256,32 +247,51 @@ void *worker(void *arg) {
 		m = 0;
 		/* maybe randomly vary depth */
 		int depth_now = depth;
-		logstring(f, "search\n");
-		eval = search(&pos, depth_now, 0, 0, 0, &m, &tt, &h, 0);
-		logstring(f, "done\n");
+		eval = search(&pos, depth_now, 0, 0, 0, &m, tt, &h, 0);
 
 		/* check for fens that we dont want to write */
 		int skip = is_capture(&pos, &m) || generate_checkers(&pos, pos.turn) ||
-			move_flag(&m) || position_already_written(&pos);
+			move_flag(&m) || position_already_written(&pos) || !bernoulli(exp(-pos.halfmove / 8.0), &seed);
+
+		int stop_game = !m || (eval != VALUE_NONE && ABS(eval) > eval_limit) ||
+				pos.halfmove >= 100 || h.ply >= write_max_ply ||
+				is_repetition(&pos, &h, 0, 2) || probable_long_draw(&h, eval, &drawn_score_count);
 
 		if (skip)
 			eval = VALUE_NONE;
+		else if (popcount(all_pieces(&pos)) <= 2)
+			eval = 0;
+#ifdef SYZYGY
+		else if (popcount(all_pieces(&pos)) <= TB_LARGEST) {
+			uint64_t _white = pos.piece[white][all];
+			uint64_t _black = pos.piece[black][all];
+			uint64_t _kings = pos.piece[white][king] | pos.piece[black][king];
+			uint64_t _queens = pos.piece[white][queen] | pos.piece[black][queen];
+			uint64_t _rooks = pos.piece[white][rook] | pos.piece[black][rook];
+			uint64_t _bishops = pos.piece[white][bishop] | pos.piece[black][bishop];
+			uint64_t _knights = pos.piece[white][knight] | pos.piece[black][knight];
+			uint64_t _pawns = pos.piece[white][pawn] | pos.piece[black][pawn];
+			unsigned _rule50 = 0;
+			unsigned _castling = 0;
+			unsigned _ep = 0;
+			int _turn = pos.turn;
+			unsigned ret = tb_probe_wdl(_white, _black, _kings, _queens, _rooks, _bishops, _knights, _pawns, _rule50, _castling, _ep, _turn);
+			if (ret == TB_DRAW) {
+				eval = 0;
+			}
+			else if (ret == TB_WIN)
+				eval = VALUE_WIN;
+			else if (ret == TB_LOSS)
+				eval = -VALUE_WIN;
+		}
+#endif
 
-		logstring(f, "stop_game\n");
-		int stop_game = !m || (eval != VALUE_NONE && ABS(eval) > eval_limit) ||
-				pos.halfmove >= 100 || h.ply >= write_max_ply ||
-				is_repetition(&pos, &h, 0, 2) || probable_long_draw(&pos, &h, eval, &drawn_score_count);
-		logstring(f, "done\n");
-
-		logstring(f, "cmove\n");
 		if (!stop_game && h.ply < random_move_max_ply && random_move[h.ply]) {
 			generate_all(&pos, move_list);
 			m = move_list[xorshift64(&seed) % move_count(move_list)];
 		}
-		logstring(f, "done\n");
 
 		if (stop_game) {
-			logstring(f, "reset\n");
 			eval = VALUE_NONE;
 			if (h.ply >= write_min_ply) {
 				if (!write(fd, &eval, 2)) {
@@ -306,17 +316,13 @@ void *worker(void *arg) {
 			history_reset(&pos, &h);
 			random_move_flags(random_move, &seed);
 
-			logstring(f, "done\n");
 			continue;
 		}
 		else {
-			logstring(f, "move\n");
 			history_next(&pos, &h, m);
-			logstring(f, "done\n");
 		}
 
 		if (h.ply == write_min_ply) {
-			logstring(f, "wpos\n");
 			m = 0;
 			if (!write(fd, &m, 2)) {
 				fprintf(stderr, "WRITE ERROR ON THREAD %d\n", threadn);
@@ -327,10 +333,8 @@ void *worker(void *arg) {
 				fprintf(stderr, "WRITE ERROR ON THREAD %d\n", threadn);
 				exit(1);
 			}
-			logstring(f, "done\n");
 		}
 		if (h.ply > write_min_ply) {
-			logstring(f, "wmove\n");
 			if (!write(fd, &eval, 2)) {
 				fprintf(stderr, "WRITE ERROR ON THREAD %d\n", threadn);
 				exit(1);
@@ -340,13 +344,10 @@ void *worker(void *arg) {
 				fprintf(stderr, "WRITE ERROR ON THREAD %d\n", threadn);
 				exit(1);
 			}
-			logstring(f, "done\n");
 		}
 
 	}
-	fclose(f);
 	fprintf(stderr, "EXITED THREAD %d\n", threadn);
-	exit(1);
 	return NULL;
 }
 
@@ -362,26 +363,32 @@ int main(int argc, char **argv) {
 	moveorder_init();
 	position_init();
 	transposition_init();
+	endgame_init();
 
-	hash_table = malloc(HASH_SIZE * sizeof(*hash_table));
-	memset(hash_table, 0, HASH_SIZE * sizeof(*hash_table));
+#ifdef SYZYGY
+	if (!tb_init(MACRO_VALUE(SYZYGY))) {
+		printf("Init for tablebase failed for path \"%s\".\n", MACRO_VALUE(SYZYGY));
+		exit(1);
+	}
+	printf("Tablebases found for up to %d pieces.\n", TB_LARGEST);
+#endif
+
+	hash_table = calloc(HASH_SIZE, sizeof(*hash_table));
 
 	option_history       = 1;
 	option_transposition = 1;
 	option_nnue          = 0;
 	option_endgame       = 1;
-	option_damp          = 0;
+	option_damp          = 1;
 
 	int n_threads = 12;
-	int depth = 7;
+	int depth = 5;
 	uint64_t fens = 500000000;
 
 	uint64_t seed = time(NULL);
 
-	pthread_t thread[n_threads];
-	struct threadinfo threadinfo[n_threads];
-
-	memset(threadinfo, 0, sizeof(threadinfo));
+	pthread_t *thread = malloc(n_threads * sizeof(*thread));
+	struct threadinfo *threadinfo = calloc(n_threads, sizeof(*threadinfo));
 
 	pthread_mutex_init(&lock, NULL);
 
@@ -391,9 +398,11 @@ int main(int argc, char **argv) {
 		threadinfo[i].depth = depth;
 		threadinfo[i].seed = seed + i;
 		threadinfo[i].threadn = i;
-		transposition_alloc(&threadinfo[i].tt, tt_bytes_per_thread);
+		transposition_alloc(&threadinfo[i].tt, tt_GiB * 1024 * 1024 * 1024 / n_threads);
 		pthread_create(&thread[i], NULL, worker, &threadinfo[i]);
 	}
+
+	start = time(NULL);
 
 	FILE *f = fopen("nnue.bin", "wb");
 
@@ -416,5 +425,8 @@ int main(int argc, char **argv) {
 
 	pthread_mutex_destroy(&lock);
 
+#ifdef SYZYGY
+	tb_free();
+#endif
 	free(hash_table);
 }

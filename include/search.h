@@ -32,6 +32,11 @@ enum {
 	FLAG_NULL_MOVE = 65,
 };
 
+struct searchstack {
+	move_t move;
+	move_t excluded_move;
+};
+
 struct searchinfo {
 	uint64_t nodes;
 
@@ -52,8 +57,6 @@ struct searchinfo {
 };
 
 int32_t search(struct position *pos, int depth, int verbose, int etime, int movetime, move_t *m, struct transpositiontable *tt, struct history *history, int iterative);
-
-int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, struct searchinfo *si);
 
 void search_init(void);
 

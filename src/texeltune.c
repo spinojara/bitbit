@@ -514,10 +514,8 @@ void arrays_init(void) {
 		size_t bytes = 2 * parameters[i].size * sizeof(double);
 		parameters[i].value = malloc(bytes);
 		parameters[i].grad = malloc(bytes);
-		parameters[i].m = malloc(bytes);
-		memset(parameters[i].m, 0, bytes);
-		parameters[i].v = malloc(bytes);
-		memset(parameters[i].v, 0, bytes);
+		parameters[i].m = calloc(2 * parameters[i].size, sizeof(double));
+		parameters[i].v = calloc(2 * parameters[i].size, sizeof(double));
 		
 		for (size_t j = 0; j < parameters[i].size; j++) {
 			if (parameters[i].type == TYPE_SCORE) {

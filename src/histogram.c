@@ -117,7 +117,7 @@ int main(int argc, char **argv) {
 		
 		if (material_delta >= 3 && eval == 0 && pos.halfmove <= 0) {
 			char fen[128];
-			print_position(&pos, 0);
+			print_position(&pos);
 			printf("%s\n", pos_to_fen(fen, &pos));
 			printf("%d\n", (2 * pos.turn - 1) * evaluate_classical(&pos));
 			printf("%d\n", pos.turn ? eval : -eval);

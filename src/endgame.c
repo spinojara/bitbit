@@ -459,7 +459,7 @@ void undo_endgame_key(struct position *pos, const move_t *m) {
 }
 
 void endgame_init(void) {
-	uint64_t seed = start_seed;
+	uint64_t seed = SEED;
 	for (size_t i = 0; i < SIZE(endgame_keys); i++)
 		endgame_keys[i] = xorshift64(&seed);
 	

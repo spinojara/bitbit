@@ -112,12 +112,9 @@ struct batch *next_batch(void *ptr) {
 }
 
 void *batch_open(const char *s, size_t requested_size, double random_skip) {
-	struct data *data = malloc(sizeof(struct data));
-	memset(data, 0, sizeof(*data));
-	data->pos = malloc(sizeof(*data->pos));
-	memset(data->pos, 0, sizeof(*data->pos));
-	data->batch = malloc(sizeof(*data->batch));
-	memset(data->batch, 0, sizeof(*data->batch));
+	struct data *data = calloc(1, sizeof(struct data));
+	data->pos = calloc(1, sizeof(*data->pos));
+	data->batch = calloc(1, sizeof(*data->batch));
 
 	data->requested_size = requested_size;
 	data->random_skip = random_skip;

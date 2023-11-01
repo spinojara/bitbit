@@ -636,7 +636,7 @@ void evaluate_print(struct position *pos) {
 		for (int f = 0; f < 8; f++) {
 			int square = make_square(f, r);
 			int piece = pos->mailbox[square];
-			if (uncolored_piece(piece)) {
+			if (uncolored_piece(piece) && uncolored_piece(piece) != king) {
 				int16_t oldeval = psqtaccumulation[white] - psqtaccumulation[black];
 				for (int color = 0; color < 2; color++) {
 					int king_square = ei.king_square[color];

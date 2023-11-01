@@ -130,10 +130,8 @@ int main(void) {
 	bitboard_init();
 
 	struct position pos;
-	bitbase_KXKX = malloc(BITBASE_KXKX_TABLE_SIZE * sizeof(*bitbase_KXKX));
-	invalid_KXKX = malloc(BITBASE_KXKX_TABLE_SIZE / BITBASE_KXKX_BITS_PER_POSITION * sizeof(*bitbase_KXKX));
-	memset(bitbase_KXKX, 0, BITBASE_KXKX_TABLE_SIZE * sizeof(*bitbase_KXKX));
-	memset(invalid_KXKX, 0, BITBASE_KXKX_TABLE_SIZE / BITBASE_KXKX_BITS_PER_POSITION * sizeof(*invalid_KXKX));
+	bitbase_KXKX = calloc(BITBASE_KXKX_TABLE_SIZE, sizeof(*bitbase_KXKX));
+	invalid_KXKX = calloc(BITBASE_KXKX_TABLE_SIZE / BITBASE_KXKX_BITS_PER_POSITION, sizeof(*bitbase_KXKX));
 
 #if 1
 	FILE *file_KXKX = fopen("KXKX.bb", "rb");

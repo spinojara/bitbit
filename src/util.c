@@ -24,8 +24,7 @@
 #include "bitboard.h"
 
 /* <http://vigna.di.unimi.it/ftp/papers/xorshift.pdf> */
-const uint64_t start_seed = 1274012836ull;
-uint64_t gseed = start_seed;
+uint64_t gseed = SEED;
 uint64_t gxorshift64(void) {
 	return xorshift64(&gseed);
 }

@@ -31,7 +31,8 @@
 
 static struct position start;
 
-void print_position(const struct position *pos, int flip) {
+void print_position(const struct position *pos) {
+	const int flip = 0;
 	int i, j, t;
 	char pieces[] = " PNBRQKpnbrqk";
 	char letters[] = "abcdefgh";

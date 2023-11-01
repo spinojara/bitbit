@@ -33,7 +33,7 @@ piece_to_index = [
 	     PS_B_PAWN, PS_B_KNIGHT, PS_B_BISHOP, PS_B_ROOK, PS_B_QUEEN, 0, ],
 ]
 
-piece_value = [ 0, 120, 350, 400, 600, 1100, ]
+piece_value = [ 0, 97, 491, 514, 609, 1374, ]
 
 LRELU_SLOPE = 0.01
 
@@ -69,20 +69,13 @@ class nnue(torch.nn.Module):
         accumulation = torch.cat([f1, f2], dim = 1)
         psqtaccumulation = 0.5 * (psqt1 - psqt2)
 
-        ft_out = self.activation(accumulation)
-        hidden1_out = self.activation(self.hidden1(ft_out))
-        hidden2_out = self.activation(self.hidden2(hidden1_out))
+        ft_out = self.clamp(accumulation)
+        hidden1_out = self.clamp(self.hidden1(ft_out))
+        hidden2_out = self.clamp(self.hidden2(hidden1_out))
         return self.output(hidden2_out) + FV_SCALE * 2 ** FT_SHIFT * psqtaccumulation / 2 ** SHIFT
-
-    def activation(self, x):
-        return self.clamp(x)
 
     def clamp(self, x):
         return x.clamp_(0.0, 1.0)
-
-    # Leaky clamp does not seem to work. The weights diverge to large values.
-    def lclamp(self, x):
-        return LRELU_SLOPE * x.clamp_max_(0.0) + x.clamp_(0.0, 1.0) + LRELU_SLOPE * (x.clamp_min_(1.0) - 1.0)
 
     def clamp_weights(self):
         self.hidden1.weight.data.clamp_(-weight_limit, weight_limit)
