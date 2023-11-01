@@ -1,9 +1,9 @@
-MAJOR     = 1
-MINOR     = 0
-VERSION   = $(MAJOR).$(MINOR)
+MAJOR      = 1
+MINOR      = 0
+VERSION   := $(MAJOR).$(MINOR)
 
-KERNEL    = $(shell uname -s)
-ARCH      = $(shell uname -m)
+KERNEL     = $(shell uname -s)
+ARCH       = $(shell uname -m)
 ifneq ($(findstring x86, $(ARCH)), )
 	ARCH = -march=native -mtune=native
 else ifneq ($(findstring arm, $(ARCH)), )
@@ -12,10 +12,10 @@ else ifneq ($(findstring ppc64, $(ARCH)), )
 	ARCH = -mtune=native
 endif
 
-CC        = cc
-CSTANDARD = -std=c11
-CWARNINGS = -Wall -Wextra -Wshadow -pedantic -Wno-unused-result -Wvla
-COPTIMIZE = -O2 $(ARCH) -flto
+CC         = cc
+CSTANDARD  = -std=c11
+CWARNINGS  = -Wall -Wextra -Wshadow -pedantic -Wno-unused-result -Wvla
+COPTIMIZE := -O2 $(ARCH) -flto
 
 ifeq ($(DEBUG), 1)
 	CDEBUG    = -g3 -ggdb
@@ -28,21 +28,18 @@ else
 	CDEBUG    = -DNDEBUG
 endif
 
-CFLAGS  = $(CSTANDARD) $(CWARNINGS) $(COPTIMIZE) $(CDEBUG) -pthread
-LDFLAGS = $(CFLAGS)
-LDLIBS  = -lm
+CFLAGS    := $(CSTANDARD) $(CWARNINGS) $(COPTIMIZE) $(CDEBUG) -pthread
+LDFLAGS    = $(CFLAGS)
+LDLIBS     = -lm
 
 ifeq ($(SIMD), avx2)
 	CFLAGS  += -DAVX2 -mavx2
-	LDFLAGS += -DAVX2 -mavx2
 endif
 ifeq ($(SIMD), sse4)
 	CFLAGS  += -DSSE4 -msse4
-	LDFLAGS += -DSSE4 -msse4
 endif
 ifeq ($(SIMD), sse2)
 	CFLAGS  += -DSSE2 -msse2
-	LDFLAGS += -DSSE2 -msse2
 endif
 
 ifeq ($(TT), )
@@ -55,8 +52,8 @@ else
 endif
 
 ifneq ($(SYZYGY), )
-	LDLIBS += -lfathom
-	DSYZYGY = -DSYZYGY=$(SYZYGY)
+	LDLIBS  += -lfathom
+	DSYZYGY := -DSYZYGY=$(SYZYGY)
 endif
 
 ifeq ($(wildcard src/nnueweights.c), )
