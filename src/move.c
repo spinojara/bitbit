@@ -291,7 +291,7 @@ char *move_str_pgn(char *str, const struct position *pos, const move_t *m) {
 	struct position pos_t;
 	move_t m_t;
 	m_t = *m;
-	memcpy(&pos_t, pos, sizeof(struct position));
+	memcpy(&pos_t, pos, sizeof(pos_t));
 	do_move(&pos_t, &m_t);
 	int ma = mate(&pos_t);
 	uint64_t checkers = generate_checkers(&pos_t, pos_t.turn);

@@ -112,7 +112,7 @@ struct batch *next_batch(void *ptr) {
 }
 
 void *batch_open(const char *s, size_t requested_size, double random_skip) {
-	struct data *data = calloc(1, sizeof(struct data));
+	struct data *data = calloc(1, sizeof(*data));
 	data->pos = calloc(1, sizeof(*data->pos));
 	data->batch = calloc(1, sizeof(*data->batch));
 

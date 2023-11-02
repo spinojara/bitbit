@@ -36,7 +36,7 @@ void read_ft_weights(char *filename) {
 	for (int i = 0; i < K_HALF_DIMENSIONS + 1; i++)
 		read_le_uint(f, sizeof(ft_bias_t));
 	for (int i = 0; i < (K_HALF_DIMENSIONS + 1) * FT_IN_DIMS; i++)
-		ft_weights[i] = (ft_weight_t)read_le_uint(f, sizeof(ft_weight_t));
+		ft_weights[i] = (ft_weight_t)read_le_uint(f, sizeof(*ft_weights));
 	fclose(f);
 }
 

@@ -38,12 +38,12 @@ uint64_t zobrist_keys[12 * 64 + 1 + 16 + 8];
 static uint64_t start;
 
 void transposition_clear(struct transpositiontable *tt) {
-	memset(tt->table, 0, tt->size * sizeof(struct transposition));
+	memset(tt->table, 0, tt->size * sizeof(*tt->table));
 }
 
 int transposition_alloc(struct transpositiontable *tt, size_t bytes) {
-	tt->size = bytes / sizeof(struct transposition);
-	tt->table = malloc(tt->size * sizeof(struct transposition));
+	tt->size = bytes / sizeof(*tt->table);
+	tt->table = malloc(tt->size * sizeof(*tt->table));
 	if (!tt->table)
 		return 1;
 	transposition_clear(tt);

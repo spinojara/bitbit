@@ -292,7 +292,7 @@ static inline void remove_index(unsigned index, int16_t accumulation[2][K_HALF_D
 void refresh_accumulator(struct position *pos, int turn) {
 	if (!option_nnue)
 		return;
-	memcpy(pos->accumulation[turn], ft_biases, K_HALF_DIMENSIONS * sizeof(ft_bias_t));
+	memcpy(pos->accumulation[turn], ft_biases, K_HALF_DIMENSIONS * sizeof(*ft_biases));
 	pos->psqtaccumulation[turn] = 0;
 	int king_square = ctz(pos->piece[turn][king]);
 	king_square = orient_horizontal(turn, king_square);

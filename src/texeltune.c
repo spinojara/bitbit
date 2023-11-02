@@ -511,11 +511,10 @@ void parameters_print(void) {
 
 void arrays_init(void) {
 	for (size_t i = 0; i < SIZE(parameters); i++) {
-		size_t bytes = 2 * parameters[i].size * sizeof(double);
-		parameters[i].value = malloc(bytes);
-		parameters[i].grad = malloc(bytes);
-		parameters[i].m = calloc(2 * parameters[i].size, sizeof(double));
-		parameters[i].v = calloc(2 * parameters[i].size, sizeof(double));
+		parameters[i].value = malloc(2 * parameters[i].size * sizeof(*parameters[i].value));
+		parameters[i].grad = malloc(2 * parameters[i].size * sizeof(*parameters[i].grad));
+		parameters[i].m = calloc(2 * parameters[i].size, sizeof(*parameters[i].m));
+		parameters[i].v = calloc(2 * parameters[i].size, sizeof(*parameters[i].v));
 		
 		for (size_t j = 0; j < parameters[i].size; j++) {
 			if (parameters[i].type == TYPE_SCORE) {
@@ -576,10 +575,8 @@ void step(void) {
 }
 
 void zero_grad(void) {
-	for (size_t i = 0; i < SIZE(parameters); i++) {
-		size_t bytes = 2 * parameters[i].size * sizeof(double);
-		memset(parameters[i].grad, 0, bytes);
-	}
+	for (size_t i = 0; i < SIZE(parameters); i++)
+		memset(parameters[i].grad, 0, 2 * parameters[i].size * sizeof(*parameters[i].grad));
 }
 
 /* Calculates the gradient of the error function by hand.

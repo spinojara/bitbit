@@ -93,7 +93,7 @@ static inline void store_pv_move(const move_t *m, int ply, move_t pv[DEPTH_MAX][
 		return;
 	assert(*m);
 	pv[ply][ply] = *m & 0xFFFF;
-	memcpy(pv[ply] + ply + 1, pv[ply + 1] + ply + 1, sizeof(move_t) * (DEPTH_MAX - (ply + 1)));
+	memcpy(pv[ply] + ply + 1, pv[ply + 1] + ply + 1, sizeof(**pv) * (DEPTH_MAX - (ply + 1)));
 }
 
 /* Random drawn score to avoid threefold blindness. */

@@ -179,7 +179,7 @@ char *castle_string(char *str, int castle) {
 }
 
 void startpos(struct position *pos) {
-	memcpy(pos, &start, sizeof(struct position));
+	memcpy(pos, &start, sizeof(*pos));
 }
 
 /* assumes that fen is ok */
@@ -548,7 +548,7 @@ void print_history_pgn(const struct history *h) {
 		return;
 
 	struct position pos;
-	memcpy(&pos, &h->start, sizeof(struct position));
+	memcpy(&pos, &h->start, sizeof(pos));
 	move_t m[POSITIONS_MAX];
 	memcpy(m, h->move, sizeof(m));
 
