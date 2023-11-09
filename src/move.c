@@ -137,7 +137,7 @@ void undo_move(struct position *pos, const move_t *m) {
 	else if (move_flag(m) == 2) {
 		pos->piece[pos->turn][pawn] ^= to;
 		pos->piece[pos->turn][uncolored_piece(pos->mailbox[target_square])] ^= to;
-		/* later gets updated as a normal move_t would */
+		/* Later gets updated as a normal move would. */
 		pos->mailbox[target_square] = colored_piece(pawn, pos->turn);
 	}
 	else if (move_flag(m) == 3) {
@@ -195,7 +195,7 @@ void print_move(const move_t *m) {
 		printf("%c", "nbrq"[move_promote(m)]);
 }
 
-/* str needs to be at least 6 bytes */
+/* str needs to be at least 6 bytes. */
 char *move_str_algebraic(char *str, const move_t *m) {
 	algebraic(str, move_from(m));
 	algebraic(str + 2, move_to(m));
@@ -205,8 +205,8 @@ char *move_str_algebraic(char *str, const move_t *m) {
 	return str;
 }
 
-/* str needs to be at least 8 bytes */
-/* m can be illegal */
+/* str needs to be at least 8 bytes. */
+/* m can be illegal. */
 char *move_str_pgn(char *str, const struct position *pos, const move_t *m) {
 	if (!is_legal(pos, m))
 		return NULL;
@@ -230,7 +230,7 @@ char *move_str_pgn(char *str, const struct position *pos, const move_t *m) {
 	case queen:
 		str[i++] = 'Q';
 		break;
-	/* king */
+	/* King. */
 	case king:
 		if (f == 4 && file_of(move_to(m)) == 6) {
 			sprintf(str, "O-O");
@@ -304,7 +304,7 @@ char *move_str_pgn(char *str, const struct position *pos, const move_t *m) {
 	return str;
 }
 
-/* str can be illegal */
+/* str can be illegal. */
 move_t string_to_move(const struct position *pos, const char *str) {
 	if (!str)
 		return 0;

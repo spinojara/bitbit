@@ -61,33 +61,33 @@ char environment[] =
 #endif
 ;
 
-/* MSVC does not allow a macro based transformation */
+/* MSVC does not allow a macro based transformation. */
 char *date(char *str) {
 #ifdef __DATE__
-	/* year */
+	/* Year. */
 	str[0] = __DATE__[9];
 	str[1] = __DATE__[10];
-	/* first digit of month */
-	/* Oct Nov Dev */
+	/* First digit of month. */
+	/* Oct, Nov, Dev. */
 	str[2] = (__DATE__[0] == 'O' || __DATE__[0] == 'N' || __DATE__[0] == 'D') ? '1' : '0';
 	/* second digit of month */
 	str[3] =
-	(__DATE__[2] == 'l') ? '7' : /* Jul */
-	(__DATE__[2] == 'g') ? '8' : /* Aug */
-	(__DATE__[1] == 'u') ? '6' : /* Jun */
-	(__DATE__[2] == 'n') ? '1' : /* Jan */
-	(__DATE__[2] == 'y') ? '5' : /* May */
-	(__DATE__[1] == 'a') ? '3' : /* Mar */
-	(__DATE__[2] == 'b') ? '2' : /* Feb */
-	(__DATE__[0] == 'A') ? '4' : /* Apr */
-	(__DATE__[2] == 'p') ? '9' : /* Sep */
-	(__DATE__[2] == 't') ? '0' : /* Oct */
-	(__DATE__[2] == 'v') ? '1' : /* Nov */
-	'2'; /* Dec */
+	(__DATE__[2] == 'l') ? '7' : /* Jul. */
+	(__DATE__[2] == 'g') ? '8' : /* Aug. */
+	(__DATE__[1] == 'u') ? '6' : /* Jun. */
+	(__DATE__[2] == 'n') ? '1' : /* Jan. */
+	(__DATE__[2] == 'y') ? '5' : /* May. */
+	(__DATE__[1] == 'a') ? '3' : /* Mar. */
+	(__DATE__[2] == 'b') ? '2' : /* Feb. */
+	(__DATE__[0] == 'A') ? '4' : /* Apr. */
+	(__DATE__[2] == 'p') ? '9' : /* Sep. */
+	(__DATE__[2] == 't') ? '0' : /* Oct. */
+	(__DATE__[2] == 'v') ? '1' : /* Nov. */
+	'2'; /* Dec. */
 
-	/* first digit of day */
+	/* First digit of day. */
 	str[4] = (__DATE__[4] == ' ') ? '0' : __DATE__[4];
-	/* second digit of day */
+	/* Second digit of day. */
 	str[5] = __DATE__[5];
 	str[6] = '\0';
 	return str;

@@ -102,12 +102,12 @@ int see_geq(struct position *pos, const move_t *m, int32_t value) {
 		ret = 1 - ret;
 
 		if (turnattackers & pos->piece[turn][pawn]) {
-			/* x < ret because x < 1 is same as <= 0 */
+			/* x < ret because x < 1 is same as <= 0. */
 			if ((swap = move_order_piece_value[pawn] - swap) < ret)
 				break;
 
 			occupied ^= ls1b(turnattackers);
-			/* add x-ray pieces */
+			/* Add x-ray pieces. */
 			attackers |= bishop_attacks(to, 0, occupied) & (pos->piece[white][bishop] | pos->piece[white][queen] |
 									pos->piece[black][bishop] | pos->piece[black][queen]);
 		}
@@ -143,9 +143,9 @@ int see_geq(struct position *pos, const move_t *m, int32_t value) {
 			attackers |= rook_attacks(to, 0, occupied) & (pos->piece[white][rook] | pos->piece[white][queen] |
 									pos->piece[black][rook] | pos->piece[black][queen]);
 		}
-		/* king */
+		/* King. */
 		else {
-			/* we lose if other side still has attackers */
+			/* We lose if other side still has attackers. */
 			if (attackers & pos->piece[other_color(turn)][all])
 				ret = 1 - ret;
 			break;

@@ -30,7 +30,7 @@ struct position {
 
 	int turn;
 	int en_passant;
-	/* KQkq */
+	/* KQkq. */
 	unsigned castle;
 
 	int halfmove;
@@ -50,8 +50,8 @@ struct partialposition {
 
 	int turn;
 	int en_passant;
-	/* KQkq */
-	int castle;
+	/* KQkq. */
+	unsigned castle;
 
 	int halfmove;
 	int fullmove;

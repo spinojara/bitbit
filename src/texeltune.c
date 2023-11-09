@@ -157,7 +157,7 @@ struct parameter {
 	double *v;
 };
 
-/* parameter list has to be in the same order as the enum. */
+/* Parameter list has to be in the same order as the enum. */
 struct parameter parameters[] = {
 	PARAMETER(&piece_value[0],            5, TYPE_SCORE, WEIGHTDECAY_NO,  TUNE_YES),
 
@@ -595,10 +595,6 @@ double grad_calc(struct position *pos, double result) {
 	double factor = 2 * (sigmoid(eval) - result) * sigmoid_grad(eval);
 
 	struct parameter *param;
-	/* Piece value get way too low
-	 * mg - 80 327 361 390 722
-	 * eg - 109 261 258 441 774
-	 */
 	if ((param = &parameters[PARAM_PIECEVALUE])->tune == TUNE_YES) {
 		for (size_t i = 0; i < param->size; i++) {
 			int piece = i + 1;

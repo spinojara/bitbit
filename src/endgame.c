@@ -131,16 +131,6 @@ void endgame_test(void) {
 			}
 		}
 
-#if 0
-		printf("HERE\n");
-		for (int color = 0; color < 2; color++) {
-			for (int piece = pawn; piece <= king; piece++) {
-				printf("%d ", pieces[color][piece]);
-			}
-			printf("\n");
-		}
-#endif
-
 #ifndef NDEBUG
 		pos.piece[white][all] = pos.piece[black][all] = 0;
 		for (int color = 0; color < 2; color++) {
@@ -463,20 +453,20 @@ void endgame_init(void) {
 	for (size_t i = 0; i < SIZE(endgame_keys); i++)
 		endgame_keys[i] = xorshift64(&seed);
 	
-	endgame_store("KPK",   &evaluate_KPK);   /* done */
-	endgame_store("KPKP",  &evaluate_KPKP);  /* done */
-	endgame_store("KBPK",  &evaluate_KBPK);  /* done */
-	endgame_store("KRKP",  &evaluate_KRKP);  /* done */
-	endgame_store("KRKN",  &evaluate_KRKN);  /* done */
-	endgame_store("KRKB",  &evaluate_KRKB);  /* done */
-	endgame_store("KBBKN", &evaluate_KBBKN); /* done */
-	endgame_store("KNNK",  &evaluate_KNNK);  /* done */
+	endgame_store("KPK",   &evaluate_KPK);
+	endgame_store("KPKP",  &evaluate_KPKP);
+	endgame_store("KBPK",  &evaluate_KBPK);
+	endgame_store("KRKP",  &evaluate_KRKP);
+	endgame_store("KRKN",  &evaluate_KRKN);
+	endgame_store("KRKB",  &evaluate_KRKB);
+	endgame_store("KBBKN", &evaluate_KBBKN);
+	endgame_store("KNNK",  &evaluate_KNNK);
 	endgame_store("KNNKP", &evaluate_KNNKP);
-	endgame_store("KBNK",  &evaluate_KBNK);  /* done */
-	endgame_store("KQKP",  &evaluate_KQKP);  /* done */
-	endgame_store("KQKN",  &evaluate_KQKX);  /* done */
-	endgame_store("KQKB",  &evaluate_KQKX);  /* done */
-	endgame_store("KQKR",  &evaluate_KQKX);  /* done */
+	endgame_store("KBNK",  &evaluate_KBNK);
+	endgame_store("KQKP",  &evaluate_KQKP);
+	endgame_store("KQKN",  &evaluate_KQKX);
+	endgame_store("KQKB",  &evaluate_KQKX);
+	endgame_store("KQKR",  &evaluate_KQKX);
 	for (int color = 0; color < 2; color++) {
 		endgame_KXK[color].evaluate = evaluate_KXK;
 		endgame_KXK[color].strong_side = color;

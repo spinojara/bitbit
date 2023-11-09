@@ -28,10 +28,10 @@
 #include "history.h"
 #include "position.h"
 
-/* 12 * 64: each piece each square
- * 1: turn to move_t is white
- * 16: each castling combination
- * 8: en passant on file
+/* 12 * 64: each piece each square.
+ * 1: turn to move is white.
+ * 16: each castling combination.
+ * 8: en passant on file.
  */
 uint64_t zobrist_keys[12 * 64 + 1 + 16 + 8];
 
@@ -201,7 +201,7 @@ void undo_zobrist_key(struct position *pos, const move_t *m) {
 	}
 }
 
-/* should be called before do_null_move and then again before (un)do_null_move */
+/* Should be called before do_null_move and then again before (un)do_null_move. */
 void do_null_zobrist_key(struct position *pos, int en_passant) {
 	if (!option_transposition && !option_history)
 		return;

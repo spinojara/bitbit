@@ -46,7 +46,7 @@ uint64_t power(uint64_t m, uint64_t n);
 
 int find_char(const char *s, char c);
 
-/* returns 0 if s is not a non negative integer */
+/* Returns 0 if s is not a non negative integer. */
 int strint(const char *s);
 
 char *appendstr(char *dest, const char *src);

@@ -213,19 +213,19 @@ static inline int32_t output_layer(int8_t *input, const bias_t *biases, const we
 #if defined(AVX2)
 	__m256i *a = (__m256i *)input;
 	__m256i *b = (__m256i *)weights;
-	/* gives us 16 16bit integers */
+	/* Gives us 16 16bit integers. */
 	a[0] = _mm256_maddubs_epi16(a[0], b[0]);
-	/* gives us 8 32bit integers */
+	/* Gives us 8 32bit integers. */
 	a[0] = _mm256_madd_epi16(a[0], _mm256_set1_epi16(1));
-	/* sums the first 4 32bit integers with the last 4 32bit integers
-	 * giving us 4 32bit integers
+	/* Sums the first 4 32bit integers with the last 4 32bit integers
+	 * giving us 4 32bit integers.
 	 */
 	__m128i sum = _mm_add_epi32(_mm256_castsi256_si128(a[0]), _mm256_extracti128_si256(a[0], 1));
-	/* gives us 4 32bit integers, integer 0 and 2 are identical.
+	/* Gives us 4 32bit integers, integer 0 and 2 are identical.
 	 * So are 1 and 3. We want to sum 0 and 1 or 2 and 3.
 	 */
 	sum = _mm_add_epi32(sum, _mm_shuffle_epi32(sum, 0x1b));
-	/* add integer 0 and 1 */
+	/* Add integer 0 and 1. */
 	return _mm_cvtsi128_si32(sum) + _mm_extract_epi32(sum, 1) + biases[0];
 #elif defined(SSE4)
 	__m128i *a = (__m128i *)input;
@@ -311,7 +311,7 @@ void refresh_accumulator(struct position *pos, int turn) {
 	}
 }
 
-/* m cannot be a king move */
+/* m cannot be a king move. */
 void do_update_accumulator(struct position *pos, move_t *m, int turn) {
 	int source_square = move_from(m);
 	int target_square = move_to(m);
@@ -390,7 +390,7 @@ void undo_update_accumulator(struct position *pos, move_t *m, int turn) {
 	}
 }
 
-/* should be called after do_move */
+/* Should be called after do_move. */
 void do_accumulator(struct position *pos, move_t *m) {
 	assert(*m);
 	assert(!pos->mailbox[move_from(m)]);
@@ -445,7 +445,7 @@ void do_accumulator(struct position *pos, move_t *m) {
 	}
 }
 
-/* should be called after undo_move */
+/* Should be called after undo_move. */
 void undo_accumulator(struct position *pos, move_t *m) {
 	assert(*m);
 	assert(pos->mailbox[move_from(m)]);

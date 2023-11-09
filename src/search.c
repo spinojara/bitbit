@@ -108,7 +108,7 @@ static inline int32_t evaluate(const struct position *pos) {
 		return evaluation;
 
 	int classical = 0;
-	/* NNUE */
+	/* NNUE. */
 	if (option_nnue) {
 		int32_t psqt = ABS((pos->psqtaccumulation[white] - pos->psqtaccumulation[black]) / 2);
 		if (psqt > 350)
@@ -116,7 +116,7 @@ static inline int32_t evaluate(const struct position *pos) {
 		else
 			evaluation = evaluate_accumulator(pos);
 	}
-	/* Classical */
+	/* Classical. */
 	if (!option_nnue || classical) {
 		evaluation = evaluate_classical(pos);
 	}
@@ -203,7 +203,6 @@ int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, s
 	return best_eval;
 }
 
-/* check for ply and depth out of bound */
 int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t beta, int cut_node, struct searchinfo *si, struct searchstack *ss) {
 	if (interrupt || si->interrupt)
 		return 0;
@@ -221,11 +220,11 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	assert(!(pv_node && cut_node));
 
 	if (!root_node) {
-		/* draws */
+		/* Draws. */
 		if (pos->halfmove >= 100 || (option_history && is_repetition(pos, si->history, ply, 1 + pv_node)))
 			return draw(si);
 
-		/* mate distance pruning */
+		/* Mate distance pruning. */
 		alpha = MAX(alpha, -VALUE_MATE + ply);
 		beta = MIN(beta, VALUE_MATE - ply - 1);
 		if (alpha >= beta)
@@ -559,7 +558,7 @@ int32_t search(struct position *pos, int depth, int verbose, int etime, int move
 			eval = aspiration_window(pos, d, eval, &si, ss + 1);
 
 		/* 16 elo.
-		 * Use move_t even from a partial and interrupted search.
+		 * Use move even from a partial and interrupted search.
 		 */
 		best_move = si.pv[0][0];
 		best_eval = eval;

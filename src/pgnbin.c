@@ -199,7 +199,7 @@ void write_fens(struct position *pos, int result, FILE *fin, FILE *fout) {
 	}
 early_exit:
 
-	/* If at least one move_t has been written. */
+	/* If at least one move has been written. */
 	if (moves > skip_first) {
 		perspective_result = VALUE_NONE;
 		fwrite(&perspective_result, 2, 1, fout);
@@ -280,7 +280,7 @@ int main(int argc, char **argv) {
 		if (strstr(line, "[Round"))
 			offset[count++] = ftell(fin);
 
-	/* Fisher-Yates shuffle */
+	/* Fisher-Yates shuffle. */
 	if (shuffle) {
 		for (size_t i = total - 1; i > 0; i--) {
 			size_t j = xorshift64(&seed) % (i + 1);

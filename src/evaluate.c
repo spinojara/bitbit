@@ -196,7 +196,7 @@ static inline score_t evaluate_king(const struct position *pos, struct evaluatio
 static inline score_t evaluate_knights(const struct position *pos, struct evaluationinfo *ei, int turn) {
 	score_t eval = 0;
 	uint64_t b = pos->piece[turn][knight];
-	/* knight pair */
+	/* Knight pair. */
 	if (popcount(b) == 2) {
 		eval += knight_pair;
 		if (TRACE) trace.knight_pair[turn]++;
@@ -217,16 +217,16 @@ static inline score_t evaluate_knights(const struct position *pos, struct evalua
 		ei->attacked2[turn] |= attacks & ei->attacked[turn][all];
 		ei->attacked[turn][knight] |= attacks;
 		ei->attacked[turn][all] |= attacks;
-		/* mobility (range of popcount is [0, 8]) */
+		/* Mobility (range of popcount is [0, 8]). */
 		int m = popcount(attacks & ei->mobility[turn]);
 		eval += mobility[knight - 2][m];
 		if (TRACE) trace.mobility[turn][knight - 2][m]++;
 
-		/* king attacks */
+		/* King attacks. */
 		if (ei->king_ring[other_color(turn)] & attacks)
 			ei->king_attacks[turn][knight] += popcount(ei->king_ring[other_color(turn)] & attacks) + 1;
 
-		/* outpost */
+		/* Outpost. */
 		if (squareb & outpost_squares) {
 			eval += knight_outpost;
 			if (TRACE) trace.knight_outpost[turn]++;
@@ -236,19 +236,19 @@ static inline score_t evaluate_knights(const struct position *pos, struct evalua
 			if (TRACE) trace.knight_outpost_attack[turn]++;
 		}
 		
-		/* minor behind pawn */
+		/* Minor behind pawn. */
 		if (squareb & shift_color(pos->piece[turn][pawn], other_color(turn))) {
 			eval += knight_behind_pawn;
 			if (TRACE) trace.knight_behind_pawn[turn]++;
 		}
 
-		/* defended minor */
+		/* Defended minor. */
 		if (squareb & ei->attacked[turn][pawn]) {
 			eval += defended_knight;
 			if (TRACE) trace.defended_knight[turn]++;
 		}
 		
-		/* penalty if piece is far from own king */
+		/* Penalty if piece is far from own king. */
 		eval += knight_far_from_king * distance(square, ei->king_square[turn]);
 		if (TRACE) trace.knight_far_from_king[turn] += distance(square, ei->king_square[turn]);
 
@@ -260,7 +260,7 @@ static inline score_t evaluate_knights(const struct position *pos, struct evalua
 static inline score_t evaluate_bishops(const struct position *pos, struct evaluationinfo *ei, int turn) {
 	score_t eval = 0;
 	uint64_t b = pos->piece[turn][bishop];
-	/* bishop pair */
+	/* Bishop pair. */
 	if (popcount(b) == 2) {
 		eval += bishop_pair;
 		if (TRACE) trace.bishop_pair[turn]++;
@@ -286,16 +286,16 @@ static inline score_t evaluate_bishops(const struct position *pos, struct evalua
 		ei->attacked2[turn] |= attacks & ei->attacked[turn][all];
 		ei->attacked[turn][bishop] |= attacks;
 		ei->attacked[turn][all] |= attacks;
-		/* mobility (range of popcount is [0, 13]) */
+		/* Mobility (range of popcount is [0, 13]). */
 		int m = popcount(attacks & ei->mobility[turn]);
 		eval += mobility[bishop - 2][m];
 		if (TRACE) trace.mobility[turn][bishop - 2][m]++;
 
-		/* king attacks */
+		/* King attacks. */
 		if (ei->king_ring[other_color(turn)] & attacks)
 			ei->king_attacks[turn][bishop] += popcount(ei->king_ring[other_color(turn)] & attacks) + 1;
 
-		/* outpost */
+		/* Outpost. */
 		if (squareb & outpost_squares) {
 			eval += bishop_outpost;
 			if (TRACE) trace.bishop_outpost[turn]++;
@@ -305,29 +305,29 @@ static inline score_t evaluate_bishops(const struct position *pos, struct evalua
 			if (TRACE) trace.bishop_outpost_attack[turn]++;
 		}
 
-		/* minor behind pawn */
+		/* Minor behind pawn. */
 		if (squareb & shift_color(pos->piece[turn][pawn], other_color(turn))) {
 			eval += bishop_behind_pawn;
 			if (TRACE) trace.bishop_behind_pawn[turn]++;
 		}
 
-		/* defended minor */
+		/* Defended minor. */
 		if (squareb & ei->attacked[turn][pawn]) {
 			eval += defended_bishop;
 			if (TRACE) trace.defended_bishop[turn]++;
 		}
 
-		/* long diagonal */
+		/* Long diagonal. */
 		if (clear_ls1b(attacks & long_diagonal_squares)) {
 			eval += bishop_long_diagonal;
 			if (TRACE) trace.bishop_long_diagonal[turn]++;
 		}
 		
-		/* penalty if piece is far from own king */
+		/* Penalty if piece is far from own king. */
 		eval += bishop_far_from_king * distance(square, ei->king_square[turn]);
 		if (TRACE) trace.bishop_far_from_king[turn] += distance(square, ei->king_square[turn]);
 
-		/* penalty for own pawns on same squares as bishop */
+		/* Penalty for own pawns on same squares as bishop. */
 		uint64_t pawns = same_colored_squares(square) & pos->piece[turn][pawn];
 		uint64_t blocked_pawns = pawns & shift_color(all_pieces(pos), other_color(turn));
 		eval += pawn_blocking_bishop * (popcount(pawns) + popcount(blocked_pawns));
@@ -341,7 +341,7 @@ static inline score_t evaluate_bishops(const struct position *pos, struct evalua
 static inline score_t evaluate_rooks(const struct position *pos, struct evaluationinfo *ei, int turn) {
 	score_t eval = 0;
 	uint64_t b = pos->piece[turn][rook];
-	/* rook pair */
+	/* Rook pair. */
 	if (popcount(b) == 2) {
 		eval += rook_pair;
 		if (TRACE) trace.rook_pair[turn]++;
@@ -361,16 +361,16 @@ static inline score_t evaluate_rooks(const struct position *pos, struct evaluati
 		ei->attacked2[turn] |= attacks & ei->attacked[turn][all];
 		ei->attacked[turn][rook] |= attacks;
 		ei->attacked[turn][all] |= attacks;
-		/* mobility (range of popcount is [0, 14]) */
+		/* Mobility (range of popcount is [0, 14]). */
 		int m = popcount(attacks & ei->mobility[turn]);
 		eval += mobility[rook - 2][m];
 		if (TRACE) trace.mobility[turn][rook - 2][m]++;
 
-		/* king attacks */
+		/* King attacks. */
 		if (ei->king_ring[other_color(turn)] & attacks)
 			ei->king_attacks[turn][rook] += popcount(ei->king_ring[other_color(turn)] & attacks) + 1;
 
-		/* bonus on open files */
+		/* Bonus on open files. */
 		if (!((pos->piece[black][pawn] | pos->piece[white][pawn]) & file(square))) {
 			eval += rook_open;
 			if (TRACE) trace.rook_open[turn]++;
@@ -379,9 +379,9 @@ static inline score_t evaluate_rooks(const struct position *pos, struct evaluati
 			eval += rook_semi;
 			if (TRACE) trace.rook_semi[turn]++;
 		}
-		/* penalty if blocked by uncastled king */
+		/* Penalty if blocked by uncastled king. */
 		else {
-			/* behind blocked pawns */
+			/* Behind blocked pawns. */
 			if (shift_color(all_pieces(pos), other_color(turn)) & pos->piece[turn][pawn] & file(square)) {
 				eval += rook_closed;
 				if (TRACE) trace.rook_closed[turn]++;
@@ -420,12 +420,12 @@ static inline score_t evaluate_queens(const struct position *pos, struct evaluat
 		ei->attacked2[turn] |= attacks & ei->attacked[turn][all];
 		ei->attacked[turn][queen] |= attacks;
 		ei->attacked[turn][all] |= attacks;
-		/* mobility (range of popcount is [0, 27]) */
+		/* Mobility (range of popcount is [0, 27]). */
 		int m = popcount(attacks & ei->mobility[turn]);
 		eval += mobility[queen - 2][m];
 		if (TRACE) trace.mobility[turn][queen - 2][m]++;
 
-		/* king attacks */
+		/* King attacks. */
 		if (ei->king_ring[other_color(turn)] & attacks)
 			ei->king_attacks[turn][queen] += popcount(ei->king_ring[other_color(turn)] & attacks) + 1;
 
@@ -493,7 +493,7 @@ void evaluationinfo_init(const struct position *pos, struct evaluationinfo *ei) 
 		int f = CLAMP(file_of(king_square), 1, 6);
 		int r = CLAMP(rank_of(king_square), 1, 6);
 		king_square = 8 * r + f;
-		/* king ring */
+		/* King ring... */
 		ei->king_ring[turn] = king_attacks(king_square, 0) | bitboard(king_square);
 		/* but not defended by two own pawns,
 		 * if it is only defended by one pawn it could pinned.

@@ -461,7 +461,7 @@ move_t *generate_all(const struct position *pos, move_t *move_list) {
 	}
 
 
-	/* set the terminating move_t */
+	/* Set the terminating move. */
 	*move_ptr = 0;
 	return move_ptr;
 }
@@ -990,7 +990,7 @@ move_t *generate_quiescence(const struct position *pos, move_t *move_list) {
 		attacks = clear_ls1b(attacks);
 	}
 
-	/* set the terminating move_t */
+	/* Set the terminating move. */
 	*move_ptr = 0;
 	return move_ptr;
 }

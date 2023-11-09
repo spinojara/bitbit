@@ -1,4 +1,5 @@
-/* bitbit, a bitboard based chess engine written in c.  * Copyright (C) 2022 Isak Ellmer
+/* bitbit, a bitboard based chess engine written in c.
+ * Copyright (C) 2022 Isak Ellmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -245,11 +246,11 @@ void *worker(void *arg) {
 	int drawn_score_count = 0;
 	while (1) {
 		m = 0;
-		/* maybe randomly vary depth */
+		/* Maybe randomly vary depth. */
 		int depth_now = depth;
 		eval = search(&pos, depth_now, 0, 0, 0, &m, tt, &h, 0);
 
-		/* check for fens that we dont want to write */
+		/* Check for fens that we dont want to write. */
 		int skip = is_capture(&pos, &m) || generate_checkers(&pos, pos.turn) ||
 			move_flag(&m) || position_already_written(&pos) || !bernoulli(exp(-pos.halfmove / 8.0), &seed);
 

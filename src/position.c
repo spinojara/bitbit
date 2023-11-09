@@ -182,7 +182,7 @@ void startpos(struct position *pos) {
 	memcpy(pos, &start, sizeof(*pos));
 }
 
-/* assumes that fen is ok */
+/* Assumes that fen is ok. */
 void pos_from_fen(struct position *pos, int argc, char **argv) {
 	int t = 0;
 	size_t i;
@@ -438,7 +438,7 @@ int fen_is_ok(int argc, char **argv) {
 		if (uncolored_piece(mailbox[i]) == pawn || uncolored_piece(mailbox[i + 56]) == pawn)
 			return 0;
 
-	/* now ok to generate preliminary position */
+	/* Now ok to generate preliminary position. */
 	struct position pos;
 	pos_from_fen(&pos, argc, argv);
 	uint64_t checkers = generate_checkers(&pos, other_color(pos.turn));
@@ -573,7 +573,7 @@ int has_sliding_piece(const struct position *pos) {
 	return pos->piece[pos->turn][queen] || pos->piece[pos->turn][rook] || pos->piece[pos->turn][queen];
 }
 
-/* check for irreversible moves */
+/* Check for irreversible moves. */
 int is_repetition(const struct position *pos, const struct history *h, int ply, int count) {
 	for (int i = ply + h->ply - 2, c = 0; i >= 0; i -= 2) {
 		if (pos->zobrist_key == h->zobrist_key[i])

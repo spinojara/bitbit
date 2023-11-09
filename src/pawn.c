@@ -37,7 +37,7 @@ CONST score_t passed_file[4]     = { S( -1, 11), S(-20,  7), S(-22, -5), S(-16,-
 CONST score_t distance_us[7]     = { S(  0,  0), S( -2, -3), S(  4, -9), S( 18,-18), S( 16,-23), S(-13,-20), S(-37,-20), };
 CONST score_t distance_them[7]   = { S(  0,  0), S( -8, -2), S(-11,  2), S(-10, 13), S( -5, 25), S(-12, 41), S(  3, 42), };
 
-/* mostly inspiration from stockfish */
+/* Mostly inspiration from stockfish. */
 score_t evaluate_pawns(const struct position *pos, struct evaluationinfo *ei, int color) {
 	UNUSED(ei);
 	score_t eval = 0;

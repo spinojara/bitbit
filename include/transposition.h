@@ -73,7 +73,7 @@ static inline struct transposition *transposition_probe(const struct transpositi
 
 static inline void transposition_set(struct transposition *e, const struct position *pos, int32_t evaluation, int depth, int bound, move_t move) {
 	assert(-VALUE_INFINITE < evaluation && evaluation < VALUE_INFINITE);
-	/* Keep old move_t if none available. */
+	/* Keep old move if none available. */
 	if (move)
 		e->move = (uint16_t)move;
 	e->zobrist_key = pos->zobrist_key;
@@ -103,7 +103,7 @@ static inline int32_t adjust_score_mate_store(int32_t evaluation, int ply) {
 
 static inline int32_t adjust_score_mate_get(int32_t evaluation, int ply) {
 	int32_t adjustment = 0;
-	/* should probably be more careful as to not return false mates */
+	/* Should probably be more careful as to not return false mates. */
 	if (evaluation >= VALUE_MATE_IN_MAX_PLY)
 		adjustment = -ply;
 	else if (evaluation <= -VALUE_MATE_IN_MAX_PLY)
