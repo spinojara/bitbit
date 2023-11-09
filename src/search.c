@@ -98,20 +98,35 @@ static inline void store_pv_move(const move_t *m, int ply, move_t pv[DEPTH_MAX][
 
 /* Random drawn score to avoid threefold blindness. */
 static inline int32_t draw(const struct searchinfo *si) {
-	return (si->nodes & 0x3);
+	return 2 * (si->nodes & 0x3) - 3;
 }
 
 static inline int32_t evaluate(const struct position *pos) {
 	int32_t evaluation;
-	struct endgame *e = option_endgame ? endgame_probe(pos) : NULL;
+	struct endgame *e = endgame_probe(pos);
 	if (e && (evaluation = endgame_evaluate(e, pos)) != VALUE_NONE)
 		return evaluation;
 
-	evaluation = option_nnue ? evaluate_accumulator(pos)
-		                         : evaluate_classical(pos);
+	int classical = 0;
+	/* NNUE */
+	if (option_nnue) {
+		int32_t psqt = ABS((pos->psqtaccumulation[white] - pos->psqtaccumulation[black]) / 2);
+		if (psqt > 350)
+			classical = 1;
+		else
+			evaluation = evaluate_accumulator(pos);
+	}
+	/* Classical */
+	if (!option_nnue || classical) {
+		evaluation = evaluate_classical(pos);
+	}
+
 	/* Damp when shuffling pieces. */
 	if (option_damp)
 		evaluation = evaluation * (200 - pos->halfmove) / 200;
+	
+	evaluation = CLAMP(evaluation, -VALUE_MAX, VALUE_MAX);
+
 	return evaluation;
 }
 

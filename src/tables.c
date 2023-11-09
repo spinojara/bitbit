@@ -21,7 +21,6 @@
 
 score_t psqtable[2][7][64];
 
-//score_t piece_value[6] = { S( 90, 125), S( 420, 351), S( 450, 352), S( 576, 597), S(1237, 1077), };
 score_t piece_value[6] = { S(  97, 144), S( 491, 513), S( 514, 562), S( 609, 928), S(1374,1734), };
 
 /* from white's perspective, files a to d on a regular board */

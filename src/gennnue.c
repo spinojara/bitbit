@@ -255,7 +255,8 @@ void *worker(void *arg) {
 
 		int stop_game = !m || (eval != VALUE_NONE && ABS(eval) > eval_limit) ||
 				pos.halfmove >= 100 || h.ply >= write_max_ply ||
-				is_repetition(&pos, &h, 0, 2) || probable_long_draw(&h, eval, &drawn_score_count);
+				is_repetition(&pos, &h, 0, 2) || probable_long_draw(&h, eval, &drawn_score_count) ||
+				endgame_probe(&pos);
 
 		if (skip)
 			eval = VALUE_NONE;
@@ -383,7 +384,7 @@ int main(int argc, char **argv) {
 
 	int n_threads = 12;
 	int depth = 5;
-	uint64_t fens = 500000000;
+	uint64_t fens = 500000;
 
 	uint64_t seed = time(NULL);
 

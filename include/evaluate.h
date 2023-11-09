@@ -22,10 +22,11 @@
 
 #include "position.h"
 
-#define VALUE_NONE (0x7FFF)
-#define VALUE_INFINITE (0x7FFE)
-#define VALUE_MATE (0x7F00)
-#define VALUE_WIN (0x1000)
+#define VALUE_NONE 0x7FFF
+#define VALUE_INFINITE 0x7FFE
+#define VALUE_MATE 0x7F00
+#define VALUE_WIN 0x2000
+#define VALUE_MAX (VALUE_WIN / 2)
 #define VALUE_MATE_IN_MAX_PLY (VALUE_MATE - 128)
 
 enum { mg, eg };

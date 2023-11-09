@@ -311,7 +311,7 @@ void refresh_accumulator(struct position *pos, int turn) {
 	}
 }
 
-/* m cannot be a king move_t */
+/* m cannot be a king move */
 void do_update_accumulator(struct position *pos, move_t *m, int turn) {
 	int source_square = move_from(m);
 	int target_square = move_to(m);

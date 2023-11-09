@@ -544,7 +544,6 @@ static inline int32_t scale(const struct position *pos, const struct evaluationi
 	/* Scores also KBBKN as a draw which is ok by the 50 move rule. */
 	if (!pos->piece[strong_side][pawn] && strong_material - weak_material <= material_value[bishop]) {
 		scale = (strong_material <= material_value[bishop]) ? 0 : (weak_material < material_value[rook]) ? 16 : 32;
-		
 	}
 	return scale;
 }

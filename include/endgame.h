@@ -24,6 +24,7 @@
 #include "bitboard.h"
 #include "move.h"
 #include "evaluate.h"
+#include "option.h"
 
 #define ENDGAMEBITS (8)
 #define ENDGAMESIZE (1 << ENDGAMEBITS)
@@ -45,6 +46,8 @@ static inline struct endgame *endgame_get(const struct position *pos) {
 }
 
 static inline struct endgame *endgame_probe(const struct position *pos) {
+	if (!option_endgame)
+		return NULL;
 	/* Check if pos qualifies for KXK. */
 	for (int color = 0; color < 2; color++)
 		if (is_KXK(pos, color))
