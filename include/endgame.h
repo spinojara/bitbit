@@ -26,7 +26,7 @@
 #include "evaluate.h"
 #include "option.h"
 
-#define ENDGAMEBITS (8)
+#define ENDGAMEBITS (9)
 #define ENDGAMESIZE (1 << ENDGAMEBITS)
 #define ENDGAMEINDEX (ENDGAMESIZE - 1)
 

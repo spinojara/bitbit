@@ -96,10 +96,14 @@ void endgame_store(const char *str, int32_t (*evaluate)(const struct position *p
 		
 		struct endgame *e = endgame_probe(&pos);
 		if (e) {
-			fprintf(stderr, "Endgame entry collision.\n");
+			fprintf(stderr, "Endgame %s already exists.\n", str);
 			exit(1);
 		}
 		e = endgame_get(&pos);
+		if (e->evaluate) {
+			fprintf(stderr, "Endgame %s entry collision.\n", str);
+			exit(1);
+		}
 
 		e->evaluate = evaluate;
 		e->endgame_key = pos.endgame_key;
@@ -107,10 +111,12 @@ void endgame_store(const char *str, int32_t (*evaluate)(const struct position *p
 	}
 }
 
-/* This function makes sure that the hashing of endgames is injective.
- * It takes a while.
- */
+/* This function makes sure that the hashing of endgames is injective. */
 void endgame_test(void) {
+#ifdef NDEBUG
+	printf("Assertions need to be enabled for endgame_test to work properly.\n");
+	exit(1);
+#endif
 	struct position pos = { 0 };
 	size_t max_pieces[] = { 0, 9, 11, 11, 11, 10 };
 	size_t max_index = 1;
@@ -131,7 +137,6 @@ void endgame_test(void) {
 			}
 		}
 
-#ifndef NDEBUG
 		pos.piece[white][all] = pos.piece[black][all] = 0;
 		for (int color = 0; color < 2; color++) {
 			int sign = 2 * color - 1;
@@ -143,36 +148,18 @@ void endgame_test(void) {
 				pos.piece[color][all] |= pos.piece[color][piece];
 			}
 		}
-		for (int color = 0; color < 2; color++) {
-			int total = 0;
-			for (int piece = pawn; piece <= king; piece++) {
-				int pop = popcount(pos.piece[color][piece]);
-				total += pop;
-				assert(pop == pieces[color][piece]);
-			}
-			assert(total == (int)popcount(pos.piece[color][all]));
-		}
-		assert(!(pos.piece[white][all] & pos.piece[black][all]));
-#endif
 
 		refresh_endgame_key(&pos);
 		struct endgame *e = endgame_probe(&pos);
 		/* Asserts verify_material. */
-		if (e) {
-			for (int color = 0; color < 2; color++) {
-				for (int piece = pawn; piece <= king; piece++) {
-					printf("%ld ", popcount(pos.piece[color][piece]));
-				}
-				printf("\n");
-			}
+		if (e)
 			endgame_evaluate(e, &pos);
-			printf("OK\n");
-		}
 
-		if (index % (max_index / 100) == 0)
-			printf("%ld%%\r", index / (max_index / 100));
 outer:;
+		if (index % (max_index / 100) == 0)
+			printf("%ld%%\r", 100 * index / max_index);
 	}
+	printf("Endgame table works correctly.\n");
 }
 
 /* +---+---+---+---+---+---+---+---+
