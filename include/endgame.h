@@ -48,13 +48,17 @@ static inline struct endgame *endgame_get(const struct position *pos) {
 static inline struct endgame *endgame_probe(const struct position *pos) {
 	if (!option_endgame)
 		return NULL;
+
+	struct endgame *e = endgame_get(pos);
+	if (e->endgame_key == pos->endgame_key)
+		return e;
+
 	/* Check if pos qualifies for KXK. */
 	for (int color = 0; color < 2; color++)
 		if (is_KXK(pos, color))
 			return &endgame_KXK[color];
 
-	struct endgame *e = endgame_get(pos);
-	return e->endgame_key == pos->endgame_key ? e : NULL;
+	return NULL;
 }
 
 /* If pos->halfmove is too large we should probably return 0
