@@ -60,24 +60,26 @@ int interface_uci(int argc, char **argv);
 int interface_setoption(int argc, char **argv);
 int interface_ucinewgame(int argc, char **argv);
 
+#define COMMAND(name) { #name, interface_##name }
+
 static const struct func func_arr[] = {
-	{ "help"       , interface_help       , },
-	{ "move"       , interface_move       , },
-	{ "undo"       , interface_undo       , },
-	{ "flip"       , interface_flip       , },
-	{ "mirror"     , interface_mirror     , },
-	{ "perft"      , interface_perft      , },
-	{ "position"   , interface_position   , },
-	{ "clear"      , interface_clear      , },
-	{ "quit"       , interface_quit       , },
-	{ "eval"       , interface_eval       , },
-	{ "go"         , interface_go         , },
-	{ "version"    , interface_version    , },
-	{ "tt"         , interface_tt         , },
-	{ "isready"    , interface_isready    , },
-	{ "uci"        , interface_uci        , },
-	{ "setoption"  , interface_setoption  , },
-	{ "ucinewgame" , interface_ucinewgame , },
+	COMMAND(help),
+	COMMAND(move),
+	COMMAND(undo),
+	COMMAND(flip),
+	COMMAND(mirror),
+	COMMAND(perft),
+	COMMAND(position),
+	COMMAND(clear),
+	COMMAND(quit),
+	COMMAND(eval),
+	COMMAND(go),
+	COMMAND(version),
+	COMMAND(tt),
+	COMMAND(isready),
+	COMMAND(uci),
+	COMMAND(setoption),
+	COMMAND(ucinewgame),
 };
 
 struct position pos;
@@ -281,8 +283,8 @@ int interface_version(int argc, char **argv) {
 	char t[8];
 	printf("compilation date: %s\n", date(t));
 	printf("simd: %s\n", simd);
-	printf("transposition table size: %" PRIu64 "B\n", tt.size * sizeof(*tt.table));
-	printf("transposition entry size: %" PRIu64 "B\n", sizeof(struct transposition));
+	printf("transposition table size: %" PRIu64 " B (%" PRIu64 " MiB)\n", tt.size * sizeof(*tt.table), tt.size * sizeof(*tt.table) / (1024 * 1024));
+	printf("transposition entry size: %" PRIu64 " B\n", sizeof(struct transposition));
 
 	return DONE;
 }

@@ -24,7 +24,7 @@
 #include "util.h"
 
 void version(void) {
-	printf("bitbit " MACRO_VALUE(VERSION)"\n");
+	printf("bitbit " XSTR(VERSION) "\n");
 	printf("Copyright (C) 2022 Isak Ellmer\n");
 }
 

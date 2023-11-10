@@ -32,8 +32,8 @@
 
 #define UNUSED(x) (void)(x)
 
-#define MACRO_NAME(x) #x
-#define MACRO_VALUE(x) MACRO_NAME(x)
+#define XSTR(x) STR(x)
+#define STR(x) #x
 
 #define SEED 1274012836ull
 

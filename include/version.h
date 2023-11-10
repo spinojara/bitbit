@@ -21,18 +21,18 @@
 char compiler[] =
 #if __clang__
 "clang "
-MACRO_VALUE(__clang_major__)"."
-MACRO_VALUE(__clang_minor__)"."
-MACRO_VALUE(__clang_patchlevel__)
+XSTR(__clang_major__)"."
+XSTR(__clang_minor__)"."
+XSTR(__clang_patchlevel__)
 #elif _MSC_VER
 "MSVC "
-MACRO_VALUE(_MSC_FULL_VER)"."
-MACRO_VALUE(_MSC_BUILD)
+XSTR(_MSC_FULL_VER)"."
+XSTR(_MSC_BUILD)
 #elif __GNUC__
 "gcc "
-MACRO_VALUE(__GNUC__)"."
-MACRO_VALUE(__GNUC_MINOR__)"."
-MACRO_VALUE(__GNUC_PATCHLEVEL__)
+XSTR(__GNUC__)"."
+XSTR(__GNUC_MINOR__)"."
+XSTR(__GNUC_PATCHLEVEL__)
 #else
 "unknown"
 #endif

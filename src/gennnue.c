@@ -368,8 +368,8 @@ int main(int argc, char **argv) {
 	endgame_init();
 
 #ifdef SYZYGY
-	if (!tb_init(MACRO_VALUE(SYZYGY))) {
-		printf("Init for tablebase failed for path \"%s\".\n", MACRO_VALUE(SYZYGY));
+	if (!tb_init(XSTR(SYZYGY))) {
+		printf("Init for tablebase failed for path \"%s\".\n", XSTR(SYZYGY));
 		exit(1);
 	}
 	printf("Tablebases found for up to %d pieces.\n", TB_LARGEST);
