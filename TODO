@@ -13,7 +13,7 @@
   shift_north etc since the functions are inlined. Check the generated assembly.
   Probably better with enum { UP, DOWN, LEFT, RIGHT }; These should also be so
   that square + dir is the expected square (for white). That is UP = 8 etc.
-- Make a contributions page.
+- Make a contributions page. The file could be named NOTICE.
 - Try pgnbin but don't consider pawn captures with --quiet option.
 
 VERY IMPORTANT
