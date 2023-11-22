@@ -1,3 +1,19 @@
+# bitbit, a bitboard based chess engine written in c.
+# Copyright (C) 2022 Isak Ellmer
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 MAJOR      = 1
 MINOR      = 0
 VERSION   := $(MAJOR).$(MINOR)
@@ -45,8 +61,9 @@ endif
 ifeq ($(TT), )
 	TT = 64
 endif
+
 ifeq ($(NNUE), )
-	NNUE = files/current.nnue
+	NNUE = etc/current.nnue
 else
 	NEEDWEIGHTS = yes
 endif
@@ -107,6 +124,8 @@ SRC_VISUALIZE  = visualize.c util.c
 
 SRC_NNUESOURCE = nnuesource.c util.c
 
+SRC_TESTBIT    = testbit.c sprt.c
+
 DEP = $(addprefix dep/,$(addsuffix .d,$(basename $(notdir $(wildcard src/*.c)))))
 
 OBJ_BITBIT     = $(addprefix obj/,$(addsuffix .o,$(basename $(SRC_BITBIT))))
@@ -119,6 +138,7 @@ OBJ_TEXELTUNE  = $(addprefix obj/,$(addsuffix .o,$(basename $(SRC_TEXELTUNE)))) 
 OBJ_GENBITBASE = $(addprefix obj/,$(addsuffix .o,$(basename $(SRC_GENBITBASE))))
 OBJ_BATCH      = $(addprefix obj/pic,$(addsuffix .o,$(basename $(SRC_BATCH))))
 OBJ_VISUALIZE  = $(addprefix obj/pic,$(addsuffix .o,$(basename $(SRC_VISUALIZE))))
+OBJ_TESTBIT    = $(addprefix obj/,$(addsuffix .o,$(basename $(SRC_TESTBIT))))
 
 PREFIX = /usr/local
 BINDIR = $(PREFIX)/bin
@@ -126,7 +146,7 @@ MANPREFIX = $(PREFIX)/share
 MANDIR = $(MANPREFIX)/man
 MAN6DIR = $(MANDIR)/man6
 
-all: bitbit gennnue genepd histogram pgnbin texeltune genbitbase libbatch.so libvisualize.so
+all: bitbit gennnue genepd histogram pgnbin texeltune genbitbase libbatch.so libvisualize.so testbit
 
 bitbit: $(OBJ_BITBIT)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
@@ -154,6 +174,9 @@ libbatch.so: $(OBJ_BATCH)
 
 libvisualize.so: $(OBJ_VISUALIZE)
 	$(CC) $(LDFLAGS) -shared $^ $(LDLIBS) -o $@
+
+testbit: $(OBJ_TESTBIT)
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 nnuesource: $(OBJ_NNUESOURCE)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
@@ -218,11 +241,20 @@ uninstall:
 clean:
 	rm -rf obj dep src/nnueweights.c
 
+LATEX = pdflatex
+
+doc: doc/mle_pentanomial.pdf
+
+doc/%.pdf: doc/src/%.tex
+	$(LATEX) -interaction=errorstopmode --output-directory=doc $^
+	rm doc/$*.aux doc/$*.log
+
 options:
 	@echo "CC      = $(CC)"
 	@echo "CFLAGS  = $(CFLAGS)"
 	@echo "LDFLAGS = $(LDFLAGS)"
 	@echo "LDLIBS  = $(LDLIBS)"
 
-.PHONY: all clean install uninstall options dep/nnueweights.d
+.PHONY: all clean install uninstall doc options dep/nnueweights.d
 .PRECIOUS: dep/%.d
+.SUFFIXES: .c .h .tex .pdf

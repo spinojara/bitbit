@@ -18,5 +18,5 @@
 #include <stdint.h>
 
 const uint32_t bitbase_KPK[12288] = {
-#include "../files/kpk.bin"
+#include "../etc/kpk.bin"
 };

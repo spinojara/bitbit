@@ -18,5 +18,5 @@
 #include <stdint.h>
 
 const uint32_t bitbase_KRKP[786432] = {
-#include "../files/krkp.bin"
+#include "../etc/krkp.bin"
 };
