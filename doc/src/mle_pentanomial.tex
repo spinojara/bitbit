@@ -1,0 +1,63 @@
+\documentclass{article}
+
+\title{Maximum likelihood of the pentanomial model for chess matches}
+\author{Isak Ellmer}
+\date{November 2023}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+We consider chess matches between two players with a fixed opening book and repeated openings.
+The openings are selected randomly. A pair of matches is two matches where the first player plays
+white in a specific opening and then the second player plays white in the same opening. We will
+refer to such a pair as a single match for simplicity. Each player are awarded points for each
+match in a pair. A loss gives $0$ points, a draw $\frac{1}{4}$ and a win $\frac{1}{2}$. A match
+pair can thus result in the five discrete values $0,\frac14,\frac12,\frac34,1$. The score of a
+match can be modeled as a random variable which we call $X$ with discrete distribution $f_\theta$
+where $\theta=(p_0,p_\frac14,p_\frac12,p_\frac34,p_1)$.
+
+In order to test the hypothesis $H_0:\theta\in\Theta_0$ versus $H_1:\theta\in\Theta_1$ we perform
+a generialized sequential probability ratio test. That is for i.i.d observations $x_1,...,x_N$ of
+$X$ we watch the quantity $$\frac{\sup_{\theta\in\Theta_0}\prod_{j=1}^N f_\theta(x_j)}{\sup_{\theta
+\in\Theta_1}\prod_{j=1}^N f_\theta(x_j)}$$ in some interval $[a,b]$. Or equivalently we watch $$\sup_
+{\theta\in\Theta_0}\sum_{j=1}^N\log{f_\theta(x_j)}-\sup_{\theta\in\Theta_1}\sum_{j=1}^N\log{f_\theta
+(x_j)}$$ in some interval $[A,B]=[\log a, \log b]$. In our case we are not actually interested in
+what $\theta$ is but only what the possible Elo difference is. We will thus consider hypotheses
+$$H:\phi(\theta)=C=\frac{1}{1+10^{-\Delta E/400}}$$ where $\phi(\theta)$ is the expected score of
+matches with probabilities $\theta=(p_0,...,p_1)$. $\phi$ is given by $$\phi(\theta)=\phi(p_0,...,
+p_1)=\sum_\alpha \alpha p_\alpha$$ where the sum is over $\alpha\in\{0,\frac14,\frac12,\frac34,1\}.$
+
+\section{Calculating the supremum}
+We are thus left with calculating expressions of the form $$\sup_{\phi(\theta)=C}\sum_{j=1}^N\log
+{f_\theta(x_j)}.$$ We begin by noting that since $X$ can only take $5$ discrete values. Instead of
+$x_1,...,x_N$ we can therefore consider $N_0,N_\frac14,N_\frac12,N_\frac34,N_1$ where $N_\alpha$
+is the number of $j$ such that $x_j=\alpha$ with total sum $N$. We will also normalize $N_\alpha$
+in the sense that $n_\alpha=\frac{N_\alpha}{N}$ so that the sum of the $n_\alpha$ is $1$.
+
+Our expression now simplifies to $$\sup_{\phi(\theta)=C}\sum_\alpha n_\alpha\log{f_\theta(\alpha)}=
+\sup_{\phi(\theta)=C}\sum_\alpha n_\alpha\log{p_\alpha}.$$ We want to maximize $\sum n_\alpha\log
+{p_\alpha}$ subject to $\phi(\theta)=\sum \alpha p_\alpha=C$ and $\sum p_\alpha=1$. The last equality
+is required since the r.v. $X$ must have total probability $1$. We proceed using Lagrange multipliers
+where $\mathcal{L}$ is given by $$\mathcal{L(\theta,\lambda,\mu)}=\sum n_\alpha \log p_\alpha-\lambda
+(\sum p_\alpha -1)-\mu(\sum \alpha p_\alpha-C).$$ We get $$\frac{\partial\mathcal{L}}{\partial p_\alpha}
+=\frac{n_\alpha}{p_\alpha}-\lambda-\alpha\mu=0.$$ Solving for $p_\alpha$ gives $$p_\alpha=\frac{n_\alpha}
+{\lambda+\alpha\mu}.$$ This gives us the two equations $$\sum \frac{n_\alpha}{\lambda+\alpha\mu}=1$$
+and $$\sum \frac{\alpha n_\alpha}{\lambda+\alpha\mu}=C.$$ We thus get $$\lambda+C\mu=\lambda\sum \frac
+{n_\alpha}{\lambda+\alpha\mu}+\mu\sum\frac{\alpha n_\alpha}{\lambda+\alpha\mu}=\sum \frac{\lambda n_\alpha
++\mu\alpha n_\alpha}{\lambda+\alpha\mu}=\sum n_\alpha=1.$$ Solving for $\lambda$ and substituting gives
+$$\sum \frac{\alpha n_\alpha}{1+(\alpha-C)\mu}=C.$$ Furthermore $$C=\sum C p_\alpha=\sum\frac{C n_\alpha}
+{\lambda+\alpha\mu}=\sum\frac{C n_\alpha}{1+(\alpha-C)\mu}.$$ Substituting once more gives $$\sum \frac
+{(\alpha-C)n_\alpha}{1+(\alpha-C)\mu}=0.$$ We denote this function of $\mu$ by $h$. Note that we need
+to have $0<p_\alpha$, but since $0\leq n_\alpha$ this implies $0<1+(\alpha-C)\mu$. We also note that
+$C\in(0,1)$ since it is in the range of the logistic function. If $\mu>0$ then the most restrictive
+case is $\alpha=0$ and we thus need $0<1-C\mu$ or $\mu<\frac{1}{C}$. If on the other hand $\mu<0$
+then the most restrictive case is $\alpha=1$ and we get $\frac{-1}{1-C}<\mu$. We are therefore looking
+for solutions to this equation in the interval $$\left(\frac{-1}{1-C},\frac{1}{C}\right).$$ Suppose
+now that $n_0$ and $n_1$ are both nonzero. Differentiating gives $$h'(\mu)=-\sum \frac{(\alpha-C)^2
+n_\alpha}{(1+(\alpha-C)\mu)^2}<0$$ and $h$ is thus strictly decreasing. As $\mu$ approaches $\frac{-1}
+{1-C}$, $h$ tends to $+\infty$. Moreover as $\mu$ approaches $\frac{1}{C}$, $h$ tends to $-\infty$.
+We can therefore conclude that $h$ has a unique root in this interval. In practice we will find this
+root using bisection and in the case where $n_0$ or $n_1$ vanishes we will simply set them to some
+very small $\varepsilon$.
+\end{document}
