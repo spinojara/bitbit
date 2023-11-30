@@ -13,7 +13,5 @@ src/nnueweights.c
 src/.*
 !include
 include/.*
+!doc/src
 !man
-!files
-!nnue
-/nnue/*.pyc

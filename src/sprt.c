@@ -37,14 +37,18 @@ double f_calc(const double mu, const double n[5], double C) {
 }
 
 double mu_bisect(const double n[5], double C) {
+	int t = 0;
 	double a = -1.0 / (1.0 - C);
 	double b = 1.0 / C;
 	printf("[%lf, %lf]\n", a, b);
 	while (1) {
+		t++;
 		double c = (a + b) / 2;
 		double f = f_calc(c, n, C);
-		if (fabs(f) < eps)
+		if (fabs(f) < eps) {
+			printf("%d\n", t);
 			return c;
+		}
 		if (f > 0)
 			a = c;
 		else
@@ -76,7 +80,7 @@ int main(void) {
 	double alpha = 0.05;
 	double beta = 0.05;
 	double mu;
-	const unsigned long N[5] = { 0, 17, 23, 16, 0 };
+	const unsigned long N[5] = { 1000, 100000, 1000000, 1000, 10 };
 	double n[5];
 	double p[5];
 	double sum = 0.0;
@@ -93,7 +97,7 @@ int main(void) {
 	printf("%lf - %lf - %lf - %lf - %lf\n", n[0], n[1], n[2], n[3], n[4]);
 
 	double elo1 = 0.0;
-	double elo2 = 10.0;
+	double elo2 = 130.0;
 	double C1 = sigmoid(elo1);
 	printf("C1: %lf\n", C1);
 	double C2 = sigmoid(elo2);

@@ -241,13 +241,10 @@ uninstall:
 clean:
 	rm -rf obj dep src/nnueweights.c
 
-LATEX = pdflatex
-
 doc: doc/mle_pentanomial.pdf
 
-doc/%.pdf: doc/src/%.tex
-	$(LATEX) -interaction=errorstopmode --output-directory=doc $^
-	rm doc/$*.aux doc/$*.log
+doc/%.pdf: doc/src/%.tex doc/src/%.bib
+	latexmk -pdf -cd $< -output-directory=../../doc
 
 options:
 	@echo "CC      = $(CC)"
