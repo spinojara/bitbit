@@ -17,6 +17,7 @@
 - Try pgnbin but don't consider pawn captures with --quiet option.
 - Use offsetof instead of partialposition.
 - Try pgo (profile guided optimization).
+- Profile code using gcov, operf and gprof.
 
 VERY IMPORTANT
 - Verify that the new transposition table works correctly.
