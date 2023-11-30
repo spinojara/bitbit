@@ -19,6 +19,7 @@
 #define INTERRUPT_H
 
 void interrupt_init(void);
+void interrupt_term(void);
 
 extern volatile int interrupt;
 
