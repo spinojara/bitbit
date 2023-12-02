@@ -36,7 +36,7 @@
 #include "history.h"
 #include "option.h"
 
-struct func {
+struct command {
 	char *name;
 	int (*ptr)(int argc, char **argv);
 };
@@ -62,7 +62,7 @@ int interface_ucinewgame(int argc, char **argv);
 
 #define COMMAND(name) { #name, interface_##name }
 
-static const struct func func_arr[] = {
+static const struct command commands[] = {
 	COMMAND(help),
 	COMMAND(move),
 	COMMAND(undo),
@@ -90,8 +90,8 @@ int interface_help(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
 	printf("The following commands are available in bitbit:\n");
-	for (size_t k = 0; k < SIZE(func_arr); k++)
-		printf("%s\n", func_arr[k].name);
+	for (size_t k = 0; k < SIZE(commands); k++)
+		printf("%s\n", commands[k].name);
 	
 	return DONE;
 }
@@ -313,6 +313,7 @@ int interface_uci(int argc, char **argv) {
 	printf("id author Isak Ellmer\n");
 	print_options();
 	printf("uciok\n");
+	interrupt_term();
 	return DONE;
 }
 
@@ -378,10 +379,10 @@ int parse(int *argc, char ***argv) {
 	if (interrupt)
 		ret = EXIT_LOOP;
 	else if (argc_t) {
-		const struct func *f = NULL;
-		for (size_t k = 0; k < SIZE(func_arr); k++)
-			if (strcmp(func_arr[k].name, argv_t[0]) == 0)
-				f = &func_arr[k];
+		const struct command *f = NULL;
+		for (size_t k = 0; k < SIZE(commands); k++)
+			if (strcmp(commands[k].name, argv_t[0]) == 0)
+				f = &commands[k];
 		if (f)
 			ret = f->ptr(argc_t, argv_t);
 
