@@ -9,6 +9,7 @@
 \theoremstyle{plain}
 \newtheorem{theorem}     {\bf Theorem}     [section]
 \newtheorem{proposition} {\bf Proposition} [section]
+\newtheorem{corollary}   {\bf Corollary}   [section]
 \newtheorem{lemma}       {\bf Lemma}       [section]
 \theoremstyle{definition} 
 \newtheorem{example}     {\bf Example}     [section]
@@ -51,12 +52,12 @@ Letting $\theta=(p_0,...,p_1)$ we take $\phi(\theta)=\frac14p_\frac14+\frac12p_\
 \frac34p_\frac34+p_1$ to be this expected score of a match.
 This is related to Elo in the following way
 $$\phi(\theta)=\frac1{1+10^{-\Delta E/400}}$$
-where $\Delta E$ is the elo difference of the two players \cite{wikipedia_elo}.
+where $\Delta E$ is the Elo difference of the two players \cite{wikipedia_elo}.
 
 \subsection{Hypothesis Testing}
 We denote by $f_\theta$, the probability density of the outcome of a match with probabilities
 $\theta=(p_0,...,p_1)$. Our goal is not to make any inference about $\theta$, but to test
-hypoteses on the Elo rating difference between two players. Our hypoteses will thus be of
+hypotheses on the Elo rating difference between two players. Our hypotheses will thus be of
 the form $$H:\phi(\theta)=C=\frac1{1+10^{-\Delta E/400}}$$ where we will always have
 $0<C<1$.
 
@@ -65,7 +66,7 @@ a generalized sequential probability ratio test. That is for i.i.d observations 
 we watch the quantity $$\frac{\sup_{\phi(\theta)=C_0}\prod_{j=1}^N f_\theta(x_j)}{\sup_{\phi(\theta)
 =C_1}\prod_{j=1}^N f_\theta(x_j)}$$ in some interval $[a,b]$. Or equivalently we watch $$\sup_
 {\phi(\theta)=C_0}\sum_{j=1}^N\log{f_\theta(x_j)}-\sup_{\phi(\theta)=C_1}\sum_{j=1}^N\log{f_\theta
-(x_j)}$$ in some interval $[A,B]=[\log a, \log b]$.
+(x_j)}$$ in some interval $[A,B]=[\log a,\log b]$.
 
 \section{Calculating the Supremum}
 We begin by noting that our outcome can only take $5$ discrete values.
@@ -136,7 +137,7 @@ We start with the following very useful lemma.
 	both $p_1$ and $p_N$ as per \Cref{increase}.
 	
 	This point $\theta_0$ will be
-	positive in all components and we must then have
+	positive in all components, and we must then have
 	$g(\theta_0)\leq\sup_{\theta\in R}g(\theta)$.
 
 \end{proof}
@@ -192,7 +193,7 @@ nonzero except possibly for $n_1$ and $n_N$.
 	Recall that we need $0\leq p_1,p_3$ which implies
 	$0\leq\frac{3-C-p_2}{2}$ and $0\leq\frac{C-1-p_2}{2}$. This in turn gives
 	$p_2\leq C-1$
-	and $p_2\leq 3-C$. Since $C>2$ the second inequality is more restrictive so our
+	and $p_2\leq 3-C$. Since $C>2$ the second inequality is more restrictive, so our
 	maximum is at $p_2=3-C$.
 	This gives $p_1=0$ and $p_3=C-2$. This is in line with what we expect according to
 	\Cref{pzero}. Our maximum value is moreover $1\log p_2=\log(3-C)$.
@@ -200,8 +201,8 @@ nonzero except possibly for $n_1$ and $n_N$.
 
 \subsection{Finding the Global Maximum}
 We now have everything we need to find the global maximum. We have reduced the problem
-to the following. All $n_j>0$ with the exception of $n_1$ and $n_N$. We begin with the
-case that all $n_j>0$.
+to the following. All $n_j>0$ except for $n_1$ and $n_N$. We begin with the
+case where all $n_j>0$.
 
 \begin{lemma}\label{interior}
 	Suppose that all $n_j$ are nonzero, then a global maximum of $g$ is in the
@@ -230,7 +231,7 @@ shall see in the following proposition.
 	We proceed using Lagrange multipliers with $$\mathcal{L(\theta,\lambda,\mu)}=\sum_j
 	n_j \log p_j-\lambda\left(\sum_j p_j-1\right)-\mu\left(\sum_j \alpha_jp_j-C\right).$$
 	Differentiating with respect to $p_j$ gives the equation $$\frac{n_j}{p_j}-\lambda-
-	\alpha_j\mu=0.$$ Since $n_j>0$ we know that $\lambda+\alpha_j\mu$ is nonzero and
+	\alpha_j\mu=0.$$ Since $n_j>0$ we know that $\lambda+\alpha_j\mu$ is nonzero, and
 	we can thus solve for $p_j$, which gives
 	$$p_j=\frac{n_j}{\lambda+\alpha_j\mu}.$$ Substituting into the first two equations
 	gives $$\sum_j\frac{n_j}{\lambda+\alpha_j\mu}=1$$ and
@@ -344,9 +345,111 @@ useful way of approximating the maximum.
 	$n^{(\varepsilon)}_k$ that is the largest. And then $n^{(\varepsilon)}
 	_l\log n^{(\varepsilon)}_k$ goes to $0$. Looking at $$\frac{n^{(\varepsilon)}_1}
 	{n^{(\varepsilon)}_N}$$ we see that it is either bounded or we can pass
-	to another subsequence where $n^{(\varepsilon)}_1>n^{(\varepsilon)}_N$
+	to another subsequence where $n^{(\varepsilon)}_1>n^{(\varepsilon)}_N$,
 	and we can complete the proof.
 \end{remark}
+
+\section{Generalized Hypotheses}
+Most of the time we are not even interested in what the exact Elo difference between
+two players are. Suppose for example that we make an adjustment to a chess program.
+We do not care if the engine improved by 10 or 100 Elo. If it improves the chess program,
+the change is good.
+
+For example the null hypothesis will be that the program has not improved. That is
+$$H_0:\text{The Elo of player $1$ does not exceed that of player $2$.}$$
+The alternative hypothesis is that the chess program has in fact improved. Suppose
+that we take the complement as our alternative hypothesis.
+$$H_1:\text{The Elo of player $1$ exceeds that of player $2$.}$$
+
+In both of these cases we want to examine hypotheses $H_0:\phi(\theta)\leq C$ or
+$H:\phi(\theta)>C$. In fact, we generalize even more and calculate any hypothesis
+of the form
+$H:\phi(\theta)\in\Phi$ where $\Phi\subset(\alpha_1,\alpha_N)$ is connected.
+If $\Phi$ is not connected we can still calculate the supremum by two cases as stated in
+\Cref{twocases}.
+The supremum we want to calculate is then $$\sup_{\phi(\theta)\in\Phi}\sum_jn_j\log p_j.$$
+
+We now let $n_j>0$ be fixed. Let $m:(\alpha_1,\alpha_N)\to(-\infty,0]$ be the function, of
+the variable
+$x=C$, given by $$m(x)=\sup_{\phi(\theta)=x}\sum_jn_j\log p_j.$$
+
+\begin{lemma}\label{mmax}
+	$m$ has a global maximum at $x_0=\sum_j\alpha_jn_j$.
+\end{lemma}
+\begin{proof}
+	We want to calculate $\sup\sum_jn_j\log p_j$. We once more proceed using Lagrange
+	multipliers but without any restriction on $\phi(\theta)$. We thus get
+	$$\mathcal L=\sum_jn_j\log p_j-\lambda\left(\sum_jp_j-1\right).$$
+	We now have $$\frac{n_j}{p_j}=\lambda$$ or equivalently
+	$$p_j=\frac{n_j}{\lambda}.$$ This implies $$\sum_j\frac{n_j}{\lambda}=1$$
+	and we get $\lambda=1$. Now $p_j=n_j$ for all $j$ and the maximum of $m$ must be
+	at $\phi(\theta)=\sum_j\alpha_jp_j=\sum_j\alpha_jn_j=x_0$.
+\end{proof}
+
+The following is the main result of this section.
+
+\begin{proposition}
+	$m$ is $C^2$ and has a global maximum at $x_0=\sum_j\alpha_jn_j$. 
+	Moreover $m$ is strictly increasing on the interval $(\alpha_1,x_0]$
+	and strictly decreasing on $[x_0,\alpha_N)$.
+\end{proposition}
+\begin{proof}
+	Recall the function $$h(\mu,x)=\sum_j\frac{(\alpha_j-x)n_j}
+	{1+(\alpha_j-x)\mu}.$$ As stated in \Cref{uniqueroot}, we can solve $h(\mu,x)=0$ for
+	$\mu$ as a function of
+	$x$. We also proved that $$\frac{\partial h}{\partial\mu}<0$$ for all $\mu$ and
+	$x$ in their respective intervals. The Implicit Function Theorem now implies that
+	the function $\mu(x)$ is at least $C^1$.
+
+	We now turn to the derivative of $m$. Note that the variables $p_j$ depend on $x$ as
+	$$p_j(x)=\frac{n_j}{1+(\alpha_j-x)\mu(x)}.$$ It follows that $m$ is $C^1$ since $\mu$ is.
+	The derivative is given by $$m'(x)=\sum_j\frac{n_j}{p_j}p_j'(x)=\sum_j
+	\frac{n_j}{p_j}\frac{n_j}{(1+(\alpha_j-x)\mu(x))^2}(\mu(x)-(\alpha_j-x)\mu'(x))=$$$$
+	\sum_jp_j(x)(\mu(x)-(\alpha_j-x)\mu'(x))=
+	\mu(x)\sum_jp_j(x)-\mu'(x)\sum_j(\alpha_j-x)p_j(x)=$$$$
+	\mu(x)1-\mu'(x)h(\mu(x),x)=\mu(x).$$
+	We now see that $m$ is $C^2$ since $\mu$ is $C^1$.
+
+	Suppose now that $m'(x)=0$, then $\mu(x)=0$ and $$p_j=\frac{n_j}{1+(\alpha_j-x)0}=n_j.$$
+	We thus have $x=\sum_j\alpha_jp_j=\sum_j\alpha_jn_j=x_0$. Together with \Cref{mmax} we
+	see that $x_0$ is the only root of $m'$.
+
+	If $x$ tends to $\alpha_1$ then the condition $\sum_j\alpha_jp_j=x$ ensures that the maximum
+	$\theta$ tends to $(1,0,...,0)$. $m(x)$ must then tend to $-\infty$ for all $n_j$ are positive.
+	A similar argument shows that $m$ tends to $-\infty$ as $x\to\alpha_N$.
+
+	By the continuity of the derivative $m'$ and the single root $x_0$, we know that $m'$ cannot
+	change sign on $(\alpha_1,x_0)$ nor $(x_0,\alpha_N)$. Since $m$ tends to $-\infty$ on both
+	endpoints we conclude that $m$ is strictly increasing on $(\alpha_1,x_0]$, and strictly
+	decreasing on $[x_0,\alpha_N)$.
+\end{proof}
+
+\begin{corollary}
+	Let $\Phi\subseteq(\alpha_1,\alpha_N)$ be a connected nonempty set. Then
+	$$\sup_{\phi(\theta)\in\Phi}\sum_jn_j\log p_j=\sup_{\phi(\theta)=C}\sum_jn_j\log p_j$$
+	where $C$ is the unique point in $\overline{\Phi}$ closest to $x_0$.
+\end{corollary}
+
+\begin{corollary}
+	Let $\Phi\subseteq(\alpha_1,x_0]$ be a nonempty set. Then
+	$$\sup_{\phi(\theta)\in\Phi}\sum_jn_j\log p_j=\sup_{\phi(\theta)=C}\sum_jn_j\log p_j$$
+	where $C$ is the greatest point in $\overline{\Phi}$.
+\end{corollary}
+
+\begin{corollary}
+	Let $\Phi\subseteq[x_0,\alpha_N)$ be a nonempty set. Then
+	$$\sup_{\phi(\theta)\in\Phi}\sum_jn_j\log p_j=\sup_{\phi(\theta)=C}\sum_jn_j\log p_j$$
+	where $C$ is the smallest point in $\overline{\Phi}$.
+\end{corollary}
+
+\begin{corollary}\label{twocases}
+	Let $\Phi\subseteq(\alpha_1,\alpha_N)$ be a nonempty set. If $\Phi$ intersects both
+	$(\alpha_1,x_0]$ and $[x_0,\alpha_N)$ then 
+	$$\sup_{\phi(\theta)\in\Phi}\sum_jn_j\log p_j=\max\left\{\sup_{\phi(\theta)=C_1}
+	\sum_jn_j\log p_j,\sup_{\phi(\theta)=C_2}\sum_jn_j\log p_j\right\}$$
+	where $C_1$ is the greatest point in $\overline{\Phi}\cap(\alpha_1,x_0]$ and $C_2$ the
+	smallest in $\overline{\Phi}\cap[x_0,\alpha_N)$.
+\end{corollary}
 
 \bibliographystyle{plain}
 \bibliography{\jobname}
