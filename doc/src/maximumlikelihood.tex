@@ -39,13 +39,14 @@ player $1$ won, not because of superior play, but because white was heavily favo
 in this opening. When it is player $2$'s turn to play white in the same opening
 the expected score is no longer $\frac12d+w$, but higher.
 
-A partial solution to this problem is to consider the pentanomial model. Instead of
+A partial solution to this problem is to consider the pentanomial model, as opposed to the
+old trinomial model. Instead of
 scoring a single match, we instead score the match pair. A loss still gives $0$ points,
 a draw now gives $\frac14$ and a win $\frac12$. The sum of the individual match scores
 is then the score of the match pair. For example, winning one match and drawing one results
 in a score of $\frac34$. The possible outcomes for a match pair are thus the scores
 $0$, $\frac14$, $\frac12$, $\frac34$ and $1$ with respective probabilities
-$p_0$, $p_\frac14$, $p_\frac12$, $p_\frac34$ and $p_1$.
+$p_0$, $p_\frac14$, $p_\frac12$, $p_\frac34$ and $p_1$, hence the name pentanomial. 
 
 The expected score is now given by $\frac14p_\frac14+\frac12p_\frac12+\frac34p_\frac34+p_1$.
 Letting $\theta=(p_0,...,p_1)$ we take $\phi(\theta)=\frac14p_\frac14+\frac12p_\frac12+
@@ -398,8 +399,8 @@ The following is the main result of this section.
 	{1+(\alpha_j-x)\mu}.$$ As stated in \Cref{uniqueroot}, we can solve $h(\mu,x)=0$ for
 	$\mu$ as a function of
 	$x$. We also proved that $$\frac{\partial h}{\partial\mu}<0$$ for all $\mu$ and
-	$x$ in their respective intervals. The Implicit Function Theorem now implies that
-	the function $\mu(x)$ is at least $C^1$.
+	$x$ in their respective intervals. The Implicit Function Theorem \cite{wikipedia_implicit}
+	now implies that the function $\mu(x)$ is at least $C^1$.
 
 	We now turn to the derivative of $m$. Note that the variables $p_j$ depend on $x$ as
 	$$p_j(x)=\frac{n_j}{1+(\alpha_j-x)\mu(x)}.$$ It follows that $m$ is $C^1$ since $\mu$ is.

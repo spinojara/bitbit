@@ -62,19 +62,13 @@ ifeq ($(TT), )
 	TT = 64
 endif
 
-ifeq ($(NNUE), )
-	NNUE = etc/current.nnue
-else
-	NEEDWEIGHTS = yes
-endif
-
 ifneq ($(SYZYGY), )
 	LDLIBS  += -lfathom
 	DSYZYGY := -DSYZYGY=$(SYZYGY)
 endif
 
-ifeq ($(wildcard src/nnueweights.c), )
-	NEEDWEIGHTS = yes
+ifeq ($(NNUE), )
+	NNUE = etc/current.nnue
 endif
 
 SRC_BITBIT     = bitbit.c bitboard.c magicbitboard.c attackgen.c \
@@ -118,7 +112,7 @@ SRC_GENBITBASE = genbitbase.c bitboard.c magicbitboard.c attackgen.c \
                  move.c util.c position.c movegen.c \
 
 SRC_BATCH      = batch.c bitboard.c magicbitboard.c attackgen.c \
-                 move.c util.c position.c movegen.c \
+                 move.c util.c position.c movegen.c
 
 SRC_VISUALIZE  = visualize.c util.c
 
@@ -217,9 +211,10 @@ obj/%.o: src/%.c dep/%.d Makefile
 	@mkdir -p obj
 	$(CC) $(CFLAGS) -Iinclude -c $< -o $@
 
-dep/nnueweights.d:
-src/nnueweights.c: nnuesource $(NNUE)
+src/nnueweights.c: nnuesource
 	./nnuesource $(NNUE)
+
+dep/nnueweights.d:
 
 dep/%.d: src/%.c
 	@mkdir -p dep
@@ -241,7 +236,7 @@ uninstall:
 clean:
 	rm -rf obj dep src/nnueweights.c
 
-doc: doc/mle_pentanomial.pdf
+doc: doc/maximumlikelihood.pdf doc/elo.pdf
 
 doc/%.pdf: doc/src/%.tex doc/src/%.bib
 	latexmk -pdf -cd $< -output-directory=../../doc
