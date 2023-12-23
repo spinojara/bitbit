@@ -19,10 +19,14 @@
 #include <sys/types.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <assert.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 #include <math.h>
+#include <sys/wait.h>
+
+#include "sprt.h"
 
 enum {
 	LOSS,
@@ -45,9 +49,8 @@ unsigned long game_number(const char *str) {
 	return r - 1;
 }
 
-void update_pentanomial(unsigned long pentanomial[5], struct result *results, unsigned long game) {
+int update_pentanomial(unsigned long pentanomial[5], struct result *results, unsigned long game) {
 	int first;
-
 	/* The pairs are
 	 * 0, 1
 	 * 2, 3
@@ -60,16 +63,17 @@ void update_pentanomial(unsigned long pentanomial[5], struct result *results, un
 		first = game + 1;
 
 	if (!results[first].done)
-		return;
+		return 0;
 
 	unsigned a = results[game].result;
 	unsigned b = results[first].result;
 
 	pentanomial[a + b]++;
+	return 1;
 }
 
-void start_task(unsigned long games) {
-	games = 400;
+int sprt(unsigned long games, double alpha, double beta, double elo0, double elo1) {
+	//games = 10;
 	char gamesstr[1024];
 	sprintf(gamesstr, "%lu", games);
 
@@ -83,17 +87,25 @@ void start_task(unsigned long games) {
 
 	if (pid == 0) {
 		close(pipefd[0]); /* Close unsued read end. */
+		close(STDOUT_FILENO);
+		
 		dup2(pipefd[1], STDOUT_FILENO); /* Redirect stdout to write end. */
 
-		execlp("cutechess-cli", "cutechess-cli", "-each", "proto=uci", "tc=1+0.03",
+		/* We strongly prefer if the pipe from c-chess-cli to testbit
+		 * is unbuffered. This is achieved by the library call
+		 * setbuf(stdout, NULL);
+		 *
+		 * A fork with this simple change is retained at
+		 * <https://github.com/spinosarus123/c-chess-cli/tree/unbuffered>.
+		 */
+		execlp("c-chess-cli", "c-chess-cli", "-each", "tc=1+0.03",
 				"-games", gamesstr,
 				"-concurrency", "8",
 				"-repeat",
-				"-engine", "cmd=/usr/src/bitbit/bitbit",
+				"-engine", "cmd=/usr/src/bitbit/bitbitold", "name=old",
 				"-engine", "cmd=/usr/src/bitbit/bitbit", NULL);
 
-		perror("error: failed to open cutechess-cli\n");
-		kill(getppid(), SIGINT);
+		perror("error: failed to open c-chess-cli\n");
 		exit(3);
 	}
 
@@ -103,70 +115,71 @@ void start_task(unsigned long games) {
 
 	close(pipefd[1]); /* Close unused write end. */
 	FILE *f = fdopen(pipefd[0], "r");
-	char line[BUFSIZ];
+	char *str, line[BUFSIZ];
 
+	int H = NONE;
 	while (1) {
 		fgets(line, sizeof(line), f);
-		if (!strncmp(line, "Finished game", 13)) {
-			unsigned long game = game_number(line + 14);
+		if ((str = strstr(line, "Finished game"))) {
+			unsigned long game = game_number(str + 14);
 			/* Fixes the problem while parsing that some games
 			 * are played as white and some as black.
 			 */
-			int white = !(game % 2);
+			int white = !((game + 1) % 2);
 			results[game].done = 1;
-			if (strstr(line, "1-0"))
-				results[game].result = white ? WIN : LOSS;
-			else if (strstr(line, "0-1"))
-				results[game].result = white ? LOSS : WIN;
-			else
-				results[game].result = DRAW;
 
+			str = strrchr(line, '{') - 2;
+
+			switch (*str) {
+			/* 1-0 */
+			case '0':
+				results[game].result = white ? WIN : LOSS;
+				break;
+			/* 0-1 */
+			case '1':
+				results[game].result = white ? LOSS : WIN;
+				break;
+			/* 1/2-1/2 */
+			case '2':
+				results[game].result = DRAW;
+				break;
+			default:
+				assert(0);
+			}
 			trinomial[results[game].result]++;
-			update_pentanomial(pentanomial, results, game);
+
+			if (update_pentanomial(pentanomial, results, game)) {
+				unsigned long N = 0;
+				for (int j = 0; j < 5; j++)
+					N += pentanomial[j];
+
+				if (N % 8 == 0) {
+					double plusminus;
+					double elo = sprt_elo(pentanomial, &plusminus);
+					printf("Elo: %lf +- %lf\n", elo, plusminus);
+				}
+				/* We only check every 8 games. */
+				if (N % 8 == 0 && (H = sprt_check(pentanomial, alpha, beta, elo0, elo1))) {
+					break;
+				}
+			}
 		}
-		else if (!strncmp(line, "Finished match", 14)) {
-			break;
-		}
-		printf("%s", line);
+		//printf("%s", line);
 	}
 
-	printf("TRINOMIAL %ld - %ld - %ld\n", trinomial[WIN], trinomial[LOSS], trinomial[DRAW]);
-	printf("PENTANOMIAL %ld - %ld - %ld - %ld - %ld\n", pentanomial[0], pentanomial[1], pentanomial[2], pentanomial[3], pentanomial[4]);
-
-	unsigned long tN = trinomial[0] + trinomial[1] + trinomial[2];
-	unsigned long pN = pentanomial[0] + pentanomial[1] + pentanomial[2] + pentanomial[3] + pentanomial[4];
-
-	double t[3];
-	double p[5];
-
-	for (int i = 0; i < 3; i++)
-		t[i] = (double)trinomial[i] / tN;
-
-	for (int i = 0; i < 5; i++)
-		p[i] = (double)pentanomial[i] / pN;
-
-	double tt = 0.0;
-	for (int i = 0; i < 3; i++)
-		tt += (double)i / 2 * t[i];
-
-	double pt = 0.0;
-	for (int i = 0; i < 5; i++)
-		pt += (double)i / 4 * p[i];
-
-	double tsigma = 0.0;
-	for (int i = 0; i < 3; i++)
-		tsigma += ((double)i / 2) * ((double)i / 2) * t[i];
-	tsigma = sqrt(tsigma - tt * tt);
-
-	double psigma = 0.0;
-	for (int i = 0; i < 5; i++)
-		psigma += ((double)i / 4) * ((double)i / 4) * p[i];
-	psigma = sqrt(psigma - pt * pt);
-
-	printf("tt: %f\n", tt);
-	printf("pt: %f\n", pt);
-	printf("ts: %f\n", tsigma);
-	printf("ps: %f\n", psigma);
-
+	kill(pid, SIGINT);
+	waitpid(pid, NULL, 0);
 	free(results);
+	if (H == H0)
+		printf("H0 accepted\n");
+	else if (H == H1)
+		printf("H1 accepted\n");
+	else
+		printf("None accepted\n");
+	return H;
+}
+
+int main(void) {
+	sprt(400, 0.05, 0.05, 0.0, 10.0);
+	return 0;
 }
