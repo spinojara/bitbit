@@ -9,7 +9,8 @@
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.  *
+ * GNU General Public License for more details.
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
@@ -21,14 +22,13 @@
 #include <unistd.h>
 #include <netdb.h>
 #include <sys/socket.h>
-#include <fcntl.h>
 
 #include "testbitshared.h"
+#include "sprt.h"
 
 int main(int argc, char **argv) {
 	char *hostname = NULL;
 	char *port = "2718";
-	char *path = NULL;
 
 	for (int i = 1; i < argc; i++) {
 		if (!strcmp(argv[i], "--port")) {
@@ -37,25 +37,14 @@ int main(int argc, char **argv) {
 				break;
 			port = argv[i];
 		}
-		else if (hostname) {
-			path = argv[i];
-		}
 		else {
 			hostname = argv[i];
 		}
 	}
 
-	if (!hostname || !path) {
-		fprintf(stderr, "usage: testbit hostname filename\n");
-		return 1;
-	}
+	if (!hostname)
+		fprintf(stderr, "usage: testbitn hostname\n");
 
-	int filefd = open(path, O_RDONLY, 0);
-	if (filefd == -1) {
-		fprintf(stderr, "error: failed to open file \"%s\"\n", path);
-		return 1;
-	}
-	
 	int sockfd;
 	struct addrinfo hints = { 0 }, *servinfo, *p;
 	int rv;
@@ -63,25 +52,28 @@ int main(int argc, char **argv) {
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
 
-	if ((rv = getaddrinfo(hostname, port, &hints, &servinfo))) {
+	if ((rv = getaddrinfo(argv[1], port, &hints, &servinfo))) {
 		fprintf(stderr, "error: %s\n", gai_strerror(rv));
 		return 1;
 	}
-	
+
 	for (p = servinfo; p; p = p->ai_next) {
 		if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
+			fprintf(stderr, "error: connect\n");
 			continue;
 		}
 
 		if (connect(sockfd, p->ai_addr, p->ai_addrlen)) {
 			close(sockfd);
+			fprintf(stderr, "error: connect\n");
 			continue;
 		}
+
 		break;
 	}
 
 	if (!p) {
-		fprintf(stderr, "error: failed to connect to %s\n", hostname);
+		fprintf(stderr, "error: failed to connect\n");
 		return 2;
 	}
 
@@ -93,27 +85,14 @@ int main(int argc, char **argv) {
 	recv(sockfd, salt, sizeof(salt), 0);
 	getpassword(password);
 	hashpassword(password, salt);
-	printf("hej\n");
-	sendall(sockfd, password, 64);
-	printf("hej\n");
+	sendall(sockfd, password, strlen(password));
 
-	sendall(sockfd, "c", 1);
-	printf("hej\n");
+	char buf[BUFSIZ];
 
-	/* Architecture dependent. */
-	double elo[2] = { 0.0, 10.0 };
-	sendall(sockfd, (char *)elo, 16);
-
-	sendfile(sockfd, filefd);
-	printf("hej\n");
-
-	char buf[BUFSIZ] = { 0 };
-	int n;
-	while ((n = recv(sockfd, buf, sizeof(buf) - 1, 0)) > 0) {
-		buf[n] = '\0';
-		printf("%s", buf);
+	while (recv(sockfd, buf, sizeof(buf), 0) > 0) {
+		printf("%s\n", buf);
+		/* Start test based on data. */
 	}
 
-	close(filefd);
-	close(sockfd);
+	return 0;
 }

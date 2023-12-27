@@ -118,7 +118,9 @@ SRC_VISUALIZE  = visualize.c util.c
 
 SRC_NNUESOURCE = nnuesource.c util.c
 
-SRC_TESTBIT    = testbit.c sprt.c
+SRC_TESTBIT    = testbit.c testbitshared.c util.c
+SRC_TESTBITD   = testbitd.c testbitshared.c util.c
+SRC_TESTBITN   = testbitn.c testbitshared.c util.c sprt.c
 
 DEP = $(addprefix dep/,$(addsuffix .d,$(basename $(notdir $(wildcard src/*.c)))))
 
@@ -133,6 +135,8 @@ OBJ_GENBITBASE = $(addprefix obj/,$(addsuffix .o,$(basename $(SRC_GENBITBASE))))
 OBJ_BATCH      = $(addprefix obj/pic,$(addsuffix .o,$(basename $(SRC_BATCH))))
 OBJ_VISUALIZE  = $(addprefix obj/pic,$(addsuffix .o,$(basename $(SRC_VISUALIZE))))
 OBJ_TESTBIT    = $(addprefix obj/,$(addsuffix .o,$(basename $(SRC_TESTBIT))))
+OBJ_TESTBITD   = $(addprefix obj/,$(addsuffix .o,$(basename $(SRC_TESTBITD))))
+OBJ_TESTBITN   = $(addprefix obj/,$(addsuffix .o,$(basename $(SRC_TESTBITN))))
 
 PREFIX = /usr/local
 BINDIR = $(PREFIX)/bin
@@ -140,7 +144,7 @@ MANPREFIX = $(PREFIX)/share
 MANDIR = $(MANPREFIX)/man
 MAN6DIR = $(MANDIR)/man6
 
-all: bitbit gennnue genepd histogram pgnbin texeltune genbitbase libbatch.so libvisualize.so testbit
+all: bitbit gennnue genepd histogram pgnbin texeltune genbitbase libbatch.so libvisualize.so testbit testbitd testbitn
 
 bitbit: $(OBJ_BITBIT)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
@@ -170,6 +174,12 @@ libvisualize.so: $(OBJ_VISUALIZE)
 	$(CC) $(LDFLAGS) -shared $^ $(LDLIBS) -o $@
 
 testbit: $(OBJ_TESTBIT)
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+
+testbitd: $(OBJ_TESTBITD)
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+
+testbitn: $(OBJ_TESTBITN)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 nnuesource: $(OBJ_NNUESOURCE)
