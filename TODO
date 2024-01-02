@@ -22,6 +22,7 @@
 - Update options file so that the "default" section in uci actually represents
   what is currently the default. Base this on the compile time constants for
   all the options.
+- Make piece enums upper case.
 
 VERY IMPORTANT
 - Verify that the new transposition table works correctly.
