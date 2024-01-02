@@ -15,12 +15,20 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#ifndef SPRT_H
+#define SPRT_H
+
+#include <stdint.h>
+
 enum {
-	NONE,
+	HNONE,
 	H0,
 	H1,
+	HERROR,
 };
 
-int sprt_check(const unsigned long N[5], double alpha, double beta, double elo0, double elo1);
+int sprt(unsigned long games, uint64_t trinomial[3], uint64_t pentanomial[5], double alpha, double beta, double elo0, double elo1);
 
 double sprt_elo(const unsigned long N[5], double *plusminus);
+
+#endif

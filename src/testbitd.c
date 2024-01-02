@@ -31,17 +31,23 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#include <sqlite3.h>
+
 #include "testbitshared.h"
 #include "util.h"
+#include "sprt.h"
 
 #define BACKLOG 10
 
+#define NRM "\x1B[0m"
+#define RED "\x1B[31m"
+#define GRN "\x1B[32m"
+#define YLW "\x1B[33m"
+#define MGT "\x1B[35m"
+#define CYN "\x1B[36m"
+
 enum {
-	LISTENER,
 	PASSWORD,
-	TYPE,
-	SETUP,
-	PATCH,
 	AWAITING,
 	RUNNING,
 };
@@ -49,12 +55,12 @@ enum {
 struct connection {
 	char buf[128];
 	int status;
-};
+	int id;
+	double elo0;
+	double elo1;
 
-struct queue {
-	char name[BUFSIZ];
-
-	struct queue *next;
+	size_t len;
+	char *patch;
 };
 
 int get_listener_socket(const char *port) {
@@ -103,13 +109,15 @@ struct connection *add_to_pdfs(struct pollfd *pdfs[], struct connection *connect
 		*pdfs = realloc(*pdfs, *fd_size * sizeof(**pdfs));
 		*connections = realloc(*connections, *fd_size * sizeof(**connections));
 	}
-	
+	memset(&(*pdfs)[*fd_count], 0, sizeof((*pdfs)[*fd_count]));
+	memset(&(*connections)[*fd_count], 0, sizeof(**connections));
+
 	(*pdfs)[*fd_count].fd = newfd;
 	(*pdfs)[*fd_count].events = POLLIN;
-	memset(&(*connections)[*fd_count], 0, sizeof(**connections));
+
 	(*connections)[*fd_count].status = PASSWORD;
-	++*fd_count;
-	return &(*connections)[*fd_count - 1];
+
+	return &(*connections)[(*fd_count)++];
 }
 
 void del_from_pdfs(struct pollfd pdfs[], struct connection connections[], int i, int *fd_count) {
@@ -137,8 +145,7 @@ int main(int argc, char **argv) {
 	int newfd;
 	struct sockaddr_storage remoteaddr;
 	socklen_t addrlen;
-	char buf[BUFSIZ] = { 0 };
-	char filename[128];
+	char buf[BUFSIZ] = { 0 }, *str;
 	int n;
 	
 	int fd_count = 0;
@@ -154,10 +161,99 @@ int main(int argc, char **argv) {
 
 	pdfs[0].fd = listener;
 	pdfs[0].events = POLLIN;
-	connections[0].status = LISTENER;
+	connections[0].status = -1;
 	fd_count = 1;
 
+	sqlite3 *db;
+	sqlite3_stmt *stmt, *stmt2;
+	sqlite3_blob *blob;
+	int r;
+	sqlite3_open("/var/lib/testbit/testbit.db", &db);
+	if (!db) {
+		fprintf(stderr, "error: failed to open /var/lib/testbit/testbit.db");
+		return 1;
+	}
+
+	r = sqlite3_exec(db,
+			"CREATE TABLE IF NOT EXISTS tests ("
+			"id        INTEGER PRIMARY KEY, "
+			"status    INTEGER, "
+			"elo0      REAL, "
+			"elo1      REAL, "
+			"queuetime INTEGER, "
+			"starttime INTEGER, "
+			"donetime  INTEGER, "
+			"elo       REAL, "
+			"pm        REAL, "
+			"result    INTEGER, "
+			"t0        INTEGER, "
+			"t1        INTEGER, "
+			"t2        INTEGER, "
+			"p0        INTEGER, "
+			"p1        INTEGER, "
+			"p2        INTEGER, "
+			"p3        INTEGER, "
+			"p4        INTEGER, "
+			"patch     BLOB"
+			");",
+			NULL, NULL, NULL);
+	if (r) {
+		fprintf(stderr, "error: failed to create table tests\n");
+		return 1;
+	}
+
+	/* Requeue all tests that ran before closing. */
+	sqlite3_prepare_v2(db,
+			"UPDATE tests SET status = ? WHERE status = ?;",
+			-1, &stmt, NULL);
+	sqlite3_bind_int(stmt, 1, TESTQUEUE);
+	sqlite3_bind_int(stmt, 2, TESTRUNNING);
+	sqlite3_step(stmt);
+	sqlite3_finalize(stmt);
+
 	while (1) {
+		/* Loop through queue and start available tests. */
+		r = sqlite3_prepare_v2(db,
+				"SELECT id, elo0, elo1 FROM tests WHERE status = ? ORDER BY queuetime ASC;",
+				-1, &stmt, NULL);
+		sqlite3_bind_int(stmt, 1, TESTQUEUE);
+
+		while (sqlite3_step(stmt) == SQLITE_ROW) {
+			for (int i = 0; i < fd_count; i++) {
+				int fd = pdfs[i].fd;
+				struct connection *connection = &connections[i];
+				if (connection->status == AWAITING) {
+					connection->status = RUNNING;
+					connection->id = sqlite3_column_int(stmt, 0);
+					connection->elo0 = sqlite3_column_double(stmt, 1);
+					connection->elo1 = sqlite3_column_double(stmt, 2);
+					sqlite3_prepare_v2(db,
+							"UPDATE tests SET starttime = unixepoch(), status = ? "
+							"WHERE id = ?;",
+							-1, &stmt2, NULL);
+					sqlite3_bind_int(stmt2, 1, TESTRUNNING);
+					sqlite3_bind_int(stmt2, 2, connection->id);
+					sqlite3_step(stmt2);
+					sqlite3_finalize(stmt2);
+
+					sqlite3_blob_open(db, "main", "tests", "patch", connection->id, 1, &blob);
+					connection->len = sqlite3_blob_bytes(blob);
+					connection->patch = malloc(connection->len);
+					sqlite3_blob_read(blob, connection->patch, connection->len, 0);
+					sqlite3_blob_close(blob);
+
+					double elo[2] = { connection->elo0, connection->elo1 };
+
+					sendall(fd, (char *)elo, 16);
+					sendall(fd, connection->patch, connection->len);
+					sendall(fd, "\0", 1);
+
+					free(connection->patch);
+				}
+			}
+		}
+		sqlite3_finalize(stmt);
+
 		int poll_count = poll(pdfs, fd_count, -1);
 
 		if (poll_count == -1) {
@@ -170,12 +266,154 @@ int main(int argc, char **argv) {
 				addrlen = sizeof(remoteaddr);
 				if (pdfs[i].fd == listener) {
 					newfd = accept(listener, (struct sockaddr *)&remoteaddr, &addrlen);
+					printf("New connection %d\n", newfd);
 					if (newfd == -1) {
 						fprintf(stderr, "error: accept\n");
 					}
 					else {
+						/* Set timeout so that recvexact timeouts if a message
+						 * of the wrong length is sent. This is given in milliseconds.
+						 */
+						struct timeval tv = { .tv_sec = 5, .tv_usec = 0 };
+						setsockopt(newfd, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof(tv));
+
+						if (recvexact(newfd, buf, 1) || (buf[0] != CLIENT && buf[0] != NODE && buf[0] != LOG)) {
+							str = "error: bad type\n";
+							sendall(newfd, str, strlen(str));
+							close(newfd);
+							continue;
+						}
+
+						if (buf[0] == LOG) {
+							/* Send logs. */
+							sqlite3_prepare_v2(db,
+									"SELECT "
+									"id, status, elo0, elo1, queuetime, starttime, donetime, "
+									"elo, pm, result, t0, t1, t2, p0, p1, p2, p3, p4 "
+									"FROM tests ORDER BY queuetime ASC;",
+									-1, &stmt, NULL);
+
+							int first = 1;
+							while (sqlite3_step(stmt) == SQLITE_ROW) {
+								int id = sqlite3_column_int(stmt, 0);
+								int status = sqlite3_column_int(stmt, 1);
+								double elo0 = sqlite3_column_double(stmt, 2);
+								double elo1 = sqlite3_column_double(stmt, 3);
+								time_t queuetime = sqlite3_column_int(stmt, 4);
+								time_t starttime = sqlite3_column_int(stmt, 5);
+								time_t donetime = sqlite3_column_int(stmt, 6);
+								double elo = sqlite3_column_double(stmt, 7);
+								double pm = sqlite3_column_double(stmt, 8);
+								int H = sqlite3_column_int(stmt, 9);
+								int t0 = sqlite3_column_int(stmt, 10);
+								int t1 = sqlite3_column_int(stmt, 11);
+								int t2 = sqlite3_column_int(stmt, 12);
+								int p0 = sqlite3_column_int(stmt, 13);
+								int p1 = sqlite3_column_int(stmt, 14);
+								int p2 = sqlite3_column_int(stmt, 15);
+								int p3 = sqlite3_column_int(stmt, 16);
+								int p4 = sqlite3_column_int(stmt, 17);
+
+								if (!first)
+									sendall(newfd, "\n", 1);
+								first = 0;
+
+								char timebuf[3][26];
+								switch (status) {
+								case TESTQUEUE:
+									sprintf(buf, YLW "Status      Queue\n"
+											 "H0          Elo < %lf\n"
+											 "H1          Elo > %lf\n"
+											 "Queue       %s",
+											 elo0, elo1,
+											 ctime_r(&queuetime, timebuf[0]));
+									break;
+								case TESTRUNNING:
+									sprintf(buf, MGT "Status      Running\n"
+											 "H0          Elo < %lf\n"
+											 "H1          Elo > %lf\n"
+											 "Queue       %s"
+											 "Start       %s",
+											 elo0, elo1,
+											 ctime_r(&queuetime, timebuf[0]),
+											 ctime_r(&starttime, timebuf[1]));
+									break;
+								case TESTDONE:
+									sprintf(buf, GRN "Status      Done\n"
+											 "H0          Elo < %lf\n"
+											 "H1          Elo > %lf\n"
+											 "Queue       %s"
+											 "Start       %s"
+											 "Done        %s"
+											 "Games       %d\n"
+											 "Trinomial   %d - %d - %d\n"
+											 "Pentanomial %d - %d - %d - %d - %d\n"
+											 "Elo         %lf +- %lf\n"
+											 "Result      %s\n",
+											 elo0, elo1,
+											 ctime_r(&queuetime, timebuf[0]),
+											 ctime_r(&starttime, timebuf[1]),
+											 ctime_r(&donetime, timebuf[2]),
+											 t0 + t1 + t2, t0, t1, t2,
+											 p0, p1, p2, p3, p4, elo, pm,
+											 H == H0 ? RED "H0 accepted" : H == H1 ? "H1 accepted" : YLW "Inconclusive");
+									break;
+								case RUNERROR:
+									sprintf(buf, RED "Status      Runtime Error\n"
+											 "H0          Elo < %lf\n"
+											 "H1          Elo > %lf\n"
+											 "Queue       %s"
+											 "Start       %s"
+											 "Done        %s"
+											 "Games       %d\n"
+											 "Trinomial   %d - %d - %d\n"
+											 "Pentanomial %d - %d - %d - %d - %d\n",
+											 elo0, elo1,
+											 ctime_r(&queuetime, timebuf[0]),
+											 ctime_r(&starttime, timebuf[1]),
+											 ctime_r(&donetime, timebuf[2]),
+											 t0 + t1 + t2, t0, t1, t2,
+											 p0, p1, p2, p3, p4);
+									break;
+								case PATCHERROR:
+								case MAKEERROR:
+									sprintf(buf, RED "Status      %s\n"
+											 "H0          Elo < %lf\n"
+											 "H1          Elo > %lf\n"
+											 "Queue       %s"
+											 "Start       %s",
+											 status == PATCHERROR ? "Patch Error" : "Make Error",
+											 elo0, elo1,
+											 ctime_r(&queuetime, timebuf[0]),
+											 ctime_r(&starttime, timebuf[1]));
+								}
+								sendall(newfd, buf, strlen(buf));
+
+								/* And now send the patch. */
+								sendall(newfd, CYN, strlen(CYN));
+								str = "================================================\n";
+								sendall(newfd, str, strlen(str));
+								sqlite3_blob_open(db, "main", "tests", "patch", id, 1, &blob);
+								int len = sqlite3_blob_bytes(blob);
+								char *patch = malloc(len);
+								sqlite3_blob_read(blob, patch, len, 0);
+								sqlite3_blob_close(blob);
+
+								sendall(newfd, patch, len);
+
+								free(patch);
+
+								sendall(newfd, str, strlen(str));
+							}
+							sqlite3_finalize(stmt);
+							close(newfd);
+							continue;
+						}
+
 						struct connection *newconnection;
 						newconnection = add_to_pdfs(&pdfs, &connections, newfd, &fd_count, &fd_size);
+						/* Temporarily save the connection type here. */
+						newconnection->id = buf[0];
 
 						char salt[32];
 						getrandom(salt, sizeof(salt), 0);
@@ -183,169 +421,106 @@ int main(int argc, char **argv) {
 						hashpassword(newconnection->buf, salt);
 						sendall(newfd, salt, 32);
 
-						/* Hashed password takes up exactly 64 characters.
-						 * We can save the salt a little later in the string.
-						 */
-						memcpy(&newconnection[96], salt, 32);
-#if 0
-#endif
-#if 0
-						int n;
-
-						memset(buf, 0, sizeof(buf));
-						n = recv(newfd, buf, 128, 0);
-						buf[64] = '\0';
-						if (n <= 0 || strcmp(newpassword, buf)) {
-							sendall(newfd, "Permission denied\n", strlen("Permission denied\n"));
-							close(newfd);
-							continue;
-						}
-
-						memset(buf, 0, sizeof(buf));
-						n = recv(newfd, buf, 1, 0);
-						if (n <= 0 || (buf[0] != 'c' && buf[0] != 'n')) {
-							sendall(newfd, "Bad type\n", strlen("Bad type\n"));
-							close(newfd);
-							continue;
-						}
-						if (buf[0] == 'n') {
-							continue;
-						}
-
-
-						if (mkdir(buf, 0755) == -1) {
-							sendall(newfd, "Failed to create test directory ", strlen("Failed to create test directory "));
-							sendall(newfd, buf, strlen(buf));
-							sendall(newfd, "\n", strlen("\n"));
-							close(newfd);
-							continue;
-						}
-#endif
-#if 0
-						memset(buf, 0, sizeof(buf));
-						n = recv(newfd, buf, 128, 0);
-						if (n <= 0) {
-							close(pdfs[i].fd);
-							del_from_pdfs(pdfs, connections, i, &fd_count);
-							continue;
-						}
-#endif
+						printf("status password: %d\n", newconnection->status == PASSWORD);
 					}
 				}
 				else {
 					struct connection *connection = &connections[i];
 					int fd = pdfs[i].fd;
 
-					time_t t;
+					uint64_t trinomial[3];
+					uint64_t pentanomial[5];
+					char H;
+					double elo, pm;
+					int status;
+
 					memset(buf, 0, sizeof(buf));
 					switch (connection->status) {
 					case PASSWORD:
-						n = recv(fd, buf, 64, 0);
-						if (n <= 0 || strcmp(connection->buf, buf)) {
+						if (recvexact(fd, buf, 64) || strcmp(connection->buf, buf)) {
+							if (connection->id == CLIENT) {
+								str = "Permission denied\n";
+								sendall(fd, str, strlen(str));
+							}
 							del_from_pdfs(pdfs, connections, i, &fd_count);
 							close(fd);
 							break;
 						}
-						connection->status = TYPE;
-						/* Now create a name based of the sha256
-						 * of the current time and salt.
-						 */
-						t = time(NULL);
-						printf("%s", ctime_r(&t, buf));
-						size_t len = strlen(buf);
-						/* The salt is still saved at character 96. */
-						memcpy(buf + len, &connection->buf[96], 32);
-						uint32_t hash[8];
-						sha256(buf, len + 32, hash);
-						sprintf(connection->buf,
-								"/var/lib/testbit/%08x%08x%08x%08x%08x%08x%08x%08x",
-								hash[0], hash[1], hash[2], hash[3],
-								hash[4], hash[5], hash[6], hash[7]);
-						if (mkdir(connection->buf, 0755) == -1) {
-							char *str = "error: cannot create directory \'";
-							sendall(fd, str, strlen(str));
-							sendall(fd, connection->buf, strlen(connection->buf));
-							sendall(fd, "\'\n", 2);
-							del_from_pdfs(pdfs, connections, i, &fd_count);
-							close(fd);
+
+						if (connection->id == NODE) {
+							connection->status = AWAITING;
 							break;
 						}
-						break;
-					case TYPE:
-						n = recv(fd, buf, 1, 0);
-						if (n <= 0 || (buf[0] != 'c' && buf[0] != 'n')) {
-							char *str = "error: bad type\n";
-							sendall(fd, str, strlen(str));
-							del_from_pdfs(pdfs, connections, i, &fd_count);
-							close(fd);
-							break;
-						}
-						connection->status = buf[0] == 'c' ? SETUP : AWAITING;
-						break;
-					case SETUP:
+
 						/* Architecture dependent. */
-						n = recv(fd, buf, 16, 0);
-						double elo0 = *(double *)buf;
-						double elo1 = *(double *)(&buf[8]);
-						printf("%lf, %lf\n", elo0, elo1);
-						if (n != 16 || elo0 < -100.0 || 100.0 < elo0 || elo1 < -100.0 || elo1 > 100.0) {
-							char *str = "error: bad constants\n";
-							sendall(fd, str, strlen(str));
+						if (recvexact(fd, buf, 16)) {
+							str = "error: bad constants\n";
+							r = sendall(fd, str, strlen(str));
 							del_from_pdfs(pdfs, connections, i, &fd_count);
 							close(fd);
 							break;
 						}
-						connection->status = PATCH;
-						memcpy(filename, connection->buf, 128);
-						appendstr(filename, "/test");
-						FILE *f = fopen(filename, "w");
-						t = time(NULL);
-						if (!f || fprintf(f, "Start:                %s"
-								     "H0:                   Elo <= %lf\n"
-								     "H1:                   Elo >= %lf\n"
-								     "Status:               Queue\n",
-								     ctime_r(&t, buf), elo0, elo1) < 0) {
-							char *str = "error: cannot write to file \'";
-							sendall(fd, str, strlen(str));
-							sendall(fd, filename, strlen(filename));
-							sendall(fd, "\'\n", 2);
-							del_from_pdfs(pdfs, connections, i, &fd_count);
-							close(fd);
-							break;
-						}
+						connection->elo0 = *(double *)buf;
+						connection->elo1 = *(double *)(&buf[8]);
+						connection->len = 0;
+						connection->patch = NULL;
+						while ((n = recv(fd, buf, sizeof(buf) - 1, 0)) > 0) {
+							int len = strlen(buf);
+							connection->patch = realloc(connection->patch, len + connection->len);
+							memcpy(connection->patch + connection->len, buf, len);
+							connection->len += len;
+							if (len < n)
+								break;
 
-						fclose(f);
-						break;
-					case PATCH:
-						n = recv(fd, buf, sizeof(buf) - 1, 0);
+							memset(buf, 0, sizeof(buf));
+						}
 						if (n <= 0) {
-							char *str = "error: bad send\n";
+							str = "error: bad send\n";
 							sendall(fd, str, strlen(str));
-							del_from_pdfs(pdfs, connections, i, &fd_count);
-							close(fd);
 							break;
 						}
 
-						memcpy(filename, connection->buf, 128);
-						appendstr(filename, "/patch");
-						int filefd = open(filename, O_WRONLY | O_CREAT | O_APPEND, 0644);
-						if (filefd == -1 || write(filefd, buf, n) == -1) {
-							char *str = "error: cannot write to file \'";
-							sendall(fd, str, strlen(str));
-							sendall(fd, filename, strlen(filename));
-							sendall(fd, "\'\n", 2);
-							del_from_pdfs(pdfs, connections, i, &fd_count);
-							close(fd);
-							break;
-						}
-						close(filefd);
-						if (buf - strchr(buf, '\0') <= n) {
-							char *str = "queued test\n";
-							sendall(fd, str, strlen(str));
-							del_from_pdfs(pdfs, connections, i, &fd_count);
-							close(fd);
-							break;
-						}
+						/* Queue this test. */
+						sqlite3_prepare_v2(db,
+								"INSERT INTO tests (status, elo0, elo1, queuetime, patch)"
+								"VALUES (?, ?, ?, unixepoch(), ?) RETURNING id;",
+								-1, &stmt, NULL);
+						sqlite3_bind_int(stmt, 1, TESTQUEUE);
+						sqlite3_bind_double(stmt, 2, connection->elo0);
+						sqlite3_bind_double(stmt, 3, connection->elo1);
+						sqlite3_bind_zeroblob(stmt, 4, connection->len);
+						sqlite3_step(stmt);
+						connection->id = sqlite3_column_int(stmt, 0);
+						sqlite3_step(stmt);
+						sqlite3_finalize(stmt);
+
+						sqlite3_blob_open(db, "main", "tests", "patch", connection->id, 1, &blob);
+						sqlite3_blob_write(blob, connection->patch, connection->len, 0);
+						sqlite3_blob_close(blob);
+
+						free(connection->patch);
+
+						sqlite3_prepare_v2(db,
+								"SELECT COUNT(*) FROM tests WHERE status = ?;",
+								-1, &stmt, NULL);
+						sqlite3_bind_int(stmt, 1, TESTQUEUE);
+						sqlite3_step(stmt);
+						int queue = sqlite3_column_int(stmt, 0);
+						sqlite3_step(stmt);
+						sqlite3_finalize(stmt);
+
+						int nodes = 0;
+						for (int j = 0; j < fd_count; j++)
+							if (connections[j].status == AWAITING)
+								nodes++;
+
+						sprintf(buf, "Test with id %d has been put in queue. "
+							     "There are currently %d tests in queue with "
+							     "%d available nodes.\n",
+							     connection->id, queue, nodes);
+						sendall(fd, buf, strlen(buf));
+						del_from_pdfs(pdfs, connections, i, &fd_count);
+						close(fd);
 						break;
 					case AWAITING:
 						/* A node should not send anything while awaiting. */
@@ -353,6 +528,89 @@ int main(int argc, char **argv) {
 						close(fd);
 						break;
 					case RUNNING:
+						if (recvexact(fd, buf, 1) || (buf[0] != TESTDONE && buf[0] != PATCHERROR && buf[0] != MAKEERROR)) {
+							/* Requeue the test if the node closes. */
+							sqlite3_prepare_v2(db,
+									"UPDATE tests SET status = ? WHERE id = ?;",
+									-1, &stmt, NULL);
+							sqlite3_bind_int(stmt, 1, TESTQUEUE);
+							sqlite3_bind_int(stmt, 2, connection->id);
+							sqlite3_step(stmt);
+							sqlite3_finalize(stmt);
+							del_from_pdfs(pdfs, connections, i, &fd_count);
+							close(fd);
+							break;
+						}
+						switch (buf[0]) {
+						case TESTDONE:
+							status = TESTDONE;
+							 /* Read hypothesis, trinomial and pentanomial. */
+							if (recvexact(fd, (char *)trinomial, 3 * sizeof(*trinomial)) || recvexact(fd, (char *)pentanomial, 5 * sizeof(*pentanomial)) || recvexact(fd, &H, 1)) {
+								sqlite3_prepare_v2(db,
+										"UPDATE tests SET status = ? WHERE id = ?;",
+										-1, &stmt, NULL);
+								sqlite3_bind_int(stmt, 1, TESTQUEUE);
+								sqlite3_bind_int(stmt, 2, connection->id);
+								sqlite3_step(stmt);
+								sqlite3_finalize(stmt);
+								del_from_pdfs(pdfs, connections, i, &fd_count);
+								close(fd);
+								break;
+							}
+							
+							if (H != HERROR) {
+								elo = sprt_elo(pentanomial, &pm);
+							}
+							else {
+								elo = pm = 0.0;
+								status = RUNERROR;
+							}
+
+							sqlite3_prepare_v2(db,
+									"UPDATE tests SET "
+									"status = ?, "
+									"donetime = unixepoch(), "
+									"elo = ?, "
+									"pm = ?, "
+									"result = ?, "
+									"t0 = ?, "
+									"t1 = ?, "
+									"t2 = ?, "
+									"p0 = ?, "
+									"p1 = ?, "
+									"p2 = ?, "
+									"p3 = ?, "
+									"p4 = ? "
+									"WHERE id = ?;",
+									-1, &stmt, NULL);
+							sqlite3_bind_int(stmt, 1, status);
+							sqlite3_bind_double(stmt, 2, elo);
+							sqlite3_bind_double(stmt, 3, pm);
+							sqlite3_bind_int(stmt, 4, H);
+							sqlite3_bind_int(stmt, 5, trinomial[0]);
+							sqlite3_bind_int(stmt, 6, trinomial[1]);
+							sqlite3_bind_int(stmt, 7, trinomial[2]);
+							sqlite3_bind_int(stmt, 8, pentanomial[0]);
+							sqlite3_bind_int(stmt, 9, pentanomial[1]);
+							sqlite3_bind_int(stmt, 10, pentanomial[2]);
+							sqlite3_bind_int(stmt, 11, pentanomial[3]);
+							sqlite3_bind_int(stmt, 12, pentanomial[4]);
+							sqlite3_bind_int(stmt, 13, connection->id);
+							sqlite3_step(stmt);
+							sqlite3_finalize(stmt);
+							break;
+						case PATCHERROR:
+						case MAKEERROR:
+							sqlite3_prepare_v2(db,
+									"UPDATE tests SET status = ?, donetime = unixepoch() WHERE id = ?;",
+									-1, &stmt, NULL);
+							sqlite3_bind_int(stmt, 1, buf[0]);
+							sqlite3_bind_int(stmt, 2, connection->id);
+							sqlite3_step(stmt);
+							sqlite3_finalize(stmt);
+							break;
+						}
+						connection->status = AWAITING;
 						break;
 					default:
 						fprintf(stderr, "error: bad connection status\n");
@@ -361,9 +619,5 @@ int main(int argc, char **argv) {
 				}
 			}
 		}
-		/* Loop through queue and start available tests. */
-		
 	}
-	free(pdfs);
-	free(connections);
 }

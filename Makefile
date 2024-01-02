@@ -46,7 +46,7 @@ endif
 
 CFLAGS    := $(CSTANDARD) $(CWARNINGS) $(COPTIMIZE) $(CDEBUG) -pthread
 LDFLAGS    = $(CFLAGS)
-LDLIBS     = -lm
+LDLIBS     = -lm -lsqlite3
 
 ifeq ($(SIMD), avx2)
 	CFLAGS  += -DAVX2 -mavx2
@@ -119,7 +119,7 @@ SRC_VISUALIZE  = visualize.c util.c
 SRC_NNUESOURCE = nnuesource.c util.c
 
 SRC_TESTBIT    = testbit.c testbitshared.c util.c
-SRC_TESTBITD   = testbitd.c testbitshared.c util.c
+SRC_TESTBITD   = testbitd.c testbitshared.c util.c sprt.c
 SRC_TESTBITN   = testbitn.c testbitshared.c util.c sprt.c
 
 DEP = $(addprefix dep/,$(addsuffix .d,$(basename $(notdir $(wildcard src/*.c)))))

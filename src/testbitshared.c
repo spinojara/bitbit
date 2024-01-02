@@ -35,15 +35,31 @@ int sendall(int fd, char *buf, size_t len) {
 	ssize_t s = -1;
 
 	while (sent < len) {
-		s = send(fd, buf + sent, len - sent, 0);
-		if (s == -1) {
+		s = send(fd, buf + sent, len - sent, MSG_NOSIGNAL);
+		if (s <= 0) {
 			fprintf(stderr, "send error\n");
 			break;
 		}
 		sent += s;
 	}
 
-	return s == -1;
+	return s <= 0;
+}
+
+int recvexact(int fd, char *buf, size_t len) {
+	size_t readd = 0;
+	ssize_t s = -1;
+
+	while (readd < len) {
+		s = recv(fd, buf + readd, len - readd, 0);
+		if (s <= 0) {
+			fprintf(stderr, "recv error\n");
+			break;
+		}
+		readd += s;
+	}
+
+	return s <= 0;
 }
 
 int sendfile(int fd, int filefd) {
@@ -52,6 +68,7 @@ int sendfile(int fd, int filefd) {
 	while ((n = read(filefd, buf, sizeof(buf))) > 0)
 		if (sendall(fd, buf, n))
 			return 1;
+	sendall(fd, "\0", 1);
 	return 0;
 }
 
@@ -161,7 +178,10 @@ char *getpassword(char *password) {
 	new = old;
 	new.c_lflag &= ~ECHO;
 	new.c_lflag |= ECHONL;
-	tcsetattr(STDIN_FILENO, TCSADRAIN, &new);
+	if (tcsetattr(STDIN_FILENO, TCSADRAIN, &new) == -1) {
+		fprintf(stderr, "error: tcsetattr\n");
+		exit(1);
+	}
 
 	printf("password: ");
 	fgets(password, 128, stdin);

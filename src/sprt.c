@@ -79,16 +79,13 @@ void p_calc(double p[5], double mu, const double n[5], double C) {
 
 /* Calculates L(theta, x) but instead takes mu as argument. */
 double loglikelihood(double mu, double C, const double n[5]) {
-	printf("SPRT LLH: ");
 	double p, sum = 0.0;
 	for (int j = 0; j < 5; j++) {
 		p = n[j] / (1.0 + (ALPHA(j) - C) * mu);
 		/* Avoid 0 * log(0) which has limit 0 but standard says nan. */
-		printf("%lf, ", p);
 		if (n[j])
 			sum += n[j] * log(p);
 	}
-	printf(" gives %lf\n", sum);
 
 	return sum;
 }
@@ -99,7 +96,6 @@ double loglikelihood(double mu, double C, const double n[5]) {
  * H1: E1 - E2 >= elo1.
  */
 int sprt_check(const unsigned long N[5], double alpha, double beta, double elo0, double elo1) {
-	printf("SPRT: %lu, %lu, %lu, %lu, %lu\n", N[0], N[1], N[2], N[3], N[4]);
 	unsigned long N_total = 0;
 	for (int j = 0; j < 5; j++)
 		N_total += N[j];
@@ -149,15 +145,12 @@ int sprt_check(const unsigned long N[5], double alpha, double beta, double elo0,
 
 	double t = llh[0] - llh[1];
 
-	printf("SPRT: %lf<%lf<%lf\n", A, t, B);
-	printf("SPRT: %lf, %lf\n", C[0], C[1]);
-	printf("SPRT: %lf, %lf\n", sigmoidinv(C[0]), sigmoidinv(C[1]));
 	if (t > B)
 		return H0;
 	else if (t < A)
 		return H1;
 	else
-		return NONE;
+		return HNONE;
 }
 
 /* 0.95 grade confidence interval for Elo difference. */
@@ -215,7 +208,7 @@ unsigned long game_number(const char *str) {
 	return r - 1;
 }
 
-int update_pentanomial(unsigned long pentanomial[5], struct result *results, unsigned long game) {
+int update_nomials(unsigned long trinomial[3], unsigned long pentanomial[5], struct result *results, unsigned long game) {
 	int first;
 	/* The pairs are
 	 * 0, 1
@@ -235,13 +228,20 @@ int update_pentanomial(unsigned long pentanomial[5], struct result *results, uns
 	unsigned b = results[first].result;
 
 	pentanomial[a + b]++;
+	trinomial[a]++;
+	trinomial[b]++;
 	return 1;
 }
 
-int sprt(unsigned long games, double alpha, double beta, double elo0, double elo1) {
-	//games = 10;
+int sprt(unsigned long games, uint64_t trinomial[3], uint64_t pentanomial[5], double alpha, double beta, double elo0, double elo1) {
 	char gamesstr[1024];
+	char concurrencystr[1024];
+	int concurrency = 5;
 	sprintf(gamesstr, "%lu", games);
+	sprintf(concurrencystr, "%d", concurrency);
+
+	memset(trinomial, 0, sizeof(3 * *trinomial));
+	memset(pentanomial, 0, sizeof(5 * *pentanomial));
 
 	int pipefd[2];
 	if (pipe(pipefd))
@@ -252,10 +252,10 @@ int sprt(unsigned long games, double alpha, double beta, double elo0, double elo
 		exit(2);
 
 	if (pid == 0) {
-		close(pipefd[0]); /* Close unsued read end. */
+		close(pipefd[0]);
 		close(STDOUT_FILENO);
 		
-		dup2(pipefd[1], STDOUT_FILENO); /* Redirect stdout to write end. */
+		dup2(pipefd[1], STDOUT_FILENO);
 
 		/* We strongly prefer if the pipe from c-chess-cli to testbit
 		 * is unbuffered. This is achieved by the library call
@@ -266,26 +266,23 @@ int sprt(unsigned long games, double alpha, double beta, double elo0, double elo
 		 */
 		execlp("c-chess-cli", "c-chess-cli", "-each", "tc=1+0.03",
 				"-games", gamesstr,
-				"-concurrency", "8",
+				"-concurrency", concurrencystr,
 				"-repeat",
-				"-engine", "cmd=/usr/src/bitbit/bitbitold", "name=old",
-				"-engine", "cmd=/usr/src/bitbit/bitbit", NULL);
+				"-engine", "cmd=./bitbitold", "name=old",
+				"-engine", "cmd=./bitbit", (char *)NULL);
 
-		fprintf(stderr, "error: failed to open c-chess-cli\n");
+		fprintf(stderr, "error: exec c-chess-cli\n");
 		exit(3);
 	}
 
 	struct result *results = calloc(games, sizeof(*results));
-	unsigned long trinomial[3] = { 0 };
-	unsigned long pentanomial[5] = { 0 };
 
-	close(pipefd[1]); /* Close unused write end. */
+	close(pipefd[1]);
 	FILE *f = fdopen(pipefd[0], "r");
 	char *str, line[BUFSIZ];
 
-	int H = NONE;
-	while (1) {
-		fgets(line, sizeof(line), f);
+	int H = HNONE;
+	while (fgets(line, sizeof(line), f)) {
 		if ((str = strstr(line, "Finished game"))) {
 			unsigned long game = game_number(str + 14);
 			/* Fixes the problem while parsing that some games
@@ -312,35 +309,24 @@ int sprt(unsigned long games, double alpha, double beta, double elo0, double elo
 			default:
 				assert(0);
 			}
-			trinomial[results[game].result]++;
 
-			if (update_pentanomial(pentanomial, results, game)) {
+			if (update_nomials(trinomial, pentanomial, results, game)) {
 				unsigned long N = 0;
 				for (int j = 0; j < 5; j++)
 					N += pentanomial[j];
 
-				if (N % 8 == 0) {
-					double plusminus;
-					double elo = sprt_elo(pentanomial, &plusminus);
-					printf("Elo: %lf +- %lf\n", elo, plusminus);
-				}
 				/* We only check every 8 games. */
-				if (N % 8 == 0 && (H = sprt_check(pentanomial, alpha, beta, elo0, elo1))) {
+				if (N % 8 == 0 && (H = sprt_check(pentanomial, alpha, beta, elo0, elo1)) != HNONE)
 					break;
-				}
 			}
 		}
-		//printf("%s", line);
+		printf("%s", line);
 	}
 
 	kill(pid, SIGINT);
 	waitpid(pid, NULL, 0);
 	free(results);
-	if (H == H0)
-		printf("H0 accepted\n");
-	else if (H == H1)
-		printf("H1 accepted\n");
-	else
-		printf("None accepted\n");
+	if (trinomial[0] + trinomial[1] + trinomial[2] != games && H == HNONE)
+		H = HERROR;
 	return H;
 }

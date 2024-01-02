@@ -26,6 +26,7 @@
 #include "testbitshared.h"
 
 int main(int argc, char **argv) {
+	char type = CLIENT;
 	char *hostname = NULL;
 	char *port = "2718";
 	char *path = NULL;
@@ -37,6 +38,9 @@ int main(int argc, char **argv) {
 				break;
 			port = argv[i];
 		}
+		else if (!strcmp(argv[i], "--log")) {
+			type = LOG;
+		}
 		else if (hostname) {
 			path = argv[i];
 		}
@@ -45,17 +49,11 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	if (!hostname || !path) {
-		fprintf(stderr, "usage: testbit hostname filename\n");
+	if (!hostname || (type == CLIENT && !path)) {
+		fprintf(stderr, "usage: testbit hostname [filename | --log]\n");
 		return 1;
 	}
 
-	int filefd = open(path, O_RDONLY, 0);
-	if (filefd == -1) {
-		fprintf(stderr, "error: failed to open file \"%s\"\n", path);
-		return 1;
-	}
-	
 	int sockfd;
 	struct addrinfo hints = { 0 }, *servinfo, *p;
 	int rv;
@@ -87,33 +85,41 @@ int main(int argc, char **argv) {
 
 	freeaddrinfo(servinfo);
 
+
 	/* Send information and verify password. */
-	char password[128] = { 0 };
-	char salt[32];
-	recv(sockfd, salt, sizeof(salt), 0);
-	getpassword(password);
-	hashpassword(password, salt);
-	printf("hej\n");
-	sendall(sockfd, password, 64);
-	printf("hej\n");
+	sendall(sockfd, &type, 1);
 
-	sendall(sockfd, "c", 1);
-	printf("hej\n");
+	if (type == CLIENT) {
+		int filefd = open(path, O_RDONLY, 0);
+		if (filefd == -1) {
+			fprintf(stderr, "error: failed to open file \"%s\"\n", path);
+			close(sockfd);
+			return 1;
+		}
+	
+		char password[128] = { 0 };
+		char salt[32];
+		recvexact(sockfd, salt, sizeof(salt));
+		getpassword(password);
+		hashpassword(password, salt);
+		sendall(sockfd, password, 64);
 
-	/* Architecture dependent. */
-	double elo[2] = { 0.0, 10.0 };
-	sendall(sockfd, (char *)elo, 16);
+		/* Architecture dependent. */
+		double elo[2] = { 0.0, 10.0 };
+		sendall(sockfd, (char *)elo, 16);
 
-	sendfile(sockfd, filefd);
-	printf("hej\n");
+		sendfile(sockfd, filefd);
+
+		close(filefd);
+	}
 
 	char buf[BUFSIZ] = { 0 };
 	int n;
 	while ((n = recv(sockfd, buf, sizeof(buf) - 1, 0)) > 0) {
 		buf[n] = '\0';
 		printf("%s", buf);
+		memset(buf, 0, sizeof(buf));
 	}
 
-	close(filefd);
 	close(sockfd);
 }

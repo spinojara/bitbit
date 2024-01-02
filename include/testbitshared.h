@@ -23,9 +23,26 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
+enum {
+	TESTQUEUE,
+	TESTRUNNING,
+	TESTDONE,
+	PATCHERROR,
+	MAKEERROR,
+	RUNERROR,
+};
+
+enum {
+	CLIENT,
+	NODE,
+	LOG,
+};
+
 void *get_in_addr(struct sockaddr *sa);
 
 int sendall(int fd, char *buf, size_t len);
+
+int recvexact(int fd, char *buf, size_t len);
 
 int sendfile(int fd, int filefd);
 

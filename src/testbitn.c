@@ -22,9 +22,16 @@
 #include <unistd.h>
 #include <netdb.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
+#include <dirent.h>
+#include <sys/wait.h>
+#include <fcntl.h>
+#include <stdarg.h>
+#include <stdint.h>
 
 #include "testbitshared.h"
 #include "sprt.h"
+#include "util.h"
 
 int main(int argc, char **argv) {
 	char *hostname = NULL;
@@ -42,8 +49,10 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	if (!hostname)
+	if (!hostname) {
 		fprintf(stderr, "usage: testbitn hostname\n");
+		return 1;
+	}
 
 	int sockfd;
 	struct addrinfo hints = { 0 }, *servinfo, *p;
@@ -52,20 +61,18 @@ int main(int argc, char **argv) {
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
 
-	if ((rv = getaddrinfo(argv[1], port, &hints, &servinfo))) {
+	if ((rv = getaddrinfo(hostname, port, &hints, &servinfo))) {
 		fprintf(stderr, "error: %s\n", gai_strerror(rv));
 		return 1;
 	}
 
 	for (p = servinfo; p; p = p->ai_next) {
 		if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
-			fprintf(stderr, "error: connect\n");
 			continue;
 		}
 
 		if (connect(sockfd, p->ai_addr, p->ai_addrlen)) {
 			close(sockfd);
-			fprintf(stderr, "error: connect\n");
 			continue;
 		}
 
@@ -79,20 +86,169 @@ int main(int argc, char **argv) {
 
 	freeaddrinfo(servinfo);
 
+	char type = NODE;
+	sendall(sockfd, &type, 1);
+
 	/* Send information and verify password. */
 	char password[128] = { 0 };
 	char salt[32];
-	recv(sockfd, salt, sizeof(salt), 0);
+	if (recvexact(sockfd, salt, sizeof(salt))) {
+		return 1;
+	}
 	getpassword(password);
 	hashpassword(password, salt);
 	sendall(sockfd, password, strlen(password));
 
-	char buf[BUFSIZ];
+	pid_t pid;
+	int wstatus;
+	char status;
+	char buf[BUFSIZ] = { 0 };
+	int n;
+	while (1) {
+		double elo0;
+		double elo1;
+		uint64_t trinomial[3] = { 0 };
+		uint64_t pentanomial[5] = { 0 };
+		double alpha = 0.05;
+		double beta = 0.05;
+		unsigned long games = 50000;
 
-	while (recv(sockfd, buf, sizeof(buf), 0) > 0) {
-		printf("%s\n", buf);
-		/* Start test based on data. */
+		if (chdir("/tmp")) {
+			fprintf(stderr, "error: chdir /tmp\n");
+			return 1;
+		}
+
+		if (recvexact(sockfd, buf, 16)) {
+			fprintf(stderr, "error: constants\n");
+			return 1;
+		}
+
+		elo0 = CLAMP(*(double *)buf, -100.0, 100.0);
+		elo1 = CLAMP(*(double *)(&buf[8]), -100.0, 100.0);
+
+		pid = fork();
+		if (pid == -1)
+			return 1;
+
+		if (pid == 0) {
+			execlp("rm", "rm", "-rf", "/tmp/bitbit", (char *)NULL);
+			fprintf(stderr, "error: exec rm\n");
+			return 1;
+		}
+
+		if (waitpid(pid, &wstatus, 0) == -1 || WEXITSTATUS(wstatus)) {
+			fprintf(stderr, "error: rm\n");
+			return 1;
+		}
+
+		pid = fork();
+		if (pid == -1)
+			return 1;
+
+		/* This should never fail. */
+		if (pid == 0) {
+			execlp("git", "git", "clone",
+				"https://github.com/spinosarus123/bitbit.git",
+				"--branch", "master",
+				"--single-branch",
+				"--depth", "1",
+				(char *)NULL);
+			fprintf(stderr, "error: exec git clone\n");
+			return 1;
+		}
+
+		if (waitpid(pid, &wstatus, 0) == -1 || WEXITSTATUS(wstatus)) {
+			fprintf(stderr, "error: git clone\n");
+			return 1;
+		}
+
+		if (chdir("/tmp/bitbit")) {
+			fprintf(stderr, "error: chdir /tmp/bitbit\n");
+			return 1;
+		}
+
+		int fd = open("patch", O_WRONLY | O_CREAT, 0644);
+		memset(buf, 0, sizeof(buf));
+		while ((n = recv(sockfd, buf, sizeof(buf) - 1, 0))) {
+			if (n <= 0) {
+				fprintf(stderr, "error: bad recv\n");
+				return 1;
+			}
+
+			int len = strlen(buf);
+			write(fd, buf, len);
+
+			if (len < n)
+				break;
+			memset(buf, 0, sizeof(buf));
+		}
+		close(fd);
+
+		pid = fork();
+		if (pid == -1)
+			return 1;
+
+		/* This should never fail. */
+		if (pid == 0) {
+			execlp("make", "make", "SIMD=avx2", "bitbit", (char *)NULL);
+			fprintf(stderr, "error: exec make\n");
+			return 1;
+		}
+
+		if (waitpid(pid, &wstatus, 0) == -1 || WEXITSTATUS(wstatus)) {
+			fprintf(stderr, "error: make\n");
+			return 1;
+		}
+
+		if (rename("bitbit", "bitbitold")) {
+			fprintf(stderr, "error: rename\n");
+			return 1;
+		}
+
+		pid = fork();
+		if (pid == -1)
+			return 1;
+
+		if (pid == 0) {
+			execlp("git", "git", "apply", "patch", (char *)NULL);
+			fprintf(stderr, "error: exec git apply\n");
+			return 1;
+		}
+
+		/* This can fail if there is something wrong with the patch. */
+		if (waitpid(pid, &wstatus, 0) == -1 || WEXITSTATUS(wstatus)) {
+			fprintf(stderr, "error: git apply\n");
+			status = PATCHERROR;
+			sendall(sockfd, &status, 1);
+			continue;
+		}
+
+		pid = fork();
+		if (pid == -1)
+			return 1;
+
+		if (pid == 0) {
+			execlp("make", "make", "SIMD=avx2", "bitbit", (char *)NULL);
+			fprintf(stderr, "error: exec make\n");
+			return 1;
+		}
+
+		/* This can fail by a compilation error. */
+		if (waitpid(pid, &wstatus, 0) == -1 || WEXITSTATUS(wstatus)) {
+			fprintf(stderr, "error: make\n");
+			status = MAKEERROR;
+			sendall(sockfd, &status, 1);
+			continue;
+		}
+
+		char H = sprt(games, trinomial, pentanomial, alpha, beta, elo0, elo1);
+
+		status = TESTDONE;
+		if (sendall(sockfd, &status, 1) || sendall(sockfd, (char *)trinomial, 3 * sizeof(*trinomial))
+				|| sendall(sockfd, (char *)pentanomial, 5 * sizeof(*pentanomial)) || sendall(sockfd, &H, 1))
+			return 1;
 	}
 
+	close(sockfd);
 	return 0;
 }
