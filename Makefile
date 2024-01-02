@@ -93,7 +93,10 @@ SRC_GENNNUE    = gennnue.c bitboard.c magicbitboard.c attackgen.c \
                  endgame.c nnueweights.c kpk.c kpkp.c krkp.c
 
 SRC_GENEPD     = genepd.c bitboard.c magicbitboard.c attackgen.c \
-                 move.c util.c position.c movegen.c option.c
+                 move.c util.c position.c movegen.c option.c search.c \
+                 transposition.c timeman.c interrupt.c tables.c endgame.c \
+                 nnue.c nnueweights.c kpk.c kpkp.c krkp.c movepicker.c \
+                 moveorder.c history.c evaluate.c pawn.c
 
 SRC_HISTOGRAM  = histogram.c bitboard.c magicbitboard.c move.c \
                  position.c interrupt.c util.c \

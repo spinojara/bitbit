@@ -133,7 +133,8 @@ static inline int32_t evaluate(const struct position *pos) {
 int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, struct searchinfo *si, struct searchstack *ss) {
 	const int pv_node = (beta != alpha + 1);
 
-	si->history->zobrist_key[si->history->ply + ply] = pos->zobrist_key;
+	if (si->history)
+		si->history->zobrist_key[si->history->ply + ply] = pos->zobrist_key;
 
 	uint64_t checkers = generate_checkers(pos, pos->turn);
 	int32_t eval = evaluate(pos), best_eval = -VALUE_INFINITE;
@@ -209,7 +210,8 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	if ((si->nodes & (0x1000 - 1)) == 0)
 		check_time(si);
 
-	si->history->zobrist_key[si->history->ply + ply] = pos->zobrist_key;
+	if (si->history)
+		si->history->zobrist_key[si->history->ply + ply] = pos->zobrist_key;
 
 	int32_t eval = VALUE_NONE, best_eval = -VALUE_INFINITE;
 	depth = MAX(0, depth);
@@ -537,6 +539,7 @@ int32_t search(struct position *pos, int depth, int verbose, int etime, int move
 	refresh_accumulator(pos, 0);
 	refresh_accumulator(pos, 1);
 	refresh_endgame_key(pos);
+	refresh_zobrist_key(pos);
 
 	if (depth == 0) {
 		eval = evaluate(pos);
@@ -548,7 +551,7 @@ int32_t search(struct position *pos, int depth, int verbose, int etime, int move
 	move_t best_move = 0;
 	for (int d = iterative ? 1 : depth; d <= depth; d++) {
 		si.root_depth = d;
-		if (verbose)
+		if (verbose && history)
 			reset_seldepth(si.history);
 
 		/* Minimum seems to be around d <= 5. */
@@ -568,7 +571,10 @@ int32_t search(struct position *pos, int depth, int verbose, int etime, int move
 
 		timepoint_t tp = time_now() - ts;
 		if (verbose) {
-			printf("info depth %d seldepth %d score ", d, seldepth(si.history));
+			printf("info depth %d ", d);
+			if (history)
+				printf("seldepth %d ", seldepth(si.history));
+			printf("score ");
 			if (eval >= VALUE_MATE_IN_MAX_PLY)
 				printf("mate %d", (VALUE_MATE - eval + 1) / 2);
 			else if (eval <= -VALUE_MATE_IN_MAX_PLY)
