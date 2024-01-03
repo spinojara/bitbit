@@ -235,8 +235,6 @@ int update_nomials(unsigned long trinomial[3], unsigned long pentanomial[5], str
 }
 
 int sprt(unsigned long games, uint64_t trinomial[3], uint64_t pentanomial[5], double alpha, double beta, double maintime, double increment, double elo0, double elo1, int threads, int sockfd) {
-	maintime = 1.0;
-	increment = 0.02;
 	char gamesstr[1024];
 	char concurrencystr[1024];
 	char timestr[1024];
@@ -245,7 +243,6 @@ int sprt(unsigned long games, uint64_t trinomial[3], uint64_t pentanomial[5], do
 	sprintf(gamesstr, "%lu", games);
 	sprintf(concurrencystr, "%d", concurrency);
 	sprintf(timestr, "tc=%lg+%lg", maintime, increment);
-	printf("timestr: %s\n", timestr);
 	sprintf(threadstr, "%d", threads);
 
 	memset(trinomial, 0, sizeof(3 * *trinomial));
