@@ -144,7 +144,9 @@ MANPREFIX = $(PREFIX)/share
 MANDIR = $(MANPREFIX)/man
 MAN6DIR = $(MANDIR)/man6
 
-all: bitbit gennnue genepd histogram pgnbin texeltune genbitbase libbatch.so libvisualize.so testbit testbitd testbitn
+all: bitbit
+
+everything: bitbit gennnue genepd histogram pgnbin texeltune genbitbase libbatch.so libvisualize.so testbit testbitd testbitn
 
 bitbit: $(OBJ_BITBIT)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
@@ -240,8 +242,20 @@ install: all
 	sed "s/VERSION/$(VERSION)/g" < man/bitbit.6 > $(DESTDIR)$(MAN6DIR)/bitbit.6
 	chmod 644 $(DESTDIR)$(MAN6DIR)/bitbit.6
 
+install-everything: everything install
+	mkdir -p $(DESTDIR)/var/lib/testbit
+	mkdir -p $(DESTDIR)$(BINDIR)
+	cp -f testbit $(DESTDIR)$(BINDIR)/testbit
+	chmod 755 $(DESTDIR)$(BINDIR)/testbit
+	cp -f testbitd $(DESTDIR)$(BINDIR)/testbitd
+	chmod 755 $(DESTDIR)$(BINDIR)/testbitd
+	cp -f testbitn $(DESTDIR)$(BINDIR)/testbitn
+	chmod 755 $(DESTDIR)$(BINDIR)/testbitn
+
 uninstall:
-	rm -f $(DESTDIR)$(BINDIR)/bitbit $(DESTDIR)$(MAN6DIR)/bitbit.6
+	rm -f $(DESTDIR)$(BINDIR)/{bitbit,testbit,testbitd,testbitn}
+	rm -f $(DESTDIR)$(MAN6DIR)/bitbit.6
+	rm -rf $(DESTDIR)/var/lib/testbit
 
 clean:
 	rm -rf obj dep src/nnueweights.c
@@ -257,6 +271,6 @@ options:
 	@echo "LDFLAGS = $(LDFLAGS)"
 	@echo "LDLIBS  = $(LDLIBS)"
 
-.PHONY: all clean install uninstall doc options dep/nnueweights.d
+.PHONY: all everything clean install install-everything uninstall doc options dep/nnueweights.d
 .PRECIOUS: dep/%.d
 .SUFFIXES: .c .h .tex .pdf

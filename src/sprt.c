@@ -27,6 +27,7 @@
 #include <sys/wait.h>
 
 #include "util.h"
+#include "testbitshared.h"
 
 #define eps 1.0e-6
 
@@ -233,12 +234,19 @@ int update_nomials(unsigned long trinomial[3], unsigned long pentanomial[5], str
 	return 1;
 }
 
-int sprt(unsigned long games, uint64_t trinomial[3], uint64_t pentanomial[5], double alpha, double beta, double elo0, double elo1) {
+int sprt(unsigned long games, uint64_t trinomial[3], uint64_t pentanomial[5], double alpha, double beta, double maintime, double increment, double elo0, double elo1, int threads, int sockfd) {
+	maintime = 1.0;
+	increment = 0.02;
 	char gamesstr[1024];
 	char concurrencystr[1024];
+	char timestr[1024];
+	char threadstr[1024];
 	int concurrency = 5;
 	sprintf(gamesstr, "%lu", games);
 	sprintf(concurrencystr, "%d", concurrency);
+	sprintf(timestr, "tc=%lg+%lg", maintime, increment);
+	printf("timestr: %s\n", timestr);
+	sprintf(threadstr, "%d", threads);
 
 	memset(trinomial, 0, sizeof(3 * *trinomial));
 	memset(pentanomial, 0, sizeof(5 * *pentanomial));
@@ -264,21 +272,26 @@ int sprt(unsigned long games, uint64_t trinomial[3], uint64_t pentanomial[5], do
 		 * A fork with this simple change is retained at
 		 * <https://github.com/spinosarus123/c-chess-cli/tree/unbuffered>.
 		 */
-		execlp("c-chess-cli", "c-chess-cli", "-each", "tc=1+0.03",
+		execlp("c-chess-cli", "c-chess-cli", "-each", timestr,
 				"-games", gamesstr,
 				"-concurrency", concurrencystr,
+				"-openings", "file=etc/book/5d6m100k.epd", "order=sequential",
 				"-repeat",
-				"-engine", "cmd=./bitbitold", "name=old",
+				"-engine", "cmd=./bitbitold", "name=bitbitold",
 				"-engine", "cmd=./bitbit", (char *)NULL);
 
 		fprintf(stderr, "error: exec c-chess-cli\n");
 		exit(3);
 	}
 
-	struct result *results = calloc(games, sizeof(*results));
-
 	close(pipefd[1]);
 	FILE *f = fdopen(pipefd[0], "r");
+	if (!f) {
+		kill(pid, SIGINT);
+		return HERROR;
+	}
+
+	struct result *results = calloc(games, sizeof(*results));
 	char *str, line[BUFSIZ];
 
 	int H = HNONE;
@@ -307,7 +320,10 @@ int sprt(unsigned long games, uint64_t trinomial[3], uint64_t pentanomial[5], do
 				results[game].result = DRAW;
 				break;
 			default:
-				assert(0);
+				fclose(f);
+				kill(pid, SIGINT);
+				free(results);
+				return HERROR;
 			}
 
 			if (update_nomials(trinomial, pentanomial, results, game)) {
@@ -316,13 +332,30 @@ int sprt(unsigned long games, uint64_t trinomial[3], uint64_t pentanomial[5], do
 					N += pentanomial[j];
 
 				/* We only check every 8 games. */
-				if (N % 8 == 0 && (H = sprt_check(pentanomial, alpha, beta, elo0, elo1)) != HNONE)
-					break;
+				if (N % 8 == 0) {
+					if ((H = sprt_check(pentanomial, alpha, beta, elo0, elo1)) != HNONE) {
+						break;
+					}
+					else {
+						/* Send update to sockfd. */
+						char status = TESTRUNNING;
+						if (sendall(sockfd, &status, 1) || sendall(sockfd, (char *)trinomial, 3 * sizeof(*trinomial)) ||
+								sendall(sockfd, (char *)pentanomial, 5 * sizeof(*pentanomial)) || sendall(sockfd, &status, 1))
+							break;
+						char mystatus;
+						recvexact(sockfd, &mystatus, 1);
+						if (mystatus == CANCELLED) {
+							H = HCANCEL;
+							break;
+						}
+					}
+				}
 			}
 		}
 		printf("%s", line);
 	}
 
+	fclose(f);
 	kill(pid, SIGINT);
 	waitpid(pid, NULL, 0);
 	free(results);

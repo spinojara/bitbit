@@ -24,12 +24,14 @@
 #include <fcntl.h>
 
 #include "testbitshared.h"
+#include "util.h"
 
 int main(int argc, char **argv) {
 	char type = CLIENT;
 	char *hostname = NULL;
 	char *port = "2718";
 	char *path = NULL;
+	char *status = NULL;
 
 	for (int i = 1; i < argc; i++) {
 		if (!strcmp(argv[i], "--port")) {
@@ -41,6 +43,12 @@ int main(int argc, char **argv) {
 		else if (!strcmp(argv[i], "--log")) {
 			type = LOG;
 		}
+		else if (!strcmp(argv[i], "--update")) {
+			type = UPDATE;
+		}
+		else if (path) {
+			status = argv[i];
+		}
 		else if (hostname) {
 			path = argv[i];
 		}
@@ -49,8 +57,9 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	if (!hostname || (type == CLIENT && !path)) {
-		fprintf(stderr, "usage: testbit hostname [filename | --log]\n");
+	if (!hostname || (type == CLIENT && !path) || (type == UPDATE &&
+				(!path || !status || !strint(path) || (strcmp(status, "cancel") && strcmp(status, "requeue"))))) {
+		fprintf(stderr, "usage: testbit hostname [filename | --log | --update id status]\n");
 		return 1;
 	}
 
@@ -78,25 +87,17 @@ int main(int argc, char **argv) {
 		break;
 	}
 
+	freeaddrinfo(servinfo);
+
 	if (!p) {
 		fprintf(stderr, "error: failed to connect to %s\n", hostname);
 		return 2;
 	}
 
-	freeaddrinfo(servinfo);
-
-
 	/* Send information and verify password. */
 	sendall(sockfd, &type, 1);
 
-	if (type == CLIENT) {
-		int filefd = open(path, O_RDONLY, 0);
-		if (filefd == -1) {
-			fprintf(stderr, "error: failed to open file \"%s\"\n", path);
-			close(sockfd);
-			return 1;
-		}
-	
+	if (type == CLIENT || type == UPDATE) {
 		char password[128] = { 0 };
 		char salt[32];
 		recvexact(sockfd, salt, sizeof(salt));
@@ -104,13 +105,30 @@ int main(int argc, char **argv) {
 		hashpassword(password, salt);
 		sendall(sockfd, password, 64);
 
-		/* Architecture dependent. */
-		double elo[2] = { 0.0, 10.0 };
-		sendall(sockfd, (char *)elo, 16);
+		if (type == CLIENT) {
+			int filefd = open(path, O_RDONLY, 0);
+			if (filefd == -1) {
+				fprintf(stderr, "error: failed to open file \"%s\"\n", path);
+				close(sockfd);
+				return 1;
+			}
+	
+			/* Architecture dependent. */
+			double timecontrol[2] = { 10.0, 0.1 };
+			double elo[2] = { 0.0, 10.0 };
+			sendall(sockfd, (char *)timecontrol, 16);
+			sendall(sockfd, (char *)elo, 16);
 
-		sendfile(sockfd, filefd);
+			sendfile(sockfd, filefd);
 
-		close(filefd);
+			close(filefd);
+		}
+		else if (type == UPDATE) {
+			uint64_t id = strint(path);
+			char newstatus = status[0] == 'c' ? TESTCANCEL : TESTQUEUE;
+			sendall(sockfd, (char *)&id, sizeof(id));
+			sendall(sockfd, &newstatus, 1);
+		}
 	}
 
 	char buf[BUFSIZ] = { 0 };

@@ -25,9 +25,10 @@ enum {
 	H0,
 	H1,
 	HERROR,
+	HCANCEL,
 };
 
-int sprt(unsigned long games, uint64_t trinomial[3], uint64_t pentanomial[5], double alpha, double beta, double elo0, double elo1);
+int sprt(unsigned long games, uint64_t trinomial[3], uint64_t pentanomial[5], double alpha, double beta, double maintime, double increment, double elo0, double elo1, int threads, int sockfd);
 
 double sprt_elo(const unsigned long N[5], double *plusminus);
 

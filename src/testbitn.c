@@ -36,6 +36,7 @@
 int main(int argc, char **argv) {
 	char *hostname = NULL;
 	char *port = "2718";
+	int threads = -1;
 
 	for (int i = 1; i < argc; i++) {
 		if (!strcmp(argv[i], "--port")) {
@@ -44,13 +45,16 @@ int main(int argc, char **argv) {
 				break;
 			port = argv[i];
 		}
-		else {
+		else if (!hostname) {
 			hostname = argv[i];
+		}
+		else {
+			threads = strint(argv[i]);
 		}
 	}
 
-	if (!hostname) {
-		fprintf(stderr, "usage: testbitn hostname\n");
+	if (!hostname || threads <= 0) {
+		fprintf(stderr, "usage: testbitn hostname threads\n");
 		return 1;
 	}
 
@@ -79,12 +83,12 @@ int main(int argc, char **argv) {
 		break;
 	}
 
+	freeaddrinfo(servinfo);
+
 	if (!p) {
 		fprintf(stderr, "error: failed to connect\n");
 		return 2;
 	}
-
-	freeaddrinfo(servinfo);
 
 	char type = NODE;
 	sendall(sockfd, &type, 1);
@@ -105,6 +109,8 @@ int main(int argc, char **argv) {
 	char buf[BUFSIZ] = { 0 };
 	int n;
 	while (1) {
+		double maintime;
+		double increment;
 		double elo0;
 		double elo1;
 		uint64_t trinomial[3] = { 0 };
@@ -118,13 +124,15 @@ int main(int argc, char **argv) {
 			return 1;
 		}
 
-		if (recvexact(sockfd, buf, 16)) {
+		if (recvexact(sockfd, buf, 32)) {
 			fprintf(stderr, "error: constants\n");
 			return 1;
 		}
 
-		elo0 = CLAMP(*(double *)buf, -100.0, 100.0);
-		elo1 = CLAMP(*(double *)(&buf[8]), -100.0, 100.0);
+		maintime = *(double *)buf;
+		increment = *(double *)(&buf[8]);
+		elo0 = *(double *)(&buf[16]);
+		elo1 = *(double *)(&buf[24]);
 
 		pid = fork();
 		if (pid == -1)
@@ -241,7 +249,9 @@ int main(int argc, char **argv) {
 			continue;
 		}
 
-		char H = sprt(games, trinomial, pentanomial, alpha, beta, elo0, elo1);
+		char H = sprt(games, trinomial, pentanomial, alpha, beta, maintime, increment, elo0, elo1, threads, sockfd);
+		if (H == HCANCEL)
+			continue;
 
 		status = TESTDONE;
 		if (sendall(sockfd, &status, 1) || sendall(sockfd, (char *)trinomial, 3 * sizeof(*trinomial))

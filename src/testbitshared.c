@@ -115,8 +115,8 @@ void sha256(const char *str, size_t len, uint32_t hash[8]) {
 	for (size_t i = 0; i < chunks; i++) {
 		uint32_t w[64];
 		for (int j = 0; j < 16; j++)
-			w[j] = p[64 * i + 4 * j + 3] | (p[64 * i + 4 * j + 2] << 8) |
-				(p[64 * i + 4 * j + 1] << 16) | (p[64 * i + 4 * j + 0] << 24);
+			w[j] = (uint32_t)p[64 * i + 4 * j + 3] | ((uint32_t)p[64 * i + 4 * j + 2] << 8) |
+				((uint32_t)p[64 * i + 4 * j + 1] << 16) | ((uint32_t)p[64 * i + 4 * j + 0] << 24);
 
 		for (int j = 16; j < 64; j++) {
 			uint32_t s0 = rightrotate(w[j - 15], 7) ^ rightrotate(w[j - 15], 18) ^ (w[j - 15] >> 3);

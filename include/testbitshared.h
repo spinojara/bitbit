@@ -30,12 +30,21 @@ enum {
 	PATCHERROR,
 	MAKEERROR,
 	RUNERROR,
+	TESTCANCEL,
 };
 
 enum {
 	CLIENT,
 	NODE,
+	UPDATE,
 	LOG,
+};
+
+enum {
+	PASSWORD,
+	AWAITING,
+	RUNNING,
+	CANCELLED,
 };
 
 void *get_in_addr(struct sockaddr *sa);
