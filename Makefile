@@ -46,7 +46,7 @@ endif
 
 CFLAGS    := $(CSTANDARD) $(CWARNINGS) $(COPTIMIZE) $(CDEBUG) -pthread
 LDFLAGS    = $(CFLAGS)
-LDLIBS     = -lm
+LDLIBS     = -lm -lsqlite3
 
 ifeq ($(SIMD), avx2)
 	CFLAGS  += -DAVX2 -mavx2
@@ -62,19 +62,13 @@ ifeq ($(TT), )
 	TT = 64
 endif
 
-ifeq ($(NNUE), )
-	NNUE = etc/current.nnue
-else
-	NEEDWEIGHTS = yes
-endif
-
 ifneq ($(SYZYGY), )
 	LDLIBS  += -lfathom
 	DSYZYGY := -DSYZYGY=$(SYZYGY)
 endif
 
-ifeq ($(wildcard src/nnueweights.c), )
-	NEEDWEIGHTS = yes
+ifeq ($(NNUE), )
+	NNUE = etc/current.nnue
 endif
 
 SRC_BITBIT     = bitbit.c bitboard.c magicbitboard.c attackgen.c \
@@ -121,13 +115,15 @@ SRC_GENBITBASE = genbitbase.c bitboard.c magicbitboard.c attackgen.c \
                  move.c util.c position.c movegen.c \
 
 SRC_BATCH      = batch.c bitboard.c magicbitboard.c attackgen.c \
-                 move.c util.c position.c movegen.c \
+                 move.c util.c position.c movegen.c
 
 SRC_VISUALIZE  = visualize.c util.c
 
 SRC_NNUESOURCE = nnuesource.c util.c
 
-SRC_TESTBIT    = testbit.c sprt.c
+SRC_TESTBIT    = testbit.c testbitshared.c util.c
+SRC_TESTBITD   = testbitd.c testbitshared.c util.c sprt.c
+SRC_TESTBITN   = testbitn.c testbitshared.c util.c sprt.c
 
 DEP = $(addprefix dep/,$(addsuffix .d,$(basename $(notdir $(wildcard src/*.c)))))
 
@@ -142,6 +138,8 @@ OBJ_GENBITBASE = $(addprefix obj/,$(addsuffix .o,$(basename $(SRC_GENBITBASE))))
 OBJ_BATCH      = $(addprefix obj/pic,$(addsuffix .o,$(basename $(SRC_BATCH))))
 OBJ_VISUALIZE  = $(addprefix obj/pic,$(addsuffix .o,$(basename $(SRC_VISUALIZE))))
 OBJ_TESTBIT    = $(addprefix obj/,$(addsuffix .o,$(basename $(SRC_TESTBIT))))
+OBJ_TESTBITD   = $(addprefix obj/,$(addsuffix .o,$(basename $(SRC_TESTBITD))))
+OBJ_TESTBITN   = $(addprefix obj/,$(addsuffix .o,$(basename $(SRC_TESTBITN))))
 
 PREFIX = /usr/local
 BINDIR = $(PREFIX)/bin
@@ -149,7 +147,9 @@ MANPREFIX = $(PREFIX)/share
 MANDIR = $(MANPREFIX)/man
 MAN6DIR = $(MANDIR)/man6
 
-all: bitbit gennnue genepd histogram pgnbin texeltune genbitbase libbatch.so libvisualize.so testbit
+all: bitbit
+
+everything: bitbit gennnue genepd histogram pgnbin texeltune genbitbase libbatch.so libvisualize.so testbit testbitd testbitn
 
 bitbit: $(OBJ_BITBIT)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
@@ -179,6 +179,12 @@ libvisualize.so: $(OBJ_VISUALIZE)
 	$(CC) $(LDFLAGS) -shared $^ $(LDLIBS) -o $@
 
 testbit: $(OBJ_TESTBIT)
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+
+testbitd: $(OBJ_TESTBITD)
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+
+testbitn: $(OBJ_TESTBITN)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 nnuesource: $(OBJ_NNUESOURCE)
@@ -220,9 +226,10 @@ obj/%.o: src/%.c dep/%.d Makefile
 	@mkdir -p obj
 	$(CC) $(CFLAGS) -Iinclude -c $< -o $@
 
-dep/nnueweights.d:
-src/nnueweights.c: nnuesource $(NNUE)
+src/nnueweights.c: nnuesource
 	./nnuesource $(NNUE)
+
+dep/nnueweights.d:
 
 dep/%.d: src/%.c
 	@mkdir -p dep
@@ -238,13 +245,25 @@ install: all
 	sed "s/VERSION/$(VERSION)/g" < man/bitbit.6 > $(DESTDIR)$(MAN6DIR)/bitbit.6
 	chmod 644 $(DESTDIR)$(MAN6DIR)/bitbit.6
 
+install-everything: everything install
+	mkdir -p $(DESTDIR)/var/lib/testbit
+	mkdir -p $(DESTDIR)$(BINDIR)
+	cp -f testbit $(DESTDIR)$(BINDIR)/testbit
+	chmod 755 $(DESTDIR)$(BINDIR)/testbit
+	cp -f testbitd $(DESTDIR)$(BINDIR)/testbitd
+	chmod 755 $(DESTDIR)$(BINDIR)/testbitd
+	cp -f testbitn $(DESTDIR)$(BINDIR)/testbitn
+	chmod 755 $(DESTDIR)$(BINDIR)/testbitn
+
 uninstall:
-	rm -f $(DESTDIR)$(BINDIR)/bitbit $(DESTDIR)$(MAN6DIR)/bitbit.6
+	rm -f $(DESTDIR)$(BINDIR)/{bitbit,testbit,testbitd,testbitn}
+	rm -f $(DESTDIR)$(MAN6DIR)/bitbit.6
+	rm -rf $(DESTDIR)/var/lib/testbit
 
 clean:
 	rm -rf obj dep src/nnueweights.c
 
-doc: doc/mle_pentanomial.pdf
+doc: doc/maximumlikelihood.pdf doc/elo.pdf
 
 doc/%.pdf: doc/src/%.tex doc/src/%.bib
 	latexmk -pdf -cd $< -output-directory=../../doc
@@ -255,6 +274,6 @@ options:
 	@echo "LDFLAGS = $(LDFLAGS)"
 	@echo "LDLIBS  = $(LDLIBS)"
 
-.PHONY: all clean install uninstall doc options dep/nnueweights.d
+.PHONY: all everything clean install install-everything uninstall doc options dep/nnueweights.d
 .PRECIOUS: dep/%.d
 .SUFFIXES: .c .h .tex .pdf

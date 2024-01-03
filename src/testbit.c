@@ -9,164 +9,135 @@
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
+ * GNU General Public License for more details.  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <signal.h>
-#include <sys/types.h>
-#include <stdio.h>
-#include <unistd.h>
+#define _POSIX_C_SOURCE 200112L
 #include <stdlib.h>
-#include <stdint.h>
+#include <stdio.h>
 #include <string.h>
-#include <math.h>
+#include <unistd.h>
+#include <netdb.h>
+#include <sys/socket.h>
+#include <fcntl.h>
 
-enum {
-	LOSS,
-	DRAW,
-	WIN,
-};
+#include "testbitshared.h"
+#include "util.h"
 
-struct result {
-	unsigned result;
-	unsigned done;
-};
+int main(int argc, char **argv) {
+	char type = CLIENT;
+	char *hostname = NULL;
+	char *port = "2718";
+	char *path = NULL;
+	char *status = NULL;
 
-unsigned long game_number(const char *str) {
-	unsigned long r = 0;
-
-	for (const char *c = str; *c != ' '; c++) {
-		r = 10 * r + *c - '0';
-	}
-		
-	return r - 1;
-}
-
-void update_pentanomial(unsigned long pentanomial[5], struct result *results, unsigned long game) {
-	int first;
-
-	/* The pairs are
-	 * 0, 1
-	 * 2, 3
-	 * 4, 5
-	 * etc.
-	 */
-	if (game % 2)
-		first = game - 1;
-	else
-		first = game + 1;
-
-	if (!results[first].done)
-		return;
-
-	unsigned a = results[game].result;
-	unsigned b = results[first].result;
-
-	pentanomial[a + b]++;
-}
-
-void start_task(unsigned long games) {
-	games = 400;
-	char gamesstr[1024];
-	sprintf(gamesstr, "%lu", games);
-
-	int pipefd[2];
-	if (pipe(pipefd))
-		exit(1);
-
-	pid_t pid = fork();
-	if (pid == -1)
-		exit(2);
-
-	if (pid == 0) {
-		close(pipefd[0]); /* Close unsued read end. */
-		dup2(pipefd[1], STDOUT_FILENO); /* Redirect stdout to write end. */
-
-		execlp("cutechess-cli", "cutechess-cli", "-each", "proto=uci", "tc=1+0.03",
-				"-games", gamesstr,
-				"-concurrency", "8",
-				"-repeat",
-				"-engine", "cmd=/usr/src/bitbit/bitbit",
-				"-engine", "cmd=/usr/src/bitbit/bitbit", NULL);
-
-		perror("error: failed to open cutechess-cli\n");
-		kill(getppid(), SIGINT);
-		exit(3);
-	}
-
-	struct result *results = calloc(games, sizeof(*results));
-	unsigned long trinomial[3] = { 0 };
-	unsigned long pentanomial[5] = { 0 };
-
-	close(pipefd[1]); /* Close unused write end. */
-	FILE *f = fdopen(pipefd[0], "r");
-	char line[BUFSIZ];
-
-	while (1) {
-		fgets(line, sizeof(line), f);
-		if (!strncmp(line, "Finished game", 13)) {
-			unsigned long game = game_number(line + 14);
-			/* Fixes the problem while parsing that some games
-			 * are played as white and some as black.
-			 */
-			int white = !(game % 2);
-			results[game].done = 1;
-			if (strstr(line, "1-0"))
-				results[game].result = white ? WIN : LOSS;
-			else if (strstr(line, "0-1"))
-				results[game].result = white ? LOSS : WIN;
-			else
-				results[game].result = DRAW;
-
-			trinomial[results[game].result]++;
-			update_pentanomial(pentanomial, results, game);
+	for (int i = 1; i < argc; i++) {
+		if (!strcmp(argv[i], "--port")) {
+			i++;
+			if (!(i < argc))
+				break;
+			port = argv[i];
 		}
-		else if (!strncmp(line, "Finished match", 14)) {
-			break;
+		else if (!strcmp(argv[i], "--log")) {
+			type = LOG;
 		}
-		printf("%s", line);
+		else if (!strcmp(argv[i], "--update")) {
+			type = UPDATE;
+		}
+		else if (path) {
+			status = argv[i];
+		}
+		else if (hostname) {
+			path = argv[i];
+		}
+		else {
+			hostname = argv[i];
+		}
 	}
 
-	printf("TRINOMIAL %ld - %ld - %ld\n", trinomial[WIN], trinomial[LOSS], trinomial[DRAW]);
-	printf("PENTANOMIAL %ld - %ld - %ld - %ld - %ld\n", pentanomial[0], pentanomial[1], pentanomial[2], pentanomial[3], pentanomial[4]);
+	if (!hostname || (type == CLIENT && !path) || (type == UPDATE &&
+				(!path || !status || !strint(path) || (strcmp(status, "cancel") && strcmp(status, "requeue"))))) {
+		fprintf(stderr, "usage: testbit hostname [filename | --log | --update id status]\n");
+		return 1;
+	}
 
-	unsigned long tN = trinomial[0] + trinomial[1] + trinomial[2];
-	unsigned long pN = pentanomial[0] + pentanomial[1] + pentanomial[2] + pentanomial[3] + pentanomial[4];
+	int sockfd;
+	struct addrinfo hints = { 0 }, *servinfo, *p;
+	int rv;
 
-	double t[3];
-	double p[5];
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
 
-	for (int i = 0; i < 3; i++)
-		t[i] = (double)trinomial[i] / tN;
+	if ((rv = getaddrinfo(hostname, port, &hints, &servinfo))) {
+		fprintf(stderr, "error: %s\n", gai_strerror(rv));
+		return 1;
+	}
+	
+	for (p = servinfo; p; p = p->ai_next) {
+		if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
+			continue;
+		}
 
-	for (int i = 0; i < 5; i++)
-		p[i] = (double)pentanomial[i] / pN;
+		if (connect(sockfd, p->ai_addr, p->ai_addrlen)) {
+			close(sockfd);
+			continue;
+		}
+		break;
+	}
 
-	double tt = 0.0;
-	for (int i = 0; i < 3; i++)
-		tt += (double)i / 2 * t[i];
+	freeaddrinfo(servinfo);
 
-	double pt = 0.0;
-	for (int i = 0; i < 5; i++)
-		pt += (double)i / 4 * p[i];
+	if (!p) {
+		fprintf(stderr, "error: failed to connect to %s\n", hostname);
+		return 2;
+	}
 
-	double tsigma = 0.0;
-	for (int i = 0; i < 3; i++)
-		tsigma += ((double)i / 2) * ((double)i / 2) * t[i];
-	tsigma = sqrt(tsigma - tt * tt);
+	/* Send information and verify password. */
+	sendall(sockfd, &type, 1);
 
-	double psigma = 0.0;
-	for (int i = 0; i < 5; i++)
-		psigma += ((double)i / 4) * ((double)i / 4) * p[i];
-	psigma = sqrt(psigma - pt * pt);
+	if (type == CLIENT || type == UPDATE) {
+		char password[128] = { 0 };
+		char salt[32];
+		recvexact(sockfd, salt, sizeof(salt));
+		getpassword(password);
+		hashpassword(password, salt);
+		sendall(sockfd, password, 64);
 
-	printf("tt: %f\n", tt);
-	printf("pt: %f\n", pt);
-	printf("ts: %f\n", tsigma);
-	printf("ps: %f\n", psigma);
+		if (type == CLIENT) {
+			int filefd = open(path, O_RDONLY, 0);
+			if (filefd == -1) {
+				fprintf(stderr, "error: failed to open file \"%s\"\n", path);
+				close(sockfd);
+				return 1;
+			}
+	
+			/* Architecture dependent. */
+			double timecontrol[2] = { 10.0, 0.1 };
+			double elo[2] = { 0.0, 10.0 };
+			sendall(sockfd, (char *)timecontrol, 16);
+			sendall(sockfd, (char *)elo, 16);
 
-	free(results);
+			sendfile(sockfd, filefd);
+
+			close(filefd);
+		}
+		else if (type == UPDATE) {
+			uint64_t id = strint(path);
+			char newstatus = status[0] == 'c' ? TESTCANCEL : TESTQUEUE;
+			sendall(sockfd, (char *)&id, sizeof(id));
+			sendall(sockfd, &newstatus, 1);
+		}
+	}
+
+	char buf[BUFSIZ] = { 0 };
+	int n;
+	while ((n = recv(sockfd, buf, sizeof(buf) - 1, 0)) > 0) {
+		buf[n] = '\0';
+		printf("%s", buf);
+		memset(buf, 0, sizeof(buf));
+	}
+
+	close(sockfd);
 }
