@@ -1,12 +1,5 @@
 - Add checks for malloc.
 - Aspiration window should probably return VALUE_NONE if interrupted.
-- Test for integer overflows using clang in real games.
-- Make unit tests for score_mg etc.
-- Unfinished search.
-- Is it possible to fix that make does not rebuild when we update variables like
-  DEBUG=2 or NNUE=file?
-- Should all inlined functions be static inline etc?
-- Don't use BUFSIZ.
 - Make the enums upper case. pawn -> PAWN etc.
 - Make the shift functions take an argument from an
   enum { NORTH, SOUTH, EAST, WEST }; This should probably be as fast as
@@ -22,7 +15,6 @@
 - Update options file so that the "default" section in uci actually represents
   what is currently the default. Base this on the compile time constants for
   all the options.
-- Make piece enums upper case.
 
 VERY IMPORTANT
 - Verify that the new transposition table works correctly.
