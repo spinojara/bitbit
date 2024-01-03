@@ -19,7 +19,6 @@
 #define TRANSPOSITION_TABLE_H
 
 #include <stdint.h>
-#include <stdatomic.h>
 #include <assert.h>
 
 #include "position.h"
