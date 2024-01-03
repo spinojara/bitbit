@@ -269,7 +269,7 @@ int sprt(unsigned long games, uint64_t trinomial[3], uint64_t pentanomial[5], do
 		 * A fork with this simple change is retained at
 		 * <https://github.com/spinosarus123/c-chess-cli/tree/unbuffered>.
 		 */
-		execlp("c-chess-cli", "c-chess-cli", "-each", timestr,
+		execlp("c-chess-cli-unbuffered", "c-chess-cli-unbuffered", "-each", timestr,
 				"-games", gamesstr,
 				"-concurrency", concurrencystr,
 				"-openings", "file=etc/book/5d6m100k.epd", "order=sequential",
@@ -277,7 +277,7 @@ int sprt(unsigned long games, uint64_t trinomial[3], uint64_t pentanomial[5], do
 				"-engine", "cmd=./bitbitold", "name=bitbitold",
 				"-engine", "cmd=./bitbit", (char *)NULL);
 
-		fprintf(stderr, "error: exec c-chess-cli\n");
+		fprintf(stderr, "error: exec c-chess-cli-unbuffered\n");
 		exit(3);
 	}
 
