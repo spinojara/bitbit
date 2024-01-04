@@ -15,7 +15,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#define _DEFAULT_SOURCE /* usleep */
+#define _DEFAULT_SOURCE
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>

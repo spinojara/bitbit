@@ -39,6 +39,63 @@
 
 struct trace trace;
 
+extern score_t king_on_open_file;
+extern score_t knight_outpost;
+extern score_t knight_outpost_attack;
+extern score_t bishop_outpost;
+extern score_t bishop_outpost_attack;
+extern score_t bishop_long_diagonal;
+extern score_t knight_behind_pawn;
+extern score_t bishop_behind_pawn;
+extern score_t defended_knight;
+extern score_t defended_bishop;
+extern score_t knight_far_from_king;
+extern score_t bishop_far_from_king;
+extern score_t knight_pair;
+extern score_t bishop_pair;
+extern score_t rook_pair;
+extern score_t pawn_blocking_bishop;
+extern score_t rook_open;
+extern score_t rook_semi;
+extern score_t rook_closed;
+extern score_t rook_blocked;
+extern score_t bad_queen;
+extern score_t king_attack_pawn;
+extern score_t king_defend_pawn;
+extern score_t tempo_bonus;
+
+extern score_t pawn_threat;
+extern score_t push_threat;
+extern score_t minor_threat[7];
+extern score_t rook_threat[7];
+
+extern int weak_squares;
+extern int enemy_no_queen;
+extern int knight_attack;
+extern int bishop_attack;
+extern int rook_attack;
+extern int queen_attack;
+extern int discovery;
+extern int checks[12];
+
+extern int phase_max;
+extern int phase_min;
+extern int phase_knight;
+extern int phase_bishop;
+extern int phase_rook;
+extern int phase_queen;
+
+extern score_t supported_pawn;
+extern score_t backward_pawn[4];
+extern score_t isolated_pawn[4];
+extern score_t doubled_pawn[4];
+extern score_t connected_pawn[7];
+extern score_t passed_pawn[7];
+extern score_t passed_blocked[7];
+extern score_t passed_file[4];
+extern score_t distance_us[7];
+extern score_t distance_them[7];
+
 #define BATCH_SIZE (32)
 
 #define PARAMETER(x, y, z, w, q) { .ptr = x, .size = y, .type = z, .weight_decay = w, .tune = q }
