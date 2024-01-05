@@ -53,6 +53,8 @@ struct connection {
 	int id;
 	double maintime;
 	double increment;
+	double alpha;
+	double beta;
 	double elo0;
 	double elo1;
 
@@ -214,6 +216,8 @@ int main(int argc, char **argv) {
 			"status    INTEGER, "
 			"maintime  REAL, "
 			"increment REAL, "
+			"alpha     REAL, "
+			"beta      REAL, "
 			"elo0      REAL, "
 			"elo1      REAL, "
 			"queuetime INTEGER, "
@@ -222,6 +226,7 @@ int main(int argc, char **argv) {
 			"elo       REAL, "
 			"pm        REAL, "
 			"result    INTEGER, "
+			"llh       REAL, "
 			"t0        INTEGER, "
 			"t1        INTEGER, "
 			"t2        INTEGER, "
@@ -250,7 +255,7 @@ int main(int argc, char **argv) {
 	while (1) {
 		/* Loop through queue and start available tests. */
 		r = sqlite3_prepare_v2(db,
-				"SELECT id, maintime, increment, elo0, elo1 "
+				"SELECT id, maintime, increment, alpha, beta, elo0, elo1 "
 				"FROM tests WHERE status = ? ORDER BY queuetime ASC;",
 				-1, &stmt, NULL);
 		sqlite3_bind_int(stmt, 1, TESTQUEUE);
@@ -264,8 +269,10 @@ int main(int argc, char **argv) {
 					connection->id = sqlite3_column_int(stmt, 0);
 					connection->maintime = sqlite3_column_double(stmt, 1);
 					connection->increment = sqlite3_column_double(stmt, 2);
-					connection->elo0 = sqlite3_column_double(stmt, 3);
-					connection->elo1 = sqlite3_column_double(stmt, 4);
+					connection->alpha = sqlite3_column_double(stmt, 3);
+					connection->beta = sqlite3_column_double(stmt, 4);
+					connection->elo0 = sqlite3_column_double(stmt, 5);
+					connection->elo1 = sqlite3_column_double(stmt, 6);
 					sqlite3_prepare_v2(db,
 							"UPDATE tests SET starttime = unixepoch(), status = ? "
 							"WHERE id = ?;",
@@ -281,9 +288,11 @@ int main(int argc, char **argv) {
 					sqlite3_blob_read(blob, connection->patch, connection->len, 0);
 					sqlite3_blob_close(blob);
 
-					double elo[2] = { connection->elo0, connection->elo1 };
 					double timecontrol[2] = { connection->maintime , connection->increment };
+					double alphabeta[2] = { connection->alpha, connection->beta };
+					double elo[2] = { connection->elo0, connection->elo1 };
 					sendall(fd, (char *)timecontrol, 16);
+					sendall(fd, (char *)alphabeta, 16);
 					sendall(fd, (char *)elo, 16);
 					sendall(fd, connection->patch, connection->len);
 					sendall(fd, "\0", 1);
@@ -328,8 +337,8 @@ int main(int argc, char **argv) {
 							/* Send logs. */
 							sqlite3_prepare_v2(db,
 									"SELECT "
-									"id, status, maintime, increment, elo0, elo1, "
-									"queuetime, starttime, donetime, elo, pm, result, "
+									"id, status, maintime, increment, alpha, beta, elo0, elo1, "
+									"queuetime, starttime, donetime, elo, pm, result, llh, "
 									"t0, t1, t2, p0, p1, p2, p3, p4 FROM tests "
 									"ORDER BY CASE WHEN status = ? THEN 1 ELSE 0 END ASC, "
 									"queuetime ASC;",
@@ -342,26 +351,49 @@ int main(int argc, char **argv) {
 								int status = sqlite3_column_int(stmt, 1);
 								double maintime = sqlite3_column_double(stmt, 2);
 								double increment = sqlite3_column_double(stmt, 3);
-								double elo0 = sqlite3_column_double(stmt, 4);
-								double elo1 = sqlite3_column_double(stmt, 5);
-								time_t queuetime = sqlite3_column_int(stmt, 6);
-								time_t starttime = sqlite3_column_int(stmt, 7);
-								time_t donetime = sqlite3_column_int(stmt, 8);
-								double elo = sqlite3_column_double(stmt, 9);
-								double pm = sqlite3_column_double(stmt, 10);
-								int H = sqlite3_column_int(stmt, 11);
-								int t0 = sqlite3_column_int(stmt, 12);
-								int t1 = sqlite3_column_int(stmt, 13);
-								int t2 = sqlite3_column_int(stmt, 14);
-								int p0 = sqlite3_column_int(stmt, 15);
-								int p1 = sqlite3_column_int(stmt, 16);
-								int p2 = sqlite3_column_int(stmt, 17);
-								int p3 = sqlite3_column_int(stmt, 18);
-								int p4 = sqlite3_column_int(stmt, 19);
+								double alpha = sqlite3_column_double(stmt, 4);
+								double beta = sqlite3_column_double(stmt, 5);
+								double elo0 = sqlite3_column_double(stmt, 6);
+								double elo1 = sqlite3_column_double(stmt, 7);
+								time_t queuetime = sqlite3_column_int(stmt, 8);
+								time_t starttime = sqlite3_column_int(stmt, 9);
+								time_t donetime = sqlite3_column_int(stmt, 10);
+								double elo = sqlite3_column_double(stmt, 11);
+								double pm = sqlite3_column_double(stmt, 12);
+								int H = sqlite3_column_int(stmt, 13);
+								double llh = sqlite3_column_double(stmt, 14);
+								int t0 = sqlite3_column_int(stmt, 15);
+								int t1 = sqlite3_column_int(stmt, 16);
+								int t2 = sqlite3_column_int(stmt, 17);
+								int p0 = sqlite3_column_int(stmt, 18);
+								int p1 = sqlite3_column_int(stmt, 19);
+								int p2 = sqlite3_column_int(stmt, 20);
+								int p3 = sqlite3_column_int(stmt, 21);
+								int p4 = sqlite3_column_int(stmt, 22);
+								long expectedgames = 0;
+
+								double A = log(beta / (1 - alpha));
+								double B = log((1 - beta) / alpha);
 
 								if (!first)
 									sendall(newfd, "\n", 1);
 								first = 0;
+
+								long games = t0 + t1 + t2;
+								if (status == TESTRUNNING && games > 0) {
+									double multiplier = 0.0;
+									donetime = 0;
+									if (llh > 0.001)
+										multiplier = B / llh;
+									else if (llh < -0.001)
+										multiplier = A / llh;
+									if (multiplier) {
+										expectedgames = multiplier * games;
+										/* Add 15 seconds for compilation time. */
+										time_t run = (time(NULL) - (queuetime + 15));
+										donetime = queuetime + 15 + run * (expectedgames - games) / games;
+									}
+								}
 
 								char queuestr[64];
 								char startstr[64];
@@ -372,51 +404,58 @@ int main(int argc, char **argv) {
 
 								switch (status) {
 								case TESTQUEUE:
-									sprintf(buf, YLW "Id            %d\n"
-											 "Status        Queue\n"
-											 "Timecontrol   %lg+%lg\n"
-											 "H0            Elo < %lg\n"
-											 "H1            Elo > %lg\n"
-											 "Queue         %s\n",
+									sprintf(buf, YLW "Id             %d\n"
+											 "Status         Queue\n"
+											 "Timecontrol    %lg+%lg\n"
+											 "H0             Elo < %lg\n"
+											 "H1             Elo > %lg\n"
+											 "Queue          %s\n",
 											 id,
 											 maintime, increment,
 											 elo0, elo1,
 											 queuestr);
 									break;
 								case TESTRUNNING:
-									sprintf(buf, MGT "Id            %d\n"
-											 "Status        Running\n"
-											 "Timecontrol   %lg+%lg\n"
-											 "H0            Elo < %lg\n"
-											 "H1            Elo > %lg\n"
-											 "Queue         %s\n"
-											 "Start         %s\n"
-											 "Games         %d\n"
-											 "Trinomial     %d - %d - %d\n"
-											 "Pentanomial   %d - %d - %d - %d - %d\n"
-											 "Elo           %lg +- %lg\n",
+									sprintf(buf, MGT "Id             %d\n"
+											 "Status         Running\n"
+											 "Timecontrol    %lg+%lg\n"
+											 "H0             Elo < %lg\n"
+											 "H1             Elo > %lg\n"
+											 "Queue          %s\n"
+											 "Start          %s\n"
+											 "Games          %d\n"
+											 "Trinomial      %d - %d - %d\n"
+											 "Pentanomial    %d - %d - %d - %d - %d\n"
+											 "Elo            %lg +- %lg\n"
+											 "LLH            %lg (%lg, %lg)\n"
+											 "Games (Approx) %ld\n"
+											 "ETA            %s\n",
 											 id,
 											 maintime, increment,
 											 elo0, elo1,
 											 queuestr,
 											 startstr,
 											 t0 + t1 + t2, t0, t1, t2,
-											 p0, p1, p2, p3, p4, elo, pm);
+											 p0, p1, p2, p3, p4, elo, pm,
+											 llh, A, B,
+											 expectedgames,
+											 donetime ? donestr : "NONE");
 									break;
 								case TESTDONE:
-									sprintf(buf, GRN "Id            %d\n"
-											 "Status        Done\n"
-											 "Timecontrol   %lg+%lg\n"
-											 "H0            Elo < %lg\n"
-											 "H1            Elo > %lg\n"
-											 "Queue         %s\n"
-											 "Start         %s\n"
-											 "Done          %s\n"
-											 "Games         %d\n"
-											 "Trinomial     %d - %d - %d\n"
-											 "Pentanomial   %d - %d - %d - %d - %d\n"
-											 "Elo           %lg +- %lg\n"
-											 "Result        %s\n",
+									sprintf(buf, GRN "Id             %d\n"
+											 "Status         Done\n"
+											 "Timecontrol    %lg+%lg\n"
+											 "H0             Elo < %lg\n"
+											 "H1             Elo > %lg\n"
+											 "Queue          %s\n"
+											 "Start          %s\n"
+											 "Done           %s\n"
+											 "Games          %d\n"
+											 "Trinomial      %d - %d - %d\n"
+											 "Pentanomial    %d - %d - %d - %d - %d\n"
+											 "Elo            %lg +- %lg\n"
+											 "LLH            %lg (%lg, %lg)\n"
+											 "Result         %s\n",
 											 id,
 											 maintime, increment,
 											 elo0, elo1,
@@ -424,23 +463,26 @@ int main(int argc, char **argv) {
 											 startstr,
 											 donestr,
 											 t0 + t1 + t2, t0, t1, t2,
-											 p0, p1, p2, p3, p4, elo, pm,
+											 p0, p1, p2, p3, p4,
+											 elo, pm,
+											 llh, A, B,
 											 H == H0 ? RED "H0 accepted" : H == H1 ? "H1 accepted" : YLW "Inconclusive");
 									break;
 								case TESTCANCEL:
 								case RUNERROR:
-									sprintf(buf, RED "Id            %d\n"
-											 "Status        %s\n"
-											 "Timecontrol   %lg+%lg\n"
-											 "H0            Elo < %lg\n"
-											 "H1            Elo > %lg\n"
-											 "Queue         %s\n"
-											 "Start         %s\n"
-											 "Done          %s\n"
-											 "Games         %d\n"
-											 "Trinomial     %d - %d - %d\n"
-											 "Pentanomial   %d - %d - %d - %d - %d\n"
-											 "Elo           %lg +- %lg\n",
+									sprintf(buf, RED "Id             %d\n"
+											 "Status         %s\n"
+											 "Timecontrol    %lg+%lg\n"
+											 "H0             Elo < %lg\n"
+											 "H1             Elo > %lg\n"
+											 "Queue          %s\n"
+											 "Start          %s\n"
+											 "Done           %s\n"
+											 "Games          %d\n"
+											 "Trinomial      %d - %d - %d\n"
+											 "Pentanomial    %d - %d - %d - %d - %d\n"
+											 "Elo            %lg +- %lg\n"
+											 "LLH            %lg (%lg, %lg)\n",
 											 id,
 											 status == TESTCANCEL ? "Cancelled" : "Runtime Error",
 											 maintime, increment,
@@ -449,17 +491,19 @@ int main(int argc, char **argv) {
 											 startstr,
 											 donestr,
 											 t0 + t1 + t2, t0, t1, t2,
-											 p0, p1, p2, p3, p4, elo, pm);
+											 p0, p1, p2, p3, p4,
+											 elo, pm,
+											 llh, A, B);
 									break;
 								case PATCHERROR:
 								case MAKEERROR:
-									sprintf(buf, RED "Id            %d\n"
-											 "Status        %s\n"
-											 "Timecontrol   %lg+%lg\n"
-											 "H0            Elo < %lg\n"
-											 "H1            Elo > %lg\n"
-											 "Queue         %s\n"
-											 "Start         %s\n",
+									sprintf(buf, RED "Id             %d\n"
+											 "Status         %s\n"
+											 "Timecontrol    %lg+%lg\n"
+											 "H0             Elo < %lg\n"
+											 "H1             Elo > %lg\n"
+											 "Queue          %s\n"
+											 "Start          %s\n",
 											 id,
 											 status == PATCHERROR ? "Patch Error" : "Make Error",
 											 maintime, increment,
@@ -510,6 +554,7 @@ int main(int argc, char **argv) {
 					uint64_t pentanomial[5];
 					char H;
 					double elo, pm;
+					double llh;
 					int status;
 					char yourstatus = connection->status;
 
@@ -575,7 +620,7 @@ int main(int argc, char **argv) {
 						}
 
 						/* Architecture dependent. */
-						if (recvexact(fd, buf, 32)) {
+						if (recvexact(fd, buf, 48)) {
 							str = "error: bad constants\n";
 							sendall(fd, str, strlen(str));
 							del_from_pdfs(pdfs, connections, i, &fd_count);
@@ -584,8 +629,10 @@ int main(int argc, char **argv) {
 						}
 						connection->maintime = *(double *)buf;
 						connection->increment = *(double *)(&buf[8]);
-						connection->elo0 = *(double *)(&buf[16]);
-						connection->elo1 = *(double *)(&buf[24]);
+						connection->alpha = *(double *)(&buf[16]);
+						connection->beta = *(double *)(&buf[24]);
+						connection->elo0 = *(double *)(&buf[32]);
+						connection->elo1 = *(double *)(&buf[40]);
 						connection->len = 0;
 						connection->patch = NULL;
 						while ((n = recv(fd, buf, sizeof(buf) - 1, 0)) > 0) {
@@ -606,18 +653,20 @@ int main(int argc, char **argv) {
 
 						/* Queue this test. */
 						sqlite3_prepare_v2(db,
-								"INSERT INTO tests (status, maintime, increment, "
+								"INSERT INTO tests (status, maintime, increment, alpha, beta, "
 								"elo0, elo1, queuetime, elo, pm, patch) VALUES "
-								"(?, ?, ?, ?, ?, unixepoch(), ?, ?, ?) RETURNING id;",
+								"(?, ?, ?, ?, ?, ?, ?, unixepoch(), ?, ?, ?) RETURNING id;",
 								-1, &stmt, NULL);
 						sqlite3_bind_int(stmt, 1, TESTQUEUE);
 						sqlite3_bind_double(stmt, 2, connection->maintime);
 						sqlite3_bind_double(stmt, 3, connection->increment);
-						sqlite3_bind_double(stmt, 4, connection->elo0);
-						sqlite3_bind_double(stmt, 5, connection->elo1);
-						sqlite3_bind_double(stmt, 6, nan(""));
-						sqlite3_bind_double(stmt, 7, nan(""));
-						sqlite3_bind_zeroblob(stmt, 8, connection->len);
+						sqlite3_bind_double(stmt, 4, connection->alpha);
+						sqlite3_bind_double(stmt, 5, connection->beta);
+						sqlite3_bind_double(stmt, 6, connection->elo0);
+						sqlite3_bind_double(stmt, 7, connection->elo1);
+						sqlite3_bind_double(stmt, 8, nan(""));
+						sqlite3_bind_double(stmt, 9, nan(""));
+						sqlite3_bind_zeroblob(stmt, 10, connection->len);
 						sqlite3_step(stmt);
 						connection->id = sqlite3_column_int(stmt, 0);
 						sqlite3_step(stmt);
@@ -700,7 +749,10 @@ int main(int argc, char **argv) {
 							/* fallthrough */
 						case TESTDONE:
 							 /* Read hypothesis, trinomial and pentanomial. */
-							if (recvexact(fd, (char *)trinomial, 3 * sizeof(*trinomial)) || recvexact(fd, (char *)pentanomial, 5 * sizeof(*pentanomial)) || recvexact(fd, &H, 1)) {
+							if (recvexact(fd, (char *)trinomial, 3 * sizeof(*trinomial)) ||
+									recvexact(fd, (char *)pentanomial, 5 * sizeof(*pentanomial)) ||
+									recvexact(fd, (char *)&llh, 8) ||
+									recvexact(fd, &H, 1)) {
 								sqlite3_prepare_v2(db,
 										"UPDATE tests SET "
 										"status = ?, "
@@ -748,6 +800,7 @@ int main(int argc, char **argv) {
 									"elo = ?, "
 									"pm = ?, "
 									"result = ?, "
+									"llh = ?, "
 									"t0 = ?, "
 									"t1 = ?, "
 									"t2 = ?, "
@@ -762,15 +815,16 @@ int main(int argc, char **argv) {
 							sqlite3_bind_double(stmt, 2, elo);
 							sqlite3_bind_double(stmt, 3, pm);
 							sqlite3_bind_int(stmt, 4, H);
-							sqlite3_bind_int(stmt, 5, trinomial[0]);
-							sqlite3_bind_int(stmt, 6, trinomial[1]);
-							sqlite3_bind_int(stmt, 7, trinomial[2]);
-							sqlite3_bind_int(stmt, 8, pentanomial[0]);
-							sqlite3_bind_int(stmt, 9, pentanomial[1]);
-							sqlite3_bind_int(stmt, 10, pentanomial[2]);
-							sqlite3_bind_int(stmt, 11, pentanomial[3]);
-							sqlite3_bind_int(stmt, 12, pentanomial[4]);
-							sqlite3_bind_int(stmt, 13, connection->id);
+							sqlite3_bind_double(stmt, 5, llh);
+							sqlite3_bind_int(stmt, 6, trinomial[0]);
+							sqlite3_bind_int(stmt, 7, trinomial[1]);
+							sqlite3_bind_int(stmt, 8, trinomial[2]);
+							sqlite3_bind_int(stmt, 9, pentanomial[0]);
+							sqlite3_bind_int(stmt, 10, pentanomial[1]);
+							sqlite3_bind_int(stmt, 11, pentanomial[2]);
+							sqlite3_bind_int(stmt, 12, pentanomial[3]);
+							sqlite3_bind_int(stmt, 13, pentanomial[4]);
+							sqlite3_bind_int(stmt, 14, connection->id);
 							sqlite3_step(stmt);
 							sqlite3_finalize(stmt);
 							break;

@@ -109,30 +109,31 @@ int main(int argc, char **argv) {
 	char buf[BUFSIZ] = { 0 };
 	int n;
 	while (1) {
-		double maintime;
-		double increment;
-		double elo0;
-		double elo1;
+		double maintime, increment;
+		double alpha, beta;
+		double elo0, elo1;
 		uint64_t trinomial[3] = { 0 };
 		uint64_t pentanomial[5] = { 0 };
-		double alpha = 0.05;
-		double beta = 0.05;
 		unsigned long games = 50000;
+		double llh = 0.0;
 
 		if (chdir("/tmp")) {
 			fprintf(stderr, "error: chdir /tmp\n");
 			return 1;
 		}
 
-		if (recvexact(sockfd, buf, 32)) {
+		if (recvexact(sockfd, buf, 48)) {
 			fprintf(stderr, "error: constants\n");
 			return 1;
 		}
 
 		maintime = *(double *)buf;
 		increment = *(double *)(&buf[8]);
-		elo0 = *(double *)(&buf[16]);
-		elo1 = *(double *)(&buf[24]);
+		alpha = *(double *)(&buf[16]);
+		beta = *(double *)(&buf[24]);
+		elo0 = *(double *)(&buf[32]);
+		elo1 = *(double *)(&buf[40]);
+		printf("alpha, beta %lf, %lf\n", alpha, beta);
 
 		pid = fork();
 		if (pid == -1)
@@ -249,13 +250,16 @@ int main(int argc, char **argv) {
 			continue;
 		}
 
-		char H = sprt(games, trinomial, pentanomial, alpha, beta, maintime, increment, elo0, elo1, threads, sockfd);
+		char H = sprt(games, trinomial, pentanomial, alpha, beta, maintime, increment, elo0, elo1, &llh, threads, sockfd);
 		if (H == HCANCEL)
 			continue;
 
 		status = TESTDONE;
-		if (sendall(sockfd, &status, 1) || sendall(sockfd, (char *)trinomial, 3 * sizeof(*trinomial))
-				|| sendall(sockfd, (char *)pentanomial, 5 * sizeof(*pentanomial)) || sendall(sockfd, &H, 1))
+		if (sendall(sockfd, &status, 1) ||
+				sendall(sockfd, (char *)trinomial, 3 * sizeof(*trinomial)) ||
+				sendall(sockfd, (char *)pentanomial, 5 * sizeof(*pentanomial)) ||
+				sendall(sockfd, (char *)&llh, 8) ||
+				sendall(sockfd, &H, 1))
 			return 1;
 	}
 

@@ -97,7 +97,7 @@ double loglikelihood(double mu, double C, const double n[5]) {
  * H0: E1 - E2 <= elo0.
  * H1: E1 - E2 >= elo1.
  */
-int sprt_check(const unsigned long N[5], double alpha, double beta, double elo0, double elo1) {
+int sprt_check(const unsigned long N[5], double alpha, double beta, double elo0, double elo1, double *llh) {
 	unsigned long N_total = 0;
 	for (int j = 0; j < 5; j++)
 		N_total += N[j];
@@ -110,7 +110,7 @@ int sprt_check(const unsigned long N[5], double alpha, double beta, double elo0,
 	double A = log(beta / (1 - alpha));
 	double B = log((1 - beta) / alpha);
 
-	double llh[2];
+	double llh2[2];
 
 	double sum = 0.0;
 	for (int j = 0; j < 5; j++) {
@@ -142,15 +142,15 @@ int sprt_check(const unsigned long N[5], double alpha, double beta, double elo0,
 			C[i] = CLAMP(C[i], eps, 1.0 - eps);
 			mu = mu_bisect(n, C[i]);
 		}
-		llh[i] = N_total * loglikelihood(mu, C[i], n);
+		llh2[i] = N_total * loglikelihood(mu, C[i], n);
 	}
 
-	double t = llh[0] - llh[1];
+	*llh = llh2[1] - llh2[0];
 
-	if (t > B)
-		return H0;
-	else if (t < A)
+	if (*llh > B)
 		return H1;
+	else if (*llh < A)
+		return H0;
 	else
 		return HNONE;
 }
@@ -235,7 +235,7 @@ int update_nomials(unsigned long trinomial[3], unsigned long pentanomial[5], str
 	return 1;
 }
 
-int sprt(unsigned long games, uint64_t trinomial[3], uint64_t pentanomial[5], double alpha, double beta, double maintime, double increment, double elo0, double elo1, int threads, int sockfd) {
+int sprt(unsigned long games, uint64_t trinomial[3], uint64_t pentanomial[5], double alpha, double beta, double maintime, double increment, double elo0, double elo1, double *llh, int threads, int sockfd) {
 	char gamesstr[1024];
 	char concurrencystr[1024];
 	char timestr[1024];
@@ -331,14 +331,17 @@ int sprt(unsigned long games, uint64_t trinomial[3], uint64_t pentanomial[5], do
 
 				/* We only check every 8 games. */
 				if (N % 8 == 0) {
-					if ((H = sprt_check(pentanomial, alpha, beta, elo0, elo1)) != HNONE) {
+					if ((H = sprt_check(pentanomial, alpha, beta, elo0, elo1, llh)) != HNONE) {
 						break;
 					}
 					else {
 						/* Send update to sockfd. */
 						char status = TESTRUNNING;
-						if (sendall(sockfd, &status, 1) || sendall(sockfd, (char *)trinomial, 3 * sizeof(*trinomial)) ||
-								sendall(sockfd, (char *)pentanomial, 5 * sizeof(*pentanomial)) || sendall(sockfd, &status, 1))
+						if (sendall(sockfd, &status, 1) ||
+								sendall(sockfd, (char *)trinomial, 3 * sizeof(*trinomial)) ||
+								sendall(sockfd, (char *)pentanomial, 5 * sizeof(*pentanomial)) ||
+								sendall(sockfd, (char *)llh, 8) ||
+								sendall(sockfd, &status, 1))
 							break;
 						char mystatus;
 						recvexact(sockfd, &mystatus, 1);

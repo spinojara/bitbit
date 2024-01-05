@@ -115,8 +115,10 @@ int main(int argc, char **argv) {
 	
 			/* Architecture dependent. */
 			double timecontrol[2] = { 10.0, 0.1 };
+			double alphabeta[2] = { 0.05, 0.05 };
 			double elo[2] = { 0.0, 10.0 };
 			sendall(sockfd, (char *)timecontrol, 16);
+			sendall(sockfd, (char *)alphabeta, 16);
 			sendall(sockfd, (char *)elo, 16);
 
 			sendfile(sockfd, filefd);
