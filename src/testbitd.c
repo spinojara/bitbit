@@ -390,8 +390,9 @@ int main(int argc, char **argv) {
 									if (multiplier) {
 										expectedgames = multiplier * games;
 										/* Add 15 seconds for compilation time. */
-										time_t run = (time(NULL) - (queuetime + 15));
-										donetime = queuetime + 15 + run * (expectedgames - games) / games;
+										time_t now = time(NULL);
+										time_t run = (now - (queuetime + 15));
+										donetime = now + run * (expectedgames - games) / games;
 									}
 								}
 
