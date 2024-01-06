@@ -127,13 +127,12 @@ int main(int argc, char **argv) {
 			return 1;
 		}
 
-		maintime = *(double *)buf;
-		increment = *(double *)(&buf[8]);
-		alpha = *(double *)(&buf[16]);
-		beta = *(double *)(&buf[24]);
-		elo0 = *(double *)(&buf[32]);
-		elo1 = *(double *)(&buf[40]);
-		printf("alpha, beta %lf, %lf\n", alpha, beta);
+		maintime = ((double *)buf)[0];
+		increment = ((double *)buf)[1];
+		alpha = ((double *)buf)[2];
+		beta = ((double *)buf)[3];
+		elo0 = ((double *)buf)[4];
+		elo1 = ((double *)buf)[5];
 
 		pid = fork();
 		if (pid == -1)

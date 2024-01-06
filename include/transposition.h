@@ -27,8 +27,10 @@
 #include "move.h"
 #include "search.h"
 #include "interrupt.h"
-#include "option.h"
 #include "util.h"
+
+extern int option_transposition;
+extern int option_history;
 
 enum {
 	BOUND_NONE  = 0,

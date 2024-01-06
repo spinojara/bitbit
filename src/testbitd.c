@@ -627,12 +627,13 @@ int main(int argc, char **argv) {
 							close(fd);
 							break;
 						}
-						connection->maintime = *(double *)buf;
-						connection->increment = *(double *)(&buf[8]);
-						connection->alpha = *(double *)(&buf[16]);
-						connection->beta = *(double *)(&buf[24]);
-						connection->elo0 = *(double *)(&buf[32]);
-						connection->elo1 = *(double *)(&buf[40]);
+						connection->maintime = ((double *)buf)[0];
+						connection->increment = ((double *)buf)[1];
+						connection->alpha = ((double *)buf)[2];
+						connection->beta = ((double *)buf)[3];
+						connection->elo0 = ((double *)buf)[4];
+						connection->elo1 = ((double *)buf)[5];
+						printf("alpha, beta: %lf, %lf\n", connection->alpha, connection->beta);
 						connection->len = 0;
 						connection->patch = NULL;
 						while ((n = recv(fd, buf, sizeof(buf) - 1, 0)) > 0) {

@@ -21,6 +21,7 @@
 #include <inttypes.h>
 #include <time.h>
 #include <string.h>
+#include <strings.h>
 #include <signal.h>
 
 #include "bitboard.h"
@@ -320,7 +321,16 @@ int interface_uci(int argc, char **argv) {
 int interface_setoption(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
-	setoption(argc, argv, &tt);
+	if (argc >= 5 && !strcasecmp(argv[2], "hash")) {
+		size_t MiB = strint(argv[4]);
+		transposition_free(&tt);
+		transposition_alloc(&tt, MiB * 1024 * 1024);
+		if (!MiB)
+			option_transposition = 0;
+	}
+	else {
+		setoption(argc, argv, &tt);
+	}
 	return DONE;
 }
 

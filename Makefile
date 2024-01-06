@@ -148,7 +148,7 @@ testbitd:        LDLIBS += -lsqlite3
 
 obj/gennnue.o:   CFLAGS += $(DSYZYGY) -pthread
 obj/init.o:      CFLAGS += -DVERSION=$(VERSION)
-obj/interface.o: CFLAGS += -DTT=$(TT)
+obj/interface.o obj/option.o: CFLAGS += -DTT=$(TT)
 
 dep/nnueweights.d:
 	@mkdir -p dep

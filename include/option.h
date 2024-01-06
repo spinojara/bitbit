@@ -18,6 +18,8 @@
 #ifndef OPTION_H
 #define OPTION_H
 
+#include "transposition.h"
+
 extern int option_nnue;
 extern int option_transposition;
 extern int option_history;
@@ -26,6 +28,6 @@ extern int option_damp;
 
 void print_options(void);
 
-void setoption(int argc, char **argv, void *p);
+void setoption(int argc, char **argv, struct transpositiontable *tt);
 
 #endif
