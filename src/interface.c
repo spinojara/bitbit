@@ -324,7 +324,10 @@ int interface_setoption(int argc, char **argv) {
 	if (argc >= 5 && !strcasecmp(argv[2], "hash")) {
 		size_t MiB = strint(argv[4]);
 		transposition_free(&tt);
-		transposition_alloc(&tt, MiB * 1024 * 1024);
+		if (transposition_alloc(&tt, MiB * 1024 * 1024)) {
+			fprintf(stderr, "error: failed to allocate transposition table\n");
+			exit(1);
+		}
 		if (!MiB)
 			option_transposition = 0;
 	}
@@ -413,12 +416,15 @@ int parse(int *argc, char ***argv) {
 }
 
 void interface_init(int *argc, char ***argv) {
-	/* Remove ./bitbit argument. */
+	/* Remove argv[0]. */
 	--*argc;
 	++*argv;
 	startpos(&pos);
 	startkey(&pos);
-	transposition_alloc(&tt, TT * 1024 * 1024);
+	if (transposition_alloc(&tt, TT * 1024 * 1024)) {
+		fprintf(stderr, "error: failed to allocate transposition table\n");
+		exit(1);
+	}
 	history_reset(&pos, &history);
 }
 

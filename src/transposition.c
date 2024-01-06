@@ -44,7 +44,7 @@ void transposition_clear(struct transpositiontable *tt) {
 int transposition_alloc(struct transpositiontable *tt, size_t bytes) {
 	tt->size = bytes / sizeof(*tt->table);
 	tt->table = malloc(tt->size * sizeof(*tt->table));
-	if (!tt->table)
+	if (tt->size && !tt->table)
 		return 1;
 	transposition_clear(tt);
 	return 0;
