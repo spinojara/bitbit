@@ -156,7 +156,7 @@ int main(int argc, char **argv) {
 		/* This should never fail. */
 		if (pid == 0) {
 			execlp("git", "git", "clone",
-				"https://github.com/spinosarus123/bitbit.git",
+				"https://github.com/Spinojara/bitbit.git",
 				"--branch", "master",
 				"--single-branch",
 				"--depth", "1",

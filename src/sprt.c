@@ -268,7 +268,7 @@ int sprt(unsigned long games, uint64_t trinomial[3], uint64_t pentanomial[5], do
 		 * setbuf(stdout, NULL);
 		 *
 		 * A fork with this simple change is retained at
-		 * <https://github.com/spinosarus123/c-chess-cli/tree/unbuffered>.
+		 * <https://github.com/Spinojara/c-chess-cli/tree/unbuffered>.
 		 */
 		execlp("c-chess-cli-unbuffered", "c-chess-cli-unbuffered", "-each", timestr,
 				"-games", gamesstr,
