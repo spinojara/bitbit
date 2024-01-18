@@ -70,11 +70,11 @@ enum square {
 	a8, b8, c8, d8, e8, f8, g8, h8,
 };
 
-enum uncolored_piece { all, pawn, knight, bishop, rook, queen, king };
+enum uncolored_piece { ALL, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING };
 
-enum color { black, white };
+enum color { BLACK, WHITE };
 
-enum colored_piece { empty, white_pawn, white_knight, white_bishop, white_rook, white_queen, white_king, black_pawn, black_knight, black_bishop, black_rook, black_queen, black_king };
+enum colored_piece { EMPTY, WHITE_PAWN, WHITE_KNIGHT, WHITE_BISHOP, WHITE_ROOK, WHITE_QUEEN, WHITE_KING, BLACK_PAWN, BLACK_KNIGHT, BLACK_BISHOP, BLACK_ROOK, BLACK_QUEEN, BLACK_KING };
 
 uint64_t generate_checkers(const struct position *pos, int color);
 uint64_t generate_attackers(const struct position *pos, int square, int color);
@@ -84,7 +84,7 @@ uint64_t generate_blockers(const struct position *pos, uint64_t pinners, int kin
 uint64_t generate_pinners(const struct position *pos, uint64_t pinned, int color);
 
 static inline int other_color(int color) {
-	return color ^ white ^ black;
+	return color ^ WHITE ^ BLACK;
 }
 
 static inline int orient_horizontal(int turn, int square) {
@@ -96,15 +96,15 @@ static inline int orient_vertical(int orient, int square) {
 }
 
 static inline uint64_t all_pieces(const struct position *pos) {
-	return pos->piece[black][all] | pos->piece[white][all];
+	return pos->piece[BLACK][ALL] | pos->piece[WHITE][ALL];
 }
 
 static inline int colored_piece(int piece, int color) {
-	return piece + other_color(color) * king;
+	return piece + other_color(color) * KING;
 }
 
 static inline int uncolored_piece(int piece) {
-	return piece - white_king * (piece > white_king);
+	return piece - WHITE_KING * (piece > WHITE_KING);
 }
 
 static inline int rank_of(int square) {

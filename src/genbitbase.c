@@ -55,20 +55,20 @@ long bitbase_KXKX_index_by_square(int turn, int king_white, int piece_white, int
 }
 
 long bitbase_KXKX_index(const struct position *pos) {
-	int king_white = ctz(pos->piece[white][king]);
-	int king_black = ctz(pos->piece[black][king]);
+	int king_white = ctz(pos->piece[WHITE][KING]);
+	int king_black = ctz(pos->piece[BLACK][KING]);
 	int piece_white = 0;
 	int square_white = 0;
 	int piece_black = 0;
 	int square_black = 0;
-	for (int piece = pawn; piece < king; piece++) {
-		if (pos->piece[white][piece]) {
+	for (int piece = PAWN; piece < KING; piece++) {
+		if (pos->piece[WHITE][piece]) {
 			piece_white = piece;
-			square_white = ctz(pos->piece[white][piece]);
+			square_white = ctz(pos->piece[WHITE][piece]);
 		}
-		if (pos->piece[black][piece]) {
+		if (pos->piece[BLACK][piece]) {
 			piece_black = piece;
-			square_black = ctz(pos->piece[black][piece]);
+			square_black = ctz(pos->piece[BLACK][piece]);
 		}
 	}
 	return bitbase_KXKX_index_by_square(pos->turn, king_white, piece_white, square_white, king_black, piece_black, square_black);
@@ -110,11 +110,11 @@ static inline int legal_position(const struct position *pos, int king_white, int
 		return 0;
 
 	/* No pawns on rank 1 and 8. */
-	if ((piece_white == pawn && (square_white < 8 || square_white > 56)) || (piece_black == pawn && (square_black < 8 || square_black > 56)))
+	if ((piece_white == PAWN && (square_white < 8 || square_white > 56)) || (piece_black == PAWN && (square_black < 8 || square_black > 56)))
 		return 0;
 
 	/* Makes sure that all 2 to 4 squares are distinct. */
-	if (popcount(pos->piece[white][all] | pos->piece[black][all]) != 2ull + (piece_white != 0) + (piece_black != 0))
+	if (popcount(pos->piece[WHITE][ALL] | pos->piece[BLACK][ALL]) != 2ull + (piece_white != 0) + (piece_black != 0))
 		return 0;
 	
 	/* Not legal if we can capture enemy king. */
@@ -284,9 +284,9 @@ int main(void) {
 				for (int king_black = 0; king_black < 64; king_black++) {
 					memset(&pos, 0, sizeof(pos));
 					pos.turn = turn;
-					pos.piece[white][king] = bitboard(king_white);
-					pos.piece[white][pawn] = bitboard(pawn_white);
-					pos.piece[black][king] = bitboard(king_black);
+					pos.piece[WHITE][KING] = bitboard(king_white);
+					pos.piece[WHITE][PAWN] = bitboard(pawn_white);
+					pos.piece[BLACK][KING] = bitboard(king_black);
 					unsigned p = bitbase_KXKX_probe(&pos);
 					bitbase_KPK_store(&pos, p);
 				}
@@ -302,10 +302,10 @@ int main(void) {
 					for (int pawn_black = 8; pawn_black < 56; pawn_black++) {
 						memset(&pos, 0, sizeof(pos));
 						pos.turn = turn;
-						pos.piece[white][king] = bitboard(king_white);
-						pos.piece[white][pawn] = bitboard(pawn_white);
-						pos.piece[black][king] = bitboard(king_black);
-						pos.piece[black][pawn] = bitboard(pawn_black);
+						pos.piece[WHITE][KING] = bitboard(king_white);
+						pos.piece[WHITE][PAWN] = bitboard(pawn_white);
+						pos.piece[BLACK][KING] = bitboard(king_black);
+						pos.piece[BLACK][PAWN] = bitboard(pawn_black);
 						unsigned p = bitbase_KXKX_probe(&pos);
 						bitbase_KPKP_store(&pos, p);
 					}
@@ -322,10 +322,10 @@ int main(void) {
 					for (int pawn_black = 8; pawn_black < 56; pawn_black++) {
 						memset(&pos, 0, sizeof(pos));
 						pos.turn = turn;
-						pos.piece[white][king] = bitboard(king_white);
-						pos.piece[white][rook] = bitboard(rook_white);
-						pos.piece[black][king] = bitboard(king_black);
-						pos.piece[black][pawn] = bitboard(pawn_black);
+						pos.piece[WHITE][KING] = bitboard(king_white);
+						pos.piece[WHITE][ROOK] = bitboard(rook_white);
+						pos.piece[BLACK][KING] = bitboard(king_black);
+						pos.piece[BLACK][PAWN] = bitboard(pawn_black);
 						unsigned p = bitbase_KXKX_probe(&pos);
 						bitbase_KRKP_store(&pos, p);
 					}

@@ -42,12 +42,12 @@ static inline long bitbase_KPK_index_by_square(int turn, int king_white, int paw
 }
 
 static inline long bitbase_KPK_index(const struct position *pos) {
-	int white_side = pos->piece[white][pawn] != 0;
+	int white_side = pos->piece[WHITE][PAWN] != 0;
 	int black_side = other_color(white_side);
 	int turn = pos->turn == white_side;
-	int king_white = orient_horizontal(white_side, ctz(pos->piece[white_side][king]));
-	int pawn_white = orient_horizontal(white_side, ctz(pos->piece[white_side][pawn]));
-	int king_black = orient_horizontal(white_side, ctz(pos->piece[black_side][king]));
+	int king_white = orient_horizontal(white_side, ctz(pos->piece[white_side][KING]));
+	int pawn_white = orient_horizontal(white_side, ctz(pos->piece[white_side][PAWN]));
+	int king_black = orient_horizontal(white_side, ctz(pos->piece[black_side][KING]));
 	return bitbase_KPK_index_by_square(turn, king_white, pawn_white, king_black);
 }
 
@@ -58,7 +58,7 @@ static inline unsigned bitbase_KPK_probe_by_index(long index) {
 }
 
 static inline unsigned bitbase_KPK_probe(const struct position *pos, int eval_side) {
-	int white_side = pos->piece[white][pawn] != 0;
+	int white_side = pos->piece[WHITE][PAWN] != 0;
 	unsigned p = bitbase_KPK_probe_by_index(bitbase_KPK_index(pos));
 	return orient_bitbase_eval(white_side != eval_side, p);
 }

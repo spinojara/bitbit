@@ -644,7 +644,7 @@ void zero_grad(void) {
 double grad_calc(struct position *pos, double result) {
 	memset(&trace, 0, sizeof(trace));
 	int32_t eval = evaluate_classical(pos);
-	eval = pos->turn == white ? eval : -eval;
+	eval = pos->turn == WHITE ? eval : -eval;
 
 	double mgs = (double)trace.p / PHASE;
 	double egs = (double)(PHASE - trace.p) / PHASE * trace.s / NORMAL_SCALE;
@@ -655,7 +655,7 @@ double grad_calc(struct position *pos, double result) {
 	if ((param = &parameters[PARAM_PIECEVALUE])->tune == TUNE_YES) {
 		for (size_t i = 0; i < param->size; i++) {
 			int piece = i + 1;
-			double grad = factor * ((double)popcount(pos->piece[white][piece]) - popcount(pos->piece[black][piece]));
+			double grad = factor * ((double)popcount(pos->piece[WHITE][piece]) - popcount(pos->piece[BLACK][piece]));
 			double gradmg = mgs * grad;
 			double gradeg = egs * grad;
 			param->grad[2 * i + mg] += gradmg;
@@ -706,7 +706,7 @@ double grad_calc(struct position *pos, double result) {
 			int f = file_of(square);
 			int r = rank_of(square);
 			square = make_square(f, 7 - r);
-			double grad = factor * ((pos->mailbox[orient_horizontal(white, square)] == white_pawn) - (pos->mailbox[orient_horizontal(black, square)] == black_pawn));
+			double grad = factor * ((pos->mailbox[orient_horizontal(WHITE, square)] == WHITE_PAWN) - (pos->mailbox[orient_horizontal(BLACK, square)] == BLACK_PAWN));
 			double gradmg = mgs * grad;
 			double gradeg = egs * grad;
 			param->grad[2 * i + mg] += gradmg;
@@ -742,8 +742,8 @@ double grad_calc(struct position *pos, double result) {
 			int r = i / 4;
 			int square1 = make_square(f, 7 - r);
 			int square2 = orient_vertical(1, square1);
-			int num = (pos->mailbox[orient_horizontal(white, square1)] == white_knight) + (pos->mailbox[orient_horizontal(white, square2)] == white_knight) -
-				  (pos->mailbox[orient_horizontal(black, square1)] == black_knight) - (pos->mailbox[orient_horizontal(black, square2)] == black_knight);
+			int num = (pos->mailbox[orient_horizontal(WHITE, square1)] == WHITE_KNIGHT) + (pos->mailbox[orient_horizontal(WHITE, square2)] == WHITE_KNIGHT) -
+				  (pos->mailbox[orient_horizontal(BLACK, square1)] == BLACK_KNIGHT) - (pos->mailbox[orient_horizontal(BLACK, square2)] == BLACK_KNIGHT);
 			double grad = factor * num;
 			double gradmg = mgs * grad;
 			double gradeg = egs * grad;
@@ -779,8 +779,8 @@ double grad_calc(struct position *pos, double result) {
 			int r = i / 4;
 			int square1 = make_square(f, 7 - r);
 			int square2 = orient_vertical(1, square1);
-			int num = (pos->mailbox[orient_horizontal(white, square1)] == white_bishop) + (pos->mailbox[orient_horizontal(white, square2)] == white_bishop) -
-				  (pos->mailbox[orient_horizontal(black, square1)] == black_bishop) - (pos->mailbox[orient_horizontal(black, square2)] == black_bishop);
+			int num = (pos->mailbox[orient_horizontal(WHITE, square1)] == WHITE_BISHOP) + (pos->mailbox[orient_horizontal(WHITE, square2)] == WHITE_BISHOP) -
+				  (pos->mailbox[orient_horizontal(BLACK, square1)] == BLACK_BISHOP) - (pos->mailbox[orient_horizontal(BLACK, square2)] == BLACK_BISHOP);
 			double grad = factor * num;
 			double gradmg = mgs * grad;
 			double gradeg = egs * grad;
@@ -794,8 +794,8 @@ double grad_calc(struct position *pos, double result) {
 			int r = i / 4;
 			int square1 = make_square(f, 7 - r);
 			int square2 = orient_vertical(1, square1);
-			int num = (pos->mailbox[orient_horizontal(white, square1)] == white_rook) + (pos->mailbox[orient_horizontal(white, square2)] == white_rook) -
-				  (pos->mailbox[orient_horizontal(black, square1)] == black_rook) - (pos->mailbox[orient_horizontal(black, square2)] == black_rook);
+			int num = (pos->mailbox[orient_horizontal(WHITE, square1)] == WHITE_ROOK) + (pos->mailbox[orient_horizontal(WHITE, square2)] == WHITE_ROOK) -
+				  (pos->mailbox[orient_horizontal(BLACK, square1)] == BLACK_ROOK) - (pos->mailbox[orient_horizontal(BLACK, square2)] == BLACK_ROOK);
 			double grad = factor * num;
 			double gradmg = mgs * grad;
 			double gradeg = egs * grad;
@@ -809,8 +809,8 @@ double grad_calc(struct position *pos, double result) {
 			int r = i / 4;
 			int square1 = make_square(f, 7 - r);
 			int square2 = orient_vertical(1, square1);
-			int num = (pos->mailbox[orient_horizontal(white, square1)] == white_queen) + (pos->mailbox[orient_horizontal(white, square2)] == white_queen) -
-				  (pos->mailbox[orient_horizontal(black, square1)] == black_queen) - (pos->mailbox[orient_horizontal(black, square2)] == black_queen);
+			int num = (pos->mailbox[orient_horizontal(WHITE, square1)] == WHITE_QUEEN) + (pos->mailbox[orient_horizontal(WHITE, square2)] == WHITE_QUEEN) -
+				  (pos->mailbox[orient_horizontal(BLACK, square1)] == BLACK_QUEEN) - (pos->mailbox[orient_horizontal(BLACK, square2)] == BLACK_QUEEN);
 			double grad = factor * num;
 			double gradmg = mgs * grad;
 			double gradeg = egs * grad;
@@ -824,8 +824,8 @@ double grad_calc(struct position *pos, double result) {
 			int r = i / 4;
 			int square1 = make_square(f, 7 - r);
 			int square2 = orient_vertical(1, square1);
-			int num = (pos->mailbox[orient_horizontal(white, square1)] == white_king) + (pos->mailbox[orient_horizontal(white, square2)] == white_king) -
-				  (pos->mailbox[orient_horizontal(black, square1)] == black_king) - (pos->mailbox[orient_horizontal(black, square2)] == black_king);
+			int num = (pos->mailbox[orient_horizontal(WHITE, square1)] == WHITE_KING) + (pos->mailbox[orient_horizontal(WHITE, square2)] == WHITE_KING) -
+				  (pos->mailbox[orient_horizontal(BLACK, square1)] == BLACK_KING) - (pos->mailbox[orient_horizontal(BLACK, square2)] == BLACK_KING);
 			double grad = factor * num;
 			double gradmg = mgs * grad;
 			double gradeg = egs * grad;
@@ -846,7 +846,7 @@ double grad_calc(struct position *pos, double result) {
 	}
 	if ((param = &parameters[PARAM_MOBILITYKNIGHT])->tune == TUNE_YES) {
 		for (size_t i = 0; i < param->size; i++) {
-			double dEdm = trace.mobility[white][knight - 2][i] - trace.mobility[black][knight - 2][i];
+			double dEdm = trace.mobility[WHITE][KNIGHT - 2][i] - trace.mobility[BLACK][KNIGHT - 2][i];
 			double grad = factor * dEdm;
 			double gradmg = mgs * grad;
 			double gradeg = egs * grad;
@@ -856,7 +856,7 @@ double grad_calc(struct position *pos, double result) {
 	}
 	if ((param = &parameters[PARAM_MOBILITYBISHOP])->tune == TUNE_YES) {
 		for (size_t i = 0; i < param->size; i++) {
-			double dEdm = trace.mobility[white][bishop - 2][i] - trace.mobility[black][bishop - 2][i];
+			double dEdm = trace.mobility[WHITE][BISHOP - 2][i] - trace.mobility[BLACK][BISHOP - 2][i];
 			double grad = factor * dEdm;
 			double gradmg = mgs * grad;
 			double gradeg = egs * grad;
@@ -866,7 +866,7 @@ double grad_calc(struct position *pos, double result) {
 	}
 	if ((param = &parameters[PARAM_MOBILITYROOK])->tune == TUNE_YES) {
 		for (size_t i = 0; i < param->size; i++) {
-			double dEdm = trace.mobility[white][rook - 2][i] - trace.mobility[black][rook - 2][i];
+			double dEdm = trace.mobility[WHITE][ROOK - 2][i] - trace.mobility[BLACK][ROOK - 2][i];
 			double grad = factor * dEdm;
 			double gradmg = mgs * grad;
 			double gradeg = egs * grad;
@@ -876,7 +876,7 @@ double grad_calc(struct position *pos, double result) {
 	}
 	if ((param = &parameters[PARAM_MOBILITYQUEEN])->tune == TUNE_YES) {
 		for (size_t i = 0; i < param->size; i++) {
-			double dEdm = trace.mobility[white][queen - 2][i] - trace.mobility[black][queen - 2][i];
+			double dEdm = trace.mobility[WHITE][QUEEN - 2][i] - trace.mobility[BLACK][QUEEN - 2][i];
 			double grad = factor * dEdm;
 			double gradmg = mgs * grad;
 			double gradeg = egs * grad;
@@ -886,7 +886,7 @@ double grad_calc(struct position *pos, double result) {
 	}
 	if ((param = &parameters[PARAM_PAWNSHELTER])->tune == TUNE_YES) {
 		for (size_t i = 0; i < param->size; i++) {
-			double dEdp = trace.pawn_shelter[white][i] - trace.pawn_shelter[black][i];
+			double dEdp = trace.pawn_shelter[WHITE][i] - trace.pawn_shelter[BLACK][i];
 			double grad = factor * dEdp;
 			double gradmg = mgs * grad;
 			double gradeg = egs * grad;
@@ -896,7 +896,7 @@ double grad_calc(struct position *pos, double result) {
 	}
 	if ((param = &parameters[PARAM_UNBLOCKEDSTORM])->tune == TUNE_YES) {
 		for (size_t i = 0; i < param->size; i++) {
-			double dEdu = trace.unblocked_storm[white][i] - trace.unblocked_storm[black][i];
+			double dEdu = trace.unblocked_storm[WHITE][i] - trace.unblocked_storm[BLACK][i];
 			double grad = factor * dEdu;
 			double gradmg = mgs * grad;
 			double gradeg = egs * grad;
@@ -906,7 +906,7 @@ double grad_calc(struct position *pos, double result) {
 	}
 	if ((param = &parameters[PARAM_UNBLOCKABLESTORM])->tune == TUNE_YES) {
 		for (size_t i = 0; i < param->size; i++) {
-			double dEdb = trace.unblockable_storm[white][i] - trace.unblockable_storm[black][i];
+			double dEdb = trace.unblockable_storm[WHITE][i] - trace.unblockable_storm[BLACK][i];
 			double grad = factor * dEdb;
 			double gradmg = mgs * grad;
 			double gradeg = egs * grad;
@@ -916,7 +916,7 @@ double grad_calc(struct position *pos, double result) {
 	}
 	if ((param = &parameters[PARAM_BLOCKEDSTORM])->tune == TUNE_YES) {
 		for (size_t i = 0; i < param->size; i++) {
-			double dEdb = trace.blocked_storm[white][i] - trace.blocked_storm[black][i];
+			double dEdb = trace.blocked_storm[WHITE][i] - trace.blocked_storm[BLACK][i];
 			double grad = factor * dEdb;
 			double gradmg = mgs * grad;
 			double gradeg = egs * grad;
@@ -925,7 +925,7 @@ double grad_calc(struct position *pos, double result) {
 		}
 	}
 	if ((param = &parameters[PARAM_KINGONOPENFILE])->tune == TUNE_YES) {
-		double dEdx = trace.king_on_open_file[white] - trace.king_on_open_file[black];
+		double dEdx = trace.king_on_open_file[WHITE] - trace.king_on_open_file[BLACK];
 		double grad = factor * dEdx;
 		double gradmg = mgs * grad;
 		double gradeg = egs * grad;
@@ -933,7 +933,7 @@ double grad_calc(struct position *pos, double result) {
 		param->grad[eg] += gradeg;
 	}
 	if ((param = &parameters[PARAM_KNIGHTOUTPOST])->tune == TUNE_YES) {
-		double dEdx = trace.knight_outpost[white] - trace.knight_outpost[black];
+		double dEdx = trace.knight_outpost[WHITE] - trace.knight_outpost[BLACK];
 		double grad = factor * dEdx;
 		double gradmg = mgs * grad;
 		double gradeg = egs * grad;
@@ -941,7 +941,7 @@ double grad_calc(struct position *pos, double result) {
 		param->grad[eg] += gradeg;
 	}
 	if ((param = &parameters[PARAM_KNIGHTOUTPOSTATTACK])->tune == TUNE_YES) {
-		double dEdx = trace.knight_outpost_attack[white] - trace.knight_outpost_attack[black];
+		double dEdx = trace.knight_outpost_attack[WHITE] - trace.knight_outpost_attack[BLACK];
 		double grad = factor * dEdx;
 		double gradmg = mgs * grad;
 		double gradeg = egs * grad;
@@ -949,7 +949,7 @@ double grad_calc(struct position *pos, double result) {
 		param->grad[eg] += gradeg;
 	}
 	if ((param = &parameters[PARAM_BISHOPOUTPOST])->tune == TUNE_YES) {
-		double dEdx = trace.bishop_outpost[white] - trace.bishop_outpost[black];
+		double dEdx = trace.bishop_outpost[WHITE] - trace.bishop_outpost[BLACK];
 		double grad = factor * dEdx;
 		double gradmg = mgs * grad;
 		double gradeg = egs * grad;
@@ -957,7 +957,7 @@ double grad_calc(struct position *pos, double result) {
 		param->grad[eg] += gradeg;
 	}
 	if ((param = &parameters[PARAM_BISHOPOUTPOSTATTACK])->tune == TUNE_YES) {
-		double dEdx = trace.bishop_outpost_attack[white] - trace.bishop_outpost_attack[black];
+		double dEdx = trace.bishop_outpost_attack[WHITE] - trace.bishop_outpost_attack[BLACK];
 		double grad = factor * dEdx;
 		double gradmg = mgs * grad;
 		double gradeg = egs * grad;
@@ -965,7 +965,7 @@ double grad_calc(struct position *pos, double result) {
 		param->grad[eg] += gradeg;
 	}
 	if ((param = &parameters[PARAM_BISHOPLONGDIAGONAL])->tune == TUNE_YES) {
-		double dEdx = trace.bishop_long_diagonal[white] - trace.bishop_long_diagonal[black];
+		double dEdx = trace.bishop_long_diagonal[WHITE] - trace.bishop_long_diagonal[BLACK];
 		double grad = factor * dEdx;
 		double gradmg = mgs * grad;
 		double gradeg = egs * grad;
@@ -973,7 +973,7 @@ double grad_calc(struct position *pos, double result) {
 		param->grad[eg] += gradeg;
 	}
 	if ((param = &parameters[PARAM_KNIGHTBEHINDPAWN])->tune == TUNE_YES) {
-		double dEdx = trace.knight_behind_pawn[white] - trace.knight_behind_pawn[black];
+		double dEdx = trace.knight_behind_pawn[WHITE] - trace.knight_behind_pawn[BLACK];
 		double grad = factor * dEdx;
 		double gradmg = mgs * grad;
 		double gradeg = egs * grad;
@@ -981,7 +981,7 @@ double grad_calc(struct position *pos, double result) {
 		param->grad[eg] += gradeg;
 	}
 	if ((param = &parameters[PARAM_BISHOPBEHINDPAWN])->tune == TUNE_YES) {
-		double dEdx = trace.bishop_behind_pawn[white] - trace.bishop_behind_pawn[black];
+		double dEdx = trace.bishop_behind_pawn[WHITE] - trace.bishop_behind_pawn[BLACK];
 		double grad = factor * dEdx;
 		double gradmg = mgs * grad;
 		double gradeg = egs * grad;
@@ -989,7 +989,7 @@ double grad_calc(struct position *pos, double result) {
 		param->grad[eg] += gradeg;
 	}
 	if ((param = &parameters[PARAM_DEFENDEDKNIGHT])->tune == TUNE_YES) {
-		double dEdx = trace.defended_knight[white] - trace.defended_knight[black];
+		double dEdx = trace.defended_knight[WHITE] - trace.defended_knight[BLACK];
 		double grad = factor * dEdx;
 		double gradmg = mgs * grad;
 		double gradeg = egs * grad;
@@ -997,7 +997,7 @@ double grad_calc(struct position *pos, double result) {
 		param->grad[eg] += gradeg;
 	}
 	if ((param = &parameters[PARAM_DEFENDEDBISHOP])->tune == TUNE_YES) {
-		double dEdx = trace.defended_bishop[white] - trace.defended_bishop[black];
+		double dEdx = trace.defended_bishop[WHITE] - trace.defended_bishop[BLACK];
 		double grad = factor * dEdx;
 		double gradmg = mgs * grad;
 		double gradeg = egs * grad;
@@ -1005,7 +1005,7 @@ double grad_calc(struct position *pos, double result) {
 		param->grad[eg] += gradeg;
 	}
 	if ((param = &parameters[PARAM_KNIGHTFARFROMKING])->tune == TUNE_YES) {
-		double dEdx = trace.knight_far_from_king[white] - trace.knight_far_from_king[black];
+		double dEdx = trace.knight_far_from_king[WHITE] - trace.knight_far_from_king[BLACK];
 		double grad = factor * dEdx;
 		double gradmg = mgs * grad;
 		double gradeg = egs * grad;
@@ -1013,7 +1013,7 @@ double grad_calc(struct position *pos, double result) {
 		param->grad[eg] += gradeg;
 	}
 	if ((param = &parameters[PARAM_BISHOPFARFROMKING])->tune == TUNE_YES) {
-		double dEdx = trace.bishop_far_from_king[white] - trace.bishop_far_from_king[black];
+		double dEdx = trace.bishop_far_from_king[WHITE] - trace.bishop_far_from_king[BLACK];
 		double grad = factor * dEdx;
 		double gradmg = mgs * grad;
 		double gradeg = egs * grad;
@@ -1021,7 +1021,7 @@ double grad_calc(struct position *pos, double result) {
 		param->grad[eg] += gradeg;
 	}
 	if ((param = &parameters[PARAM_KNIGHTPAIR])->tune == TUNE_YES) {
-		double dEdx = trace.knight_pair[white] - trace.knight_pair[black];
+		double dEdx = trace.knight_pair[WHITE] - trace.knight_pair[BLACK];
 		double grad = factor * dEdx;
 		double gradmg = mgs * grad;
 		double gradeg = egs * grad;
@@ -1029,7 +1029,7 @@ double grad_calc(struct position *pos, double result) {
 		param->grad[eg] += gradeg;
 	}
 	if ((param = &parameters[PARAM_BISHOPPAIR])->tune == TUNE_YES) {
-		double dEdx = trace.bishop_pair[white] - trace.bishop_pair[black];
+		double dEdx = trace.bishop_pair[WHITE] - trace.bishop_pair[BLACK];
 		double grad = factor * dEdx;
 		double gradmg = mgs * grad;
 		double gradeg = egs * grad;
@@ -1037,7 +1037,7 @@ double grad_calc(struct position *pos, double result) {
 		param->grad[eg] += gradeg;
 	}
 	if ((param = &parameters[PARAM_ROOKPAIR])->tune == TUNE_YES) {
-		double dEdx = trace.rook_pair[white] - trace.rook_pair[black];
+		double dEdx = trace.rook_pair[WHITE] - trace.rook_pair[BLACK];
 		double grad = factor * dEdx;
 		double gradmg = mgs * grad;
 		double gradeg = egs * grad;
@@ -1045,7 +1045,7 @@ double grad_calc(struct position *pos, double result) {
 		param->grad[eg] += gradeg;
 	}
 	if ((param = &parameters[PARAM_PAWNBLOCKINGBISHOP])->tune == TUNE_YES) {
-		double dEdx = trace.pawn_blocking_bishop[white] - trace.pawn_blocking_bishop[black];
+		double dEdx = trace.pawn_blocking_bishop[WHITE] - trace.pawn_blocking_bishop[BLACK];
 		double grad = factor * dEdx;
 		double gradmg = mgs * grad;
 		double gradeg = egs * grad;
@@ -1053,7 +1053,7 @@ double grad_calc(struct position *pos, double result) {
 		param->grad[eg] += gradeg;
 	}
 	if ((param = &parameters[PARAM_ROOKOPEN])->tune == TUNE_YES) {
-		double dEdx = trace.rook_open[white] - trace.rook_open[black];
+		double dEdx = trace.rook_open[WHITE] - trace.rook_open[BLACK];
 		double grad = factor * dEdx;
 		double gradmg = mgs * grad;
 		double gradeg = egs * grad;
@@ -1061,7 +1061,7 @@ double grad_calc(struct position *pos, double result) {
 		param->grad[eg] += gradeg;
 	}
 	if ((param = &parameters[PARAM_ROOKSEMI])->tune == TUNE_YES) {
-		double dEdx = trace.rook_semi[white] - trace.rook_semi[black];
+		double dEdx = trace.rook_semi[WHITE] - trace.rook_semi[BLACK];
 		double grad = factor * dEdx;
 		double gradmg = mgs * grad;
 		double gradeg = egs * grad;
@@ -1069,7 +1069,7 @@ double grad_calc(struct position *pos, double result) {
 		param->grad[eg] += gradeg;
 	}
 	if ((param = &parameters[PARAM_ROOKCLOSED])->tune == TUNE_YES) {
-		double dEdx = trace.rook_closed[white] - trace.rook_closed[black];
+		double dEdx = trace.rook_closed[WHITE] - trace.rook_closed[BLACK];
 		double grad = factor * dEdx;
 		double gradmg = mgs * grad;
 		double gradeg = egs * grad;
@@ -1077,7 +1077,7 @@ double grad_calc(struct position *pos, double result) {
 		param->grad[eg] += gradeg;
 	}
 	if ((param = &parameters[PARAM_ROOKBLOCKED])->tune == TUNE_YES) {
-		double dEdx = trace.rook_blocked[white] - trace.rook_blocked[black];
+		double dEdx = trace.rook_blocked[WHITE] - trace.rook_blocked[BLACK];
 		double grad = factor * dEdx;
 		double gradmg = mgs * grad;
 		double gradeg = egs * grad;
@@ -1085,7 +1085,7 @@ double grad_calc(struct position *pos, double result) {
 		param->grad[eg] += gradeg;
 	}
 	if ((param = &parameters[PARAM_BADQUEEN])->tune == TUNE_YES) {
-		double dEdx = trace.bad_queen[white] - trace.bad_queen[black];
+		double dEdx = trace.bad_queen[WHITE] - trace.bad_queen[BLACK];
 		double grad = factor * dEdx;
 		double gradmg = mgs * grad;
 		double gradeg = egs * grad;
@@ -1112,7 +1112,7 @@ double grad_calc(struct position *pos, double result) {
 #endif
 	}
 	if ((param = &parameters[PARAM_KINGATTACKPAWN])->tune == TUNE_YES) {
-		double dEdx = trace.king_attack_pawn[white] - trace.king_attack_pawn[black];
+		double dEdx = trace.king_attack_pawn[WHITE] - trace.king_attack_pawn[BLACK];
 		double grad = factor * dEdx;
 		double gradmg = mgs * grad;
 		double gradeg = egs * grad;
@@ -1120,7 +1120,7 @@ double grad_calc(struct position *pos, double result) {
 		param->grad[eg] += gradeg;
 	}
 	if ((param = &parameters[PARAM_KINGDEFENDPAWN])->tune == TUNE_YES) {
-		double dEdx = trace.king_defend_pawn[white] - trace.king_defend_pawn[black];
+		double dEdx = trace.king_defend_pawn[WHITE] - trace.king_defend_pawn[BLACK];
 		double grad = factor * dEdx;
 		double gradmg = mgs * grad;
 		double gradeg = egs * grad;
@@ -1137,7 +1137,7 @@ double grad_calc(struct position *pos, double result) {
 	}
 
 	if ((param = &parameters[PARAM_PAWNTHREAT])->tune == TUNE_YES) {
-		double dEdx = trace.pawn_threat[white] - trace.pawn_threat[black];
+		double dEdx = trace.pawn_threat[WHITE] - trace.pawn_threat[BLACK];
 		double grad = factor * dEdx;
 		double gradmg = mgs * grad;
 		double gradeg = egs * grad;
@@ -1145,7 +1145,7 @@ double grad_calc(struct position *pos, double result) {
 		param->grad[eg] += gradeg;
 	}
 	if ((param = &parameters[PARAM_PUSHTHREAT])->tune == TUNE_YES) {
-		double dEdx = trace.push_threat[white] - trace.push_threat[black];
+		double dEdx = trace.push_threat[WHITE] - trace.push_threat[BLACK];
 		double grad = factor * dEdx;
 		double gradmg = mgs * grad;
 		double gradeg = egs * grad;
@@ -1154,7 +1154,7 @@ double grad_calc(struct position *pos, double result) {
 	}
 	if ((param = &parameters[PARAM_MINORTHREAT])->tune == TUNE_YES) {
 		for (size_t i = 0; i < param->size; i++) {
-			double dEdx = trace.minor_threat[white][i] - trace.minor_threat[black][i];
+			double dEdx = trace.minor_threat[WHITE][i] - trace.minor_threat[BLACK][i];
 			double grad = factor * dEdx;
 			double gradmg = mgs * grad;
 			double gradeg = egs * grad;
@@ -1175,7 +1175,7 @@ double grad_calc(struct position *pos, double result) {
 	}
 	if ((param = &parameters[PARAM_ROOKTHREAT])->tune == TUNE_YES) {
 		for (size_t i = 0; i < param->size; i++) {
-			double dEdx = trace.rook_threat[white][i] - trace.rook_threat[black][i];
+			double dEdx = trace.rook_threat[WHITE][i] - trace.rook_threat[BLACK][i];
 			double grad = factor * dEdx;
 			double gradmg = mgs * grad;
 			double gradeg = egs * grad;
@@ -1206,8 +1206,8 @@ double grad_calc(struct position *pos, double result) {
 
 		if (total_grad) {
 			print_position(pos, 0);
-			print_bitboard(ei.weak_squares[black]);
-			print_bitboard(ei.weak_squares[white]);
+			print_bitboard(ei.weak_squares[BLACK]);
+			print_bitboard(ei.weak_squares[WHITE]);
 			printf("grad: %e\n", total_grad);
 			printf("gradtest: %e\n", gradtest);
 		}
@@ -1323,7 +1323,7 @@ double grad_calc(struct position *pos, double result) {
 	/* Same idea as before. */
 	if ((param = &parameters[PARAM_PHASEKNIGHT])->tune == TUNE_YES) {
 		double dEdp = score_mg(trace.eval) - score_eg(trace.eval);
-		int num_knights = popcount(pos->piece[white][knight] | pos->piece[black][knight]);
+		int num_knights = popcount(pos->piece[WHITE][KNIGHT] | pos->piece[BLACK][KNIGHT]);
 		int m2 = trace.material + num_knights * 1;
 		int m1 = trace.material - num_knights * 1;
 		int p_M = phase_max;
@@ -1361,7 +1361,7 @@ double grad_calc(struct position *pos, double result) {
 	}
 	if ((param = &parameters[PARAM_PHASEBISHOP])->tune == TUNE_YES) {
 		double dEdp = score_mg(trace.eval) - score_eg(trace.eval);
-		int num_bishops = popcount(pos->piece[white][bishop] | pos->piece[black][bishop]);
+		int num_bishops = popcount(pos->piece[WHITE][BISHOP] | pos->piece[BLACK][BISHOP]);
 		int m2 = trace.material + num_bishops * 1;
 		int m1 = trace.material - num_bishops * 1;
 		int p_M = phase_max;
@@ -1374,7 +1374,7 @@ double grad_calc(struct position *pos, double result) {
 	}
 	if ((param = &parameters[PARAM_PHASEROOK])->tune == TUNE_YES) {
 		double dEdp = score_mg(trace.eval) - score_eg(trace.eval);
-		int num_rooks = popcount(pos->piece[white][rook] | pos->piece[black][rook]);
+		int num_rooks = popcount(pos->piece[WHITE][ROOK] | pos->piece[BLACK][ROOK]);
 		int m2 = trace.material + num_rooks * 1;
 		int m1 = trace.material - num_rooks * 1;
 		int p_M = phase_max;
@@ -1387,7 +1387,7 @@ double grad_calc(struct position *pos, double result) {
 	}
 	if ((param = &parameters[PARAM_PHASEQUEEN])->tune == TUNE_YES) {
 		double dEdp = score_mg(trace.eval) - score_eg(trace.eval);
-		int num_queens = popcount(pos->piece[white][queen] | pos->piece[black][queen]);
+		int num_queens = popcount(pos->piece[WHITE][QUEEN] | pos->piece[BLACK][QUEEN]);
 		int m2 = trace.material + num_queens * 1;
 		int m1 = trace.material - num_queens * 1;
 		int p_M = phase_max;
@@ -1400,7 +1400,7 @@ double grad_calc(struct position *pos, double result) {
 	}
 
 	if ((param = &parameters[PARAM_SUPPORTEDPAWN])->tune == TUNE_YES) {
-		double dEdx = trace.supported_pawn[white] - trace.supported_pawn[black];
+		double dEdx = trace.supported_pawn[WHITE] - trace.supported_pawn[BLACK];
 		double grad = factor * dEdx;
 		double gradmg = mgs * grad;
 		double gradeg = egs * grad;
@@ -1409,7 +1409,7 @@ double grad_calc(struct position *pos, double result) {
 	}
 	if ((param = &parameters[PARAM_BACKWARDPAWN])->tune == TUNE_YES) {
 		for (size_t i = 0; i < param->size; i++) {
-			double dEdx = trace.backward_pawn[white][i] - trace.backward_pawn[black][i];
+			double dEdx = trace.backward_pawn[WHITE][i] - trace.backward_pawn[BLACK][i];
 			double grad = factor * dEdx;
 			double gradmg = mgs * grad;
 			double gradeg = egs * grad;
@@ -1419,7 +1419,7 @@ double grad_calc(struct position *pos, double result) {
 	}
 	if ((param = &parameters[PARAM_ISOLATEDPAWN])->tune == TUNE_YES) {
 		for (size_t i = 0; i < param->size; i++) {
-			double dEdx = trace.isolated_pawn[white][i] - trace.isolated_pawn[black][i];
+			double dEdx = trace.isolated_pawn[WHITE][i] - trace.isolated_pawn[BLACK][i];
 			double grad = factor * dEdx;
 			double gradmg = mgs * grad;
 			double gradeg = egs * grad;
@@ -1429,7 +1429,7 @@ double grad_calc(struct position *pos, double result) {
 	}
 	if ((param = &parameters[PARAM_DOUBLEDPAWN])->tune == TUNE_YES) {
 		for (size_t i = 0; i < param->size; i++) {
-			double dEdx = trace.doubled_pawn[white][i] - trace.doubled_pawn[black][i];
+			double dEdx = trace.doubled_pawn[WHITE][i] - trace.doubled_pawn[BLACK][i];
 			double grad = factor * dEdx;
 			double gradmg = mgs * grad;
 			double gradeg = egs * grad;
@@ -1439,7 +1439,7 @@ double grad_calc(struct position *pos, double result) {
 	}
 	if ((param = &parameters[PARAM_CONNECTEDPAWN])->tune == TUNE_YES) {
 		for (size_t i = 0; i < param->size; i++) {
-			double dEdx = trace.connected_pawn[white][i] - trace.connected_pawn[black][i];
+			double dEdx = trace.connected_pawn[WHITE][i] - trace.connected_pawn[BLACK][i];
 			double grad = factor * dEdx;
 			double gradmg = mgs * grad;
 			double gradeg = egs * grad;
@@ -1449,7 +1449,7 @@ double grad_calc(struct position *pos, double result) {
 	}
 	if ((param = &parameters[PARAM_PASSEDPAWN])->tune == TUNE_YES) {
 		for (size_t i = 0; i < param->size; i++) {
-			double dEdx = trace.passed_pawn[white][i] - trace.passed_pawn[black][i];
+			double dEdx = trace.passed_pawn[WHITE][i] - trace.passed_pawn[BLACK][i];
 			double grad = factor * dEdx;
 			double gradmg = mgs * grad;
 			double gradeg = egs * grad;
@@ -1459,7 +1459,7 @@ double grad_calc(struct position *pos, double result) {
 	}
 	if ((param = &parameters[PARAM_PASSEDBLOCKED])->tune == TUNE_YES) {
 		for (size_t i = 0; i < param->size; i++) {
-			double dEdx = trace.passed_blocked[white][i] - trace.passed_blocked[black][i];
+			double dEdx = trace.passed_blocked[WHITE][i] - trace.passed_blocked[BLACK][i];
 			double grad = factor * dEdx;
 			double gradmg = mgs * grad;
 			double gradeg = egs * grad;
@@ -1469,7 +1469,7 @@ double grad_calc(struct position *pos, double result) {
 	}
 	if ((param = &parameters[PARAM_PASSEDFILE])->tune == TUNE_YES) {
 		for (size_t i = 0; i < param->size; i++) {
-			double dEdx = trace.passed_file[white][i] - trace.passed_file[black][i];
+			double dEdx = trace.passed_file[WHITE][i] - trace.passed_file[BLACK][i];
 			double grad = factor * dEdx;
 			double gradmg = mgs * grad;
 			double gradeg = egs * grad;
@@ -1479,7 +1479,7 @@ double grad_calc(struct position *pos, double result) {
 	}
 	if ((param = &parameters[PARAM_DISTANCEUS])->tune == TUNE_YES) {
 		for (size_t i = 0; i < param->size; i++) {
-			double dEdx = trace.distance_us[white][i] - trace.distance_us[black][i];
+			double dEdx = trace.distance_us[WHITE][i] - trace.distance_us[BLACK][i];
 			double grad = factor * dEdx;
 			double gradmg = mgs * grad;
 			double gradeg = egs * grad;
@@ -1489,7 +1489,7 @@ double grad_calc(struct position *pos, double result) {
 	}
 	if ((param = &parameters[PARAM_DISTANCETHEM])->tune == TUNE_YES) {
 		for (size_t i = 0; i < param->size; i++) {
-			double dEdx = trace.distance_them[white][i] - trace.distance_them[black][i];
+			double dEdx = trace.distance_them[WHITE][i] - trace.distance_them[BLACK][i];
 			double grad = factor * dEdx;
 			double gradmg = mgs * grad;
 			double gradeg = egs * grad;
@@ -1531,7 +1531,7 @@ size_t grad(FILE *f, struct position *pos) {
 		if (skip)
 			continue;
 
-		eval = pos->turn == white ? eval : -eval;
+		eval = pos->turn == WHITE ? eval : -eval;
 		double result = sigmoid(eval);
 
 		grad_calc(pos, result);

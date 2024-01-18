@@ -44,13 +44,13 @@ static inline long bitbase_KRKP_index_by_square(int turn, int king_white, int ro
 }
 
 static inline long bitbase_KRKP_index(const struct position *pos) {
-	int white_side = pos->piece[white][rook] != 0;
+	int white_side = pos->piece[WHITE][ROOK] != 0;
 	int black_side = other_color(white_side);
 	int turn = pos->turn == white_side;
-	int king_white = orient_horizontal(white_side, ctz(pos->piece[white_side][king]));
-	int rook_white = orient_horizontal(white_side, ctz(pos->piece[white_side][rook]));
-	int king_black = orient_horizontal(white_side, ctz(pos->piece[black_side][king]));
-	int pawn_black = orient_horizontal(white_side, ctz(pos->piece[black_side][pawn]));
+	int king_white = orient_horizontal(white_side, ctz(pos->piece[white_side][KING]));
+	int rook_white = orient_horizontal(white_side, ctz(pos->piece[white_side][ROOK]));
+	int king_black = orient_horizontal(white_side, ctz(pos->piece[black_side][KING]));
+	int pawn_black = orient_horizontal(white_side, ctz(pos->piece[black_side][PAWN]));
 	return bitbase_KRKP_index_by_square(turn, king_white, rook_white, king_black, pawn_black);
 }
 
@@ -61,7 +61,7 @@ static inline unsigned bitbase_KRKP_probe_by_index(long index) {
 }
 
 static inline unsigned bitbase_KRKP_probe(const struct position *pos, int eval_side) {
-	int white_side = pos->piece[white][rook] != 0;
+	int white_side = pos->piece[WHITE][ROOK] != 0;
 	unsigned p = bitbase_KRKP_probe_by_index(bitbase_KRKP_index(pos));
 	return orient_bitbase_eval(white_side != eval_side, p);
 }

@@ -38,7 +38,7 @@ const uint32_t mv[6] = { 0, 0x1, 0x10, 0x100, 0x1000, 0x10000 };
 
 int verify_material(const struct position *pos, int color, int material_verify) {
 	int material = 0;
-	for (int piece = pawn; piece <= queen; piece++)
+	for (int piece = PAWN; piece <= QUEEN; piece++)
 		material += mv[piece] * popcount(pos->piece[color][piece]);
 	if (material_verify != -1 && material_verify != material)
 		return 0;
@@ -54,7 +54,7 @@ static inline uint64_t endgame_key(int color, int piece, int count) {
 void refresh_endgame_key(struct position *pos) {
 	pos->endgame_key = 0;
 	for (int color = 0; color < 2; color++) {
-		for (int piece = pawn; piece < king; piece++) {
+		for (int piece = PAWN; piece < KING; piece++) {
 			int count = popcount(pos->piece[color][piece]);
 			pos->endgame_key ^= endgame_key(color, piece, count);
 		}
@@ -120,15 +120,15 @@ void endgame_test(void) {
 	struct position pos = { 0 };
 	size_t max_pieces[] = { 0, 9, 11, 11, 11, 10 };
 	size_t max_index = 1;
-	for (size_t i = pawn; i < king; i++)
+	for (size_t i = PAWN; i < KING; i++)
 		max_index *= max_pieces[i] * max_pieces[i];
 	for (size_t index = 0; index < max_index; index++) {
 		int pieces[2][7];
-		pieces[white][king] = pieces[black][king] = 1;
+		pieces[WHITE][KING] = pieces[BLACK][KING] = 1;
 		size_t denominator = 1;
 		for (int color = 0; color < 2; color++) {
 			int total = 1;
-			for (int piece = pawn; piece < king; piece++) {
+			for (int piece = PAWN; piece < KING; piece++) {
 				pieces[color][piece] = (index / denominator) % max_pieces[piece];
 				denominator *= max_pieces[piece];
 				total += pieces[color][piece];
@@ -137,15 +137,15 @@ void endgame_test(void) {
 			}
 		}
 
-		pos.piece[white][all] = pos.piece[black][all] = 0;
+		pos.piece[WHITE][ALL] = pos.piece[BLACK][ALL] = 0;
 		for (int color = 0; color < 2; color++) {
 			int sign = 2 * color - 1;
 			int total = 0;
-			for (int piece = pawn; piece <= king; piece++) {
+			for (int piece = PAWN; piece <= KING; piece++) {
 				pos.piece[color][piece] = (1 << pieces[color][piece]) - 1;
 				total += pieces[color][piece];
-				pos.piece[color][piece] <<= 32 - sign * total - pieces[black][piece] * (color == black);
-				pos.piece[color][all] |= pos.piece[color][piece];
+				pos.piece[color][piece] <<= 32 - sign * total - pieces[BLACK][piece] * (color == BLACK);
+				pos.piece[color][ALL] |= pos.piece[color][piece];
 			}
 		}
 
@@ -199,24 +199,24 @@ static inline int32_t push_away(int square1, int square2) {
 int32_t evaluate_KPK(const struct position *pos, int strong_side) {
 	int weak_side = other_color(strong_side);
 	UNUSED(weak_side);
-	assert(verify_material(pos, strong_side, mv[pawn]));
+	assert(verify_material(pos, strong_side, mv[PAWN]));
 	assert(verify_material(pos, weak_side, 0));
-	int pawn_square = ctz(pos->piece[strong_side][pawn]);
+	int pawn_square = ctz(pos->piece[strong_side][PAWN]);
 	int r = rank_of(orient_horizontal(strong_side, pawn_square));
 	int32_t eval = r;
 	if (bitbase_KPK_probe(pos, strong_side) == BITBASE_WIN)
-		eval += VALUE_WIN + material_value[pawn] - pos->halfmove;
+		eval += VALUE_WIN + material_value[PAWN] - pos->halfmove;
 	return eval;
 }
 
 int32_t evaluate_KPKP(const struct position *pos, int strong_side) {
 	int weak_side = other_color(strong_side);
 	UNUSED(weak_side);
-	assert(verify_material(pos, strong_side, mv[pawn]));
-	assert(verify_material(pos, weak_side, mv[pawn]));
-	int pawn_white = ctz(pos->piece[white][pawn]);
+	assert(verify_material(pos, strong_side, mv[PAWN]));
+	assert(verify_material(pos, weak_side, mv[PAWN]));
+	int pawn_white = ctz(pos->piece[WHITE][PAWN]);
 	int y_white = rank_of(pawn_white);
-	int pawn_black = orient_horizontal(black, ctz(pos->piece[black][pawn]));
+	int pawn_black = orient_horizontal(BLACK, ctz(pos->piece[BLACK][PAWN]));
 	int y_black = rank_of(pawn_black);
 	int32_t eval = y_white - y_black;
 	unsigned p = bitbase_KPKP_probe(pos, strong_side);
@@ -230,10 +230,10 @@ int32_t evaluate_KPKP(const struct position *pos, int strong_side) {
 int32_t evaluate_KBPK(const struct position *pos, int strong_side) {
 	int weak_side = other_color(strong_side);
 	UNUSED(weak_side);
-	assert(verify_material(pos, strong_side, mv[bishop] + mv[pawn]));
+	assert(verify_material(pos, strong_side, mv[BISHOP] + mv[PAWN]));
 	assert(verify_material(pos, weak_side, 0));
-	int pawn_square = orient_horizontal(strong_side, ctz(pos->piece[strong_side][pawn]));
-	int bishop_square = orient_horizontal(strong_side, ctz(pos->piece[strong_side][bishop]));
+	int pawn_square = orient_horizontal(strong_side, ctz(pos->piece[strong_side][PAWN]));
+	int bishop_square = orient_horizontal(strong_side, ctz(pos->piece[strong_side][BISHOP]));
 	int f = file_of(pawn_square);
 	int r = rank_of(pawn_square);
 	int promotion_square = f + 8 * 7;
@@ -241,52 +241,52 @@ int32_t evaluate_KBPK(const struct position *pos, int strong_side) {
 	/* We can probe bitbase_KPK directly because the bishop is simply ignored. */
 	if ((0 < f && f < 7) || (same_colored_squares(bishop_square) & same_colored_squares(promotion_square)) ||
 			bitbase_KPK_probe(pos, strong_side) == BITBASE_WIN)
-		eval += VALUE_WIN + material_value[bishop] + material_value[pawn] - pos->halfmove;
+		eval += VALUE_WIN + material_value[BISHOP] + material_value[PAWN] - pos->halfmove;
 	return eval;
 }
 
 int32_t evaluate_KRKP(const struct position *pos, int strong_side) {
 	int weak_side = other_color(strong_side);
-	assert(verify_material(pos, strong_side, mv[rook]));
-	assert(verify_material(pos, weak_side, mv[pawn]));
-	int strong_king = ctz(pos->piece[strong_side][king]);
-	int weak_king = ctz(pos->piece[weak_side][king]);
-	int pawn_square = orient_horizontal(weak_side, ctz(pos->piece[weak_side][pawn]));
+	assert(verify_material(pos, strong_side, mv[ROOK]));
+	assert(verify_material(pos, weak_side, mv[PAWN]));
+	int strong_king = ctz(pos->piece[strong_side][KING]);
+	int weak_king = ctz(pos->piece[weak_side][KING]);
+	int pawn_square = orient_horizontal(weak_side, ctz(pos->piece[weak_side][PAWN]));
 	int r = rank_of(pawn_square);
 	int32_t eval = -r;
 	unsigned p = bitbase_KRKP_probe(pos, strong_side);
 	if (p == BITBASE_WIN)
-		eval += VALUE_WIN + material_value[rook] - material_value[pawn] + push_toward(strong_king, weak_king) - pos->halfmove;
+		eval += VALUE_WIN + material_value[ROOK] - material_value[PAWN] + push_toward(strong_king, weak_king) - pos->halfmove;
 	else if (p == BITBASE_LOSE)
-		eval -= VALUE_WIN + material_value[pawn] - material_value[rook] - pos->halfmove;
+		eval -= VALUE_WIN + material_value[PAWN] - material_value[ROOK] - pos->halfmove;
 	return eval;
 }
 
 int32_t evaluate_KRKN(const struct position *pos, int strong_side) {
 	int weak_side = other_color(strong_side);
-	assert(verify_material(pos, strong_side, mv[rook]));
-	assert(verify_material(pos, weak_side, mv[knight]));
-	int strong_king = ctz(pos->piece[strong_side][king]);
-	int weak_king = ctz(pos->piece[weak_side][king]);
-	int weak_knight = ctz(pos->piece[weak_side][knight]);
+	assert(verify_material(pos, strong_side, mv[ROOK]));
+	assert(verify_material(pos, weak_side, mv[KNIGHT]));
+	int strong_king = ctz(pos->piece[strong_side][KING]);
+	int weak_king = ctz(pos->piece[weak_side][KING]);
+	int weak_knight = ctz(pos->piece[weak_side][KNIGHT]);
 	return 2 * push_toward_edge(weak_king) + push_away(weak_king, weak_knight) + 3 * push_toward(weak_king, strong_king);
 }
 
 int32_t evaluate_KRKB(const struct position *pos, int strong_side) {
 	int weak_side = other_color(strong_side);
-	assert(verify_material(pos, strong_side, mv[rook]));
-	assert(verify_material(pos, weak_side, mv[bishop]));
-	int weak_king = ctz(pos->piece[weak_side][king]);
+	assert(verify_material(pos, strong_side, mv[ROOK]));
+	assert(verify_material(pos, weak_side, mv[BISHOP]));
+	int weak_king = ctz(pos->piece[weak_side][KING]);
 	return push_toward_edge(weak_king);
 }
 
 /* Drawish because of 50 move rule. */
 int32_t evaluate_KBBKN(const struct position *pos, int strong_side) {
 	int weak_side = other_color(strong_side);
-	assert(verify_material(pos, strong_side, 2 * mv[bishop]));
-	assert(verify_material(pos, weak_side, mv[knight]));
-	int strong_king = ctz(pos->piece[strong_side][king]);
-	int weak_king = ctz(pos->piece[weak_side][king]);
+	assert(verify_material(pos, strong_side, 2 * mv[BISHOP]));
+	assert(verify_material(pos, weak_side, mv[KNIGHT]));
+	int strong_king = ctz(pos->piece[strong_side][KING]);
+	int weak_king = ctz(pos->piece[weak_side][KING]);
 	return push_toward(strong_king, weak_king) + 4 * push_toward_edge(weak_king);
 }
 
@@ -294,77 +294,77 @@ int32_t evaluate_KNNK(const struct position *pos, int strong_side) {
 	int weak_side = other_color(strong_side);
 	UNUSED(weak_side);
 	UNUSED(pos);
-	assert(verify_material(pos, strong_side, 2 * mv[knight]));
+	assert(verify_material(pos, strong_side, 2 * mv[KNIGHT]));
 	assert(verify_material(pos, weak_side, 0));
 	return 0;
 }
 
 int32_t evaluate_KNNKP(const struct position *pos, int strong_side) {
 	int weak_side = other_color(strong_side);
-	assert(verify_material(pos, strong_side, 2 * mv[knight]));
-	assert(verify_material(pos, weak_side, mv[pawn]));
-	int square = ctz(pos->piece[weak_side][pawn]);
-	int weak_king = ctz(pos->piece[weak_side][king]);
+	assert(verify_material(pos, strong_side, 2 * mv[KNIGHT]));
+	assert(verify_material(pos, weak_side, mv[PAWN]));
+	int square = ctz(pos->piece[weak_side][PAWN]);
+	int weak_king = ctz(pos->piece[weak_side][KING]);
 	int r = rank_of(orient_horizontal(weak_side, square));
 	return 3 * push_toward_edge(weak_king) - 4 * r;
 }
 
 int32_t evaluate_KBNK(const struct position *pos, int strong_side) {
 	int weak_side = other_color(strong_side);
-	assert(verify_material(pos, strong_side, mv[bishop] + mv[knight]));
+	assert(verify_material(pos, strong_side, mv[BISHOP] + mv[KNIGHT]));
 	assert(verify_material(pos, weak_side, 0));
-	int weak_king = ctz(pos->piece[weak_side][king]);
-	int strong_king = ctz(pos->piece[strong_side][king]);
-	uint64_t darkbishop = pos->piece[strong_side][bishop] & same_colored_squares(a1);
+	int weak_king = ctz(pos->piece[weak_side][KING]);
+	int strong_king = ctz(pos->piece[strong_side][KING]);
+	uint64_t darkbishop = pos->piece[strong_side][BISHOP] & same_colored_squares(a1);
 	int corner1 = darkbishop ? a1 : a8;
 	int corner2 = darkbishop ? h8 : h1;
 	int closest_corner = distance(weak_king, corner1) < distance(weak_king, corner2) ? corner1 : corner2;
-	return VALUE_WIN + material_value[bishop] + material_value[knight] + push_toward(strong_king, weak_king) + 0x8 * push_toward(closest_corner, weak_king) - pos->halfmove;
+	return VALUE_WIN + material_value[BISHOP] + material_value[KNIGHT] + push_toward(strong_king, weak_king) + 0x8 * push_toward(closest_corner, weak_king) - pos->halfmove;
 }
 
 int32_t evaluate_KQKP(const struct position *pos, int strong_side) {
 	int weak_side = other_color(strong_side);
-	assert(verify_material(pos, strong_side, mv[queen]));
-	assert(verify_material(pos, weak_side, mv[pawn]));
-	int weak_king = ctz(pos->piece[weak_side][king]);
-	int strong_king = ctz(pos->piece[strong_side][king]);
+	assert(verify_material(pos, strong_side, mv[QUEEN]));
+	assert(verify_material(pos, weak_side, mv[PAWN]));
+	int weak_king = ctz(pos->piece[weak_side][KING]);
+	int strong_king = ctz(pos->piece[strong_side][KING]);
 	int32_t eval = push_toward(strong_king, weak_king);
 
-	int square = ctz(pos->piece[weak_side][pawn]);
+	int square = ctz(pos->piece[weak_side][PAWN]);
 	int r = rank_of(orient_horizontal(weak_side, square));
 	/* r != 7th rank */
 	if (r != 6 || distance(weak_king, square) != 1 ||
-			((FILE_B | FILE_D | FILE_E | FILE_G) & pos->piece[weak_side][pawn]))
-		eval += VALUE_WIN + material_value[queen] - material_value[rook] - pos->halfmove;
+			((FILE_B | FILE_D | FILE_E | FILE_G) & pos->piece[weak_side][PAWN]))
+		eval += VALUE_WIN + material_value[QUEEN] - material_value[ROOK] - pos->halfmove;
 	return eval;
 }
 
 int32_t evaluate_KQKX(const struct position *pos, int strong_side) {
 	int weak_side = other_color(strong_side);
-	int piece = pos->piece[weak_side][knight] ? knight : pos->piece[weak_side][bishop] ? bishop : rook;
-	int weak_king = ctz(pos->piece[weak_side][king]);
-	int strong_king = ctz(pos->piece[strong_side][king]);
-	assert(verify_material(pos, strong_side, mv[queen]));
-	assert(verify_material(pos, weak_side, mv[piece]));
-	return VALUE_WIN + material_value[queen] - material_value[piece] + push_toward(strong_king, weak_king) + 0x8 * push_toward_edge(weak_king) - pos->halfmove;
+	int piece = pos->piece[weak_side][KNIGHT] ? KNIGHT : pos->piece[weak_side][BISHOP] ? BISHOP : ROOK;
+	int weak_king = ctz(pos->piece[weak_side][KING]);
+	int strong_king = ctz(pos->piece[strong_side][KING]);
+	assert(verify_material(pos, strong_side, mv[QUEEN]));
+	assert(verify_material(pos, weak_side, mv[PIECE]));
+	return VALUE_WIN + material_value[QUEEN] - material_value[piece] + push_toward(strong_king, weak_king) + 0x8 * push_toward_edge(weak_king) - pos->halfmove;
 }
 
 int32_t evaluate_KXK(const struct position *pos, int strong_side) {
 	int weak_side = other_color(strong_side);
 	assert(verify_material(pos, weak_side, 0));
-	int weak_king = ctz(pos->piece[weak_side][king]);
-	int strong_king = ctz(pos->piece[strong_side][king]);
+	int weak_king = ctz(pos->piece[weak_side][KING]);
+	int strong_king = ctz(pos->piece[strong_side][KING]);
 	int32_t material = 0;
-	for (int piece = pawn; piece < king; piece++)
+	for (int piece = PAWN; piece < KING; piece++)
 		material += material_value[piece] * popcount(pos->piece[strong_side][piece]);
 	return VALUE_WIN + material + push_toward(strong_king, weak_king) + 0x8 * push_toward_edge(weak_king) - pos->halfmove;
 }
 
 int is_KXK(const struct position *pos, int color) {
-	return !(pos->piece[other_color(color)][all] ^ pos->piece[other_color(color)][king]) &&
-			(pos->piece[color][rook] ||
-			 pos->piece[color][queen] ||
-			 (popcount(pos->piece[color][knight] | pos->piece[color][bishop]) >= 3));
+	return !(pos->piece[other_color(color)][ALL] ^ pos->piece[other_color(color)][KING]) &&
+			(pos->piece[color][ROOK] ||
+			 pos->piece[color][QUEEN] ||
+			 (popcount(pos->piece[color][KNIGHT] | pos->piece[color][BISHOP]) >= 3));
 }
 
 /* Should be called before do_move. */
@@ -381,18 +381,18 @@ void do_endgame_key(struct position *pos, const move_t *m) {
 		pos->endgame_key ^= endgame_key(other_color(turn), victim, after);
 	}
 	if (move_flag(m) == MOVE_EN_PASSANT) {
-		int before = popcount(pos->piece[other_color(turn)][pawn]);
+		int before = popcount(pos->piece[other_color(turn)][PAWN]);
 		int after = before - 1;
 		assert(before);
-		pos->endgame_key ^= endgame_key(other_color(turn), pawn, before);
-		pos->endgame_key ^= endgame_key(other_color(turn), pawn, after);
+		pos->endgame_key ^= endgame_key(other_color(turn), PAWN, before);
+		pos->endgame_key ^= endgame_key(other_color(turn), PAWN, after);
 	}
 	if (move_flag(m) == MOVE_PROMOTION) {
-		int before_pawn = popcount(pos->piece[turn][pawn]);
+		int before_pawn = popcount(pos->piece[turn][PAWN]);
 		int after_pawn = before_pawn - 1;
 		assert(before_pawn);
-		pos->endgame_key ^= endgame_key(turn, pawn, before_pawn);
-		pos->endgame_key ^= endgame_key(turn, pawn, after_pawn);
+		pos->endgame_key ^= endgame_key(turn, PAWN, before_pawn);
+		pos->endgame_key ^= endgame_key(turn, PAWN, after_pawn);
 
 		int piece = move_promote(m) + 2;
 		int before = popcount(pos->piece[turn][piece]);
@@ -416,16 +416,16 @@ void undo_endgame_key(struct position *pos, const move_t *m) {
 		pos->endgame_key ^= endgame_key(other_color(turn), victim, after);
 	}
 	if (move_flag(m) == MOVE_EN_PASSANT) {
-		int before = popcount(pos->piece[other_color(turn)][pawn]);
+		int before = popcount(pos->piece[other_color(turn)][PAWN]);
 		int after = before + 1;
-		pos->endgame_key ^= endgame_key(other_color(turn), pawn, before);
-		pos->endgame_key ^= endgame_key(other_color(turn), pawn, after);
+		pos->endgame_key ^= endgame_key(other_color(turn), PAWN, before);
+		pos->endgame_key ^= endgame_key(other_color(turn), PAWN, after);
 	}
 	if (move_flag(m) == MOVE_PROMOTION) {
-		int before_pawn = popcount(pos->piece[turn][pawn]);
+		int before_pawn = popcount(pos->piece[turn][PAWN]);
 		int after_pawn = before_pawn + 1;
-		pos->endgame_key ^= endgame_key(turn, pawn, before_pawn);
-		pos->endgame_key ^= endgame_key(turn, pawn, after_pawn);
+		pos->endgame_key ^= endgame_key(turn, PAWN, before_pawn);
+		pos->endgame_key ^= endgame_key(turn, PAWN, after_pawn);
 
 		int piece = move_promote(m) + 2;
 		int before = popcount(pos->piece[turn][piece]);

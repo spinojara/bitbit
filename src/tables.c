@@ -130,14 +130,14 @@ score_t blocked_storm[28] = {
 void tables_init(void) {
 	memset(psqtable, 0, sizeof(psqtable));
 	for (int turn = 0; turn < 2; turn++) {
-		for (int piece = pawn; piece <= king; piece++) {
+		for (int piece = PAWN; piece <= KING; piece++) {
 			for (int square = 0; square < 64; square++) {
 				int f = file_of(square);
 				int r = rank_of(square);
-				int factor = (piece == pawn) ? 8 : 4;
-				if (f >= 4 && piece != pawn)
+				int factor = (piece == PAWN) ? 8 : 4;
+				if (f >= 4 && piece != PAWN)
 					f = 7 - f;
-				if (turn == white)
+				if (turn == WHITE)
 					r = 7 - r;
 				psqtable[turn][piece][square] = white_psqtable[piece - 1][factor * r + f] +
 					piece_value[piece - 1];

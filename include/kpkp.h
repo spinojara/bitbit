@@ -44,10 +44,10 @@ static inline long bitbase_KPKP_index_by_square(int king_white, int pawn_white, 
 
 static inline long bitbase_KPKP_index(const struct position *pos) {
 	int turn = pos->turn;
-	int king_white = orient_horizontal(turn, ctz(pos->piece[turn][king]));
-	int pawn_white = orient_horizontal(turn, ctz(pos->piece[turn][pawn]));
-	int king_black = orient_horizontal(turn, ctz(pos->piece[other_color(turn)][king]));
-	int pawn_black = orient_horizontal(turn, ctz(pos->piece[other_color(turn)][pawn]));
+	int king_white = orient_horizontal(turn, ctz(pos->piece[turn][KING]));
+	int pawn_white = orient_horizontal(turn, ctz(pos->piece[turn][PAWN]));
+	int king_black = orient_horizontal(turn, ctz(pos->piece[other_color(turn)][KING]));
+	int pawn_black = orient_horizontal(turn, ctz(pos->piece[other_color(turn)][PAWN]));
 	return bitbase_KPKP_index_by_square(king_white, pawn_white, king_black, pawn_black);
 }
 

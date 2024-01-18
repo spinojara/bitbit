@@ -50,10 +50,10 @@ static const struct searchinfo gsi = { 0 };
 
 int32_t evaluate_material(const struct position *pos) {
 	int32_t eval = 0;
-	for (int piece = pawn; piece < king; piece++)
-		eval += popcount(pos->piece[white][piece]) * material_value[piece];
-	for (int piece = pawn; piece < king; piece++)
-		eval -= popcount(pos->piece[black][piece]) * material_value[piece];
+	for (int piece = PAWN; piece < KING; piece++)
+		eval += popcount(pos->piece[WHITE][piece]) * material_value[piece];
+	for (int piece = PAWN; piece < KING; piece++)
+		eval -= popcount(pos->piece[BLACK][piece]) * material_value[piece];
 	return pos->turn ? eval : -eval;
 }
 

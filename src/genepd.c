@@ -53,17 +53,17 @@ void genepd_startpos(struct position *pos, uint64_t *seed) {
 	for (int sq = b1; sq < h1; sq++) {
 		if (sq == e1)
 			continue;
-		pos->mailbox[sq] = empty;
+		pos->mailbox[sq] = EMPTY;
 	}
-	pos->piece[white][knight] = pos->piece[white][bishop] = pos->piece[white][queen] = 0;
-	pos->piece[black][knight] = pos->piece[black][bishop] = pos->piece[black][queen] = 0;
+	pos->piece[WHITE][KNIGHT] = pos->piece[WHITE][BISHOP] = pos->piece[WHITE][QUEEN] = 0;
+	pos->piece[BLACK][KNIGHT] = pos->piece[BLACK][BISHOP] = pos->piece[BLACK][QUEEN] = 0;
 
 	/* Dark squared bishop. Can be c1 or g1. */
 	int db[2] = { c1, g1 };
-	pos->mailbox[db[xorshift64(seed) % 2]] = white_bishop;
+	pos->mailbox[db[xorshift64(seed) % 2]] = WHITE_BISHOP;
 	/* Light squared bishop. Can be b1, d1 or f1. */
 	int lb[3] = { b1, d1, f1 };
-	pos->mailbox[lb[xorshift64(seed) % 3]] = white_bishop;
+	pos->mailbox[lb[xorshift64(seed) % 3]] = WHITE_BISHOP;
 	
 	/* Queen square. One of the remaining 3 squares.
 	 * The other two squares are occupied by knights.
@@ -72,9 +72,9 @@ void genepd_startpos(struct position *pos, uint64_t *seed) {
 	for (int sq = b1; sq < h1; sq++) {
 		if (!pos->mailbox[sq]) {
 			if (!qs)
-				pos->mailbox[sq] = white_queen;
+				pos->mailbox[sq] = WHITE_QUEEN;
 			else
-				pos->mailbox[sq] = white_knight;
+				pos->mailbox[sq] = WHITE_KNIGHT;
 			qs--;
 		}
 	}
@@ -83,16 +83,16 @@ void genepd_startpos(struct position *pos, uint64_t *seed) {
 		if (sq == e1)
 			continue;
 		int piece = uncolored_piece(pos->mailbox[sq]);
-		int bsq = orient_horizontal(black, sq);
-		pos->mailbox[bsq] = colored_piece(piece, black);
-		pos->piece[white][piece] |= bitboard(sq);
-		pos->piece[black][piece] |= bitboard(bsq);
+		int bsq = orient_horizontal(BLACK, sq);
+		pos->mailbox[bsq] = colored_piece(piece, BLACK);
+		pos->piece[WHITE][piece] |= bitboard(sq);
+		pos->piece[BLACK][piece] |= bitboard(bsq);
 	}
 
 	for (int color = 0; color < 2; color++) {
-		pos->piece[color][all] = 0;
-		for (int piece = pawn; piece <= king; piece++)
-			pos->piece[color][all] |= pos->piece[color][piece];
+		pos->piece[color][ALL] = 0;
+		for (int piece = PAWN; piece <= KING; piece++)
+			pos->piece[color][ALL] |= pos->piece[color][piece];
 	}
 }
 
@@ -121,7 +121,7 @@ int genepd_position(struct position *pos, struct transpositiontable *tt, uint64_
 		for (int j = 0; j < 16 && m == 0; j++) {
 			m = movelist[xorshift64(seed) % c];
 			int piece = uncolored_piece(pos->mailbox[move_from(&m)]);
-			if (minor_pieces && (piece == rook || piece == queen || piece == king))
+			if (minor_pieces && (piece == ROOK || piece == QUEEN || piece == KING))
 				m = 0;
 		}
 		if (!m)

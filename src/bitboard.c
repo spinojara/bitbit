@@ -226,8 +226,8 @@ void bitboard_init(void) {
 		file_left_lookup[i] = file_left_calc(i);
 		file_right_lookup[i] = file_right_calc(i);
 		adjacent_files_lookup[i] = adjacent_files_calc(i);
-		passed_files_lookup[i] = passed_files_calc(i, white);
-		passed_files_lookup[i + 64] = passed_files_calc(i, black);
+		passed_files_lookup[i] = passed_files_calc(i, WHITE);
+		passed_files_lookup[i + 64] = passed_files_calc(i, BLACK);
 		same_colored_squares_lookup[i] = same_colored_squares_calc(i);
 		for (int j = 0; j < 64; j++) {
 			distance_lookup[i + 64 * j] = distance_calc(i, j);

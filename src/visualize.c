@@ -81,7 +81,7 @@ void image_psqt(int32_t *image, int piece) {
 				}
 			}
 
-			if (piece == pawn && (y == 0 || y == 7)) {
+			if (piece == PAWN && (y == 0 || y == 7)) {
 				value = 0;
 				num = 1;
 			}

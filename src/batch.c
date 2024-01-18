@@ -83,8 +83,8 @@ struct batch *next_batch(void *ptr) {
 
 		batch->eval[batch->actual_size] = (float)FV_SCALE * eval / (127 * 64);
 		int index, square;
-		const int king_square[] = { orient_horizontal(black, ctz(data->pos->piece[black][king])), orient_horizontal(white, ctz(data->pos->piece[white][king])) };
-		for (int piece = pawn; piece < king; piece++) {
+		const int king_square[] = { orient_horizontal(BLACK, ctz(data->pos->piece[BLACK][KING])), orient_horizontal(WHITE, ctz(data->pos->piece[WHITE][KING])) };
+		for (int piece = PAWN; piece < KING; piece++) {
 			for (int turn = 0; turn <= 1; turn++) {
 				uint64_t b = data->pos->piece[turn][piece];
 				while (b) {

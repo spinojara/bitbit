@@ -45,9 +45,9 @@ score_t evaluate_pawns(const struct position *pos, struct evaluationinfo *ei, in
 	unsigned up = color ? 8 : -8;
 	unsigned down = color ? -8 : 8;
 
-	uint64_t ourpawns = pos->piece[color][pawn];
-	uint64_t theirpawns = pos->piece[other_color(color)][pawn];
-	uint64_t b = pos->piece[color][pawn];
+	uint64_t ourpawns = pos->piece[color][PAWN];
+	uint64_t theirpawns = pos->piece[other_color(color)][PAWN];
+	uint64_t b = pos->piece[color][PAWN];
 	uint64_t neighbours, doubled, stoppers, support, phalanx, lever, leverpush, blocker;
 	int backward, passed;
 	int square;
@@ -86,10 +86,10 @@ score_t evaluate_pawns(const struct position *pos, struct evaluationinfo *ei, in
 			if (TRACE) trace.passed_pawn[color][r]++;
 			if (TRACE) trace.passed_file[color][rf]++;
 
-			int i = distance(square + up, ctz(pos->piece[color][king]));
+			int i = distance(square + up, ctz(pos->piece[color][KING]));
 			eval += i * distance_us[r];
 			if (TRACE) trace.distance_us[color][r] += i;
-			int j = distance(square + up, ctz(pos->piece[other_color(color)][king]));
+			int j = distance(square + up, ctz(pos->piece[other_color(color)][KING]));
 			eval += j * distance_them[r];
 			if (TRACE) trace.distance_them[color][r] += j;
 

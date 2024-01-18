@@ -80,9 +80,9 @@ const int material_value[7] = { 0, 100, 300, 300, 500, 1000, 0 };
 static inline score_t evaluate_king_shelter(const struct position *pos, struct evaluationinfo *ei, int turn) {
 	score_t eval = 0;
 
-	uint64_t ourpawns = pos->piece[turn][pawn] &
+	uint64_t ourpawns = pos->piece[turn][PAWN] &
 		~passed_files(ei->king_square[turn], other_color(turn));
-	uint64_t theirpawns = pos->piece[other_color(turn)][pawn] &
+	uint64_t theirpawns = pos->piece[other_color(turn)][PAWN] &
 		~passed_files(ei->king_square[turn], other_color(turn));
 
 	uint64_t b;
@@ -96,10 +96,10 @@ static inline score_t evaluate_king_shelter(const struct position *pos, struct e
 			if (TRACE) trace.king_on_open_file[turn]++;
 		}
 
-		ourrank = b ? turn ? rank_of(clzm(b)) : rank_of(orient_horizontal(black, ctz(b))) : 0;
+		ourrank = b ? turn ? rank_of(clzm(b)) : rank_of(orient_horizontal(BLACK, ctz(b))) : 0;
 
 		b = theirpawns & file(f);
-		theirrank = b ? turn ? rank_of(ctz(b)) : rank_of(orient_horizontal(black, clzm(b))) : 0;
+		theirrank = b ? turn ? rank_of(ctz(b)) : rank_of(orient_horizontal(BLACK, clzm(b))) : 0;
 
 		int d = MIN(f, 7 - f);
 		eval += pawn_shelter[d * 7 + ourrank];
@@ -124,68 +124,68 @@ static inline score_t evaluate_king_shelter(const struct position *pos, struct e
 static inline score_t evaluate_king(const struct position *pos, struct evaluationinfo *ei, int turn) {
 	score_t eval = evaluate_king_shelter(pos, ei, turn);
 
-	uint64_t weak = ei->attacked[other_color(turn)][all]
+	uint64_t weak = ei->attacked[other_color(turn)][ALL]
 		      & ~(ei->attacked2[turn])
-		      & (~ei->attacked[turn][all] | ei->attacked[turn][king] | ei->attacked[turn][queen]);
+		      & (~ei->attacked[turn][ALL] | ei->attacked[turn][KING] | ei->attacked[turn][QUEEN]);
 
 	/* All pieces that are not pawns. */
-	uint64_t discoveries = ei->pinned[turn] & pos->piece[other_color(turn)][all] & ~pos->piece[other_color(turn)][pawn];
+	uint64_t discoveries = ei->pinned[turn] & pos->piece[other_color(turn)][ALL] & ~pos->piece[other_color(turn)][PAWN];
 
-	int king_danger = knight_attack * ei->king_attacks[other_color(turn)][knight]
-			+ bishop_attack * ei->king_attacks[other_color(turn)][bishop]
-			+ rook_attack * ei->king_attacks[other_color(turn)][rook]
-			+ queen_attack * ei->king_attacks[other_color(turn)][queen]
+	int king_danger = knight_attack * ei->king_attacks[other_color(turn)][KNIGHT]
+			+ bishop_attack * ei->king_attacks[other_color(turn)][BISHOP]
+			+ rook_attack * ei->king_attacks[other_color(turn)][ROOK]
+			+ queen_attack * ei->king_attacks[other_color(turn)][QUEEN]
 			+ weak_squares * popcount(weak & ei->king_ring[turn])
 			+ discovery * popcount(discoveries)
-			- enemy_no_queen * !pos->piece[other_color(turn)][queen];
+			- enemy_no_queen * !pos->piece[other_color(turn)][QUEEN];
 
-	if (TRACE) trace.knight_attack[turn] = ei->king_attacks[other_color(turn)][knight];
-	if (TRACE) trace.bishop_attack[turn] = ei->king_attacks[other_color(turn)][bishop];
-	if (TRACE) trace.rook_attack[turn] = ei->king_attacks[other_color(turn)][rook];
-	if (TRACE) trace.queen_attack[turn] = ei->king_attacks[other_color(turn)][queen];
+	if (TRACE) trace.knight_attack[turn] = ei->king_attacks[other_color(turn)][KNIGHT];
+	if (TRACE) trace.bishop_attack[turn] = ei->king_attacks[other_color(turn)][BISHOP];
+	if (TRACE) trace.rook_attack[turn] = ei->king_attacks[other_color(turn)][ROOK];
+	if (TRACE) trace.queen_attack[turn] = ei->king_attacks[other_color(turn)][QUEEN];
 	if (TRACE) trace.weak_squares[turn] = popcount(weak & ei->king_ring[turn]);
 	if (TRACE) trace.discovery[turn] = popcount(discoveries);
-	if (TRACE) trace.enemy_no_queen[turn] = -!pos->piece[other_color(turn)][queen];
+	if (TRACE) trace.enemy_no_queen[turn] = -!pos->piece[other_color(turn)][QUEEN];
 
 	uint64_t possible_knight_checks = knight_attacks(ei->king_square[turn], 0);
-	uint64_t possible_bishop_checks = bishop_attacks(ei->king_square[turn], 0, all_pieces(pos) ^ pos->piece[turn][queen]);
-	uint64_t possible_rook_checks = rook_attacks(ei->king_square[turn], 0, all_pieces(pos) ^ pos->piece[turn][queen]);
-	uint64_t very_safe = ~ei->attacked[turn][all];
+	uint64_t possible_bishop_checks = bishop_attacks(ei->king_square[turn], 0, all_pieces(pos) ^ pos->piece[turn][QUEEN]);
+	uint64_t possible_rook_checks = rook_attacks(ei->king_square[turn], 0, all_pieces(pos) ^ pos->piece[turn][QUEEN]);
+	uint64_t very_safe = ~ei->attacked[turn][ALL];
 	uint64_t safe = very_safe
-		      | (ei->attacked2[other_color(turn)] & ~ei->attacked2[turn] & ~ei->attacked[turn][pawn]);
+		      | (ei->attacked2[other_color(turn)] & ~ei->attacked2[turn] & ~ei->attacked[turn][PAWN]);
 
-	uint64_t knight_checks = possible_knight_checks & safe & ei->attacked[other_color(turn)][knight];
-	uint64_t bishop_checks = possible_bishop_checks & safe & ei->attacked[other_color(turn)][bishop];
-	uint64_t rook_checks = possible_rook_checks & safe & ei->attacked[other_color(turn)][rook];
-	uint64_t queen_checks = (possible_bishop_checks | possible_rook_checks) & safe & ei->attacked[other_color(turn)][queen];
+	uint64_t knight_checks = possible_knight_checks & safe & ei->attacked[other_color(turn)][KNIGHT];
+	uint64_t bishop_checks = possible_bishop_checks & safe & ei->attacked[other_color(turn)][BISHOP];
+	uint64_t rook_checks = possible_rook_checks & safe & ei->attacked[other_color(turn)][ROOK];
+	uint64_t queen_checks = (possible_bishop_checks | possible_rook_checks) & safe & ei->attacked[other_color(turn)][QUEEN];
 
 	if (knight_checks) {
-		king_danger += checks[2 * knight + (clear_ls1b(knight_checks) != 0)];
-		if (TRACE) trace.checks[turn][2 * knight + (clear_ls1b(knight_checks) != 0)]++;
+		king_danger += checks[2 * KNIGHT + (clear_ls1b(knight_checks) != 0)];
+		if (TRACE) trace.checks[turn][2 * KNIGHT + (clear_ls1b(knight_checks) != 0)]++;
 	}
 	if (bishop_checks) {
-		king_danger += checks[2 * bishop + (clear_ls1b(bishop_checks) != 0)];
-		if (TRACE) trace.checks[turn][2 * bishop + (clear_ls1b(bishop_checks) != 0)]++;
+		king_danger += checks[2 * BISHOP + (clear_ls1b(bishop_checks) != 0)];
+		if (TRACE) trace.checks[turn][2 * BISHOP + (clear_ls1b(bishop_checks) != 0)]++;
 	}
 	if (rook_checks) {
-		king_danger += checks[2 * rook + (clear_ls1b(rook_checks) != 0)];
-		if (TRACE) trace.checks[turn][2 * rook + (clear_ls1b(rook_checks) != 0)]++;
+		king_danger += checks[2 * ROOK + (clear_ls1b(rook_checks) != 0)];
+		if (TRACE) trace.checks[turn][2 * ROOK + (clear_ls1b(rook_checks) != 0)]++;
 	}
 	if (queen_checks) {
-		king_danger += checks[2 * queen + (clear_ls1b(queen_checks) != 0)];
-		if (TRACE) trace.checks[turn][2 * queen + (clear_ls1b(queen_checks) != 0)]++;
+		king_danger += checks[2 * QUEEN + (clear_ls1b(queen_checks) != 0)];
+		if (TRACE) trace.checks[turn][2 * QUEEN + (clear_ls1b(queen_checks) != 0)]++;
 	}
 
 	if (TRACE) trace.king_danger[turn] = king_danger;
 	if (king_danger > 0)
 		eval -= S(king_danger * king_danger / 2048, king_danger / 8);
 
-	if (pos->piece[turn][pawn] & king_attacks(ei->king_square[turn], 0)) {
+	if (pos->piece[turn][PAWN] & king_attacks(ei->king_square[turn], 0)) {
 		eval += king_defend_pawn;
 		if (TRACE) trace.king_defend_pawn[turn]++;
 	}
 
-	if (pos->piece[other_color(turn)][pawn] & king_attacks(ei->king_square[turn], 0)) {
+	if (pos->piece[other_color(turn)][PAWN] & king_attacks(ei->king_square[turn], 0)) {
 		eval += king_attack_pawn;
 		if (TRACE) trace.king_attack_pawn[turn]++;
 	}
@@ -195,7 +195,7 @@ static inline score_t evaluate_king(const struct position *pos, struct evaluatio
 
 static inline score_t evaluate_knights(const struct position *pos, struct evaluationinfo *ei, int turn) {
 	score_t eval = 0;
-	uint64_t b = pos->piece[turn][knight];
+	uint64_t b = pos->piece[turn][KNIGHT];
 	/* Knight pair. */
 	if (popcount(b) == 2) {
 		eval += knight_pair;
@@ -203,28 +203,28 @@ static inline score_t evaluate_knights(const struct position *pos, struct evalua
 	}
 
 	uint64_t outpost_squares = (turn ? (RANK_4 | RANK_5 | RANK_6) : (RANK_3 | RANK_4 | RANK_5))
-				 & ~ei->pawn_attack_span[other_color(turn)] & ei->attacked[turn][pawn];
+				 & ~ei->pawn_attack_span[other_color(turn)] & ei->attacked[turn][PAWN];
 
 	while (b) {
 		ei->material += phase_knight;
-		ei->material_value[turn] += material_value[knight];
+		ei->material_value[turn] += material_value[KNIGHT];
 
 		int square = ctz(b);
 		uint64_t squareb = bitboard(square);
 		
 		uint64_t attacks = ei->pinned[turn] & bitboard(square) ? 0 : knight_attacks(square, 0);
 
-		ei->attacked2[turn] |= attacks & ei->attacked[turn][all];
-		ei->attacked[turn][knight] |= attacks;
-		ei->attacked[turn][all] |= attacks;
+		ei->attacked2[turn] |= attacks & ei->attacked[turn][ALL];
+		ei->attacked[turn][KNIGHT] |= attacks;
+		ei->attacked[turn][ALL] |= attacks;
 		/* Mobility (range of popcount is [0, 8]). */
 		int m = popcount(attacks & ei->mobility[turn]);
-		eval += mobility[knight - 2][m];
-		if (TRACE) trace.mobility[turn][knight - 2][m]++;
+		eval += mobility[KNIGHT - 2][m];
+		if (TRACE) trace.mobility[turn][KNIGHT - 2][m]++;
 
 		/* King attacks. */
 		if (ei->king_ring[other_color(turn)] & attacks)
-			ei->king_attacks[turn][knight] += popcount(ei->king_ring[other_color(turn)] & attacks) + 1;
+			ei->king_attacks[turn][KNIGHT] += popcount(ei->king_ring[other_color(turn)] & attacks) + 1;
 
 		/* Outpost. */
 		if (squareb & outpost_squares) {
@@ -237,13 +237,13 @@ static inline score_t evaluate_knights(const struct position *pos, struct evalua
 		}
 		
 		/* Minor behind pawn. */
-		if (squareb & shift_color(pos->piece[turn][pawn], other_color(turn))) {
+		if (squareb & shift_color(pos->piece[turn][PAWN], other_color(turn))) {
 			eval += knight_behind_pawn;
 			if (TRACE) trace.knight_behind_pawn[turn]++;
 		}
 
 		/* Defended minor. */
-		if (squareb & ei->attacked[turn][pawn]) {
+		if (squareb & ei->attacked[turn][PAWN]) {
 			eval += defended_knight;
 			if (TRACE) trace.defended_knight[turn]++;
 		}
@@ -259,7 +259,7 @@ static inline score_t evaluate_knights(const struct position *pos, struct evalua
 
 static inline score_t evaluate_bishops(const struct position *pos, struct evaluationinfo *ei, int turn) {
 	score_t eval = 0;
-	uint64_t b = pos->piece[turn][bishop];
+	uint64_t b = pos->piece[turn][BISHOP];
 	/* Bishop pair. */
 	if (popcount(b) == 2) {
 		eval += bishop_pair;
@@ -267,33 +267,33 @@ static inline score_t evaluate_bishops(const struct position *pos, struct evalua
 	}
 
 	uint64_t outpost_squares = (turn ? (RANK_4 | RANK_5 | RANK_6) : (RANK_3 | RANK_4 | RANK_5))
-				 & ~ei->pawn_attack_span[other_color(turn)] & ei->attacked[turn][pawn];
+				 & ~ei->pawn_attack_span[other_color(turn)] & ei->attacked[turn][PAWN];
 
 	uint64_t long_diagonal_squares = 0x1818000000;
 
 	while (b) {
 		ei->material += phase_bishop;
-		ei->material_value[turn] += material_value[bishop];
+		ei->material_value[turn] += material_value[BISHOP];
 
 		int square = ctz(b);
 		uint64_t squareb = bitboard(square);
 		
 		/* Attacks, including x-rays through both sides' queens and own bishops. */
-		uint64_t attacks = bishop_attacks(square, 0, all_pieces(pos) ^ pos->piece[white][queen] ^ pos->piece[black][queen] ^ pos->piece[turn][bishop]);
+		uint64_t attacks = bishop_attacks(square, 0, all_pieces(pos) ^ pos->piece[WHITE][QUEEN] ^ pos->piece[BLACK][QUEEN] ^ pos->piece[turn][BISHOP]);
 		if (ei->pinned[turn] & bitboard(square))
 			attacks &= line(square, ei->king_square[turn]);
 
-		ei->attacked2[turn] |= attacks & ei->attacked[turn][all];
-		ei->attacked[turn][bishop] |= attacks;
-		ei->attacked[turn][all] |= attacks;
+		ei->attacked2[turn] |= attacks & ei->attacked[turn][ALL];
+		ei->attacked[turn][BISHOP] |= attacks;
+		ei->attacked[turn][ALL] |= attacks;
 		/* Mobility (range of popcount is [0, 13]). */
 		int m = popcount(attacks & ei->mobility[turn]);
-		eval += mobility[bishop - 2][m];
-		if (TRACE) trace.mobility[turn][bishop - 2][m]++;
+		eval += mobility[BISHOP - 2][m];
+		if (TRACE) trace.mobility[turn][BISHOP - 2][m]++;
 
 		/* King attacks. */
 		if (ei->king_ring[other_color(turn)] & attacks)
-			ei->king_attacks[turn][bishop] += popcount(ei->king_ring[other_color(turn)] & attacks) + 1;
+			ei->king_attacks[turn][BISHOP] += popcount(ei->king_ring[other_color(turn)] & attacks) + 1;
 
 		/* Outpost. */
 		if (squareb & outpost_squares) {
@@ -306,13 +306,13 @@ static inline score_t evaluate_bishops(const struct position *pos, struct evalua
 		}
 
 		/* Minor behind pawn. */
-		if (squareb & shift_color(pos->piece[turn][pawn], other_color(turn))) {
+		if (squareb & shift_color(pos->piece[turn][PAWN], other_color(turn))) {
 			eval += bishop_behind_pawn;
 			if (TRACE) trace.bishop_behind_pawn[turn]++;
 		}
 
 		/* Defended minor. */
-		if (squareb & ei->attacked[turn][pawn]) {
+		if (squareb & ei->attacked[turn][PAWN]) {
 			eval += defended_bishop;
 			if (TRACE) trace.defended_bishop[turn]++;
 		}
@@ -328,7 +328,7 @@ static inline score_t evaluate_bishops(const struct position *pos, struct evalua
 		if (TRACE) trace.bishop_far_from_king[turn] += distance(square, ei->king_square[turn]);
 
 		/* Penalty for own pawns on same squares as bishop. */
-		uint64_t pawns = same_colored_squares(square) & pos->piece[turn][pawn];
+		uint64_t pawns = same_colored_squares(square) & pos->piece[turn][PAWN];
 		uint64_t blocked_pawns = pawns & shift_color(all_pieces(pos), other_color(turn));
 		eval += pawn_blocking_bishop * (popcount(pawns) + popcount(blocked_pawns));
 		if (TRACE) trace.pawn_blocking_bishop[turn] += popcount(pawns) + popcount(blocked_pawns);
@@ -340,7 +340,7 @@ static inline score_t evaluate_bishops(const struct position *pos, struct evalua
 
 static inline score_t evaluate_rooks(const struct position *pos, struct evaluationinfo *ei, int turn) {
 	score_t eval = 0;
-	uint64_t b = pos->piece[turn][rook];
+	uint64_t b = pos->piece[turn][ROOK];
 	/* Rook pair. */
 	if (popcount(b) == 2) {
 		eval += rook_pair;
@@ -349,40 +349,40 @@ static inline score_t evaluate_rooks(const struct position *pos, struct evaluati
 
 	while (b) {
 		ei->material += phase_rook;
-		ei->material_value[turn] += material_value[rook];
+		ei->material_value[turn] += material_value[ROOK];
 
 		int square = ctz(b);
 		
 		/* Attacks, including x-rays through both sides' queens and own rooks. */
-		uint64_t attacks = rook_attacks(square, 0, all_pieces(pos) ^ pos->piece[white][queen] ^ pos->piece[black][queen] ^ pos->piece[turn][rook]);
+		uint64_t attacks = rook_attacks(square, 0, all_pieces(pos) ^ pos->piece[WHITE][QUEEN] ^ pos->piece[BLACK][QUEEN] ^ pos->piece[turn][ROOK]);
 		if (ei->pinned[turn] & bitboard(square))
 			attacks &= line(square, ei->king_square[turn]);
 
-		ei->attacked2[turn] |= attacks & ei->attacked[turn][all];
-		ei->attacked[turn][rook] |= attacks;
-		ei->attacked[turn][all] |= attacks;
+		ei->attacked2[turn] |= attacks & ei->attacked[turn][ALL];
+		ei->attacked[turn][ROOK] |= attacks;
+		ei->attacked[turn][ALL] |= attacks;
 		/* Mobility (range of popcount is [0, 14]). */
 		int m = popcount(attacks & ei->mobility[turn]);
-		eval += mobility[rook - 2][m];
-		if (TRACE) trace.mobility[turn][rook - 2][m]++;
+		eval += mobility[ROOK - 2][m];
+		if (TRACE) trace.mobility[turn][ROOK - 2][m]++;
 
 		/* King attacks. */
 		if (ei->king_ring[other_color(turn)] & attacks)
-			ei->king_attacks[turn][rook] += popcount(ei->king_ring[other_color(turn)] & attacks) + 1;
+			ei->king_attacks[turn][ROOK] += popcount(ei->king_ring[other_color(turn)] & attacks) + 1;
 
 		/* Bonus on open files. */
-		if (!((pos->piece[black][pawn] | pos->piece[white][pawn]) & file(square))) {
+		if (!((pos->piece[BLACK][PAWN] | pos->piece[WHITE][PAWN]) & file(square))) {
 			eval += rook_open;
 			if (TRACE) trace.rook_open[turn]++;
 		}
-		else if (!(pos->piece[turn][pawn] & file(square))) {
+		else if (!(pos->piece[turn][PAWN] & file(square))) {
 			eval += rook_semi;
 			if (TRACE) trace.rook_semi[turn]++;
 		}
 		/* Penalty if blocked by uncastled king. */
 		else {
 			/* Behind blocked pawns. */
-			if (shift_color(all_pieces(pos), other_color(turn)) & pos->piece[turn][pawn] & file(square)) {
+			if (shift_color(all_pieces(pos), other_color(turn)) & pos->piece[turn][PAWN] & file(square)) {
 				eval += rook_closed;
 				if (TRACE) trace.rook_closed[turn]++;
 			}
@@ -406,30 +406,30 @@ static inline score_t evaluate_rooks(const struct position *pos, struct evaluati
 
 static inline score_t evaluate_queens(const struct position *pos, struct evaluationinfo *ei, int turn) {
 	score_t eval = 0;
-	uint64_t b = pos->piece[turn][queen];
+	uint64_t b = pos->piece[turn][QUEEN];
 	/* Only add the material value of 1 queen per side. */
 	while (b) {
 		ei->material += phase_queen;
-		ei->material_value[turn] += material_value[queen];
+		ei->material_value[turn] += material_value[QUEEN];
 
 		int square = ctz(b);
 		
 		uint64_t attacks = queen_attacks(square, 0, all_pieces(pos));
 		if (ei->pinned[turn] & bitboard(square))
 			attacks &= line(square, ei->king_square[turn]);
-		ei->attacked2[turn] |= attacks & ei->attacked[turn][all];
-		ei->attacked[turn][queen] |= attacks;
-		ei->attacked[turn][all] |= attacks;
+		ei->attacked2[turn] |= attacks & ei->attacked[turn][ALL];
+		ei->attacked[turn][QUEEN] |= attacks;
+		ei->attacked[turn][ALL] |= attacks;
 		/* Mobility (range of popcount is [0, 27]). */
 		int m = popcount(attacks & ei->mobility[turn]);
-		eval += mobility[queen - 2][m];
-		if (TRACE) trace.mobility[turn][queen - 2][m]++;
+		eval += mobility[QUEEN - 2][m];
+		if (TRACE) trace.mobility[turn][QUEEN - 2][m]++;
 
 		/* King attacks. */
 		if (ei->king_ring[other_color(turn)] & attacks)
-			ei->king_attacks[turn][queen] += popcount(ei->king_ring[other_color(turn)] & attacks) + 1;
+			ei->king_attacks[turn][QUEEN] += popcount(ei->king_ring[other_color(turn)] & attacks) + 1;
 
-		if (generate_blockers(pos, pos->piece[other_color(turn)][bishop] | pos->piece[other_color(turn)][rook], square)) {
+		if (generate_blockers(pos, pos->piece[other_color(turn)][BISHOP] | pos->piece[other_color(turn)][ROOK], square)) {
 			eval += bad_queen;
 			if (TRACE) trace.bad_queen[turn]++;
 		}
@@ -441,21 +441,21 @@ static inline score_t evaluate_queens(const struct position *pos, struct evaluat
 
 static inline score_t evaluate_threats(const struct position *pos, struct evaluationinfo *ei, int turn) {
 	score_t eval = 0;
-	uint64_t ourpawns = pos->piece[turn][pawn];
-	uint64_t theirnonpawns = pos->piece[other_color(turn)][all] ^ pos->piece[other_color(turn)][pawn];
+	uint64_t ourpawns = pos->piece[turn][PAWN];
+	uint64_t theirnonpawns = pos->piece[other_color(turn)][ALL] ^ pos->piece[other_color(turn)][PAWN];
 	uint64_t b;
 	/* Pawn threats. */
-	b = ei->attacked[turn][pawn] & theirnonpawns;
+	b = ei->attacked[turn][PAWN] & theirnonpawns;
 	eval += popcount(b) * pawn_threat;
 	if (TRACE) trace.pawn_threat[turn] += popcount(b);
 
 	/* Pawn push threats. */
-	b = shift_color(ourpawns, turn) & ~all_pieces(pos) & ~ei->attacked[other_color(turn)][pawn];
-	b = shift_color(shift_west(b) | shift_east(b), turn) & (pos->piece[other_color(turn)][all] ^ pos->piece[other_color(turn)][pawn]);
+	b = shift_color(ourpawns, turn) & ~all_pieces(pos) & ~ei->attacked[other_color(turn)][PAWN];
+	b = shift_color(shift_west(b) | shift_east(b), turn) & (pos->piece[other_color(turn)][ALL] ^ pos->piece[other_color(turn)][PAWN]);
 	eval += popcount(b) * push_threat;
 	if (TRACE) trace.push_threat[turn] += popcount(b);
 
-	b = (ei->attacked[turn][knight] | ei->attacked[turn][bishop]) & pos->piece[other_color(turn)][all];
+	b = (ei->attacked[turn][KNIGHT] | ei->attacked[turn][BISHOP]) & pos->piece[other_color(turn)][ALL];
 	while (b) {
 		int square = ctz(b);
 		eval += minor_threat[uncolored_piece(pos->mailbox[square])];
@@ -463,8 +463,8 @@ static inline score_t evaluate_threats(const struct position *pos, struct evalua
 		b = clear_ls1b(b);
 	}
 
-	b = ei->attacked[turn][rook] & pos->piece[other_color(turn)][all]
-	  & ~(ei->attacked[other_color(turn)][pawn] | (ei->attacked2[other_color(turn)] & ~ei->attacked2[turn]));
+	b = ei->attacked[turn][ROOK] & pos->piece[other_color(turn)][ALL]
+	  & ~(ei->attacked[other_color(turn)][PAWN] | (ei->attacked2[other_color(turn)] & ~ei->attacked2[turn]));
 	while (b) {
 		int square = ctz(b);
 		eval += rook_threat[uncolored_piece(pos->mailbox[square])];
@@ -481,14 +481,14 @@ static inline score_t evaluate_tempo(const struct position *pos, struct evaluati
 }
 
 void evaluationinfo_init(const struct position *pos, struct evaluationinfo *ei) {
-	ei->attacked[white][pawn] = shift_north_west(pos->piece[white][pawn]) | shift_north_east(pos->piece[white][pawn]);
-	ei->attacked[black][pawn] = shift_south_west(pos->piece[black][pawn]) | shift_south_east(pos->piece[black][pawn]);
+	ei->attacked[WHITE][PAWN] = shift_north_west(pos->piece[WHITE][PAWN]) | shift_north_east(pos->piece[WHITE][PAWN]);
+	ei->attacked[BLACK][PAWN] = shift_south_west(pos->piece[BLACK][PAWN]) | shift_south_east(pos->piece[BLACK][PAWN]);
 
-	ei->pawn_attack_span[white] = fill_north(ei->attacked[white][pawn]);
-	ei->pawn_attack_span[black] = fill_south(ei->attacked[black][pawn]);
+	ei->pawn_attack_span[WHITE] = fill_north(ei->attacked[WHITE][PAWN]);
+	ei->pawn_attack_span[BLACK] = fill_south(ei->attacked[BLACK][PAWN]);
 
 	for (int turn = 0; turn < 2; turn++) {
-		int king_square = ctz(pos->piece[turn][king]);
+		int king_square = ctz(pos->piece[turn][KING]);
 		ei->king_square[turn] = king_square;
 		int f = CLAMP(file_of(king_square), 1, 6);
 		int r = CLAMP(rank_of(king_square), 1, 6);
@@ -498,17 +498,17 @@ void evaluationinfo_init(const struct position *pos, struct evaluationinfo *ei) 
 		/* but not defended by two own pawns,
 		 * if it is only defended by one pawn it could pinned.
 		 */
-		ei->king_ring[turn] &= ~(shift_color_west(pos->piece[turn][pawn], turn) & shift_color_east(pos->piece[turn][pawn], turn));
-		ei->attacked[turn][king] = king_attacks(ctz(pos->piece[turn][king]), 0);
-		ei->attacked[turn][all] = ei->attacked[turn][king] | ei->attacked[turn][pawn];
-		ei->attacked2[turn] = ei->attacked[turn][king] & ei->attacked[turn][pawn];
+		ei->king_ring[turn] &= ~(shift_color_west(pos->piece[turn][PAWN], turn) & shift_color_east(pos->piece[turn][PAWN], turn));
+		ei->attacked[turn][KING] = king_attacks(ctz(pos->piece[turn][KING]), 0);
+		ei->attacked[turn][ALL] = ei->attacked[turn][KING] | ei->attacked[turn][PAWN];
+		ei->attacked2[turn] = ei->attacked[turn][KING] & ei->attacked[turn][PAWN];
 
 		ei->pinned[turn] = generate_pinned(pos, turn);
 
-		ei->mobility[turn] = ~pos->piece[turn][king]
-		                           & ~ei->attacked[other_color(turn)][pawn]
-		                           & ~(shift_color(all_pieces(pos), other_color(turn)) & pos->piece[turn][pawn])
-					   & ~(ei->pinned[turn] & pos->piece[turn][all]);
+		ei->mobility[turn] = ~pos->piece[turn][KING]
+		                           & ~ei->attacked[other_color(turn)][PAWN]
+		                           & ~(shift_color(all_pieces(pos), other_color(turn)) & pos->piece[turn][PAWN])
+					   & ~(ei->pinned[turn] & pos->piece[turn][ALL]);
 	}
 }
 
@@ -517,7 +517,7 @@ static inline score_t evaluate_psqtable(const struct position *pos, struct evalu
 	score_t eval = 0;
 	uint64_t bitboard;
 	int square;
-	for (int piece = pawn; piece <= king; piece++) {
+	for (int piece = PAWN; piece <= KING; piece++) {
 		bitboard = pos->piece[turn][piece];
 		while (bitboard) {
 			square = ctz(bitboard);
@@ -542,8 +542,8 @@ static inline int32_t scale(const struct position *pos, const struct evaluationi
 	int32_t strong_material = ei->material_value[strong_side];
 	int32_t weak_material = ei->material_value[weak_side];
 	/* Scores also KBBKN as a draw which is ok by the 50 move rule. */
-	if (!pos->piece[strong_side][pawn] && strong_material - weak_material <= material_value[bishop]) {
-		scale = (strong_material <= material_value[bishop]) ? 0 : (weak_material < material_value[rook]) ? 16 : 32;
+	if (!pos->piece[strong_side][PAWN] && strong_material - weak_material <= material_value[BISHOP]) {
+		scale = (strong_material <= material_value[BISHOP]) ? 0 : (weak_material < material_value[ROOK]) ? 16 : 32;
 	}
 	return scale;
 }
@@ -564,15 +564,15 @@ int32_t evaluate_classical(const struct position *pos) {
 	struct evaluationinfo ei = { 0 };
 	evaluationinfo_init(pos, &ei);
 
-	ei.eval  = evaluate_psqtable(pos, &ei, white) - evaluate_psqtable(pos, &ei, black);
-	ei.eval += evaluate_pawns(pos, &ei, white)    - evaluate_pawns(pos, &ei, black);
-	ei.eval += evaluate_knights(pos, &ei, white)  - evaluate_knights(pos, &ei, black);
-	ei.eval += evaluate_bishops(pos, &ei, white)  - evaluate_bishops(pos, &ei, black);
-	ei.eval += evaluate_rooks(pos, &ei, white)    - evaluate_rooks(pos, &ei, black);
-	ei.eval += evaluate_queens(pos, &ei, white)   - evaluate_queens(pos, &ei, black);
-	ei.eval += evaluate_king(pos, &ei, white)     - evaluate_king(pos, &ei, black);
-	ei.eval += evaluate_threats(pos, &ei, white)  - evaluate_threats(pos, &ei, black);
-	ei.eval += evaluate_tempo(pos, &ei, white)    - evaluate_tempo(pos, &ei, black);
+	ei.eval  = evaluate_psqtable(pos, &ei, WHITE) - evaluate_psqtable(pos, &ei, BLACK);
+	ei.eval += evaluate_pawns(pos, &ei, WHITE)    - evaluate_pawns(pos, &ei, BLACK);
+	ei.eval += evaluate_knights(pos, &ei, WHITE)  - evaluate_knights(pos, &ei, BLACK);
+	ei.eval += evaluate_bishops(pos, &ei, WHITE)  - evaluate_bishops(pos, &ei, BLACK);
+	ei.eval += evaluate_rooks(pos, &ei, WHITE)    - evaluate_rooks(pos, &ei, BLACK);
+	ei.eval += evaluate_queens(pos, &ei, WHITE)   - evaluate_queens(pos, &ei, BLACK);
+	ei.eval += evaluate_king(pos, &ei, WHITE)     - evaluate_king(pos, &ei, BLACK);
+	ei.eval += evaluate_threats(pos, &ei, WHITE)  - evaluate_threats(pos, &ei, BLACK);
+	ei.eval += evaluate_tempo(pos, &ei, WHITE)    - evaluate_tempo(pos, &ei, BLACK);
 
 	int32_t ret = evaluate_tapered(pos, &ei);
 	return pos->turn ? ret : -ret;
@@ -635,15 +635,15 @@ void evaluate_print(struct position *pos) {
 		for (int f = 0; f < 8; f++) {
 			int square = make_square(f, r);
 			int piece = pos->mailbox[square];
-			if (uncolored_piece(piece) && uncolored_piece(piece) != king) {
-				int16_t oldeval = psqtaccumulation[white] - psqtaccumulation[black];
+			if (uncolored_piece(piece) && uncolored_piece(piece) != KING) {
+				int16_t oldeval = psqtaccumulation[WHITE] - psqtaccumulation[BLACK];
 				for (int color = 0; color < 2; color++) {
 					int king_square = ei.king_square[color];
 					king_square = orient_horizontal(color, king_square);
 					int index = make_index(color, square, piece, king_square);
 					add_index_slow(index, accumulation, psqtaccumulation, color);
 				}
-				int16_t neweval = psqtaccumulation[white] - psqtaccumulation[black] - oldeval;
+				int16_t neweval = psqtaccumulation[WHITE] - psqtaccumulation[BLACK] - oldeval;
 				
 				if (ABS(neweval) >= 2000)
 					printf(" %+.1f |", (double)neweval / 200);
@@ -656,8 +656,8 @@ void evaluate_print(struct position *pos) {
 		}
 		printf("\n+-------+-------+-------+-------+-------+-------+-------+-------+\n");
 	}
-	printf("Psqt: %+.2f\n", (double)(psqtaccumulation[white] - psqtaccumulation[black]) / 200);
-	printf("Positional %+.2f\n", (double)((2 * pos->turn - 1) * evaluate_nnue(pos) - (psqtaccumulation[white] - psqtaccumulation[black]) / 2) / 100);
+	printf("Psqt: %+.2f\n", (double)(psqtaccumulation[WHITE] - psqtaccumulation[BLACK]) / 200);
+	printf("Positional %+.2f\n", (double)((2 * pos->turn - 1) * evaluate_nnue(pos) - (psqtaccumulation[WHITE] - psqtaccumulation[BLACK]) / 2) / 100);
 	printf("\n");
 	printf("Classical Evaluation: %+.2f\n", (double)(2 * pos->turn - 1) * evaluate_classical(pos) / 100);
 	printf("NNUE Evaluation: %+.2f\n", (double)(2 * pos->turn - 1) * evaluate_nnue(pos) / 100);
@@ -684,8 +684,8 @@ void print_score_t(score_t eval) {
 
 score_t evaluate_print_x(const char *name, const struct position *pos, struct evaluationinfo *ei,
 		score_t (*evaluate_x)(const struct position *, struct evaluationinfo *ei, int)) {
-	score_t w = evaluate_x(pos, ei, white);
-	score_t b = evaluate_x(pos, ei, black);
+	score_t w = evaluate_x(pos, ei, WHITE);
+	score_t b = evaluate_x(pos, ei, BLACK);
 	char namepadded[32];
 	strcpy(namepadded, name);
 	int len = strlen(name);

@@ -50,60 +50,60 @@ void do_move(struct position *pos, move_t *m) {
 	if (pos->mailbox[target_square]) {
 		pos->piece[other_color(pos->turn)][uncolored_piece(pos->mailbox[target_square])] ^= to;
 		move_set_captured(m, uncolored_piece(pos->mailbox[target_square]));
-		pos->piece[other_color(pos->turn)][all] ^= to;
+		pos->piece[other_color(pos->turn)][ALL] ^= to;
 		pos->halfmove = 0;
 	}
 
-	if (source_square + 16 == target_square && pos->mailbox[source_square] == white_pawn)
+	if (source_square + 16 == target_square && pos->mailbox[source_square] == WHITE_PAWN)
 		pos->en_passant = target_square - 8;
-	if (source_square - 16 == target_square && pos->mailbox[source_square] == black_pawn)
+	if (source_square - 16 == target_square && pos->mailbox[source_square] == BLACK_PAWN)
 		pos->en_passant = target_square + 8;
 
-	if (uncolored_piece(pos->mailbox[source_square]) == pawn)
+	if (uncolored_piece(pos->mailbox[source_square]) == PAWN)
 		pos->halfmove = 0;
 
 	pos->piece[pos->turn][uncolored_piece(pos->mailbox[source_square])] ^= from_to;
-	pos->piece[pos->turn][all] ^= from_to;
+	pos->piece[pos->turn][ALL] ^= from_to;
 
 	pos->mailbox[target_square] = pos->mailbox[source_square];
-	pos->mailbox[source_square] = empty;
+	pos->mailbox[source_square] = EMPTY;
 
 	if (move_flag(m) == 1) {
 		int direction = 2 * pos->turn - 1;
-		pos->piece[other_color(pos->turn)][pawn] ^= bitboard(target_square - direction * 8);
-		pos->piece[other_color(pos->turn)][all] ^= bitboard(target_square - direction * 8);
-		pos->mailbox[target_square - direction * 8] = empty;
+		pos->piece[other_color(pos->turn)][PAWN] ^= bitboard(target_square - direction * 8);
+		pos->piece[other_color(pos->turn)][ALL] ^= bitboard(target_square - direction * 8);
+		pos->mailbox[target_square - direction * 8] = EMPTY;
 	}
 	else if (move_flag(m) == 2) {
-		pos->piece[pos->turn][pawn] ^= to;
+		pos->piece[pos->turn][PAWN] ^= to;
 		pos->piece[pos->turn][move_promote(m) + 2] ^= to;
 		pos->mailbox[target_square] = colored_piece(move_promote(m) + 2, pos->turn);
 	}
 	else if (move_flag(m) == 3) {
 		switch (target_square) {
 		case g1:
-			pos->piece[white][rook] ^= 0xA0;
-			pos->piece[white][all] ^= 0xA0;
-			pos->mailbox[h1] = empty;
-			pos->mailbox[f1] = white_rook;
+			pos->piece[WHITE][ROOK] ^= 0xA0;
+			pos->piece[WHITE][ALL] ^= 0xA0;
+			pos->mailbox[h1] = EMPTY;
+			pos->mailbox[f1] = WHITE_ROOK;
 			break;
 		case c1:
-			pos->piece[white][rook] ^= 0x9;
-			pos->piece[white][all] ^= 0x9;
-			pos->mailbox[a1] = empty;
-			pos->mailbox[d1] = white_rook;
+			pos->piece[WHITE][ROOK] ^= 0x9;
+			pos->piece[WHITE][ALL] ^= 0x9;
+			pos->mailbox[a1] = EMPTY;
+			pos->mailbox[d1] = WHITE_ROOK;
 			break;
 		case g8:
-			pos->piece[black][rook] ^= 0xA000000000000000;
-			pos->piece[black][all] ^= 0xA000000000000000;
-			pos->mailbox[h8] = empty;
-			pos->mailbox[f8] = black_rook;
+			pos->piece[BLACK][ROOK] ^= 0xA000000000000000;
+			pos->piece[BLACK][ALL] ^= 0xA000000000000000;
+			pos->mailbox[h8] = EMPTY;
+			pos->mailbox[f8] = BLACK_ROOK;
 			break;
 		case c8:
-			pos->piece[black][rook] ^= 0x900000000000000;
-			pos->piece[black][all] ^= 0x900000000000000;
-			pos->mailbox[a8] = empty;
-			pos->mailbox[d8] = black_rook;
+			pos->piece[BLACK][ROOK] ^= 0x900000000000000;
+			pos->piece[BLACK][ALL] ^= 0x900000000000000;
+			pos->mailbox[a8] = EMPTY;
+			pos->mailbox[d8] = BLACK_ROOK;
 			break;
 		}
 	}
@@ -130,54 +130,54 @@ void undo_move(struct position *pos, const move_t *m) {
 
 	if (move_flag(m) == 1) {
 		int direction = 2 * pos->turn - 1;
-		pos->piece[other_color(pos->turn)][pawn] ^= bitboard(target_square - direction * 8);
-		pos->piece[other_color(pos->turn)][all] ^= bitboard(target_square - direction * 8);
-		pos->mailbox[target_square - direction * 8] = colored_piece(pawn, other_color(pos->turn));
+		pos->piece[other_color(pos->turn)][PAWN] ^= bitboard(target_square - direction * 8);
+		pos->piece[other_color(pos->turn)][ALL] ^= bitboard(target_square - direction * 8);
+		pos->mailbox[target_square - direction * 8] = colored_piece(PAWN, other_color(pos->turn));
 	}
 	else if (move_flag(m) == 2) {
-		pos->piece[pos->turn][pawn] ^= to;
+		pos->piece[pos->turn][PAWN] ^= to;
 		pos->piece[pos->turn][uncolored_piece(pos->mailbox[target_square])] ^= to;
 		/* Later gets updated as a normal move would. */
-		pos->mailbox[target_square] = colored_piece(pawn, pos->turn);
+		pos->mailbox[target_square] = colored_piece(PAWN, pos->turn);
 	}
 	else if (move_flag(m) == 3) {
 		switch (target_square) {
 		case g1:
-			pos->piece[white][rook] ^= 0xA0;
-			pos->piece[white][all] ^= 0xA0;
-			pos->mailbox[h1] = white_rook;
-			pos->mailbox[f1] = empty;
+			pos->piece[WHITE][ROOK] ^= 0xA0;
+			pos->piece[WHITE][ALL] ^= 0xA0;
+			pos->mailbox[h1] = WHITE_ROOK;
+			pos->mailbox[f1] = EMPTY;
 			break;
 		case c1:
-			pos->piece[white][rook] ^= 0x9;
-			pos->piece[white][all] ^= 0x9;
-			pos->mailbox[a1] = white_rook;
-			pos->mailbox[d1] = empty;
+			pos->piece[WHITE][ROOK] ^= 0x9;
+			pos->piece[WHITE][ALL] ^= 0x9;
+			pos->mailbox[a1] = WHITE_ROOK;
+			pos->mailbox[d1] = EMPTY;
 			break;
 		case g8:
-			pos->piece[black][rook] ^= 0xA000000000000000;
-			pos->piece[black][all] ^= 0xA000000000000000;
-			pos->mailbox[h8] = black_rook;
-			pos->mailbox[f8] = empty;
+			pos->piece[BLACK][ROOK] ^= 0xA000000000000000;
+			pos->piece[BLACK][ALL] ^= 0xA000000000000000;
+			pos->mailbox[h8] = BLACK_ROOK;
+			pos->mailbox[f8] = EMPTY;
 			break;
 		case c8:
-			pos->piece[black][rook] ^= 0x900000000000000;
-			pos->piece[black][all] ^= 0x900000000000000;
-			pos->mailbox[a8] = black_rook;
-			pos->mailbox[d8] = empty;
+			pos->piece[BLACK][ROOK] ^= 0x900000000000000;
+			pos->piece[BLACK][ALL] ^= 0x900000000000000;
+			pos->mailbox[a8] = BLACK_ROOK;
+			pos->mailbox[d8] = EMPTY;
 			break;
 		}
 	}
 
 	pos->piece[pos->turn][uncolored_piece(pos->mailbox[target_square])] ^= from_to;
-	pos->piece[pos->turn][all] ^= from_to;
+	pos->piece[pos->turn][ALL] ^= from_to;
 
 	pos->mailbox[source_square] = pos->mailbox[target_square];
-	pos->mailbox[target_square] = empty;
+	pos->mailbox[target_square] = EMPTY;
 
 	if (move_capture(m)) {
 		pos->piece[other_color(pos->turn)][move_capture(m)] ^= to;
-		pos->piece[other_color(pos->turn)][all] ^= to;
+		pos->piece[other_color(pos->turn)][ALL] ^= to;
 		pos->mailbox[target_square] = colored_piece(move_capture(m), other_color(pos->turn));
 	}
 
@@ -216,22 +216,22 @@ char *move_str_pgn(char *str, const struct position *pos, const move_t *m) {
 
 	str[i] = '\0';
 	switch (uncolored_piece(pos->mailbox[move_from(m)])) {
-	case pawn:
+	case PAWN:
 		break;
-	case knight:
+	case KNIGHT:
 		str[i++] = 'N';
 		break;
-	case bishop:
+	case BISHOP:
 		str[i++] = 'B';
 		break;
-	case rook:
+	case ROOK:
 		str[i++] = 'R';
 		break;
-	case queen:
+	case QUEEN:
 		str[i++] = 'Q';
 		break;
 	/* King. */
-	case king:
+	case KING:
 		if (f == 4 && file_of(move_to(m)) == 6) {
 			sprintf(str, "O-O");
 			i = 3;
@@ -247,7 +247,7 @@ char *move_str_pgn(char *str, const struct position *pos, const move_t *m) {
 	}
 
 	uint64_t attackers = 0;
-	if (uncolored_piece(pos->mailbox[move_from(m)]) == pawn) {
+	if (uncolored_piece(pos->mailbox[move_from(m)]) == PAWN) {
 		if (is_capture(pos, m) || move_flag(m) == 1)
 			attackers = rank(move_from(m));
 		else

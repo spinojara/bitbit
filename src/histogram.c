@@ -29,7 +29,7 @@
 
 void store_information(struct position *pos, uint64_t piece_square[7][64]) {
 	for (int color = 0; color < 2; color++) {
-		for (int piece = pawn; piece <= king; piece++) {
+		for (int piece = PAWN; piece <= KING; piece++) {
 			uint64_t b = pos->piece[color][piece];
 			while (b) {
 				int square = ctz(b);
@@ -134,6 +134,6 @@ int main(int argc, char **argv) {
 	printf("total positions: %lu\n", total);
 	printf("total games: %lu\n", games);
 	printf("percent: %f\n", (double)c / a);
-	for (int piece = pawn; piece <= king; piece++)
+	for (int piece = PAWN; piece <= KING; piece++)
 		print_information(piece_square[piece], total);
 }

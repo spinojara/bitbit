@@ -294,7 +294,7 @@ void refresh_accumulator(struct position *pos, int turn) {
 		return;
 	memcpy(pos->accumulation[turn], ft_biases, K_HALF_DIMENSIONS * sizeof(*ft_biases));
 	pos->psqtaccumulation[turn] = 0;
-	int king_square = ctz(pos->piece[turn][king]);
+	int king_square = ctz(pos->piece[turn][KING]);
 	king_square = orient_horizontal(turn, king_square);
 	uint64_t b;
 	int square;
@@ -315,7 +315,7 @@ void refresh_accumulator(struct position *pos, int turn) {
 void do_update_accumulator(struct position *pos, move_t *m, int turn) {
 	int source_square = move_from(m);
 	int target_square = move_to(m);
-	int king_square = orient_horizontal(turn, ctz(pos->piece[turn][king]));
+	int king_square = orient_horizontal(turn, ctz(pos->piece[turn][KING]));
 	unsigned index;
 	unsigned indext;
 
@@ -332,19 +332,19 @@ void do_update_accumulator(struct position *pos, move_t *m, int turn) {
 
 	if (move_flag(m) == 1) {
 		if (pos->turn)
-			index = make_index(turn, target_square + 8, white_pawn, king_square);
+			index = make_index(turn, target_square + 8, WHITE_PAWN, king_square);
 		else
-			index = make_index(turn, target_square - 8, black_pawn, king_square);
+			index = make_index(turn, target_square - 8, BLACK_PAWN, king_square);
 		remove_index(index, pos->accumulation, pos->psqtaccumulation, turn);
 	}
 	else if (move_flag(m) == 2) {
 		if (pos->turn) {
 			index = make_index(turn, source_square, pos->mailbox[target_square], king_square);
-			indext = make_index(turn, source_square, black_pawn, king_square);
+			indext = make_index(turn, source_square, BLACK_PAWN, king_square);
 		}
 		else {
 			index = make_index(turn, source_square, pos->mailbox[target_square], king_square);
-			indext = make_index(turn, source_square, white_pawn, king_square);
+			indext = make_index(turn, source_square, WHITE_PAWN, king_square);
 		}
 		add_index(index, pos->accumulation, pos->psqtaccumulation, turn);
 		remove_index(indext, pos->accumulation, pos->psqtaccumulation, turn);
@@ -354,7 +354,7 @@ void do_update_accumulator(struct position *pos, move_t *m, int turn) {
 void undo_update_accumulator(struct position *pos, move_t *m, int turn) {
 	int source_square = move_from(m);
 	int target_square = move_to(m);
-	int king_square = orient_horizontal(turn, ctz(pos->piece[turn][king]));
+	int king_square = orient_horizontal(turn, ctz(pos->piece[turn][KING]));
 	unsigned index;
 	unsigned indext;
 	
@@ -371,19 +371,19 @@ void undo_update_accumulator(struct position *pos, move_t *m, int turn) {
 
 	if (move_flag(m) == 1) {
 		if (pos->turn)
-			index = make_index(turn, target_square - 8, black_pawn, king_square);
+			index = make_index(turn, target_square - 8, BLACK_PAWN, king_square);
 		else
-			index = make_index(turn, target_square + 8, white_pawn, king_square);
+			index = make_index(turn, target_square + 8, WHITE_PAWN, king_square);
 		add_index(index, pos->accumulation, pos->psqtaccumulation, turn);
 	}
 	else if (move_flag(m) == 2) {
 		if (pos->turn) {
 			index = make_index(turn, target_square, move_promote(m) + 2, king_square);
-			indext = make_index(turn, target_square, white_pawn, king_square);
+			indext = make_index(turn, target_square, WHITE_PAWN, king_square);
 		}
 		else {
 			index = make_index(turn, target_square, move_promote(m) + 8, king_square);
-			indext = make_index(turn, target_square, black_pawn, king_square);
+			indext = make_index(turn, target_square, BLACK_PAWN, king_square);
 		}
 		remove_index(index, pos->accumulation, pos->psqtaccumulation, turn);
 		add_index(indext, pos->accumulation, pos->psqtaccumulation, turn);
@@ -398,50 +398,50 @@ void do_accumulator(struct position *pos, move_t *m) {
 	if (!option_nnue)
 		return;
 	int target_square = move_to(m);
-	if (uncolored_piece(pos->mailbox[target_square]) == king) {
+	if (uncolored_piece(pos->mailbox[target_square]) == KING) {
 		refresh_accumulator(pos, other_color(pos->turn));
 		if (move_capture(m)) {
 			unsigned index;
 			int turn = pos->turn;
-			int king_square = orient_horizontal(turn, ctz(pos->piece[turn][king]));
+			int king_square = orient_horizontal(turn, ctz(pos->piece[turn][KING]));
 			index = make_index(turn, target_square, colored_piece(move_capture(m), turn), king_square);
 			remove_index(index, pos->accumulation, pos->psqtaccumulation, turn);
 		}
 		else if (move_flag(m) == 3) {
 			unsigned index;
 			int turn = pos->turn;
-			int king_square = orient_horizontal(turn, ctz(pos->piece[turn][king]));
+			int king_square = orient_horizontal(turn, ctz(pos->piece[turn][KING]));
 			switch (target_square) {
 			case g1:
-				index = make_index(black, h1, white_rook, king_square);
-				remove_index(index, pos->accumulation, pos->psqtaccumulation, black);
-				index = make_index(black, f1, white_rook, king_square);
-				add_index(index, pos->accumulation, pos->psqtaccumulation, black);
+				index = make_index(BLACK, h1, WHITE_ROOK, king_square);
+				remove_index(index, pos->accumulation, pos->psqtaccumulation, BLACK);
+				index = make_index(BLACK, f1, WHITE_ROOK, king_square);
+				add_index(index, pos->accumulation, pos->psqtaccumulation, BLACK);
 				break;
 			case c1:
-				index = make_index(black, a1, white_rook, king_square);
-				remove_index(index, pos->accumulation, pos->psqtaccumulation, black);
-				index = make_index(black, d1, white_rook, king_square);
-				add_index(index, pos->accumulation, pos->psqtaccumulation, black);
+				index = make_index(BLACK, a1, WHITE_ROOK, king_square);
+				remove_index(index, pos->accumulation, pos->psqtaccumulation, BLACK);
+				index = make_index(BLACK, d1, WHITE_ROOK, king_square);
+				add_index(index, pos->accumulation, pos->psqtaccumulation, BLACK);
 				break;
 			case g8:
-				index = make_index(white, h8, black_rook, king_square);
-				remove_index(index, pos->accumulation, pos->psqtaccumulation, white);
-				index = make_index(white, f8, black_rook, king_square);
-				add_index(index, pos->accumulation, pos->psqtaccumulation, white);
+				index = make_index(WHITE, h8, BLACK_ROOK, king_square);
+				remove_index(index, pos->accumulation, pos->psqtaccumulation, WHITE);
+				index = make_index(WHITE, f8, BLACK_ROOK, king_square);
+				add_index(index, pos->accumulation, pos->psqtaccumulation, WHITE);
 				break;
 			case c8:
-				index = make_index(white, a8, black_rook, king_square);
-				remove_index(index, pos->accumulation, pos->psqtaccumulation, white);
-				index = make_index(white, d8, black_rook, king_square);
-				add_index(index, pos->accumulation, pos->psqtaccumulation, white);
+				index = make_index(WHITE, a8, BLACK_ROOK, king_square);
+				remove_index(index, pos->accumulation, pos->psqtaccumulation, WHITE);
+				index = make_index(WHITE, d8, BLACK_ROOK, king_square);
+				add_index(index, pos->accumulation, pos->psqtaccumulation, WHITE);
 				break;
 			}
 		}
 	}
 	else {
-		do_update_accumulator(pos, m, black);
-		do_update_accumulator(pos, m, white);
+		do_update_accumulator(pos, m, BLACK);
+		do_update_accumulator(pos, m, WHITE);
 	}
 }
 
@@ -453,50 +453,50 @@ void undo_accumulator(struct position *pos, move_t *m) {
 		return;
 	int source_square = move_from(m);
 	int target_square = move_to(m);
-	if (uncolored_piece(pos->mailbox[source_square]) == king) {
+	if (uncolored_piece(pos->mailbox[source_square]) == KING) {
 		refresh_accumulator(pos, pos->turn);
 		if (move_capture(m)) {
 			unsigned index;
 			int turn = other_color(pos->turn);
-			int king_square = orient_horizontal(turn, ctz(pos->piece[turn][king]));
+			int king_square = orient_horizontal(turn, ctz(pos->piece[turn][KING]));
 			index = make_index(turn, target_square, colored_piece(move_capture(m), turn), king_square);
 			add_index(index, pos->accumulation, pos->psqtaccumulation, turn);
 		}
 		else if (move_flag(m) == 3) {
 			unsigned index;
 			int turn = other_color(pos->turn);
-			int king_square = orient_horizontal(turn, ctz(pos->piece[turn][king]));
+			int king_square = orient_horizontal(turn, ctz(pos->piece[turn][KING]));
 			switch (target_square) {
 			case g1:
-				index = make_index(black, h1, white_rook, king_square);
-				add_index(index, pos->accumulation, pos->psqtaccumulation, black);
-				index = make_index(black, f1, white_rook, king_square);
-				remove_index(index, pos->accumulation, pos->psqtaccumulation, black);
+				index = make_index(BLACK, h1, WHITE_ROOK, king_square);
+				add_index(index, pos->accumulation, pos->psqtaccumulation, BLACK);
+				index = make_index(BLACK, f1, WHITE_ROOK, king_square);
+				remove_index(index, pos->accumulation, pos->psqtaccumulation, BLACK);
 				break;
 			case c1:
-				index = make_index(black, a1, white_rook, king_square);
-				add_index(index, pos->accumulation, pos->psqtaccumulation, black);
-				index = make_index(black, d1, white_rook, king_square);
-				remove_index(index, pos->accumulation, pos->psqtaccumulation, black);
+				index = make_index(BLACK, a1, WHITE_ROOK, king_square);
+				add_index(index, pos->accumulation, pos->psqtaccumulation, BLACK);
+				index = make_index(BLACK, d1, WHITE_ROOK, king_square);
+				remove_index(index, pos->accumulation, pos->psqtaccumulation, BLACK);
 				break;
 			case g8:
-				index = make_index(white, h8, black_rook, king_square);
-				add_index(index, pos->accumulation, pos->psqtaccumulation, white);
-				index = make_index(white, f8, black_rook, king_square);
-				remove_index(index, pos->accumulation, pos->psqtaccumulation, white);
+				index = make_index(WHITE, h8, BLACK_ROOK, king_square);
+				add_index(index, pos->accumulation, pos->psqtaccumulation, WHITE);
+				index = make_index(WHITE, f8, BLACK_ROOK, king_square);
+				remove_index(index, pos->accumulation, pos->psqtaccumulation, WHITE);
 				break;
 			case c8:
-				index = make_index(white, a8, black_rook, king_square);
-				add_index(index, pos->accumulation, pos->psqtaccumulation, white);
-				index = make_index(white, d8, black_rook, king_square);
-				remove_index(index, pos->accumulation, pos->psqtaccumulation, white);
+				index = make_index(WHITE, a8, BLACK_ROOK, king_square);
+				add_index(index, pos->accumulation, pos->psqtaccumulation, WHITE);
+				index = make_index(WHITE, d8, BLACK_ROOK, king_square);
+				remove_index(index, pos->accumulation, pos->psqtaccumulation, WHITE);
 				break;
 			}
 		}
 	}
 	else {
-		undo_update_accumulator(pos, m, black);
-		undo_update_accumulator(pos, m, white);
+		undo_update_accumulator(pos, m, BLACK);
+		undo_update_accumulator(pos, m, WHITE);
 	}
 }
 
