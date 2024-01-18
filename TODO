@@ -12,7 +12,6 @@
 - Use offsetof instead of partialposition.
 - Try pgo (profile guided optimization).
 - Profile code using gcov, operf and gprof.
-- Use tls for sockets.
 
 VERY IMPORTANT
 - Verify that the new transposition table works correctly.
