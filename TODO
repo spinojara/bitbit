@@ -1,6 +1,5 @@
 - Add checks for malloc.
 - Aspiration window should probably return VALUE_NONE if interrupted.
-- Make the enums upper case. pawn -> PAWN etc.
 - Make the shift functions take an argument from an
   enum { NORTH, SOUTH, EAST, WEST }; This should probably be as fast as
   shift_north etc since the functions are inlined. Check the generated assembly.
