@@ -31,7 +31,9 @@
 #include <time.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <signal.h>
 
+#include <openssl/ssl.h>
 #include <sqlite3.h>
 
 #include "testbitshared.h"
@@ -60,6 +62,8 @@ struct connection {
 
 	size_t len;
 	char *patch;
+
+	SSL *ssl;
 };
 
 char *iso8601time(char str[32], const struct tm *tm) {
@@ -158,12 +162,14 @@ struct connection *add_to_pdfs(struct pollfd *pdfs[], struct connection *connect
 
 void del_from_pdfs(struct pollfd pdfs[], struct connection connections[], int i, int *fd_count) {
 	/* Copy the last element here. */
+	SSL_close(connections[i].ssl);
 	pdfs[i] = pdfs[*fd_count - 1];
 	connections[i] = connections[*fd_count - 1];
 	--*fd_count;
 }
 
 int main(int argc, char **argv) {
+	signal(SIGPIPE, SIG_IGN);
 	char password[128];
 	getpassword(password);
 
@@ -182,7 +188,6 @@ int main(int argc, char **argv) {
 	struct sockaddr_storage remoteaddr;
 	socklen_t addrlen;
 	char buf[BUFSIZ] = { 0 }, *str;
-	int n;
 	
 	int fd_count = 0;
 	int fd_size = 4;
@@ -193,6 +198,36 @@ int main(int argc, char **argv) {
 	if (listener == -1) {
 		fprintf(stderr, "error: getting listening socket\n");
 		return 1;
+	}
+
+	SSL_CTX *ctx;
+
+	ctx = SSL_CTX_new(TLS_server_method());
+	if (!ctx) {
+		fprintf(stderr, "error: failed to create the SSL context\n");
+		return 3;
+	}
+
+	char filename[BUFSIZ];
+	printf("Certificate filename: ");
+	fgets(filename, sizeof(filename), stdin);
+	filename[strcspn(filename, "\n")] = '\0';
+	if (!SSL_CTX_use_certificate_file(ctx, filename, SSL_FILETYPE_PEM)) {
+		fprintf(stderr, "error: failed to set the certificate\n");
+		return 4;
+	}
+
+	printf("Private key filename: ");
+	fgets(filename, sizeof(filename), stdin);
+	filename[strcspn(filename, "\n")] = '\0';
+	if (!SSL_CTX_use_PrivateKey_file(ctx, filename, SSL_FILETYPE_PEM)) {
+		fprintf(stderr, "error: failed to set the private key\n");
+		return 5;
+	}
+
+	if (!SSL_CTX_set_min_proto_version(ctx, TLS1_2_VERSION)) {
+		fprintf(stderr, "error: failed to set the minimum TLS protocol version\n");
+		return 6;
 	}
 
 	pdfs[0].fd = listener;
@@ -262,8 +297,8 @@ int main(int argc, char **argv) {
 
 		while (sqlite3_step(stmt) == SQLITE_ROW) {
 			for (int i = 0; i < fd_count; i++) {
-				int fd = pdfs[i].fd;
 				struct connection *connection = &connections[i];
+				SSL *ssl = connection->ssl;
 				if (connection->status == AWAITING) {
 					connection->status = RUNNING;
 					connection->id = sqlite3_column_int(stmt, 0);
@@ -291,11 +326,11 @@ int main(int argc, char **argv) {
 					double timecontrol[2] = { connection->maintime , connection->increment };
 					double alphabeta[2] = { connection->alpha, connection->beta };
 					double elo[2] = { connection->elo0, connection->elo1 };
-					sendall(fd, (char *)timecontrol, 16);
-					sendall(fd, (char *)alphabeta, 16);
-					sendall(fd, (char *)elo, 16);
-					sendall(fd, connection->patch, connection->len);
-					sendall(fd, "\0", 1);
+					sendall(ssl, (char *)timecontrol, 16);
+					sendall(ssl, (char *)alphabeta, 16);
+					sendall(ssl, (char *)elo, 16);
+					sendall(ssl, connection->patch, connection->len);
+					sendall(ssl, "\0", 1);
 
 					free(connection->patch);
 				}
@@ -326,10 +361,39 @@ int main(int argc, char **argv) {
 						struct timeval tv = { .tv_sec = 5, .tv_usec = 0 };
 						setsockopt(newfd, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof(tv));
 
-						if (recvexact(newfd, buf, 1) || (buf[0] != CLIENT && buf[0] != NODE && buf[0] != LOG && buf[0] != UPDATE)) {
+						SSL *ssl;
+						BIO *bio;
+						ssl = SSL_new(ctx);
+						if (!ssl) {
+							fprintf(stderr, "error: failed to create the SSL object\n");
+							return 6;
+						}
+
+						bio = BIO_new(BIO_s_socket());
+						if (!bio) {
+							fprintf(stderr, "error: failed to create the BIO object\n");
+							return 7;
+						}
+
+						BIO_set_fd(bio, newfd, BIO_CLOSE);
+						SSL_set_bio(ssl, bio, bio);
+
+						SSL_set_accept_state(ssl);
+
+						if (SSL_accept(ssl) <= 0) {
+							fprintf(stderr, "error: handshake failed\n");
+							if (SSL_get_verify_result(ssl) != X509_V_OK)
+								fprintf(stderr, "error: %s\n",
+										X509_verify_cert_error_string(
+											SSL_get_verify_result(ssl)));
+							SSL_free(ssl);
+							continue;
+						}
+
+						if (recvexact(ssl, buf, 1) || (buf[0] != CLIENT && buf[0] != NODE && buf[0] != LOG && buf[0] != UPDATE)) {
 							str = "error: bad type\n";
-							sendall(newfd, str, strlen(str));
-							close(newfd);
+							sendall(ssl, str, strlen(str));
+							SSL_close(ssl);
 							continue;
 						}
 
@@ -376,7 +440,7 @@ int main(int argc, char **argv) {
 								double B = log((1 - beta) / alpha);
 
 								if (!first)
-									sendall(newfd, "\n", 1);
+									sendall(ssl, "\n", 1);
 								first = 0;
 
 								long games = t0 + t1 + t2;
@@ -512,26 +576,26 @@ int main(int argc, char **argv) {
 											 queuestr,
 											 startstr);
 								}
-								sendall(newfd, buf, strlen(buf));
+								sendall(ssl, buf, strlen(buf));
 
 								/* And now send the patch. */
-								sendall(newfd, NRM, strlen(NRM));
+								sendall(ssl, NRM, strlen(NRM));
 								str = "==============================================================\n";
-								sendall(newfd, str, strlen(str));
+								sendall(ssl, str, strlen(str));
 								sqlite3_blob_open(db, "main", "tests", "patch", id, 1, &blob);
 								int len = sqlite3_blob_bytes(blob);
 								char *patch = malloc(len);
 								sqlite3_blob_read(blob, patch, len, 0);
 								sqlite3_blob_close(blob);
 
-								sendall(newfd, patch, len);
+								sendall(ssl, patch, len);
 
 								free(patch);
 
-								sendall(newfd, str, strlen(str));
+								sendall(ssl, str, strlen(str));
 							}
 							sqlite3_finalize(stmt);
-							close(newfd);
+							SSL_close(ssl);
 							continue;
 						}
 
@@ -539,17 +603,12 @@ int main(int argc, char **argv) {
 						newconnection = add_to_pdfs(&pdfs, &connections, newfd, &fd_count, &fd_size);
 						/* Temporarily save the connection type here. */
 						newconnection->id = buf[0];
-
-						char salt[32];
-						getrandom(salt, sizeof(salt), 0);
-						memcpy(newconnection->buf, password, 128);
-						hashpassword(newconnection->buf, salt);
-						sendall(newfd, salt, 32);
+						newconnection->ssl = ssl;
 					}
 				}
 				else {
 					struct connection *connection = &connections[i];
-					int fd = pdfs[i].fd;
+					SSL *ssl = connection->ssl;
 
 					uint64_t trinomial[3];
 					uint64_t pentanomial[5];
@@ -562,13 +621,12 @@ int main(int argc, char **argv) {
 					memset(buf, 0, sizeof(buf));
 					switch (connection->status) {
 					case PASSWORD:
-						if (recvexact(fd, buf, 64) || strcmp(connection->buf, buf)) {
+						if (recvexact(ssl, buf, 128) || strcmp(password, buf)) {
 							if (connection->id == CLIENT) {
 								str = "Permission denied\n";
-								sendall(fd, str, strlen(str));
+								sendall(ssl, str, strlen(str));
 							}
 							del_from_pdfs(pdfs, connections, i, &fd_count);
-							close(fd);
 							break;
 						}
 
@@ -579,11 +637,10 @@ int main(int argc, char **argv) {
 						else if (connection->id == UPDATE) {
 							uint64_t id;
 							char newstatus;
-							if (recvexact(fd, (char *)&id, sizeof(id)) || recvexact(fd, &newstatus, 1)) {
+							if (recvexact(ssl, (char *)&id, sizeof(id)) || recvexact(ssl, &newstatus, 1)) {
 								str = "error: bad constants\n";
-								sendall(fd, str, strlen(str));
+								sendall(ssl, str, strlen(str));
 								del_from_pdfs(pdfs, connections, i, &fd_count);
-								close(fd);
 							}
 							/* Can requeue any test that is not already running,
 							 * and we can only cancel tests that are queued or
@@ -616,16 +673,14 @@ int main(int argc, char **argv) {
 							sqlite3_step(stmt);
 							sqlite3_finalize(stmt);
 							del_from_pdfs(pdfs, connections, i, &fd_count);
-							close(fd);
 							break;
 						}
 
 						/* Architecture dependent. */
-						if (recvexact(fd, buf, 48)) {
+						if (recvexact(ssl, buf, 48)) {
 							str = "error: bad constants\n";
-							sendall(fd, str, strlen(str));
+							sendall(ssl, str, strlen(str));
 							del_from_pdfs(pdfs, connections, i, &fd_count);
-							close(fd);
 							break;
 						}
 						connection->maintime = ((double *)buf)[0];
@@ -637,19 +692,21 @@ int main(int argc, char **argv) {
 						printf("alpha, beta: %lf, %lf\n", connection->alpha, connection->beta);
 						connection->len = 0;
 						connection->patch = NULL;
-						while ((n = recv(fd, buf, sizeof(buf) - 1, 0)) > 0) {
-							int len = strlen(buf);
+
+						size_t n;
+						while (SSL_read_ex(ssl, buf, sizeof(buf) - 1, &n)) {
+							buf[n] = '\0';
+							size_t len = strlen(buf);
 							connection->patch = realloc(connection->patch, len + connection->len);
 							memcpy(connection->patch + connection->len, buf, len);
 							connection->len += len;
 							if (len < n)
 								break;
-
-							memset(buf, 0, sizeof(buf));
 						}
+
 						if (n <= 0) {
 							str = "error: bad send\n";
-							sendall(fd, str, strlen(str));
+							sendall(ssl, str, strlen(str));
 							break;
 						}
 
@@ -698,17 +755,15 @@ int main(int argc, char **argv) {
 							     "There are currently %d tests in queue with "
 							     "%d available nodes.\n",
 							     connection->id, queue, nodes);
-						sendall(fd, buf, strlen(buf));
+						sendall(ssl, buf, strlen(buf));
 						del_from_pdfs(pdfs, connections, i, &fd_count);
-						close(fd);
 						break;
 					case AWAITING:
 						del_from_pdfs(pdfs, connections, i, &fd_count);
-						close(fd);
 						break;
 					case CANCELLED:
 					case RUNNING:
-						if (recvexact(fd, buf, 1) || (buf[0] != TESTDONE && buf[0] != PATCHERROR && buf[0] != MAKEERROR && buf[0] != TESTRUNNING)) {
+						if (recvexact(ssl, buf, 1) || (buf[0] != TESTDONE && buf[0] != PATCHERROR && buf[0] != MAKEERROR && buf[0] != TESTRUNNING)) {
 							/* Requeue the test if the node closes unless the test was cancelled. */
 							sqlite3_prepare_v2(db,
 									"UPDATE tests SET "
@@ -741,20 +796,19 @@ int main(int argc, char **argv) {
 							sqlite3_step(stmt);
 							sqlite3_finalize(stmt);
 							del_from_pdfs(pdfs, connections, i, &fd_count);
-							close(fd);
 							break;
 						}
 						status = buf[0];
 						switch (status) {
 						case TESTRUNNING:
-							sendall(fd, &yourstatus, 1);
+							sendall(ssl, &yourstatus, 1);
 							/* fallthrough */
 						case TESTDONE:
 							 /* Read hypothesis, trinomial and pentanomial. */
-							if (recvexact(fd, (char *)trinomial, 3 * sizeof(*trinomial)) ||
-									recvexact(fd, (char *)pentanomial, 5 * sizeof(*pentanomial)) ||
-									recvexact(fd, (char *)&llh, 8) ||
-									recvexact(fd, &H, 1)) {
+							if (recvexact(ssl, (char *)trinomial, 3 * sizeof(*trinomial)) ||
+									recvexact(ssl, (char *)pentanomial, 5 * sizeof(*pentanomial)) ||
+									recvexact(ssl, (char *)&llh, 8) ||
+									recvexact(ssl, &H, 1)) {
 								sqlite3_prepare_v2(db,
 										"UPDATE tests SET "
 										"status = ?, "
@@ -786,7 +840,6 @@ int main(int argc, char **argv) {
 								sqlite3_step(stmt);
 								sqlite3_finalize(stmt);
 								del_from_pdfs(pdfs, connections, i, &fd_count);
-								close(fd);
 								break;
 							}
 							
@@ -854,5 +907,6 @@ int main(int argc, char **argv) {
 	}
 	free(pdfs);
 	free(connections);
+	SSL_CTX_free(ctx);
 	sqlite3_close(db);
 }

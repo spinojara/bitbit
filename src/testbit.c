@@ -22,11 +22,15 @@
 #include <netdb.h>
 #include <sys/socket.h>
 #include <fcntl.h>
+#include <signal.h>
+
+#include <openssl/ssl.h>
 
 #include "testbitshared.h"
 #include "util.h"
 
 int main(int argc, char **argv) {
+	signal(SIGPIPE, SIG_IGN);
 	char type = CLIENT;
 	char *hostname = NULL;
 	char *port = "2718";
@@ -94,16 +98,68 @@ int main(int argc, char **argv) {
 		return 2;
 	}
 
+	SSL_CTX *ctx;
+	SSL *ssl;
+	BIO *bio;
+	ctx = SSL_CTX_new(TLS_client_method());
+	if (!ctx) {
+		fprintf(stderr, "error: failed to create the SSL context\n");
+		return 3;
+	}
+
+	SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
+
+	if (!SSL_CTX_set_default_verify_paths(ctx)) {
+		fprintf(stderr, "error: failed to set the default trusted certificate store\n");
+		return 4;
+	}
+
+	if (!SSL_CTX_set_min_proto_version(ctx, TLS1_2_VERSION)) {
+		fprintf(stderr, "error: failed to set the minimum TLS protocol version\n");
+		return 5;
+	}
+	
+	ssl = SSL_new(ctx);
+	if (!ssl) {
+		fprintf(stderr, "error: failed to create the SSL object\n");
+		return 6;
+	}
+
+	bio = BIO_new(BIO_s_socket());
+	if (!bio) {
+		fprintf(stderr, "error: failed to create the BIO object\n");
+		return 7;
+	}
+
+	BIO_set_fd(bio, sockfd, BIO_CLOSE);
+	SSL_set_bio(ssl, bio, bio);
+
+	if (!SSL_set_tlsext_host_name(ssl, hostname)) {
+		fprintf(stderr, "error: failed to set the SNI hostname\n");
+		return 8;
+	}
+
+	if (!SSL_set1_host(ssl, hostname)) {
+		fprintf(stderr, "error: failed to set the certificate verification hostname\n");
+		return 9;
+	}
+
+	if (SSL_connect(ssl) <= 0) {
+		fprintf(stderr, "error: handshake failed\n");
+		if (SSL_get_verify_result(ssl) != X509_V_OK)
+			fprintf(stderr, "error: %s\n",
+					X509_verify_cert_error_string(
+						SSL_get_verify_result(ssl)));
+		return 10;
+	}
+
 	/* Send information and verify password. */
-	sendall(sockfd, &type, 1);
+	sendall(ssl, &type, 1);
 
 	if (type == CLIENT || type == UPDATE) {
 		char password[128] = { 0 };
-		char salt[32];
-		recvexact(sockfd, salt, sizeof(salt));
 		getpassword(password);
-		hashpassword(password, salt);
-		sendall(sockfd, password, 64);
+		sendall(ssl, password, 128);
 
 		if (type == CLIENT) {
 			int filefd = open(path, O_RDONLY, 0);
@@ -117,29 +173,34 @@ int main(int argc, char **argv) {
 			double timecontrol[2] = { 10.0, 0.1 };
 			double alphabeta[2] = { 0.05, 0.05 };
 			double elo[2] = { 0.0, 10.0 };
-			sendall(sockfd, (char *)timecontrol, 16);
-			sendall(sockfd, (char *)alphabeta, 16);
-			sendall(sockfd, (char *)elo, 16);
+			sendall(ssl, (char *)timecontrol, 16);
+			sendall(ssl, (char *)alphabeta, 16);
+			sendall(ssl, (char *)elo, 16);
 
-			sendfile(sockfd, filefd);
+			sendfile(ssl, filefd);
 
 			close(filefd);
 		}
 		else if (type == UPDATE) {
 			uint64_t id = strint(path);
 			char newstatus = status[0] == 'c' ? TESTCANCEL : TESTQUEUE;
-			sendall(sockfd, (char *)&id, sizeof(id));
-			sendall(sockfd, &newstatus, 1);
+			sendall(ssl, (char *)&id, sizeof(id));
+			sendall(ssl, &newstatus, 1);
 		}
 	}
 
-	char buf[BUFSIZ] = { 0 };
-	int n;
-	while ((n = recv(sockfd, buf, sizeof(buf) - 1, 0)) > 0) {
+	char buf[BUFSIZ];
+	size_t n;
+	while (SSL_read_ex(ssl, buf, sizeof(buf) - 1, &n)) {
 		buf[n] = '\0';
 		printf("%s", buf);
-		memset(buf, 0, sizeof(buf));
 	}
 
-	close(sockfd);
+	if (SSL_get_error(ssl, 0) != SSL_ERROR_ZERO_RETURN) {
+		fprintf(stderr, "error: failed to read the remaining bytes\n");
+		return 11;
+	}
+
+	SSL_close(ssl);
+	SSL_CTX_free(ctx);
 }

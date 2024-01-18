@@ -143,7 +143,9 @@ src/nnueweights.c: nnuesource Makefile
 	./nnuesource $(NNUE)
 
 gennnue:         LDLIBS += -pthread
-testbitd:        LDLIBS += -lsqlite3
+testbit:         LDLIBS += -lssl -lcrypto
+testbitd:        LDLIBS += -lssl -lcrypto -lsqlite3
+testbitn:        LDLIBS += -lssl -lcrypto
 %.so:            LDFLAGS += -shared
 
 obj/gennnue.o:   CFLAGS += $(DSYZYGY) -pthread

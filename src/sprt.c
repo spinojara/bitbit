@@ -27,6 +27,8 @@
 #include <signal.h>
 #include <sys/wait.h>
 
+#include <openssl/ssl.h>
+
 #include "util.h"
 #include "testbitshared.h"
 
@@ -235,7 +237,7 @@ int update_nomials(unsigned long trinomial[3], unsigned long pentanomial[5], str
 	return 1;
 }
 
-int sprt(unsigned long games, uint64_t trinomial[3], uint64_t pentanomial[5], double alpha, double beta, double maintime, double increment, double elo0, double elo1, double *llh, int threads, int sockfd) {
+int sprt(unsigned long games, uint64_t trinomial[3], uint64_t pentanomial[5], double alpha, double beta, double maintime, double increment, double elo0, double elo1, double *llh, int threads, void *ssl) {
 	char gamesstr[1024];
 	char concurrencystr[1024];
 	char timestr[1024];
@@ -329,22 +331,22 @@ int sprt(unsigned long games, uint64_t trinomial[3], uint64_t pentanomial[5], do
 				for (int j = 0; j < 5; j++)
 					N += pentanomial[j];
 
-				/* We only check every 8 games. */
+				/* We only check every 8 game pairs. */
 				if (N % 8 == 0) {
 					if ((H = sprt_check(pentanomial, alpha, beta, elo0, elo1, llh)) != HNONE) {
 						break;
 					}
-					else {
-						/* Send update to sockfd. */
+					else if (ssl) {
+						/* Send update to server. */
 						char status = TESTRUNNING;
-						if (sendall(sockfd, &status, 1) ||
-								sendall(sockfd, (char *)trinomial, 3 * sizeof(*trinomial)) ||
-								sendall(sockfd, (char *)pentanomial, 5 * sizeof(*pentanomial)) ||
-								sendall(sockfd, (char *)llh, 8) ||
-								sendall(sockfd, &status, 1))
+						if (sendall(ssl, &status, 1) ||
+								sendall(ssl, (char *)trinomial, 3 * sizeof(*trinomial)) ||
+								sendall(ssl, (char *)pentanomial, 5 * sizeof(*pentanomial)) ||
+								sendall(ssl, (char *)llh, 8) ||
+								sendall(ssl, &status, 1))
 							break;
 						char mystatus;
-						recvexact(sockfd, &mystatus, 1);
+						recvexact(ssl, &mystatus, 1);
 						if (mystatus == CANCELLED) {
 							H = HCANCEL;
 							break;

@@ -23,6 +23,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
+#include <openssl/ssl.h>
+
 enum {
 	TESTQUEUE,
 	TESTRUNNING,
@@ -49,15 +51,13 @@ enum {
 
 void *get_in_addr(struct sockaddr *sa);
 
-int sendall(int fd, char *buf, size_t len);
+int sendall(SSL *ssl, char *buf, size_t len);
 
-int recvexact(int fd, char *buf, size_t len);
+int recvexact(SSL *ssl, char *buf, size_t len);
 
-int sendfile(int fd, int filefd);
+int sendfile(SSL *ssl, int filefd);
 
-void sha256(const char *str, size_t len, uint32_t hash[8]);
-
-char *hashpassword(char *password, const char salt[32]);
+void SSL_close(SSL *ssl);
 
 char *getpassword(char *password);
 

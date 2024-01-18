@@ -28,12 +28,16 @@
 #include <fcntl.h>
 #include <stdarg.h>
 #include <stdint.h>
+#include <signal.h>
+
+#include <openssl/ssl.h>
 
 #include "testbitshared.h"
 #include "sprt.h"
 #include "util.h"
 
 int main(int argc, char **argv) {
+	signal(SIGPIPE, SIG_IGN);
 	char *hostname = NULL;
 	char *port = "2718";
 	int threads = -1;
@@ -90,24 +94,73 @@ int main(int argc, char **argv) {
 		return 2;
 	}
 
+	SSL_CTX *ctx;
+	SSL *ssl;
+	BIO *bio;
+	ctx = SSL_CTX_new(TLS_client_method());
+	if (!ctx) {
+		fprintf(stderr, "error: failed to create the SSL context\n");
+		return 3;
+	}
+
+	SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
+
+	if (!SSL_CTX_set_default_verify_paths(ctx)) {
+		fprintf(stderr, "error: failed to set the default trusted certificate store\n");
+		return 4;
+	}
+
+	if (!SSL_CTX_set_min_proto_version(ctx, TLS1_2_VERSION)) {
+		fprintf(stderr, "error: failed to set the minimum TLS protocol version\n");
+		return 5;
+	}
+	
+	ssl = SSL_new(ctx);
+	if (!ssl) {
+		fprintf(stderr, "error: failed to create the SSL object\n");
+		return 6;
+	}
+
+	bio = BIO_new(BIO_s_socket());
+	if (!bio) {
+		fprintf(stderr, "error: failed to create the BIO object\n");
+		return 7;
+	}
+
+	BIO_set_fd(bio, sockfd, BIO_CLOSE);
+	SSL_set_bio(ssl, bio, bio);
+
+	if (!SSL_set_tlsext_host_name(ssl, hostname)) {
+		fprintf(stderr, "error: failed to set the SNI hostname\n");
+		return 8;
+	}
+
+	if (!SSL_set1_host(ssl, hostname)) {
+		fprintf(stderr, "error: failed to set the certificate verification hostname\n");
+		return 9;
+	}
+
+	if (SSL_connect(ssl) <= 0) {
+		fprintf(stderr, "error: handshake failed\n");
+		if (SSL_get_verify_result(ssl) != X509_V_OK)
+			fprintf(stderr, "error: %s\n",
+					X509_verify_cert_error_string(
+						SSL_get_verify_result(ssl)));
+		return 10;
+	}
+
 	char type = NODE;
-	sendall(sockfd, &type, 1);
+	sendall(ssl, &type, 1);
 
 	/* Send information and verify password. */
-	char password[128] = { 0 };
-	char salt[32];
-	if (recvexact(sockfd, salt, sizeof(salt))) {
-		return 1;
-	}
+	char password[128];
 	getpassword(password);
-	hashpassword(password, salt);
-	sendall(sockfd, password, strlen(password));
+	sendall(ssl, password, 128);
 
 	pid_t pid;
 	int wstatus;
 	char status;
 	char buf[BUFSIZ] = { 0 };
-	int n;
 	while (1) {
 		double maintime, increment;
 		double alpha, beta;
@@ -122,7 +175,7 @@ int main(int argc, char **argv) {
 			return 1;
 		}
 
-		if (recvexact(sockfd, buf, 48)) {
+		if (recvexact(ssl, buf, 48)) {
 			fprintf(stderr, "error: constants\n");
 			return 1;
 		}
@@ -176,19 +229,13 @@ int main(int argc, char **argv) {
 		}
 
 		int fd = open("patch", O_WRONLY | O_CREAT, 0644);
-		memset(buf, 0, sizeof(buf));
-		while ((n = recv(sockfd, buf, sizeof(buf) - 1, 0))) {
-			if (n <= 0) {
-				fprintf(stderr, "error: bad recv\n");
-				return 1;
-			}
-
-			int len = strlen(buf);
+		size_t n;
+		while (SSL_read_ex(ssl, buf, sizeof(buf) - 1, &n)) {
+			buf[n] = '\0';
+			size_t len = strlen(buf);
 			write(fd, buf, len);
-
 			if (len < n)
 				break;
-			memset(buf, 0, sizeof(buf));
 		}
 		close(fd);
 
@@ -227,7 +274,7 @@ int main(int argc, char **argv) {
 		if (waitpid(pid, &wstatus, 0) == -1 || WEXITSTATUS(wstatus)) {
 			fprintf(stderr, "error: git apply\n");
 			status = PATCHERROR;
-			sendall(sockfd, &status, 1);
+			sendall(ssl, &status, 1);
 			continue;
 		}
 
@@ -245,23 +292,23 @@ int main(int argc, char **argv) {
 		if (waitpid(pid, &wstatus, 0) == -1 || WEXITSTATUS(wstatus)) {
 			fprintf(stderr, "error: make\n");
 			status = MAKEERROR;
-			sendall(sockfd, &status, 1);
+			sendall(ssl, &status, 1);
 			continue;
 		}
 
-		char H = sprt(games, trinomial, pentanomial, alpha, beta, maintime, increment, elo0, elo1, &llh, threads, sockfd);
+		char H = sprt(games, trinomial, pentanomial, alpha, beta, maintime, increment, elo0, elo1, &llh, threads, ssl);
 		if (H == HCANCEL)
 			continue;
 
 		status = TESTDONE;
-		if (sendall(sockfd, &status, 1) ||
-				sendall(sockfd, (char *)trinomial, 3 * sizeof(*trinomial)) ||
-				sendall(sockfd, (char *)pentanomial, 5 * sizeof(*pentanomial)) ||
-				sendall(sockfd, (char *)&llh, 8) ||
-				sendall(sockfd, &H, 1))
+		if (sendall(ssl, &status, 1) ||
+				sendall(ssl, (char *)trinomial, 3 * sizeof(*trinomial)) ||
+				sendall(ssl, (char *)pentanomial, 5 * sizeof(*pentanomial)) ||
+				sendall(ssl, (char *)&llh, 8) ||
+				sendall(ssl, &H, 1))
 			return 1;
 	}
 
-	close(sockfd);
+	SSL_close(ssl);
 	return 0;
 }
