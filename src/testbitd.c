@@ -905,8 +905,13 @@ int main(int argc, char **argv) {
 			}
 		}
 	}
+	/* We currently never break out of the loop above so this
+	 * code will never run. Nonetheless we include it for
+	 * maybe we will break in future releases.
+	 */
 	free(pdfs);
 	free(connections);
 	SSL_CTX_free(ctx);
 	sqlite3_close(db);
+	return 0;
 }

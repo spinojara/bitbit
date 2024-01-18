@@ -165,7 +165,7 @@ int main(int argc, char **argv) {
 			int filefd = open(path, O_RDONLY, 0);
 			if (filefd == -1) {
 				fprintf(stderr, "error: failed to open file \"%s\"\n", path);
-				close(sockfd);
+				SSL_close(ssl);
 				return 1;
 			}
 	
@@ -196,11 +196,7 @@ int main(int argc, char **argv) {
 		printf("%s", buf);
 	}
 
-	if (SSL_get_error(ssl, 0) != SSL_ERROR_ZERO_RETURN) {
-		fprintf(stderr, "error: failed to read the remaining bytes\n");
-		return 11;
-	}
-
 	SSL_close(ssl);
 	SSL_CTX_free(ctx);
+	return 0;
 }

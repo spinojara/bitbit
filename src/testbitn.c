@@ -310,5 +310,6 @@ int main(int argc, char **argv) {
 	}
 
 	SSL_close(ssl);
+	SSL_CTX_free(ctx);
 	return 0;
 }
