@@ -39,14 +39,14 @@ CONST score_t distance_them[7]   = { S(  0,  0), S( -8, -2), S(-11,  2), S(-10, 
 
 /* Mostly inspiration from stockfish. */
 score_t evaluate_pawns(const struct position *pos, struct evaluationinfo *ei, int us) {
-	int them = other_color(us);
-	unsigned up = us ? N : S;
+	const int them = other_color(us);
+	const unsigned up = us ? N : S;
 
 	UNUSED(ei);
 	score_t eval = 0;
 
-	int up_sq = us ? 8 : -8;
-	int down_sq = -up_sq;
+	const int up_sq = us ? 8 : -8;
+	const int down_sq = -up_sq;
 
 	uint64_t ourpawns = pos->piece[us][PAWN];
 	uint64_t theirpawns = pos->piece[them][PAWN];

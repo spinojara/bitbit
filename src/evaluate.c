@@ -78,7 +78,7 @@ CONST int phase_queen               = 1454;
 const int material_value[7] = { 0, 100, 300, 300, 500, 1000, 0 };
 
 static inline score_t evaluate_king_shelter(const struct position *pos, struct evaluationinfo *ei, int us) {
-	int them = other_color(us);
+	const int them = other_color(us);
 
 	score_t eval = 0;
 
@@ -124,7 +124,7 @@ static inline score_t evaluate_king_shelter(const struct position *pos, struct e
 }
 
 static inline score_t evaluate_king(const struct position *pos, struct evaluationinfo *ei, int us) {
-	int them = other_color(us);
+	const int them = other_color(us);
 	score_t eval = evaluate_king_shelter(pos, ei, us);
 
 	uint64_t weak = ei->attacked[them][ALL]
@@ -197,7 +197,7 @@ static inline score_t evaluate_king(const struct position *pos, struct evaluatio
 }
 
 static inline score_t evaluate_knights(const struct position *pos, struct evaluationinfo *ei, int us) {
-	int them = other_color(us);
+	const int them = other_color(us);
 	int down = us ? S : N;
 
 	score_t eval = 0;
@@ -264,7 +264,7 @@ static inline score_t evaluate_knights(const struct position *pos, struct evalua
 }
 
 static inline score_t evaluate_bishops(const struct position *pos, struct evaluationinfo *ei, int us) {
-	int them = other_color(us);
+	const int them = other_color(us);
 	int down = us ? S : N;
 
 	score_t eval = 0;
@@ -348,7 +348,7 @@ static inline score_t evaluate_bishops(const struct position *pos, struct evalua
 }
 
 static inline score_t evaluate_rooks(const struct position *pos, struct evaluationinfo *ei, int us) {
-	int them = other_color(us);
+	const int them = other_color(us);
 	int down = us ? S : N;
 
 	score_t eval = 0;
@@ -417,7 +417,7 @@ static inline score_t evaluate_rooks(const struct position *pos, struct evaluati
 }
 
 static inline score_t evaluate_queens(const struct position *pos, struct evaluationinfo *ei, int us) {
-	int them = other_color(us);
+	const int them = other_color(us);
 
 	score_t eval = 0;
 	uint64_t b = pos->piece[us][QUEEN];
@@ -454,7 +454,7 @@ static inline score_t evaluate_queens(const struct position *pos, struct evaluat
 }
 
 static inline score_t evaluate_threats(const struct position *pos, struct evaluationinfo *ei, int us) {
-	int them = other_color(us);
+	const int them = other_color(us);
 	int up = us ? N : S;
 
 	score_t eval = 0;
@@ -507,7 +507,7 @@ void evaluationinfo_init(const struct position *pos, struct evaluationinfo *ei) 
 	for (int us = 0; us < 2; us++) {
 		int up = us ? N : S;
 		int down = us ? S : N;
-		int them = other_color(us);
+		const int them = other_color(us);
 		int king_square = ctz(pos->piece[us][KING]);
 		ei->king_square[us] = king_square;
 		int f = CLAMP(file_of(king_square), 1, 6);

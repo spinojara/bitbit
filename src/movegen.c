@@ -27,10 +27,10 @@ int move_count(const move_t *m) {
 }
 
 move_t *generate_all(const struct position *pos, move_t *move_list) {
-	int us = pos->turn;
-	int them = other_color(us);
-	unsigned up = us ? N : S;
-	unsigned down = us ? S : N;
+	const int us = pos->turn;
+	const int them = other_color(us);
+	const unsigned up = us ? N : S;
+	const unsigned down = us ? S : N;
 
 	move_t *move_ptr = move_list;
 	int i;
@@ -472,9 +472,9 @@ move_t *generate_all(const struct position *pos, move_t *move_list) {
 }
 
 move_t *generate_quiescence(const struct position *pos, move_t *move_list) {
-	int us = pos->turn;
-	int them = other_color(us);
-	unsigned down = us ? S : N;
+	const int us = pos->turn;
+	const int them = other_color(us);
+	const unsigned down = us ? S : N;
 
 	move_t *move_ptr = move_list;
 

@@ -37,8 +37,8 @@ void mvv_lva_init(void) {
 }
 
 int see_geq(struct position *pos, const move_t *m, int32_t value) {
-	int us = pos->turn;
-	int them = other_color(us);
+	const int us = pos->turn;
+	const int them = other_color(us);
 
 	int from = move_from(m);
 	int to = move_to(m);

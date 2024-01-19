@@ -61,7 +61,7 @@ uint64_t generate_checkers(const struct position *pos, int color) {
 
 uint64_t generate_attackers(const struct position *pos, int square, int color) {
 	uint64_t attackers = 0;
-	unsigned up = color ? N : S;
+	const unsigned up = color ? N : S;
 
 	attackers |= (shift(pos->piece[color][KING], up | E) | shift(pos->piece[color][KING], up | W)) & pos->piece[other_color(color)][PAWN];
 	attackers |= rook_attacks(square, 0, pos->piece[WHITE][ALL] | pos->piece[BLACK][ALL]) & (pos->piece[other_color(color)][ROOK] | pos->piece[other_color(color)][QUEEN]);
@@ -73,7 +73,7 @@ uint64_t generate_attackers(const struct position *pos, int square, int color) {
 
 uint64_t generate_attacked(const struct position *pos, int color) {
 	uint64_t attacked = 0;
-	unsigned up = color ? N : S;
+	const unsigned up = color ? N : S;
 	uint64_t piece;
 	int square;
 
