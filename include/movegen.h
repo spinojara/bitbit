@@ -25,8 +25,6 @@ move_t *generate_all(const struct position *pos, move_t *move_list);
 
 int move_count(const move_t *m);
 
-int mate(const struct position *pos);
-
 move_t *generate_quiescence(const struct position *pos, move_t *move_list);
 
 #endif

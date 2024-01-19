@@ -29,16 +29,20 @@ extern uint64_t knight_attacks_lookup[64];
 extern uint64_t king_attacks_lookup[64];
 
 static inline uint64_t pawn_capture_e(uint64_t pawns, uint64_t enemy, int color) {
-	return pawns & (color ? shift_south_west(enemy) : shift_north_west(enemy));
+	unsigned down = color ? S : N;
+	return pawns & shift(enemy, down | W);
 }
 static inline uint64_t pawn_capture_w(uint64_t pawns, uint64_t enemy, int color) {
-	return pawns & (color ? shift_south_east(enemy) : shift_north_east(enemy));
+	unsigned down = color ? S : N;
+	return pawns & shift(enemy, down | E);
 }
-static inline uint64_t pawn_push(uint64_t pawns, uint64_t allb, int color) {
-	return pawns & (color ? ~shift_south(allb) : ~shift_north(allb));
+static inline uint64_t pawn_push(uint64_t pawns, uint64_t all, int color) {
+	unsigned down = color ? S : N;
+	return pawns & ~shift(all, down);
 }
-static inline uint64_t pawn_double_push(uint64_t pawns, uint64_t allb, int color) {
-	return pawn_push(pawns, allb, color) &  (color ? ~shift_south_south(allb) & RANK_2 : ~shift_north_north(allb) & RANK_7);
+static inline uint64_t pawn_double_push(uint64_t pawns, uint64_t all, int color) {
+	unsigned down = color ? S : N;
+	return pawns & ~shift(all, down) & ~shift_twice(all, down) & (color ? RANK_2 : RANK_7);
 }
 
 static inline uint64_t knight_attacks(int square, uint64_t own_pieces) {

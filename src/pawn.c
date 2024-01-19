@@ -38,16 +38,19 @@ CONST score_t distance_us[7]     = { S(  0,  0), S( -2, -3), S(  4, -9), S( 18,-
 CONST score_t distance_them[7]   = { S(  0,  0), S( -8, -2), S(-11,  2), S(-10, 13), S( -5, 25), S(-12, 41), S(  3, 42), };
 
 /* Mostly inspiration from stockfish. */
-score_t evaluate_pawns(const struct position *pos, struct evaluationinfo *ei, int color) {
+score_t evaluate_pawns(const struct position *pos, struct evaluationinfo *ei, int us) {
+	int them = other_color(us);
+	unsigned up = us ? N : S;
+
 	UNUSED(ei);
 	score_t eval = 0;
 
-	unsigned up = color ? 8 : -8;
-	unsigned down = color ? -8 : 8;
+	int up_sq = us ? 8 : -8;
+	int down_sq = -up_sq;
 
-	uint64_t ourpawns = pos->piece[color][PAWN];
-	uint64_t theirpawns = pos->piece[other_color(color)][PAWN];
-	uint64_t b = pos->piece[color][PAWN];
+	uint64_t ourpawns = pos->piece[us][PAWN];
+	uint64_t theirpawns = pos->piece[them][PAWN];
+	uint64_t b = pos->piece[us][PAWN];
 	uint64_t neighbours, doubled, stoppers, support, phalanx, lever, leverpush, blocker;
 	int backward, passed;
 	int square;
@@ -56,60 +59,60 @@ score_t evaluate_pawns(const struct position *pos, struct evaluationinfo *ei, in
 		square = ctz(b);
 		squareb = bitboard(square);
 
-		int r = rank_of(orient_horizontal(color, square));
+		int r = rank_of(orient_horizontal(us, square));
 		int f = file_of(square);
 		int rf = MIN(f, 7 - f);
 		
 		/* uint64_t */
-		doubled    = ourpawns & bitboard(square + down);
+		doubled    = ourpawns & bitboard(square + down_sq);
 		neighbours = ourpawns & adjacent_files(square);
-		stoppers   = theirpawns & passed_files(square, color);
-		blocker    = theirpawns & bitboard(square + up);
-		support    = neighbours & rank(square + down);
+		stoppers   = theirpawns & passed_files(square, us);
+		blocker    = theirpawns & bitboard(square + up_sq);
+		support    = neighbours & rank(square + down_sq);
 		phalanx    = neighbours & rank(square);
-		lever      = theirpawns & shift_color(shift_west(squareb) | shift_east(squareb), color);
-		leverpush  = theirpawns & shift_color2(shift_west(squareb) | shift_east(squareb), color);
+		lever      = theirpawns & shift(shift(squareb, E) | shift(squareb, W), up);
+		leverpush  = theirpawns & shift_twice(shift(squareb, E) | shift(squareb, W), up);
 
 		/* int */
-		backward   = !(neighbours & passed_files(square + up, other_color(color))) && (leverpush | blocker);
+		backward   = !(neighbours & passed_files(square + up_sq, them)) && (leverpush | blocker);
 		passed     = !(stoppers ^ lever) || (!(stoppers ^ lever ^ leverpush) && popcount(phalanx) >= popcount(leverpush));
-		passed    &= !(passed_files(square, color) & file(square) & ourpawns);
+		passed    &= !(passed_files(square, us) & file(square) & ourpawns);
 
 		if (support | phalanx) {
 			eval += connected_pawn[r] * (2 + (phalanx != 0)) + supported_pawn * popcount(support);
-			if (TRACE) trace.supported_pawn[color] += popcount(support);
-			if (TRACE) trace.connected_pawn[color][r] += 2 + (phalanx != 0);
+			if (TRACE) trace.supported_pawn[us] += popcount(support);
+			if (TRACE) trace.connected_pawn[us][r] += 2 + (phalanx != 0);
 		}
 
 		if (passed) {
 			eval += passed_pawn[r] + passed_file[rf];
-			if (TRACE) trace.passed_pawn[color][r]++;
-			if (TRACE) trace.passed_file[color][rf]++;
+			if (TRACE) trace.passed_pawn[us][r]++;
+			if (TRACE) trace.passed_file[us][rf]++;
 
-			int i = distance(square + up, ctz(pos->piece[color][KING]));
+			int i = distance(square + up_sq, ctz(pos->piece[us][KING]));
 			eval += i * distance_us[r];
-			if (TRACE) trace.distance_us[color][r] += i;
-			int j = distance(square + up, ctz(pos->piece[other_color(color)][KING]));
+			if (TRACE) trace.distance_us[us][r] += i;
+			int j = distance(square + up_sq, ctz(pos->piece[them][KING]));
 			eval += j * distance_them[r];
-			if (TRACE) trace.distance_them[color][r] += j;
+			if (TRACE) trace.distance_them[us][r] += j;
 
-			if (pos->mailbox[square + up]) {
+			if (pos->mailbox[square + up_sq]) {
 				eval += passed_blocked[r];
-				if (TRACE) trace.passed_blocked[color][r]++;
+				if (TRACE) trace.passed_blocked[us][r]++;
 			}
 		}
 		else if (!neighbours) {
 			eval += isolated_pawn[rf];
-			if (TRACE) trace.isolated_pawn[color][rf]++;
+			if (TRACE) trace.isolated_pawn[us][rf]++;
 		}
 		if (doubled) {
 			eval += doubled_pawn[rf];
-			if (TRACE) trace.doubled_pawn[color][rf]++;
+			if (TRACE) trace.doubled_pawn[us][rf]++;
 		}
 		
 		if (backward) {
 			eval += backward_pawn[rf];
-			if (TRACE) trace.backward_pawn[color][rf]++;
+			if (TRACE) trace.backward_pawn[us][rf]++;
 		}
 
 		b = clear_ls1b(b);

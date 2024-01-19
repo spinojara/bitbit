@@ -182,57 +182,45 @@ extern const uint64_t RANK_3;
 extern const uint64_t RANK_2;
 extern const uint64_t RANK_1;
 
-static inline uint64_t shift_north(uint64_t b) {
-	return b << 8;
-}
-static inline uint64_t shift_south(uint64_t b) {
-	return b >> 8;
-}
-static inline uint64_t shift_west(uint64_t b) {
-	return (b >> 1) & ~FILE_H;
-}
-static inline uint64_t shift_east(uint64_t b) {
-	return (b << 1) & ~FILE_A;
-}
-static inline uint64_t shift_north_east(uint64_t b) {
-	return (b << 9) & ~FILE_A;
-}
-static inline uint64_t shift_north_west(uint64_t b) {
-	return (b << 7) & ~FILE_H;
-}
-static inline uint64_t shift_south_west(uint64_t b) {
-	return (b >> 9) & ~FILE_H;
-}
-static inline uint64_t shift_south_east(uint64_t b) {
-	return (b >> 7) & ~FILE_A;
-}
-static inline uint64_t shift_north_north(uint64_t b) {
-	return b << 16;
-}
-static inline uint64_t shift_south_south(uint64_t b) {
-	return b >> 16;
-}
-static inline uint64_t shift_color(uint64_t b, int color) {
-	return color ? shift_north(b) : shift_south(b);
-}
-static inline uint64_t shift_color2(uint64_t b, int color) {
-	return color ? shift_north_north(b) : shift_south_south(b);
-}
-static inline uint64_t shift_color_east(uint64_t b, int color) {
-	return color ? shift_north_east(b) : shift_south_east(b);
-}
-static inline uint64_t shift_color_west(uint64_t b, int color) {
-	return color ? shift_north_west(b) : shift_south_west(b);
+enum direction {
+	N = 1,
+	S = 2,
+	E = 4,
+	W = 8,
+};
+
+static inline uint64_t shift(uint64_t b, unsigned direction) {
+	switch (direction) {
+	case N:
+		return b << 8;
+	case S:
+		return b >> 8;
+	case E:
+		return (b << 1) & ~FILE_A;
+	case W:
+		return (b >> 1) & ~FILE_H;
+	case N | E:
+		return (b << 9) & ~FILE_A;
+	case N | W:
+		return (b << 7) & ~FILE_H;
+	case S | E:
+		return (b >> 7) & ~FILE_A;
+	case S | W:
+		return (b >> 9) & ~FILE_H;
+	default:
+		assert(0);
+		return 0;
+	}
 }
 
-static inline uint64_t fill_north(uint64_t b) {
-	for (int i = 0; i < 8; i++)
-		b |= shift_north(b);
-	return b;
+static inline uint64_t shift_twice(uint64_t b, unsigned direction) {
+	return shift(shift(b, direction), direction);
 }
-static inline uint64_t fill_south(uint64_t b) {
+
+/* Should suffice to loop and shift 7 times instead of 8. */
+static inline uint64_t fill(uint64_t b, unsigned direction) {
 	for (int i = 0; i < 8; i++)
-		b |= shift_south(b);
+		b |= shift(b, direction);
 	return b;
 }
 

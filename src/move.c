@@ -293,10 +293,12 @@ char *move_str_pgn(char *str, const struct position *pos, const move_t *m) {
 	m_t = *m;
 	memcpy(&pos_t, pos, sizeof(pos_t));
 	do_move(&pos_t, &m_t);
-	int ma = mate(&pos_t);
+	move_t movelist[MOVES_MAX];
+	generate_all(&pos_t, movelist);
+	int mate = !movelist[0];
 	uint64_t checkers = generate_checkers(&pos_t, pos_t.turn);
 
-	if (ma == 2)
+	if (mate && checkers)
 		str[i++] = '#';
 	else if (checkers)
 		str[i++] = '+';

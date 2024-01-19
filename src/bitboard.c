@@ -149,7 +149,7 @@ uint64_t file_calc(int square) {
 	uint64_t ret = FILE_A;
 
 	for (int i = 0; i < f; i++)
-		ret = shift_east(ret);
+		ret = shift(ret, E);
 	return ret;
 }
 
@@ -158,7 +158,7 @@ uint64_t rank_calc(int square) {
 	uint64_t ret = RANK_1;
 
 	for (int i = 0; i < r; i++)
-		ret = shift_north(ret);
+		ret = shift(ret, N);
 	return ret;
 }
 

@@ -37,6 +37,9 @@ void mvv_lva_init(void) {
 }
 
 int see_geq(struct position *pos, const move_t *m, int32_t value) {
+	int us = pos->turn;
+	int them = other_color(us);
+
 	int from = move_from(m);
 	int to = move_to(m);
 	uint64_t fromb = bitboard(from);
@@ -53,19 +56,19 @@ int see_geq(struct position *pos, const move_t *m, int32_t value) {
 	if (swap <= 0)
 		return 1;
 
-	pos->piece[other_color(pos->turn)][victim] ^= tob;
-	pos->piece[other_color(pos->turn)][ALL] ^= tob;
-	pos->piece[pos->turn][attacker] ^= tob | fromb;
-	pos->piece[pos->turn][ALL] ^= tob | fromb;
+	pos->piece[them][victim] ^= tob;
+	pos->piece[them][ALL] ^= tob;
+	pos->piece[us][attacker] ^= tob | fromb;
+	pos->piece[us][ALL] ^= tob | fromb;
 
-	int turn = pos->turn;
+	int turn = us;
 
 	uint64_t attackers = 0, turnattackers, occupied = pos->piece[WHITE][ALL] | pos->piece[BLACK][ALL];
 	/* Speed is more important than accuracy so we only
 	 * generate moves which are probably legal.
 	 */
-	attackers |= (shift_south_west(tob) | shift_south_east(tob)) & pos->piece[WHITE][PAWN];
-	attackers |= (shift_north_west(tob) | shift_north_east(tob)) & pos->piece[BLACK][PAWN];
+	attackers |= (shift(tob, S | E) | shift(tob, S | W)) & pos->piece[WHITE][PAWN];
+	attackers |= (shift(tob, N | E) | shift(tob, N | W)) & pos->piece[BLACK][PAWN];
 
 	attackers |= knight_attacks(to, 0) & (pos->piece[WHITE][KNIGHT] | pos->piece[BLACK][KNIGHT]);
 
@@ -154,10 +157,10 @@ int see_geq(struct position *pos, const move_t *m, int32_t value) {
 		if (discovery[turn] & ~occupied)
 			break;
 	}
-	pos->piece[other_color(pos->turn)][victim] ^= tob;
-	pos->piece[other_color(pos->turn)][ALL] ^= tob;
-	pos->piece[pos->turn][attacker] ^= tob | fromb;
-	pos->piece[pos->turn][ALL] ^= tob | fromb;
+	pos->piece[them][victim] ^= tob;
+	pos->piece[them][ALL] ^= tob;
+	pos->piece[us][attacker] ^= tob | fromb;
+	pos->piece[us][ALL] ^= tob | fromb;
 	return ret;
 }
 

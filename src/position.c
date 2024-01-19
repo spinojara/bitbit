@@ -61,8 +61,9 @@ uint64_t generate_checkers(const struct position *pos, int color) {
 
 uint64_t generate_attackers(const struct position *pos, int square, int color) {
 	uint64_t attackers = 0;
+	unsigned up = color ? N : S;
 
-	attackers |= (shift_color_west(pos->piece[color][KING], color) | shift_color_east(pos->piece[color][KING], color)) & pos->piece[other_color(color)][PAWN];
+	attackers |= (shift(pos->piece[color][KING], up | E) | shift(pos->piece[color][KING], up | W)) & pos->piece[other_color(color)][PAWN];
 	attackers |= rook_attacks(square, 0, pos->piece[WHITE][ALL] | pos->piece[BLACK][ALL]) & (pos->piece[other_color(color)][ROOK] | pos->piece[other_color(color)][QUEEN]);
 	attackers |= bishop_attacks(square, 0, pos->piece[WHITE][ALL] | pos->piece[BLACK][ALL]) & (pos->piece[other_color(color)][BISHOP] | pos->piece[other_color(color)][QUEEN]);
 	attackers |= knight_attacks(square, 0) & pos->piece[other_color(color)][KNIGHT];
@@ -72,14 +73,15 @@ uint64_t generate_attackers(const struct position *pos, int square, int color) {
 
 uint64_t generate_attacked(const struct position *pos, int color) {
 	uint64_t attacked = 0;
+	unsigned up = color ? N : S;
 	uint64_t piece;
 	int square;
 
 	square = ctz(pos->piece[color][KING]);
 
 	attacked = king_attacks(square, 0);
-	attacked |= shift_color_west(pos->piece[color][PAWN], color);
-	attacked |= shift_color_east(pos->piece[color][PAWN], color);
+	attacked |= shift(pos->piece[color][PAWN], up | E);
+	attacked |= shift(pos->piece[color][PAWN], up | W);
 
 	piece = pos->piece[color][KNIGHT];
 	while (piece) {

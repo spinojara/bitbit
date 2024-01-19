@@ -23,28 +23,23 @@ uint64_t king_attacks_lookup[64];
 uint64_t knight_attacks_calc(int square) {
 	uint64_t b = 0;
 	uint64_t square_b = bitboard(square);
-	b |= shift_north(shift_east(shift_east(square_b)));
-	b |= shift_north(shift_north(shift_east(square_b)));
-	b |= shift_north(shift_north(shift_west(square_b)));
-	b |= shift_north(shift_west(shift_west(square_b)));
-	b |= shift_south(shift_west(shift_west(square_b)));
-	b |= shift_south(shift_south(shift_west(square_b)));
-	b |= shift_south(shift_south(shift_east(square_b)));
-	b |= shift_south(shift_east(shift_east(square_b)));
+	b |= shift(shift_twice(square_b, N), E);
+	b |= shift(shift_twice(square_b, N), W);
+	b |= shift(shift_twice(square_b, S), E);
+	b |= shift(shift_twice(square_b, S), W);
+	b |= shift(shift_twice(square_b, E), N);
+	b |= shift(shift_twice(square_b, E), S);
+	b |= shift(shift_twice(square_b, W), N);
+	b |= shift(shift_twice(square_b, W), S);
 	return b;
 }
 
 uint64_t king_attacks_calc(int square) {
-	uint64_t b = 0;
-	uint64_t square_b = bitboard(square);
-	b |= shift_east(square_b);
-	b |= shift_north_east(square_b);
-	b |= shift_north(square_b);
-	b |= shift_north_west(square_b);
-	b |= shift_west(square_b);
-	b |= shift_south_west(square_b);
-	b |= shift_south(square_b);
-	b |= shift_south_east(square_b);
+	uint64_t b = bitboard(square);
+	b |= shift(b, N);
+	b |= shift(b, S);
+	b |= shift(b, E);
+	b |= shift(b, W);
 	return b;
 }
 
