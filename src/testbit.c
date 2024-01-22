@@ -171,7 +171,7 @@ int main(int argc, char **argv) {
 	
 			/* Architecture dependent. */
 			double timecontrol[2] = { 10.0, 0.1 };
-			double alphabeta[2] = { 0.05, 0.05 };
+			double alphabeta[2] = { 0.025, 0.025 };
 			double elo[2] = { 0.0, 4.0 };
 			sendall(ssl, (char *)timecontrol, 16);
 			sendall(ssl, (char *)alphabeta, 16);
