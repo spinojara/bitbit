@@ -704,7 +704,6 @@ int main(int argc, char **argv) {
 						connection->beta = ((double *)buf)[3];
 						connection->elo0 = ((double *)buf)[4];
 						connection->elo1 = ((double *)buf)[5];
-						printf("alpha, beta: %lf, %lf\n", connection->alpha, connection->beta);
 						connection->len = 0;
 						connection->patch = NULL;
 
