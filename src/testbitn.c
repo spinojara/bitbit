@@ -16,6 +16,8 @@
  */
 
 #define _POSIX_C_SOURCE 200112L
+#define _DEFAULT_SOURCE
+#define _XOPEN_SOURCE 500
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -29,12 +31,27 @@
 #include <stdarg.h>
 #include <stdint.h>
 #include <signal.h>
+#include <ftw.h>
 
 #include <openssl/ssl.h>
 
 #include "testbitshared.h"
 #include "sprt.h"
 #include "util.h"
+
+int rm(const char *path, const struct stat *sb, int typeflag, struct FTW *ftwbuf) {
+	UNUSED(sb);
+	UNUSED(typeflag);
+	UNUSED(ftwbuf);
+	int r = remove(path);
+	if (r)
+		perror(path);
+	return r;
+}
+
+int rmdir_r(const char *path) {
+	return nftw(path, rm, 64, FTW_DEPTH | FTW_PHYS);
+}
 
 int main(int argc, char **argv) {
 	signal(SIGPIPE, SIG_IGN);
@@ -169,6 +186,7 @@ int main(int argc, char **argv) {
 		uint64_t pentanomial[5] = { 0 };
 		unsigned long games = 50000;
 		double llh = 0.0;
+		char dtemp[16] = "testbit-XXXXXX";
 
 		if (chdir("/tmp")) {
 			fprintf(stderr, "error: chdir /tmp\n");
@@ -187,18 +205,8 @@ int main(int argc, char **argv) {
 		elo0 = ((double *)buf)[4];
 		elo1 = ((double *)buf)[5];
 
-		pid = fork();
-		if (pid == -1)
-			return 1;
-
-		if (pid == 0) {
-			execlp("rm", "rm", "-rf", "/tmp/bitbit", (char *)NULL);
-			fprintf(stderr, "error: exec rm\n");
-			return 1;
-		}
-
-		if (waitpid(pid, &wstatus, 0) == -1 || WEXITSTATUS(wstatus)) {
-			fprintf(stderr, "error: rm\n");
+		if (!mkdtemp(dtemp)) {
+			fprintf(stderr, "error: failed to create temporary directory\n");
 			return 1;
 		}
 
@@ -213,6 +221,7 @@ int main(int argc, char **argv) {
 				"--branch", "master",
 				"--single-branch",
 				"--depth", "1",
+				dtemp,
 				(char *)NULL);
 			fprintf(stderr, "error: exec git clone\n");
 			return 1;
@@ -297,6 +306,11 @@ int main(int argc, char **argv) {
 		}
 
 		char H = sprt(games, trinomial, pentanomial, alpha, beta, maintime, increment, elo0, elo1, &llh, threads, ssl);
+		if (chdir("/tmp") || rmdir_r(dtemp)) {
+			fprintf(stderr, "error: failed to remove temporary directory");
+			return 1;
+		}
+
 		if (H == HCANCEL)
 			continue;
 
