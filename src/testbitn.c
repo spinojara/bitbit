@@ -232,8 +232,8 @@ int main(int argc, char **argv) {
 			return 1;
 		}
 
-		if (chdir("/tmp/bitbit")) {
-			fprintf(stderr, "error: chdir /tmp/bitbit\n");
+		if (chdir(dtemp)) {
+			fprintf(stderr, "error: chdir %s\n", dtemp);
 			return 1;
 		}
 
@@ -306,8 +306,13 @@ int main(int argc, char **argv) {
 		}
 
 		char H = sprt(games, trinomial, pentanomial, alpha, beta, maintime, increment, elo0, elo1, &llh, threads, ssl);
-		if (chdir("/tmp") || rmdir_r(dtemp)) {
-			fprintf(stderr, "error: failed to remove temporary directory");
+		if (chdir("/tmp")) {
+			fprintf(stderr, "error: chdir /tmp\n");
+			return 1;
+		}
+
+		if (rmdir_r(dtemp)) {
+			fprintf(stderr, "error: failed to remove temporary directory\n");
 			return 1;
 		}
 
