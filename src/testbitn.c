@@ -184,7 +184,7 @@ int main(int argc, char **argv) {
 		double elo0, elo1;
 		uint64_t trinomial[3] = { 0 };
 		uint64_t pentanomial[5] = { 0 };
-		unsigned long games = 50000;
+		unsigned long games = 65536;
 		double llh = 0.0;
 		char dtemp[16] = "testbit-XXXXXX";
 
