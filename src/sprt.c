@@ -275,7 +275,7 @@ int sprt(unsigned long games, uint64_t trinomial[3], uint64_t pentanomial[5], do
 		execlp("c-chess-cli-unbuffered", "c-chess-cli-unbuffered", "-each", timestr,
 				"-games", gamesstr,
 				"-concurrency", concurrencystr,
-				"-openings", "file=etc/book/5d6m100k.epd", "order=sequential",
+				"-openings", "file=etc/book/5d6m100k.epd", "order=random",
 				"-repeat",
 				"-engine", "cmd=./bitbitold", "name=bitbitold",
 				"-engine", "cmd=./bitbit", (char *)NULL);
