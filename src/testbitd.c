@@ -474,10 +474,13 @@ int main(int argc, char **argv) {
 											 "Timecontrol    %lg+%lg\n"
 											 "H0             Elo < %lg\n"
 											 "H1             Elo > %lg\n"
+											 "Alpha          %lg\n"
+											 "Beta           %lg\n"
 											 "Queue          %s\n",
 											 id,
 											 maintime, increment,
 											 elo0, elo1,
+											 alpha, beta,
 											 queuestr);
 									break;
 								case TESTRUNNING:
@@ -486,6 +489,8 @@ int main(int argc, char **argv) {
 											 "Timecontrol    %lg+%lg\n"
 											 "H0             Elo < %lg\n"
 											 "H1             Elo > %lg\n"
+											 "Alpha          %lg\n"
+											 "Beta           %lg\n"
 											 "Queue          %s\n"
 											 "Start          %s\n"
 											 "Games          %d\n"
@@ -498,6 +503,7 @@ int main(int argc, char **argv) {
 											 id,
 											 maintime, increment,
 											 elo0, elo1,
+											 alpha, beta,
 											 queuestr,
 											 startstr,
 											 t0 + t1 + t2, t0, t1, t2,
@@ -512,6 +518,8 @@ int main(int argc, char **argv) {
 											 "Timecontrol    %lg+%lg\n"
 											 "H0             Elo < %lg\n"
 											 "H1             Elo > %lg\n"
+											 "Alpha          %lg\n"
+											 "Beta           %lg\n"
 											 "Queue          %s\n"
 											 "Start          %s\n"
 											 "Done           %s\n"
@@ -524,6 +532,7 @@ int main(int argc, char **argv) {
 											 id,
 											 maintime, increment,
 											 elo0, elo1,
+											 alpha, beta,
 											 queuestr,
 											 startstr,
 											 donestr,
@@ -540,6 +549,8 @@ int main(int argc, char **argv) {
 											 "Timecontrol    %lg+%lg\n"
 											 "H0             Elo < %lg\n"
 											 "H1             Elo > %lg\n"
+											 "Alpha          %lg\n"
+											 "Beta           %lg\n"
 											 "Queue          %s\n"
 											 "Start          %s\n"
 											 "Done           %s\n"
@@ -552,6 +563,7 @@ int main(int argc, char **argv) {
 											 status == TESTCANCEL ? "Cancelled" : "Runtime Error",
 											 maintime, increment,
 											 elo0, elo1,
+											 alpha, beta,
 											 queuestr,
 											 startstr,
 											 donestr,
@@ -567,12 +579,15 @@ int main(int argc, char **argv) {
 											 "Timecontrol    %lg+%lg\n"
 											 "H0             Elo < %lg\n"
 											 "H1             Elo > %lg\n"
+											 "Alpha          %lg\n"
+											 "Beta           %lg\n"
 											 "Queue          %s\n"
 											 "Start          %s\n",
 											 id,
 											 status == PATCHERROR ? "Patch Error" : "Make Error",
 											 maintime, increment,
 											 elo0, elo1,
+											 alpha, beta,
 											 queuestr,
 											 startstr);
 								}
