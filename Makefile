@@ -32,7 +32,7 @@ endif
 CC         = cc
 CSTANDARD  = -std=c11
 CWARNINGS  = -Wall -Wextra -Wshadow -pedantic -Wno-unused-result -Wvla
-COPTIMIZE  = -O2 $(ARCH) -flto
+COPTIMIZE  = -O3 $(ARCH) -flto
 
 ifeq ($(DEBUG), 1)
 	CDEBUG    = -g3 -ggdb
