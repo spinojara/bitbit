@@ -182,8 +182,8 @@ outer:;
 static inline int32_t push_toward_edge(int square) {
 	int f = file_of(square);
 	int r = rank_of(square);
-	f = MIN(f, 7 - f);
-	r = MIN(r, 7 - r);
+	f = min(f, 7 - f);
+	r = min(r, 7 - r);
 	return 6 - (f + r);
 }
 

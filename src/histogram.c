@@ -112,7 +112,7 @@ int main(int argc, char **argv) {
 			}
 		}
 
-		int material_delta = ABS(material[white] - material[black]);
+		int material_delta = abs(material[white] - material[black]);
 		
 		if (material_delta >= 3 && eval == 0 && pos.halfmove <= 0) {
 			char fen[128];

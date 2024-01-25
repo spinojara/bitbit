@@ -181,7 +181,8 @@ uninstall:
 	rm -rf $(DESTDIR)/var/lib/testbit
 
 clean:
-	rm -rf obj dep src/nnueweights.c $(BIN)
+	rm -rf obj dep
+	rm -f src/nnueweights.c $(BIN)
 
 doc: doc/maximumlikelihood.pdf doc/elo.pdf
 

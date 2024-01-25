@@ -95,9 +95,9 @@ uint64_t ray_calc(int source, int target) {
 		return ret;
 
 	if (vf)
-		vf /= ABS(vf);
+		vf /= abs(vf);
 	if (vr)
-		vr /= ABS(vr);
+		vr /= abs(vr);
 
 	while (f <= 7 && f >= 0 && r <= 7 && r >= 0) {
 		ret |= bitboard(f + 8 * r);
@@ -215,7 +215,7 @@ uint64_t same_colored_squares_calc(int square) {
 }
 
 uint64_t distance_calc(int a, int b) {
-	return MAX(ABS(file_of(a) - file_of(b)), ABS(rank_of(a) - rank_of(b)));
+	return max(abs(file_of(a) - file_of(b)), abs(rank_of(a) - rank_of(b)));
 }
 
 void bitboard_init(void) {

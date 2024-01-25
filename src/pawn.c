@@ -60,7 +60,7 @@ score_t evaluate_pawns(const struct position *pos, struct evaluationinfo *ei, in
 
 		int r = rank_of(orient_horizontal(us, square));
 		int f = file_of(square);
-		int rf = MIN(f, 7 - f);
+		int rf = min(f, 7 - f);
 		
 		/* uint64_t */
 		doubled    = ourpawns & bitboard(square + down_sq);

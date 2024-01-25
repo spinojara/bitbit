@@ -58,7 +58,7 @@ void image_ft(int32_t *image) {
 			int piece = 1 + (sqy / 8) + 6 * (1 - turn);
 			int index = make_index(turn, square, piece, king_square);
 
-			image[x + 4096 * y] = ABS(ft_weights[ren + (K_HALF_DIMENSIONS + 1) * index]);
+			image[x + 4096 * y] = abs(ft_weights[ren + (K_HALF_DIMENSIONS + 1) * index]);
 		}
 	}
 }

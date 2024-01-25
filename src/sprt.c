@@ -140,7 +140,7 @@ int sprt_check(const unsigned long N[5], double alpha, double beta, double elo0,
 			mu = 0.0;
 		}
 		else {
-			C[i] = CLAMP(C[i], eps, 1.0 - eps);
+			C[i] = fclamp(C[i], eps, 1.0 - eps);
 			mu = mu_bisect(n, C[i]);
 		}
 		llh2[i] = N_total * loglikelihood(mu, C[i], n);
@@ -170,7 +170,7 @@ double sprt_elo(const unsigned long N[5], double *plusminus) {
 	for (int j = 0; j < 5; j++)
 		score += ALPHA(j) * n[j];
 
-	score = CLAMP(score, eps, 1.0 - eps);
+	score = fclamp(score, eps, 1.0 - eps);
 	double elo = sigmoidinv(score);
 
 	if (plusminus) {

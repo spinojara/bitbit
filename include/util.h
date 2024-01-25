@@ -18,14 +18,9 @@
 #define UTIL_H
 
 #include <stdint.h>
+#include <math.h>
+#include <stdlib.h>
 #include <stdio.h>
-
-#define MIN(a, b) (((a) < (b)) ? (a) : (b))
-#define MAX(a, b) (((a) < (b)) ? (b) : (a))
-
-#define CLAMP(a, b, c) MAX((b), MIN((a), (c)))
-
-#define ABS(a) (((a) > 0) ? (a) : -(a))
 
 #define SIZE(x) (sizeof(x) / sizeof (*(x)))
 
@@ -40,6 +35,11 @@ uint64_t gxorshift64(void);
 uint64_t xorshift64(uint64_t *seed);
 int gbernoulli(double p);
 int bernoulli(double p, uint64_t *seed);
+
+static inline int max(int a, int b) { return a < b ? b : a; }
+static inline int min(int a, int b) { return a < b ? a : b; }
+static inline int clamp(int a, int b, int c) { return max(b, min(a, c)); }
+static inline double fclamp(double a, double b, double c) { return fmax(b, fmin(a, c)); }
 
 uint64_t power(uint64_t m, uint64_t n);
 

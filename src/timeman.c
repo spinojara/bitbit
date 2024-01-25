@@ -33,7 +33,7 @@ void time_init(struct position *pos, int etime, struct searchinfo *si) {
 	if (!etime)
 		return;
 
-	int moves_left = MAX(25, 50 - pos->fullmove);
+	int moves_left = max(25, 50 - pos->fullmove);
 
 	si->time_optimal = 1000 * etime / moves_left + si->time_start;
 	si->time_stop = 1000 * etime / 10 + si->time_start;

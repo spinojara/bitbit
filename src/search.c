@@ -84,7 +84,7 @@ static inline void store_history_move(const struct position *pos, const move_t *
 		return;
 	assert(*m);
 	assert(0 <= depth && depth < DEPTH_MAX);
-	history_moves[pos->mailbox[move_from(m)]][move_to(m)] += (uint64_t)1 << MIN(depth, 32);
+	history_moves[pos->mailbox[move_from(m)]][move_to(m)] += (uint64_t)1 << min(depth, 32);
 }
 
 static inline void store_pv_move(const move_t *m, int ply, move_t pv[DEPTH_MAX][DEPTH_MAX]) {
@@ -109,7 +109,7 @@ static inline int32_t evaluate(const struct position *pos) {
 	int classical = 0;
 	/* NNUE. */
 	if (option_nnue) {
-		int32_t psqt = ABS((pos->psqtaccumulation[WHITE] - pos->psqtaccumulation[BLACK]) / 2);
+		int32_t psqt = abs(pos->psqtaccumulation[WHITE] - pos->psqtaccumulation[BLACK]) / 2;
 		if (psqt > 350)
 			classical = 1;
 		else
@@ -124,7 +124,7 @@ static inline int32_t evaluate(const struct position *pos) {
 	if (option_damp)
 		evaluation = evaluation * (200 - pos->halfmove) / 200;
 	
-	evaluation = CLAMP(evaluation, -VALUE_MAX, VALUE_MAX);
+	evaluation = clamp(evaluation, -VALUE_MAX, VALUE_MAX);
 
 	return evaluation;
 }
@@ -213,7 +213,7 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 		si->history->zobrist_key[si->history->ply + ply] = pos->zobrist_key;
 
 	int32_t eval = VALUE_NONE, best_eval = -VALUE_INFINITE;
-	depth = MAX(0, depth);
+	depth = max(0, depth);
 
 	const int root_node = (ply == 0);
 	const int pv_node = (beta != alpha + 1);
@@ -226,8 +226,8 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 			return draw(si);
 
 		/* Mate distance pruning. */
-		alpha = MAX(alpha, -VALUE_MATE + ply);
-		beta = MIN(beta, VALUE_MATE - ply - 1);
+		alpha = max(alpha, -VALUE_MATE + ply);
+		beta = min(beta, VALUE_MATE - ply - 1);
 		if (alpha >= beta)
 			return alpha;
 	}
@@ -267,7 +267,7 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	/* Null move pruning. */
 	if (!pv_node && (ss - 1)->move && static_eval >= beta && depth >= 3 && has_sliding_piece(pos)) {
 		int reduction = 3;
-		int new_depth = CLAMP(depth - reduction, 1, depth);
+		int new_depth = clamp(depth - reduction, 1, depth);
 		int ep = pos->en_passant;
 		do_null_zobrist_key(pos, 0);
 		do_null_move(pos, 0);
@@ -413,7 +413,7 @@ skip_pruning:;
 			if (cut_node && m != si->killers[ply][0] && m != si->killers[ply][1])
 				r += 1;
 
-			int lmr_depth = CLAMP(new_depth - r, 1, new_depth);
+			int lmr_depth = clamp(new_depth - r, 1, new_depth);
 			/* Since this is a child of either a pv, all, or cut node and it is not the first
 			 * child it is an expected cut node. Instead of searching in [-beta, -alpha], we
 			 * expect there to be a cut and it should suffice to search in [-alpha - 1, -alpha].
@@ -492,18 +492,18 @@ skip_pruning:;
 int32_t aspiration_window(struct position *pos, int depth, int32_t last, struct searchinfo *si, struct searchstack *ss) {
 	int32_t evaluation = VALUE_NONE;
 	int32_t delta = 25 + last * last / 16384;
-	int32_t alpha = MAX(last - delta, -VALUE_MATE);
-	int32_t beta = MIN(last + delta, VALUE_MATE);
+	int32_t alpha = max(last - delta, -VALUE_MATE);
+	int32_t beta = min(last + delta, VALUE_MATE);
 
 	while (!si->interrupt || interrupt) {
 		evaluation = negamax(pos, depth, 0, alpha, beta, 0, si, ss);
 
 		if (evaluation <= alpha) {
-			alpha = MAX(alpha - delta, -VALUE_MATE);
+			alpha = max(alpha - delta, -VALUE_MATE);
 			beta = (alpha + 3 * beta) / 4;
 		}
 		else if (evaluation >= beta) {
-			beta = MIN(beta + delta, VALUE_MATE);
+			beta = min(beta + delta, VALUE_MATE);
 		}
 		else {
 			return evaluation;
@@ -516,7 +516,7 @@ int32_t aspiration_window(struct position *pos, int depth, int32_t last, struct 
 
 int32_t search(struct position *pos, int depth, int verbose, int etime, int movetime, move_t *m, struct transpositiontable *tt, struct history *history, int iterative) {
 	assert(option_history == (history != NULL));
-	depth = MIN(depth, DEPTH_MAX);
+	depth = min(depth, DEPTH_MAX);
 
 	timepoint_t ts = time_now();
 	if (etime && !movetime)

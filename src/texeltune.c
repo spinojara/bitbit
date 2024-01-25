@@ -1184,11 +1184,11 @@ double grad_calc(struct position *pos, double result) {
 	}
 
 	/* We want to calculate dE/dw=dE/dr*dr/dk*dk/dw where r is the rectified
-	 * king danger r=MAX(k, 0).
+	 * king danger r=max(k, 0).
 	 */
 	if ((param = &parameters[PARAM_WEAKSQUARES])->tune == TUNE_YES) {
 		for (int color = 0; color <= 1; color++) {
-			int r = MAX(trace.king_danger[color], 0);
+			int r = max(trace.king_danger[color], 0);
 			double dEdr = -mgs * 2 * r / 2048 - egs * 1 / 8;
 			double drdk = trace.king_danger[color] >= 0;
 			double dkdw = trace.weak_squares[color];
@@ -1214,7 +1214,7 @@ double grad_calc(struct position *pos, double result) {
 	}
 	if ((param = &parameters[PARAM_ENEMYNOQUEEN])->tune == TUNE_YES) {
 		for (int color = 0; color <= 1; color++) {
-			int r = MAX(trace.king_danger[color], 0);
+			int r = max(trace.king_danger[color], 0);
 			double dEdr = -mgs * 2 * r / 2048 - egs * 1 / 8;
 			double drdk = trace.king_danger[color] >= 0;
 			double dkdw = trace.enemy_no_queen[color];
@@ -1225,7 +1225,7 @@ double grad_calc(struct position *pos, double result) {
 	}
 	if ((param = &parameters[PARAM_KNIGHTATTACK])->tune == TUNE_YES) {
 		for (int color = 0; color <= 1; color++) {
-			int r = MAX(trace.king_danger[color], 0);
+			int r = max(trace.king_danger[color], 0);
 			double dEdr = -mgs * 2 * r / 2048 - egs * 1 / 8;
 			double drdk = trace.king_danger[color] >= 0;
 			double dkdw = trace.knight_attack[color];
@@ -1236,7 +1236,7 @@ double grad_calc(struct position *pos, double result) {
 	}
 	if ((param = &parameters[PARAM_BISHOPATTACK])->tune == TUNE_YES) {
 		for (int color = 0; color <= 1; color++) {
-			int r = MAX(trace.king_danger[color], 0);
+			int r = max(trace.king_danger[color], 0);
 			double dEdr = -mgs * 2 * r / 2048 - egs * 1 / 8;
 			double drdk = trace.king_danger[color] >= 0;
 			double dkdw = trace.bishop_attack[color];
@@ -1247,7 +1247,7 @@ double grad_calc(struct position *pos, double result) {
 	}
 	if ((param = &parameters[PARAM_ROOKATTACK])->tune == TUNE_YES) {
 		for (int color = 0; color <= 1; color++) {
-			int r = MAX(trace.king_danger[color], 0);
+			int r = max(trace.king_danger[color], 0);
 			double dEdr = -mgs * 2 * r / 2048 - egs * 1 / 8;
 			double drdk = trace.king_danger[color] >= 0;
 			double dkdw = trace.rook_attack[color];
@@ -1258,7 +1258,7 @@ double grad_calc(struct position *pos, double result) {
 	}
 	if ((param = &parameters[PARAM_QUEENATTACK])->tune == TUNE_YES) {
 		for (int color = 0; color <= 1; color++) {
-			int r = MAX(trace.king_danger[color], 0);
+			int r = max(trace.king_danger[color], 0);
 			double dEdr = -mgs * 2 * r / 2048 - egs * 1 / 8;
 			double drdk = trace.king_danger[color] >= 0;
 			double dkdw = trace.queen_attack[color];
@@ -1269,7 +1269,7 @@ double grad_calc(struct position *pos, double result) {
 	}
 	if ((param = &parameters[PARAM_DISCOVERY])->tune == TUNE_YES) {
 		for (int color = 0; color <= 1; color++) {
-			int r = MAX(trace.king_danger[color], 0);
+			int r = max(trace.king_danger[color], 0);
 			double dEdr = -mgs * 2 * r / 2048 - egs * 1 / 8;
 			double drdk = trace.king_danger[color] >= 0;
 			double dkdw = trace.discovery[color];
@@ -1281,7 +1281,7 @@ double grad_calc(struct position *pos, double result) {
 	if ((param = &parameters[PARAM_CHECKS])->tune == TUNE_YES) {
 		for (size_t i = 0; i < param->size; i++) {
 			for (int color = 0; color <= 1; color++) {
-				int r = MAX(trace.king_danger[color], 0);
+				int r = max(trace.king_danger[color], 0);
 				double dEdr = -mgs * 2 * r / 2048 - egs * 1 / 8;
 				double drdk = trace.king_danger[color] >= 0;
 				double dkdw = trace.checks[color][i];
@@ -1294,7 +1294,7 @@ double grad_calc(struct position *pos, double result) {
 
 	/* We want to calculate dE/dp_M=dE/dp*dp/dp_M where p is the phase.
 	 * E depends on p as E=p*mg+(1-p)*eg, so dE/dp=mg-eg. We now have
-	 * p=(CLAMP(material, p_m, p_M)-p_m)/(p_M-p_m). It is not differentiable
+	 * p=(clamp(material, p_m, p_M)-p_m)/(p_M-p_m). It is not differentiable
 	 * but we try a difference quotient.
 	 */
 	if ((param = &parameters[PARAM_PHASEMAX])->tune == TUNE_YES) {
@@ -1302,8 +1302,8 @@ double grad_calc(struct position *pos, double result) {
 		int p_M2 = phase_max + 1;
 		int p_M1 = phase_max - 1;
 		int p_m = phase_min;
-		double dpdp_M = ((double)CLAMP(trace.material, p_m, p_M2) - p_m) / (p_M2 - p_m) -
-				((double)CLAMP(trace.material, p_m, p_M1) - p_m) / (p_M1 - p_m);
+		double dpdp_M = ((double)clamp(trace.material, p_m, p_M2) - p_m) / (p_M2 - p_m) -
+				((double)clamp(trace.material, p_m, p_M1) - p_m) / (p_M1 - p_m);
 		dpdp_M /= p_M2 - p_M1;
 		double grad = factor * dEdp * dpdp_M;
 		param->grad[0] += grad;
@@ -1313,8 +1313,8 @@ double grad_calc(struct position *pos, double result) {
 		int p_m2 = phase_min + 1;
 		int p_m1 = phase_min - 1;
 		int p_M = phase_max;
-		double dpdp_m = ((double)CLAMP(trace.material, p_m2, p_M) - p_m2) / (p_M - p_m2) -
-				((double)CLAMP(trace.material, p_m1, p_M) - p_m1) / (p_M - p_m1);
+		double dpdp_m = ((double)clamp(trace.material, p_m2, p_M) - p_m2) / (p_M - p_m2) -
+				((double)clamp(trace.material, p_m1, p_M) - p_m1) / (p_M - p_m1);
 		dpdp_m /= p_m2 - p_m1;
 		double grad = factor * dEdp * dpdp_m;
 		param->grad[0] += grad;
@@ -1327,8 +1327,8 @@ double grad_calc(struct position *pos, double result) {
 		int m1 = trace.material - num_knights * 1;
 		int p_M = phase_max;
 		int p_m = phase_min;
-		double dpdm = ((double)CLAMP(m2, p_m, p_M) - p_m) / (p_M - p_m) -
-			      ((double)CLAMP(m1, p_m, p_M) - p_m) / (p_M - p_m);
+		double dpdm = ((double)clamp(m2, p_m, p_M) - p_m) / (p_M - p_m) -
+			      ((double)clamp(m1, p_m, p_M) - p_m) / (p_M - p_m);
 		dpdm /= 1 - (-1);
 		double grad = factor * dEdp * dpdm;
 		param->grad[0] += grad;
@@ -1365,8 +1365,8 @@ double grad_calc(struct position *pos, double result) {
 		int m1 = trace.material - num_bishops * 1;
 		int p_M = phase_max;
 		int p_m = phase_min;
-		double dpdm = ((double)CLAMP(m2, p_m, p_M) - p_m) / (p_M - p_m) -
-			      ((double)CLAMP(m1, p_m, p_M) - p_m) / (p_M - p_m);
+		double dpdm = ((double)clamp(m2, p_m, p_M) - p_m) / (p_M - p_m) -
+			      ((double)clamp(m1, p_m, p_M) - p_m) / (p_M - p_m);
 		dpdm /= 1 - (-1);
 		double grad = factor * dEdp * dpdm;
 		param->grad[0] += grad;
@@ -1378,8 +1378,8 @@ double grad_calc(struct position *pos, double result) {
 		int m1 = trace.material - num_rooks * 1;
 		int p_M = phase_max;
 		int p_m = phase_min;
-		double dpdm = ((double)CLAMP(m2, p_m, p_M) - p_m) / (p_M - p_m) -
-			      ((double)CLAMP(m1, p_m, p_M) - p_m) / (p_M - p_m);
+		double dpdm = ((double)clamp(m2, p_m, p_M) - p_m) / (p_M - p_m) -
+			      ((double)clamp(m1, p_m, p_M) - p_m) / (p_M - p_m);
 		dpdm /= 1 - (-1);
 		double grad = factor * dEdp * dpdm;
 		param->grad[0] += grad;
@@ -1391,8 +1391,8 @@ double grad_calc(struct position *pos, double result) {
 		int m1 = trace.material - num_queens * 1;
 		int p_M = phase_max;
 		int p_m = phase_min;
-		double dpdm = ((double)CLAMP(m2, p_m, p_M) - p_m) / (p_M - p_m) -
-			      ((double)CLAMP(m1, p_m, p_M) - p_m) / (p_M - p_m);
+		double dpdm = ((double)clamp(m2, p_m, p_M) - p_m) / (p_M - p_m) -
+			      ((double)clamp(m1, p_m, p_M) - p_m) / (p_M - p_m);
 		dpdm /= 1 - (-1);
 		double grad = factor * dEdp * dpdm;
 		param->grad[0] += grad;

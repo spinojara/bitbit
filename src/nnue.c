@@ -112,9 +112,9 @@ static inline void transform(const struct position *pos, const int16_t accumulat
 	int16_t sum;
 	for (int i = 0; i < K_HALF_DIMENSIONS; i++) {
 		sum = accumulation[pos->turn][i];
-		output[i] = CLAMP(sum >> FT_SHIFT, 0, 127);
+		output[i] = clamp(sum >> FT_SHIFT, 0, 127);
 		sum = accumulation[other_color(pos->turn)][i];
-		output[K_HALF_DIMENSIONS + i] = CLAMP(sum >> FT_SHIFT, 0, 127);
+		output[K_HALF_DIMENSIONS + i] = clamp(sum >> FT_SHIFT, 0, 127);
 	}
 #endif
 }
@@ -204,7 +204,7 @@ static inline void affine_propagate(int8_t *input, int8_t *output, int in_dim,
 				tmp[j] += input[i] * weights[32 * i + j];
 
 	for (i = 0; i < 32; i++)
-		output[i] = CLAMP(tmp[i] >> SHIFT, 0, 127);
+		output[i] = clamp(tmp[i] >> SHIFT, 0, 127);
 #endif
 }
 

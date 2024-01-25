@@ -87,7 +87,7 @@ static inline score_t evaluate_king_shelter(const struct position *pos, struct e
 		~passed_files(ei->king_square[us], them);
 
 	uint64_t b;
-	int center = CLAMP(file_of(ei->king_square[us]), 1, 6);
+	int center = clamp(file_of(ei->king_square[us]), 1, 6);
 	int ourrank, theirrank;
 	for (int f = center - 1; f <= center + 1; f++) {
 		b = ourpawns & file(f);
@@ -102,7 +102,7 @@ static inline score_t evaluate_king_shelter(const struct position *pos, struct e
 		b = theirpawns & file(f);
 		theirrank = b ? us ? rank_of(ctz(b)) : rank_of(orient_horizontal(BLACK, clzm(b))) : 0;
 
-		int d = MIN(f, 7 - f);
+		int d = min(f, 7 - f);
 		eval += pawn_shelter[d * 7 + ourrank];
 		if (TRACE) trace.pawn_shelter[us][d * 7 + ourrank]++;
 		if (ourrank && ourrank + 1 == theirrank) {
@@ -509,8 +509,8 @@ void evaluationinfo_init(const struct position *pos, struct evaluationinfo *ei) 
 		const int them = other_color(us);
 		int king_square = ctz(pos->piece[us][KING]);
 		ei->king_square[us] = king_square;
-		int f = CLAMP(file_of(king_square), 1, 6);
-		int r = CLAMP(rank_of(king_square), 1, 6);
+		int f = clamp(file_of(king_square), 1, 6);
+		int r = clamp(rank_of(king_square), 1, 6);
 		king_square = 8 * r + f;
 		/* King ring... */
 		ei->king_ring[us] = king_attacks(king_square, 0) | bitboard(king_square);
@@ -549,7 +549,7 @@ static inline score_t evaluate_psqtable(const struct position *pos, struct evalu
 }
 
 static inline int32_t phase(const struct evaluationinfo *ei) {
-	int32_t phase = CLAMP(ei->material, phase_min, phase_max);
+	int32_t phase = clamp(ei->material, phase_min, phase_max);
 	phase = (phase - phase_min) * PHASE / (phase_max - phase_min);
 	return phase;
 }
@@ -664,7 +664,7 @@ void evaluate_print(struct position *pos) {
 				}
 				int16_t neweval = psqtaccumulation[WHITE] - psqtaccumulation[BLACK] - oldeval;
 				
-				if (ABS(neweval) >= 2000)
+				if (abs(neweval) >= 2000)
 					printf(" %+.1f |", (double)neweval / 200);
 				else
 					printf(" %+.2f |", (double)neweval / 200);
@@ -686,16 +686,16 @@ void evaluate_print(struct position *pos) {
 void print_score_t(score_t eval) {
 	int m = score_mg(eval);
 	int e = score_eg(eval);
-	if (ABS(m) >= 10000)
+	if (abs(m) >= 10000)
 		printf("%+.0f ", (double)m / 100);
-	else if (ABS(m) >= 1000)
+	else if (abs(m) >= 1000)
 		printf("%+.1f", (double)m / 100);
 	else
 		printf("%+.2f", (double)m / 100);
 	printf(" ");
-	if (ABS(e) >= 10000)
+	if (abs(e) >= 10000)
 		printf("%+.0f ", (double)e / 100);
-	else if (ABS(e) >= 1000)
+	else if (abs(e) >= 1000)
 		printf("%+.1f", (double)e / 100);
 	else
 		printf("%+.2f", (double)e / 100);

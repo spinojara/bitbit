@@ -122,7 +122,7 @@ static inline int position_already_written(struct position *pos) {
 }
 
 int probable_long_draw(struct history *h, int32_t eval, int *drawn_score_count) {
-	if (h->ply >= adj_draw_ply && ABS(eval) <= 0)
+	if (h->ply >= adj_draw_ply && abs(eval) <= 0)
 		++*drawn_score_count;
 	else
 		*drawn_score_count = 0;
@@ -253,7 +253,7 @@ void *worker(void *arg) {
 		int skip = is_capture(&pos, &m) || generate_checkers(&pos, pos.turn) ||
 			move_flag(&m) || position_already_written(&pos) || !bernoulli(exp(-pos.halfmove / 8.0), &seed);
 
-		int stop_game = !m || (eval != VALUE_NONE && ABS(eval) > eval_limit) ||
+		int stop_game = !m || (eval != VALUE_NONE && abs(eval) > eval_limit) ||
 				pos.halfmove >= 100 || h.ply >= write_max_ply ||
 				is_repetition(&pos, &h, 0, 2) || probable_long_draw(&h, eval, &drawn_score_count) ||
 				endgame_probe(&pos);
