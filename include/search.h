@@ -26,11 +26,6 @@
 
 typedef int64_t timepoint_t;
 
-enum {
-	FLAG_NONE = 64,
-	FLAG_NULL_MOVE = 65,
-};
-
 struct searchstack {
 	move_t move;
 	move_t excluded_move;
