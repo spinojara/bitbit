@@ -318,7 +318,7 @@ int main(int argc, char **argv) {
 		if (H == HCANCEL)
 			continue;
 
-		status = TESTDONE;
+		status = H == HERROR ? RUNERROR : TESTDONE;
 		if (sendall(ssl, &status, 1) ||
 				sendall(ssl, (char *)trinomial, 3 * sizeof(*trinomial)) ||
 				sendall(ssl, (char *)pentanomial, 5 * sizeof(*pentanomial)) ||

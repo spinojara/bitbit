@@ -37,6 +37,8 @@ int main(int argc, char **argv) {
 	char *path = NULL;
 	char *status = NULL;
 
+	int32_t patch_lines = 24;
+
 	for (int i = 1; i < argc; i++) {
 		if (!strcmp(argv[i], "--port")) {
 			i++;
@@ -49,6 +51,12 @@ int main(int argc, char **argv) {
 		}
 		else if (!strcmp(argv[i], "--update")) {
 			type = UPDATE;
+		}
+		else if (!strcmp(argv[i], "--patch-lines")) {
+			i++;
+			if (!(i < argc))
+				break;
+			patch_lines = atoi(argv[i]);
 		}
 		else if (path) {
 			status = argv[i];
@@ -187,6 +195,9 @@ int main(int argc, char **argv) {
 			sendall(ssl, (char *)&id, sizeof(id));
 			sendall(ssl, &newstatus, 1);
 		}
+	}
+	else if (type == LOG) {
+		sendall(ssl, (char *)&patch_lines, 4);
 	}
 
 	char buf[BUFSIZ];

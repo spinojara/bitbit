@@ -397,6 +397,8 @@ int main(int argc, char **argv) {
 						}
 
 						if (buf[0] == LOG) {
+							int32_t patch_lines;
+							recvexact(ssl, (char *)&patch_lines, 4);
 							/* Send logs. */
 							sqlite3_prepare_v2(db,
 									"SELECT "
@@ -601,6 +603,14 @@ int main(int argc, char **argv) {
 								char *patch = malloc(len);
 								sqlite3_blob_read(blob, patch, len, 0);
 								sqlite3_blob_close(blob);
+
+								if (patch_lines >= 0) {
+									int k;
+									for (k = 0; k < len && patch_lines > 0; k++)
+										if (patch[k] == '\n')
+											patch_lines--;
+									len = k;
+								}
 
 								sendall(ssl, patch, len);
 
