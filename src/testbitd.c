@@ -412,6 +412,7 @@ int main(int argc, char **argv) {
 
 							int first = 1;
 							while (sqlite3_step(stmt) == SQLITE_ROW) {
+								int patch_lines_copy = patch_lines;
 								int id = sqlite3_column_int(stmt, 0);
 								int status = sqlite3_column_int(stmt, 1);
 								double maintime = sqlite3_column_double(stmt, 2);
@@ -604,11 +605,11 @@ int main(int argc, char **argv) {
 								sqlite3_blob_read(blob, patch, len, 0);
 								sqlite3_blob_close(blob);
 
-								if (patch_lines >= 0) {
+								if (patch_lines_copy >= 0) {
 									int k;
-									for (k = 0; k < len && patch_lines > 0; k++)
+									for (k = 0; k < len && patch_lines_copy > 0; k++)
 										if (patch[k] == '\n')
-											patch_lines--;
+											patch_lines_copy--;
 									len = k;
 								}
 
