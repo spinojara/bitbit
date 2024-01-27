@@ -4,6 +4,8 @@
 - Use offsetof instead of partialposition.
 - Try pgo (profile guided optimization).
 - Profile code using gcov, operf and gprof.
+- Don't use memcpy in unnecessary places, like copying a struct.
+  Use struct assignment instead e.g. pos1 = pos2.
 
 VERY IMPORTANT
 - Verify that the new transposition table works correctly.
