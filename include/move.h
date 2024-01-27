@@ -65,6 +65,10 @@ static inline move_t new_move(int source_square, int target_square, int flag, in
 	return source_square | (target_square << 6) | (flag << 12) | (promotion << 14);
 }
 
+int pseudo_legal(const struct position *pos, const struct pstate *pstate, const move_t *move);
+
+int legal(const struct position *pos, const struct pstate *pstate, const move_t *move);
+
 static inline int is_capture(const struct position *pos, const move_t *m) {
 	return pos->mailbox[move_to(m)];
 }

@@ -32,6 +32,9 @@ void do_move(struct position *pos, move_t *m) {
 	int source_square = move_from(m);
 	int target_square = move_to(m);
 	assert(pos->mailbox[source_square]);
+	assert(color_of_piece(pos->mailbox[source_square]) == pos->turn);
+	assert(uncolored_piece(pos->mailbox[target_square]) != KING);
+	assert(!pos->mailbox[target_square] || color_of_piece(pos->mailbox[target_square]) == other_color(pos->turn));
 
 	uint64_t from = bitboard(source_square);
 	uint64_t to = bitboard(target_square);
@@ -110,6 +113,20 @@ void do_move(struct position *pos, move_t *m) {
 	if (!pos->turn)
 		pos->fullmove++;
 	pos->turn = other_color(pos->turn);
+
+#if 0
+	if (generate_attacked(pos, pos->turn) & pos->piece[other_color(pos->turn)][KING]) {
+		char fen[128];
+		fprintf(stderr, "%s\n", pos_to_fen(fen, pos));
+		char move_from_str[3];
+		char move_to_str[3];
+		algebraic(move_from_str, move_from(m));
+		algebraic(move_to_str, move_to(m));
+		fprintf(stderr, "%s%s\n", move_from_str, move_to_str);
+		fprintf(stderr, "%zu\n", *m);
+		exit(1);
+	}
+#endif
 }
 
 void undo_move(struct position *pos, const move_t *m) {
@@ -182,6 +199,137 @@ void undo_move(struct position *pos, const move_t *m) {
 
 	if (!pos->turn)
 		pos->fullmove--;
+}
+
+int pseudo_legal(const struct position *pos, const struct pstate *pstate, const move_t *move) {
+	if (!*move)
+		return 0;
+	const int us = pos->turn;
+	const int them = other_color(us);
+	unsigned down = us ? S : N;
+
+	int from_square = move_from(move);
+	int to_square = move_to(move);
+	uint64_t from = bitboard(from_square);
+	uint64_t to = bitboard(to_square);
+	uint64_t all = all_pieces(pos);
+
+	if (!(from & pos->piece[us][ALL]))
+		return 0;
+
+	if (to & pos->piece[us][ALL])
+		return 0;
+
+	int piece = uncolored_piece(pos->mailbox[from_square]);
+
+	/* Promotions are handled after the switch. */
+	switch (move_flag(move)) {
+	case MOVE_EN_PASSANT:
+		/* It could happen that pos->en_passant is 0 in which case
+		 * to_square would have to be 0 as well. It would thus
+		 * have to be a black pawn promotion but the flag is not
+		 * the promotion flag. This error will thus get caught below.
+		 */
+		if (piece != PAWN || to_square != pos->en_passant)
+			return 0;
+		break;
+	case MOVE_CASTLE:
+		if (piece != KING || pstate->checkers)
+			return 0;
+		if (us) {
+			/* from_square must be equal to e1 or e8 by the conditions
+			 * pos->castle & x and piece == KING unless the position
+			 * is faulty.
+			 */
+			if (pos->castle & 0x1 && to_square == g1 &&
+					!(all & 0x60) && !(pstate->attacked & 0x60))
+				return 1;
+			if (pos->castle & 0x2 && to_square == c1 &&
+					!(all & 0xE) && !(pstate->attacked & 0xC))
+				return 1;
+		}
+		else {
+			if (pos->castle & 0x4 && to_square == g8 &&
+					!(all & 0x6000000000000000) && !(pstate->attacked & 0x6000000000000000))
+				return 1;
+			if (pos->castle & 0x8 && to_square == c8 &&
+					!(all & 0xE00000000000000) && !(pstate->attacked & 0xC00000000000000))
+				return 1;
+		}
+		return 0;
+	default:
+		break;
+	}
+
+	/* A move is a promotion iff it is a pawn on the 7'th (or 2'nd) rank. */
+	if ((move_flag(move) == MOVE_PROMOTION) != (piece == PAWN && (from & (us ? RANK_7 : RANK_2))))
+		return 0;
+
+	if (piece == PAWN) {
+		int pawn_sign = us ? 8 : -8;
+
+		if (from_square + pawn_sign != to_square && from_square + 2 * pawn_sign != to_square &&
+				from_square + 1 + pawn_sign != to_square && from_square - 1 + pawn_sign != to_square)
+			return 0;
+
+		if ((from_square + pawn_sign == to_square && !pawn_push(from, all, us)) ||
+				(from_square + 2 * pawn_sign == to_square && !(from & (us ? RANK_2 : RANK_7) && pawn_double_push(from, all, us))) ||
+				(from_square + 1 + pawn_sign == to_square && !pawn_capture_e(from, pos->piece[them][ALL], us) && (to_square != pos->en_passant || move_flag(move) != MOVE_EN_PASSANT)) ||
+				(from_square - 1 + pawn_sign == to_square && !pawn_capture_w(from, pos->piece[them][ALL], us) && (to_square != pos->en_passant || move_flag(move) != MOVE_EN_PASSANT)))
+			return 0;
+	}
+	else if (!(attacks(piece, move_from(move), pos->piece[us][ALL], all) & to)) {
+		return 0;
+	}
+
+	if (piece == KING && pstate->attacked & to)
+		return 0;
+
+	if (single(pstate->checkers)) {
+		if (piece != KING &&
+				!(to & pstate->checkray ||
+					(piece == PAWN && pos->en_passant &&
+					 to_square == pos->en_passant &&
+					 shift(bitboard(pos->en_passant), down) == pstate->checkers)))
+			return 0;
+	}
+	else if (pstate->checkers && piece != KING) {
+		return 0;
+	}
+
+	return 1;
+}
+
+int legal(const struct position *pos, const struct pstate *pstate, const move_t *move) {
+	if (!*move)
+		return 0;
+	const int us = pos->turn;
+	const int them = other_color(us);
+	const unsigned down = us ? S : N;
+	
+	int from_square = move_from(move);
+	int to_square = move_to(move);
+	uint64_t from = bitboard(from_square);
+	uint64_t to = bitboard(to_square);
+	int piece = uncolored_piece(pos->mailbox[from_square]);
+	uint64_t all;
+	int king_square;
+
+	switch (move_flag(move)) {
+	case MOVE_EN_PASSANT:
+		king_square = ctz(pos->piece[us][KING]);
+		all = all_pieces(pos);
+		all ^= from | to | shift(to, down);
+		return !(attacks(ROOK, king_square, 0, all) & (pos->piece[them][ROOK] | pos->piece[them][QUEEN])) &&
+			!(attacks(BISHOP, king_square, 0, all) & (pos->piece[them][BISHOP] | pos->piece[them][QUEEN]));
+		break;
+	case MOVE_CASTLE:
+		return 1;
+	default:
+		break;
+	}
+
+	return piece == KING || !(pstate->pinned & from) || (ray(ctz(pos->piece[us][KING]), from_square) & to);
 }
 
 void print_move(const move_t *m) {

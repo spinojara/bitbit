@@ -25,6 +25,201 @@ int move_count(const move_t *m) {
 	return n - m;
 }
 
+static inline move_t *pawn_moves(const struct position *pos, const struct pstate *pstate, move_t *move, uint64_t targets, unsigned type) {
+	const int us = pos->turn;
+	const int them = other_color(us);
+	const unsigned down = us ? S : N;
+	const int pawn_sign = us ? 8 : -8;
+
+	int square;
+	uint64_t pawns = pos->piece[us][PAWN] & ~(us ? RANK_7 : RANK_2);
+	uint64_t pawns7 = pos->piece[us][PAWN] ^ pawns;
+	uint64_t enemies = pos->piece[them][ALL];
+	uint64_t all = all_pieces(pos);
+
+	/* Add en passant square and promotions to
+	 * targets.
+	 */
+	if (type & MOVETYPE_NONQUIET) {
+		if (!(type & MOVETYPE_ESCAPE))
+			targets |= RANK_1 | RANK_8;
+
+		/* It is okay to add this square to targets already. This square
+		 * can only be reached by our pawns by capturing, not pushing.
+		 */
+		if (pos->en_passant && (!pstate->checkers || shift(bitboard(pos->en_passant), down) == pstate->checkers))
+			targets |= bitboard(pos->en_passant);
+	}
+
+	if (pawns && type & MOVETYPE_QUIET) {
+		uint64_t push_targets = targets & ~all;
+		uint64_t push = pawns & shift(push_targets, down);
+		uint64_t push_twice = pawns & shift_twice(push_targets, down) & (us ? RANK_2 : RANK_7) & ~shift(all, down);
+
+		while (push) {
+			square = ctz(push);
+			*move++ = new_move(square, square + pawn_sign, 0, 0);
+			push = clear_ls1b(push);
+		}
+
+		while (push_twice) {
+			square = ctz(push_twice);
+			*move++ = new_move(square, square + 2 * pawn_sign, 0, 0);
+			push_twice = clear_ls1b(push_twice);
+		}
+	}
+
+	if (pawns7 && type & MOVETYPE_NONQUIET) {
+		uint64_t push = pawns7 & shift(targets & ~all, down);
+		uint64_t capture_e = pawns7 & shift(targets & enemies, down | W);
+		uint64_t capture_w = pawns7 & shift(targets & enemies, down | E);
+
+		while (push) {
+			square = ctz(push);
+			for (int i = 3; i >= 0; i--)
+				*move++ = new_move(square, square + pawn_sign, MOVE_PROMOTION, i);
+			push = clear_ls1b(push);
+		}
+
+		while (capture_e) {
+			square = ctz(capture_e);
+			for (int i = 3; i >= 0; i--)
+				*move++ = new_move(square, square + 1 + pawn_sign, MOVE_PROMOTION, i);
+			capture_e = clear_ls1b(capture_e);
+		}
+
+		while (capture_w) {
+			square = ctz(capture_w);
+			for (int i = 3; i >= 0; i--)
+				*move++ = new_move(square, square - 1 + pawn_sign, MOVE_PROMOTION, i);
+			capture_w = clear_ls1b(capture_w);
+		}
+	}
+
+	if (pawns && type & MOVETYPE_NONQUIET) {
+		uint64_t capture_e = pawns & shift(targets & enemies, down | W);
+		uint64_t capture_w = pawns & shift(targets & enemies, down | E);
+
+		while (capture_e) {
+			square = ctz(capture_e);
+			*move++ = new_move(square, square + 1 + pawn_sign, 0, 0);
+			capture_e = clear_ls1b(capture_e);
+		}
+
+		while (capture_w) {
+			square = ctz(capture_w);
+			*move++ = new_move(square, square - 1 + pawn_sign, 0, 0);
+			capture_w = clear_ls1b(capture_w);
+		}
+
+		if (pos->en_passant) {
+			uint64_t en_passant = bitboard(pos->en_passant) & targets;
+			uint64_t en_passant_e = pawns & shift(en_passant, down | W);
+			uint64_t en_passant_w = pawns & shift(en_passant, down | E);
+			if (en_passant_e) {
+				square = ctz(en_passant_e);
+				*move++ = new_move(square, square + 1 + pawn_sign, MOVE_EN_PASSANT, 0);
+			}
+			if (en_passant_w) {
+				square = ctz(en_passant_w);
+				*move++ = new_move(square, square - 1 + pawn_sign, MOVE_EN_PASSANT, 0);
+			}
+		}
+	}
+
+	return move;
+}
+
+static inline move_t *piece_moves(const struct position *pos, move_t *move, uint64_t targets, int piece) {
+	const int us = pos->turn;
+	uint64_t own = pos->piece[us][ALL];
+	uint64_t all = all_pieces(pos);
+	uint64_t attackers = pos->piece[us][piece], attack;
+
+	int source, target;
+
+	while (attackers) {
+		source = ctz(attackers);
+		attack = attacks(piece, source, own, all) & targets;
+		while (attack) {
+			target = ctz(attack);
+			*move++ = new_move(source, target, 0, 0);
+			attack = clear_ls1b(attack);
+		}
+		attackers = clear_ls1b(attackers);
+	}
+
+	return move;
+}
+
+static inline move_t *king_moves(const struct position *pos, const struct pstate *pstate, move_t *move, unsigned type) {
+	const int us = pos->turn;
+	const int them = other_color(us);
+	uint64_t own = pos->piece[us][ALL];
+	uint64_t all = all_pieces(pos);
+
+	uint64_t targets = 0;
+	if (type & MOVETYPE_NONQUIET)
+		targets |= pos->piece[them][ALL];
+	if (type & MOVETYPE_QUIET)
+		targets |= ~pos->piece[them][ALL];
+
+	int source = ctz(pos->piece[us][KING]), target;
+
+	uint64_t attack = attacks(KING, source, own, all) & targets & ~pstate->attacked;
+	while (attack) {
+		target = ctz(attack);
+		*move++ = new_move(source, target, 0, 0);
+		attack = clear_ls1b(attack);
+	}
+
+	if (type & MOVETYPE_QUIET && !pstate->checkers) {
+		if (us) {
+			if (pos->castle & 0x1 && !(all & 0x60) &&
+					!(pstate->attacked & 0x60))
+				*move++ = new_move(e1, g1, MOVE_CASTLE, 0);
+			if (pos->castle & 0x2 && !(all & 0xE) &&
+					!(pstate->attacked & 0xC))
+				*move++ = new_move(e1, c1, MOVE_CASTLE, 0);
+		}
+		else {
+			if (pos->castle & 0x4 && !(all & 0x6000000000000000) &&
+					!(pstate->attacked & 0x6000000000000000))
+				*move++ = new_move(e8, g8, MOVE_CASTLE, 0);
+			if (pos->castle & 0x8 && !(all & 0xE00000000000000) &&
+					!(pstate->attacked & 0xC00000000000000))
+				*move++ = new_move(e8, c8, MOVE_CASTLE, 0);
+		}
+	}
+
+	return move;
+}
+
+move_t *moves(const struct position *pos, const struct pstate *pstate, move_t *move, unsigned type) {
+	assert(type & MOVETYPE_NONQUIET || type & MOVETYPE_QUIET);
+	const int us = pos->turn;
+	const int them = other_color(us);
+	uint64_t targets = 0;
+	if (type & MOVETYPE_NONQUIET)
+		targets |= pos->piece[them][ALL];
+	if (type & MOVETYPE_QUIET)
+		targets |= ~pos->piece[them][ALL];
+	if (pstate->checkers) {
+		type |= MOVETYPE_ESCAPE;
+		targets &= pstate->checkray;
+	}
+
+	move = pawn_moves(pos, pstate, move, targets, type);
+	move = piece_moves(pos, move, targets, KNIGHT);
+	move = piece_moves(pos, move, targets, BISHOP);
+	move = piece_moves(pos, move, targets, ROOK);
+	move = piece_moves(pos, move, targets, QUEEN);
+	move = king_moves(pos, pstate, move, type);
+	
+	*move = 0;
+	return move;
+}
+
 move_t *generate_all(const struct position *pos, move_t *move_list) {
 	const int us = pos->turn;
 	const int them = other_color(us);

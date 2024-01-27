@@ -344,7 +344,7 @@ int32_t evaluate_KQKX(const struct position *pos, int strong_side) {
 	int weak_king = ctz(pos->piece[weak_side][KING]);
 	int strong_king = ctz(pos->piece[strong_side][KING]);
 	assert(verify_material(pos, strong_side, mv[QUEEN]));
-	assert(verify_material(pos, weak_side, mv[PIECE]));
+	assert(verify_material(pos, weak_side, mv[piece]));
 	return VALUE_WIN + material_value[QUEEN] - material_value[piece] + push_toward(strong_king, weak_king) + 0x8 * push_toward_edge(weak_king) - pos->halfmove;
 }
 

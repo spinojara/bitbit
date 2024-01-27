@@ -28,11 +28,15 @@
 uint64_t perft(struct position *pos, int depth, int verbose) {
 	if (depth <= 0 || interrupt)
 		return 0;
+	struct pstate pstate;
+	pstate_init(pos, &pstate);
 	move_t move_list[MOVES_MAX];
-	generate_all(pos, move_list);
+	moves(pos, &pstate, move_list, MOVETYPE_ALL);
 	uint64_t nodes = 0, count;
 
-	for (move_t *ptr = move_list; *ptr; ptr++){
+	for (move_t *ptr = move_list; *ptr; ptr++) {
+		if (!legal(pos, &pstate, ptr))
+			continue;
 		if (depth == 1) {
 			count = 1;
 			nodes++;

@@ -54,6 +54,15 @@ void print_position(const struct position *pos) {
 	printf("\n\n");
 }
 
+void pstate_init(const struct position *pos, struct pstate *pstate) {
+	const int us = pos->turn;
+	const int them = other_color(us);
+	pstate->checkers = generate_checkers(pos, us);
+	pstate->attacked = generate_attacked(pos, them);
+	pstate->checkray = single(pstate->checkers) ? between(ctz(pos->piece[us][KING]), ctz(pstate->checkers)) | pstate->checkers : 0;
+	pstate->pinned = generate_pinned(pos, us);
+}
+
 uint64_t generate_checkers(const struct position *pos, int color) {
 	return generate_attackers(pos, ctz(pos->piece[color][KING]), color);
 }

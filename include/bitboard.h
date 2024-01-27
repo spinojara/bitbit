@@ -19,6 +19,7 @@
 
 #include <stdint.h>
 #include <assert.h>
+#include <execinfo.h>
 
 #if defined(_MSC_VER)
 #include <intrin.h>
@@ -29,6 +30,19 @@
 void bitboard_init(void);
 
 static inline uint64_t ctz(uint64_t b) {
+	if (!b) {
+		void *arr[128];
+		size_t size, i;
+		char **strings;
+
+		size = backtrace(arr, 128);
+		strings = backtrace_symbols(arr, size);
+
+		fprintf(stderr, "Obtained %zu stack frame\n", size);
+
+		for (i = 0; i < size; i++)
+			fprintf(stderr, "%s\n", strings[i]);
+	}
 	assert(b);
 #if defined(__GNUC__)
 	return __builtin_ctzll(b);
@@ -94,7 +108,7 @@ static inline uint64_t rotate_bytes(uint64_t b) {
 void print_bitboard(uint64_t b);
 
 static inline uint64_t single(uint64_t b) {
-	return !(b & (b - 1));
+	return b && !clear_ls1b(b);
 }
 
 static inline uint64_t insert_zero(uint64_t b, int i) {
