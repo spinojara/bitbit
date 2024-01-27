@@ -130,6 +130,11 @@ static inline int32_t evaluate(const struct position *pos) {
 }
 
 int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, struct searchinfo *si, const struct pstate *pstateptr, struct searchstack *ss) {
+	if (interrupt || si->interrupt)
+		return 0;
+	if ((si->nodes & (0x1000 - 1)) == 0)
+		check_time(si);
+
 	const int pv_node = (beta != alpha + 1);
 
 	if (si->history)

@@ -203,9 +203,10 @@ void movepicker_init(struct movepicker *mp, int quiescence, struct position *pos
 	mp->pstate = pstate;
 	mp->si = si;
 
-	mp->ttmove = (!quiescence || mp->pstate->checkers || is_capture(mp->pos, &mp->ttmove) || move_flag(&mp->ttmove) == MOVE_PROMOTION)
-		&& pseudo_legal(mp->pos, mp->pstate, &ttmove) ?
+	mp->ttmove = (!quiescence || mp->pstate->checkers || is_capture(mp->pos, &ttmove) || move_flag(&ttmove) == MOVE_PROMOTION) &&
+		pseudo_legal(mp->pos, mp->pstate, &ttmove) ?
 		ttmove : 0;
+
 #if 0
 	if (mp->ttmove && legal(pos, pstate, &mp->ttmove)) {
 		move_t movelist[MOVES_MAX];
