@@ -398,17 +398,22 @@ int main(int argc, char **argv) {
 
 						if (buf[0] == LOG) {
 							int32_t patch_lines;
+							int32_t tests;
 							recvexact(ssl, (char *)&patch_lines, 4);
+							recvexact(ssl, (char *)&tests, 4);
 							/* Send logs. */
 							sqlite3_prepare_v2(db,
-									"SELECT "
-									"id, status, maintime, increment, alpha, beta, elo0, elo1, "
-									"queuetime, starttime, donetime, elo, pm, result, llh, "
-									"t0, t1, t2, p0, p1, p2, p3, p4 FROM tests "
-									"ORDER BY CASE WHEN status = ? THEN 1 ELSE 0 END ASC, "
+									"SELECT id, status, maintime, increment, alpha, beta, "
+									"elo0, elo1, queuetime, starttime, donetime, elo, pm, "
+									"result, llh, t0, t1, t2, p0, p1, p2, p3, p4 FROM ("
+									"SELECT * FROM tests ORDER BY CASE WHEN status = ? "
+									"THEN 1 ELSE 0 END DESC, queuetime DESC LIMIT ?) ORDER "
+									"BY CASE WHEN status = ? THEN 1 ELSE 0 END ASC, "
 									"queuetime ASC;",
 									-1, &stmt, NULL);
 							sqlite3_bind_int(stmt, 1, TESTRUNNING);
+							sqlite3_bind_int(stmt, 2, tests);
+							sqlite3_bind_int(stmt, 3, TESTRUNNING);
 
 							int first = 1;
 							while (sqlite3_step(stmt) == SQLITE_ROW) {
