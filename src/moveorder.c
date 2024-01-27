@@ -55,23 +55,10 @@ int see_geq(struct position *pos, const move_t *m, int32_t value) {
 	if (swap <= 0)
 		return 1;
 
-	assert(pos->piece[WHITE][KING]);
-	assert(pos->piece[BLACK][KING]);
 	pos->piece[them][victim] ^= tob;
 	pos->piece[them][ALL] ^= tob;
 	pos->piece[us][attacker] ^= tob | fromb;
 	pos->piece[us][ALL] ^= tob | fromb;
-	if (!pos->piece[WHITE][KING] || !pos->piece[BLACK][KING]) {
-		char fen[128];
-		fprintf(stderr, "%s\n", pos_to_fen(fen, pos));
-		char move_from_str[3];
-		char move_to_str[3];
-		algebraic(move_from_str, move_from(m));
-		algebraic(move_to_str, move_to(m));
-		fprintf(stderr, "%s%s", move_from_str, move_to_str);
-	}
-	assert(pos->piece[WHITE][KING]);
-	assert(pos->piece[BLACK][KING]);
 
 	int turn = us;
 

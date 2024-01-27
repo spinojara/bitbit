@@ -113,20 +113,6 @@ void do_move(struct position *pos, move_t *m) {
 	if (!pos->turn)
 		pos->fullmove++;
 	pos->turn = other_color(pos->turn);
-
-#if 0
-	if (generate_attacked(pos, pos->turn) & pos->piece[other_color(pos->turn)][KING]) {
-		char fen[128];
-		fprintf(stderr, "%s\n", pos_to_fen(fen, pos));
-		char move_from_str[3];
-		char move_to_str[3];
-		algebraic(move_from_str, move_from(m));
-		algebraic(move_to_str, move_to(m));
-		fprintf(stderr, "%s%s\n", move_from_str, move_to_str);
-		fprintf(stderr, "%zu\n", *m);
-		exit(1);
-	}
-#endif
 }
 
 void undo_move(struct position *pos, const move_t *m) {
@@ -306,7 +292,7 @@ int legal(const struct position *pos, const struct pstate *pstate, const move_t 
 	const int us = pos->turn;
 	const int them = other_color(us);
 	const unsigned down = us ? S : N;
-	
+
 	int from_square = move_from(move);
 	int to_square = move_to(move);
 	uint64_t from = bitboard(from_square);

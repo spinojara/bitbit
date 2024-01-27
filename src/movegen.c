@@ -215,7 +215,7 @@ move_t *moves(const struct position *pos, const struct pstate *pstate, move_t *m
 	move = piece_moves(pos, move, targets, ROOK);
 	move = piece_moves(pos, move, targets, QUEEN);
 	move = king_moves(pos, pstate, move, type);
-	
+
 	*move = 0;
 	return move;
 }

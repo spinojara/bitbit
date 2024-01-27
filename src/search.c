@@ -141,6 +141,9 @@ int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, s
 		si->history->zobrist_key[si->history->ply + ply] = pos->zobrist_key;
 
 	struct pstate pstate;
+	/* Skip generation of pstate if it was already generated during
+	 * the previous negamax.
+	 */
 	if (pstateptr)
 		pstate = *pstateptr;
 	else

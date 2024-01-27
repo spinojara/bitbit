@@ -23,18 +23,13 @@
 #include "movegen.h"
 #include "util.h"
 
-int good_capture(struct position *pos, move_t *m, int threshold) {
+static inline int good_capture(struct position *pos, move_t *m, int threshold) {
 	return (is_capture(pos, m) && see_geq(pos, m, threshold)) || (move_flag(m) == MOVE_EN_PASSANT && 0 >= threshold);
 }
 
-int promotion(struct position *pos, move_t *m, int threshold) {
+static inline int promotion(struct position *pos, move_t *m, int threshold) {
 	UNUSED(pos);
 	return move_flag(m) == MOVE_PROMOTION && move_promote(m) + 2 >= threshold;
-}
-
-int is_quiet(struct position *pos, move_t *m, int threshold) {
-	UNUSED(threshold);
-	return !pos->mailbox[move_to(m)] && move_flag(m) != MOVE_PROMOTION && move_flag(m) != MOVE_EN_PASSANT;
 }
 
 int find_next(struct movepicker *mp, int (*filter)(struct position *, move_t *, int), int threshold) {
@@ -207,29 +202,6 @@ void movepicker_init(struct movepicker *mp, int quiescence, struct position *pos
 		pseudo_legal(mp->pos, mp->pstate, &ttmove) ?
 		ttmove : 0;
 
-#if 0
-	if (mp->ttmove && legal(pos, pstate, &mp->ttmove)) {
-		move_t movelist[MOVES_MAX];
-		generate_all(pos, movelist);
-
-		int found = 0;
-		for (int i = 0; movelist[i] && !found; i++)
-			if (movelist[i] == mp->ttmove)
-				found = 1;
-
-		if (!found) {
-			char fen[128];
-			fprintf(stderr, "%s\n", pos_to_fen(fen, pos));
-			char move_from_str[3];
-			char move_to_str[3];
-			algebraic(move_from_str, move_from(&mp->ttmove));
-			algebraic(move_to_str, move_to(&mp->ttmove));
-			fprintf(stderr, "%s%s\n", move_from_str, move_to_str);
-			fprintf(stderr, "%zu\n", mp->ttmove);
-			exit(1);
-		}
-	}
-#endif
 	mp->killer1 = pseudo_legal(mp->pos, mp->pstate, &killer1) ? killer1 : 0;
 	mp->killer2 = pseudo_legal(mp->pos, mp->pstate, &killer2) ? killer2 : 0;
 
