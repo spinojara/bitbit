@@ -135,7 +135,7 @@ move_t next_move(struct movepicker *mp) {
 		mp->stage++;
 		/* fallthrough */
 	case STAGE_GENQUIET:
-		if (mp->quiescence && !mp->pstate->checkers)
+		if (mp->quiescence)
 			return 0;
 		/* First put all the bad leftovers at the end. */
 		for (i = 0; mp->move[i]; i++)
@@ -152,11 +152,15 @@ move_t next_move(struct movepicker *mp) {
 		mp->stage++;
 		/* fallthrough */
 	case STAGE_QUIET:
+		if (mp->quiescence)
+			return 0;
 		if (*mp->move)
 			return *mp->move++;
 		mp->stage++;
 		/* fallthrough */
 	case STAGE_BAD:
+		if (mp->quiescence)
+			return 0;
 		if (*mp->bad)
 			return *mp->bad--;
 		mp->stage++;
@@ -170,7 +174,7 @@ move_t next_move(struct movepicker *mp) {
 }
 
 void movepicker_init(struct movepicker *mp, int quiescence, struct position *pos, const struct pstate *pstate, move_t ttmove, move_t killer1, move_t killer2, const struct searchinfo *si) {
-	mp->quiescence = quiescence;
+	mp->quiescence = quiescence && !pstate->checkers;
 
 	mp->move = mp->moves;
 	mp->move[0] = 0;
@@ -181,8 +185,19 @@ void movepicker_init(struct movepicker *mp, int quiescence, struct position *pos
 	mp->pos = pos;
 	mp->pstate = pstate;
 	mp->si = si;
+	/* Set quiescence flag based on checkers so that
+	 * we don't have to keep checking the checkers flag.
+	 */
 
-	mp->ttmove = (!quiescence || mp->pstate->checkers || is_capture(mp->pos, &ttmove) || move_flag(&ttmove) == MOVE_PROMOTION) &&
+	/* Now we keep checking for mp->quiescence on the
+	 * different stages because it might get changed
+	 * from negamax.
+	 */
+
+	/* Maybe check pseudo_legal outside movepicker.
+	 * The variable ttcapture would be affected.
+	 */
+	mp->ttmove = (!mp->quiescence || is_capture(mp->pos, &ttmove) || move_flag(&ttmove) == MOVE_PROMOTION) &&
 		pseudo_legal(mp->pos, mp->pstate, &ttmove) ?
 		ttmove : 0;
 

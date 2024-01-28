@@ -274,10 +274,14 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 #endif
 #if 0
 	/* Razoring. */
-	if (!pv_node && depth <= 8 && static_eval + 300 + 250 * depth * depth < alpha) {
-		eval = quiescence(pos, ply + 1, alpha - 1, alpha, si, ss + 1);
+	if (!pv_node && depth <= 8 && static_eval + 100 + 150 * depth * depth < alpha) {
+		char fen[128];
+		printf("Trying to razor in interval %d, %d\n", alpha, beta);
+		printf("%s\n", pos_to_fen(fen, pos));
+		eval = quiescence(pos, ply, alpha - 1, alpha, si, &pstate, ss);
 		if (eval < alpha)
 			return eval;
+		printf("Didn't razor\n");
 	}
 #endif
 #if 0
@@ -287,7 +291,7 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 #endif
 #if 0
 	/* Null move pruning. */
-	if (!pv_node && (ss - 1)->move && static_eval >= beta && depth >= 3 && has_sliding_piece(pos)) {
+	if (!pv_node && (ss - 1)->move && depth >= 3 && has_sliding_piece(pos)) {
 		int reduction = 3;
 		int new_depth = clamp(depth - reduction, 1, depth);
 		int ep = pos->en_passant;
@@ -303,7 +307,7 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 			return beta;
 	}
 #endif
-#if 1
+#if 0
 	/* Internal iterative deepening. */
 	if ((pv_node || cut_node) && !excluded_move && depth >= 4 && !ttmove) {
 		int reduction = 3;
@@ -319,7 +323,7 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 		}
 	}
 #endif
-#if 1
+#if 0
 	if (pv_node && depth >= 3 && !ttmove)
         	depth -= 2;
 
@@ -338,16 +342,15 @@ skip_pruning:;
 	move_t move;
 	int move_index = -1;
 	while ((move = next_move(&mp))) {
-#if 0
-		if (root_node) {
-			print_move(&m);
-			printf(" from stage %d\n", mp.stage);
-		}
-#endif
 		if (!legal(pos, &pstate, &move) || move == excluded_move)
 			continue;
 
 		move_index++;
+
+#if 0
+		if (!root_node && !pstate.checkers && move_index > depth * depth / 2)
+			mp.quiescence = 1;
+#endif
 
 		/* Extensions. */
 		int extensions = 0;
@@ -355,7 +358,7 @@ skip_pruning:;
 			if (pstate.checkers) {
 				extensions = 1;
 			}
-#if 1
+#if 0
 			else if (!root_node && depth >= 5 && ttmove == move && !excluded_move && e->bound & BOUND_LOWER && e->depth >= depth - 3) {
 				int reduction = 3;
 				int new_depth = depth - reduction;
