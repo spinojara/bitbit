@@ -34,8 +34,8 @@ int main(int argc, char **argv) {
 	char type = CLIENT;
 	char *hostname = NULL;
 	char *port = "2718";
-	char *path = NULL;
-	char *status = NULL;
+	char *path_or_id = NULL;
+	char *branch_or_status = NULL;
 
 	int32_t patch_lines = 24;
 	int32_t tests = 4;
@@ -65,19 +65,20 @@ int main(int argc, char **argv) {
 				break;
 			tests = atoi(argv[i]);
 		}
-		else if (path) {
-			status = argv[i];
+		else if (path_or_id) {
+			branch_or_status = argv[i];
 		}
 		else if (hostname) {
-			path = argv[i];
+			path_or_id = argv[i];
 		}
 		else {
 			hostname = argv[i];
 		}
 	}
 
-	if (!hostname || (type == CLIENT && !path) || (type == UPDATE &&
-				(!path || !status || !strint(path) || (strcmp(status, "cancel") && strcmp(status, "requeue"))))) {
+	if (!hostname || (type == CLIENT && !path_or_id) || (type == UPDATE &&
+				(!path_or_id || !branch_or_status || !strint(path_or_id) ||
+				 (strcmp(branch_or_status, "cancel") && strcmp(branch_or_status, "requeue"))))) {
 		fprintf(stderr, "usage: testbit hostname [filename | --log | --update id status]\n");
 		return 1;
 	}
@@ -171,18 +172,23 @@ int main(int argc, char **argv) {
 	/* Send information and verify password. */
 	sendall(ssl, &type, 1);
 
+	char buf[BUFSIZ];
 	if (type == CLIENT || type == UPDATE) {
 		char password[128] = { 0 };
 		getpassword(password);
 		sendall(ssl, password, 128);
 
 		if (type == CLIENT) {
-			int filefd = open(path, O_RDONLY, 0);
+			int filefd = open(path_or_id, O_RDONLY, 0);
 			if (filefd == -1) {
-				fprintf(stderr, "error: failed to open file \"%s\"\n", path);
+				fprintf(stderr, "error: failed to open file \"%s\"\n", path_or_id);
 				SSL_close(ssl);
 				return 1;
 			}
+
+			char branch[128] = "master";
+			if (branch_or_status)
+				memcpy(branch, branch_or_status, 128);
 	
 			/* Architecture dependent. */
 			double timecontrol[2] = { 10.0, 0.1 };
@@ -191,14 +197,17 @@ int main(int argc, char **argv) {
 			sendall(ssl, (char *)timecontrol, 16);
 			sendall(ssl, (char *)alphabeta, 16);
 			sendall(ssl, (char *)elo, 16);
+			sendall(ssl, branch, 128);
+
+			recvexact(ssl, buf, 1);
 
 			sendfile(ssl, filefd);
 
 			close(filefd);
 		}
 		else if (type == UPDATE) {
-			uint64_t id = strint(path);
-			char newstatus = status[0] == 'c' ? TESTCANCEL : TESTQUEUE;
+			uint64_t id = strint(path_or_id);
+			char newstatus = branch_or_status[0] == 'c' ? TESTCANCEL : TESTQUEUE;
 			sendall(ssl, (char *)&id, sizeof(id));
 			sendall(ssl, &newstatus, 1);
 		}
@@ -208,7 +217,6 @@ int main(int argc, char **argv) {
 		sendall(ssl, (char *)&tests, 4);
 	}
 
-	char buf[BUFSIZ];
 	size_t n;
 	while (SSL_read_ex(ssl, buf, sizeof(buf) - 1, &n)) {
 		buf[n] = '\0';

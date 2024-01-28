@@ -204,6 +204,13 @@ int main(int argc, char **argv) {
 		elo0 = ((double *)buf)[4];
 		elo1 = ((double *)buf)[5];
 
+		char branch[128];
+		if (recvexact(ssl, branch, 128)) {
+			fprintf(stderr, "error: branch\n");
+			return 1;
+		}
+		printf("branch: %s\n", branch);
+
 		if (!mkdtemp(dtemp)) {
 			fprintf(stderr, "error: failed to create temporary directory\n");
 			return 1;
@@ -217,7 +224,7 @@ int main(int argc, char **argv) {
 		if (pid == 0) {
 			execlp("git", "git", "clone",
 				"https://github.com/Spinojara/bitbit.git",
-				"--branch", "master",
+				"--branch", branch,
 				"--single-branch",
 				"--depth", "1",
 				dtemp,

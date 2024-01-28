@@ -31,7 +31,7 @@ void *get_in_addr(struct sockaddr *sa) {
 	return &(((struct sockaddr_in6 *)sa)->sin6_addr);
 }
 
-int sendall(SSL *ssl, char *buf, size_t len) {
+int sendall(SSL *ssl, const char *buf, size_t len) {
 	size_t sent = 0;
 	size_t s = 0;
 

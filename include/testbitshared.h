@@ -50,7 +50,7 @@ enum {
 
 void *get_in_addr(struct sockaddr *sa);
 
-int sendall(SSL *ssl, char *buf, size_t len);
+int sendall(SSL *ssl, const char *buf, size_t len);
 
 int recvexact(SSL *ssl, char *buf, size_t len);
 

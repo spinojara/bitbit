@@ -49,7 +49,6 @@
 #define CYN "\x1B[36m"
 
 struct connection {
-	char buf[128];
 	int status;
 	int id;
 	double maintime;
@@ -61,6 +60,7 @@ struct connection {
 
 	size_t len;
 	char *patch;
+	char branch[128];
 
 	SSL *ssl;
 };
@@ -269,7 +269,8 @@ int main(int argc, char **argv) {
 			"p2        INTEGER, "
 			"p3        INTEGER, "
 			"p4        INTEGER, "
-			"patch     BLOB"
+			"patch     BLOB, "
+			"branch    TEXT"
 			");",
 			NULL, NULL, NULL);
 	if (r) {
@@ -289,7 +290,7 @@ int main(int argc, char **argv) {
 	while (1) {
 		/* Loop through queue and start available tests. */
 		r = sqlite3_prepare_v2(db,
-				"SELECT id, maintime, increment, alpha, beta, elo0, elo1 "
+				"SELECT id, maintime, increment, alpha, beta, elo0, elo1, branch "
 				"FROM tests WHERE status = ? ORDER BY queuetime ASC;",
 				-1, &stmt, NULL);
 		sqlite3_bind_int(stmt, 1, TESTQUEUE);
@@ -307,6 +308,9 @@ int main(int argc, char **argv) {
 					connection->beta = sqlite3_column_double(stmt, 4);
 					connection->elo0 = sqlite3_column_double(stmt, 5);
 					connection->elo1 = sqlite3_column_double(stmt, 6);
+					const char *branch = (const char *)sqlite3_column_text(stmt, 7);
+					snprintf(connection->branch, 128, branch);
+					connection->branch[127] = '\0';
 					sqlite3_prepare_v2(db,
 							"UPDATE tests SET starttime = unixepoch(), status = ? "
 							"WHERE id = ?;",
@@ -328,6 +332,7 @@ int main(int argc, char **argv) {
 					sendall(ssl, (char *)timecontrol, 16);
 					sendall(ssl, (char *)alphabeta, 16);
 					sendall(ssl, (char *)elo, 16);
+					sendall(ssl, connection->branch, 128);
 					sendall(ssl, connection->patch, connection->len);
 					sendall(ssl, "\0", 1);
 
@@ -405,7 +410,7 @@ int main(int argc, char **argv) {
 							sqlite3_prepare_v2(db,
 									"SELECT id, status, maintime, increment, alpha, beta, "
 									"elo0, elo1, queuetime, starttime, donetime, elo, pm, "
-									"result, llh, t0, t1, t2, p0, p1, p2, p3, p4 FROM ("
+									"result, llh, t0, t1, t2, p0, p1, p2, p3, p4, branch FROM ("
 									"SELECT * FROM tests ORDER BY CASE WHEN status = ? "
 									"THEN 1 ELSE 0 END DESC, queuetime DESC LIMIT ?) ORDER "
 									"BY CASE WHEN status = ? THEN 1 ELSE 0 END ASC, "
@@ -441,6 +446,7 @@ int main(int argc, char **argv) {
 								int p2 = sqlite3_column_int(stmt, 20);
 								int p3 = sqlite3_column_int(stmt, 21);
 								int p4 = sqlite3_column_int(stmt, 22);
+								const char *branch = (const char *)sqlite3_column_text(stmt, 23);
 								long expectedgames = 0;
 
 								double A = log(beta / (1 - alpha));
@@ -478,6 +484,7 @@ int main(int argc, char **argv) {
 								case TESTQUEUE:
 									sprintf(buf, YLW "Id             %d\n"
 											 "Status         Queue\n"
+											 "Branch         %s\n"
 											 "Timecontrol    %lg+%lg\n"
 											 "H0             Elo < %lg\n"
 											 "H1             Elo > %lg\n"
@@ -485,6 +492,7 @@ int main(int argc, char **argv) {
 											 "Beta           %lg\n"
 											 "Queue          %s\n",
 											 id,
+											 branch,
 											 maintime, increment,
 											 elo0, elo1,
 											 alpha, beta,
@@ -493,6 +501,7 @@ int main(int argc, char **argv) {
 								case TESTRUNNING:
 									sprintf(buf, MGT "Id             %d\n"
 											 "Status         Running\n"
+											 "Branch         %s\n"
 											 "Timecontrol    %lg+%lg\n"
 											 "H0             Elo < %lg\n"
 											 "H1             Elo > %lg\n"
@@ -508,6 +517,7 @@ int main(int argc, char **argv) {
 											 "Games (Approx) %ld\n"
 											 "ETA            %s\n",
 											 id,
+											 branch,
 											 maintime, increment,
 											 elo0, elo1,
 											 alpha, beta,
@@ -522,6 +532,7 @@ int main(int argc, char **argv) {
 								case TESTDONE:
 									sprintf(buf, GRN "Id             %d\n"
 											 "Status         Done\n"
+											 "Branch         %s\n"
 											 "Timecontrol    %lg+%lg\n"
 											 "H0             Elo < %lg\n"
 											 "H1             Elo > %lg\n"
@@ -537,6 +548,7 @@ int main(int argc, char **argv) {
 											 "LLH            %lg (%lg, %lg)\n"
 											 "Result         %s\n",
 											 id,
+											 branch,
 											 maintime, increment,
 											 elo0, elo1,
 											 alpha, beta,
@@ -553,6 +565,7 @@ int main(int argc, char **argv) {
 								case RUNERROR:
 									sprintf(buf, RED "Id             %d\n"
 											 "Status         %s\n"
+											 "Branch         %s\n"
 											 "Timecontrol    %lg+%lg\n"
 											 "H0             Elo < %lg\n"
 											 "H1             Elo > %lg\n"
@@ -568,6 +581,7 @@ int main(int argc, char **argv) {
 											 "LLH            %lg (%lg, %lg)\n",
 											 id,
 											 status == TESTCANCEL ? "Cancelled" : "Runtime Error",
+											 branch,
 											 maintime, increment,
 											 elo0, elo1,
 											 alpha, beta,
@@ -583,6 +597,7 @@ int main(int argc, char **argv) {
 								case MAKEERROR:
 									sprintf(buf, RED "Id             %d\n"
 											 "Status         %s\n"
+											 "Branch         %s\n"
 											 "Timecontrol    %lg+%lg\n"
 											 "H0             Elo < %lg\n"
 											 "H1             Elo > %lg\n"
@@ -592,6 +607,7 @@ int main(int argc, char **argv) {
 											 "Start          %s\n",
 											 id,
 											 status == PATCHERROR ? "Patch Error" : "Make Error",
+											 branch,
 											 maintime, increment,
 											 elo0, elo1,
 											 alpha, beta,
@@ -721,6 +737,13 @@ int main(int argc, char **argv) {
 						connection->elo1 = ((double *)buf)[5];
 						connection->len = 0;
 						connection->patch = NULL;
+						if (recvexact(ssl, connection->branch, 128)) {
+							str = "error: bad branch\n";
+							sendall(ssl, str, strlen(str));
+							del_from_pdfs(pdfs, connections, i, &fd_count);
+							break;
+						}
+						connection->branch[127] = '\0';
 
 						size_t n;
 						while (SSL_read_ex(ssl, buf, sizeof(buf) - 1, &n)) {
@@ -742,8 +765,8 @@ int main(int argc, char **argv) {
 						/* Queue this test. */
 						sqlite3_prepare_v2(db,
 								"INSERT INTO tests (status, maintime, increment, alpha, beta, "
-								"elo0, elo1, queuetime, elo, pm, patch) VALUES "
-								"(?, ?, ?, ?, ?, ?, ?, unixepoch(), ?, ?, ?) RETURNING id;",
+								"elo0, elo1, queuetime, elo, pm, patch, branch) VALUES "
+								"(?, ?, ?, ?, ?, ?, ?, unixepoch(), ?, ?, ?, ?) RETURNING id;",
 								-1, &stmt, NULL);
 						sqlite3_bind_int(stmt, 1, TESTQUEUE);
 						sqlite3_bind_double(stmt, 2, connection->maintime);
@@ -755,6 +778,7 @@ int main(int argc, char **argv) {
 						sqlite3_bind_double(stmt, 8, nan(""));
 						sqlite3_bind_double(stmt, 9, nan(""));
 						sqlite3_bind_zeroblob(stmt, 10, connection->len);
+						sqlite3_bind_text(stmt, 10, connection->branch, 128, NULL);
 						sqlite3_step(stmt);
 						connection->id = sqlite3_column_int(stmt, 0);
 						sqlite3_step(stmt);
