@@ -134,6 +134,8 @@ static inline int32_t evaluate(const struct position *pos) {
 int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, struct searchinfo *si, const struct pstate *pstateptr, struct searchstack *ss) {
 	if (interrupt || si->interrupt)
 		return 0;
+	if (ply >= DEPTH_MAX)
+		return evaluate(pos);
 	if ((si->nodes & (0x1000 - 1)) == 0)
 		check_time(si);
 
@@ -220,6 +222,8 @@ int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, s
 int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t beta, int cut_node, struct searchinfo *si, struct searchstack *ss) {
 	if (interrupt || si->interrupt)
 		return 0;
+	if (ply >= DEPTH_MAX)
+		return evaluate(pos);
 	if ((si->nodes & (0x1000 - 1)) == 0)
 		check_time(si);
 
