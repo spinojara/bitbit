@@ -64,10 +64,10 @@ struct batch *next_batch(void *ptr) {
 	size_t counter1 = 0, counter2 = 0;
 
 	while (batch->actual_size < data->requested_size) {
-		move_t m = 0;
-		fread(&m, 2, 1, data->f);
-		if (m)
-			do_move(data->pos, &m);
+		move_t move = 0;
+		fread(&move, 2, 1, data->f);
+		if (move)
+			do_move(data->pos, &move);
 		else
 			fread(data->pos, sizeof(struct partialposition), 1, data->f);
 

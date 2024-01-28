@@ -311,9 +311,9 @@ void refresh_accumulator(struct position *pos, int turn) {
 }
 
 /* m cannot be a king move. */
-void do_update_accumulator(struct position *pos, move_t *m, int turn) {
-	int source_square = move_from(m);
-	int target_square = move_to(m);
+void do_update_accumulator(struct position *pos, move_t *move, int turn) {
+	int source_square = move_from(move);
+	int target_square = move_to(move);
 	int king_square = orient_horizontal(turn, ctz(pos->piece[turn][KING]));
 	unsigned index;
 	unsigned indext;
@@ -324,19 +324,19 @@ void do_update_accumulator(struct position *pos, move_t *m, int turn) {
 	index = make_index(turn, target_square, pos->mailbox[target_square], king_square);
 	add_index(index, pos->accumulation, pos->psqtaccumulation, turn);
 
-	if (move_capture(m)) {
-		index = make_index(turn, target_square, colored_piece(move_capture(m), pos->turn), king_square);
+	if (move_capture(move)) {
+		index = make_index(turn, target_square, colored_piece(move_capture(move), pos->turn), king_square);
 		remove_index(index, pos->accumulation, pos->psqtaccumulation, turn);
 	}
 
-	if (move_flag(m) == 1) {
+	if (move_flag(move) == MOVE_EN_PASSANT) {
 		if (pos->turn)
 			index = make_index(turn, target_square + 8, WHITE_PAWN, king_square);
 		else
 			index = make_index(turn, target_square - 8, BLACK_PAWN, king_square);
 		remove_index(index, pos->accumulation, pos->psqtaccumulation, turn);
 	}
-	else if (move_flag(m) == 2) {
+	else if (move_flag(move) == MOVE_PROMOTION) {
 		if (pos->turn) {
 			index = make_index(turn, source_square, pos->mailbox[target_square], king_square);
 			indext = make_index(turn, source_square, BLACK_PAWN, king_square);
@@ -350,9 +350,9 @@ void do_update_accumulator(struct position *pos, move_t *m, int turn) {
 	}
 }
 
-void undo_update_accumulator(struct position *pos, move_t *m, int turn) {
-	int source_square = move_from(m);
-	int target_square = move_to(m);
+void undo_update_accumulator(struct position *pos, move_t *move, int turn) {
+	int source_square = move_from(move);
+	int target_square = move_to(move);
 	int king_square = orient_horizontal(turn, ctz(pos->piece[turn][KING]));
 	unsigned index;
 	unsigned indext;
@@ -363,25 +363,25 @@ void undo_update_accumulator(struct position *pos, move_t *m, int turn) {
 	index = make_index(turn, source_square, pos->mailbox[source_square], king_square);
 	add_index(index, pos->accumulation, pos->psqtaccumulation, turn);
 
-	if (move_capture(m)) {
-		index = make_index(turn, target_square, colored_piece(move_capture(m), other_color(pos->turn)), king_square);
+	if (move_capture(move)) {
+		index = make_index(turn, target_square, colored_piece(move_capture(move), other_color(pos->turn)), king_square);
 		add_index(index, pos->accumulation, pos->psqtaccumulation, turn);
 	}
 
-	if (move_flag(m) == 1) {
+	if (move_flag(move) == MOVE_EN_PASSANT) {
 		if (pos->turn)
 			index = make_index(turn, target_square - 8, BLACK_PAWN, king_square);
 		else
 			index = make_index(turn, target_square + 8, WHITE_PAWN, king_square);
 		add_index(index, pos->accumulation, pos->psqtaccumulation, turn);
 	}
-	else if (move_flag(m) == 2) {
+	else if (move_flag(move) == MOVE_PROMOTION) {
 		if (pos->turn) {
-			index = make_index(turn, target_square, move_promote(m) + 2, king_square);
+			index = make_index(turn, target_square, move_promote(move) + 2, king_square);
 			indext = make_index(turn, target_square, WHITE_PAWN, king_square);
 		}
 		else {
-			index = make_index(turn, target_square, move_promote(m) + 8, king_square);
+			index = make_index(turn, target_square, move_promote(move) + 8, king_square);
 			indext = make_index(turn, target_square, BLACK_PAWN, king_square);
 		}
 		remove_index(index, pos->accumulation, pos->psqtaccumulation, turn);
@@ -390,23 +390,23 @@ void undo_update_accumulator(struct position *pos, move_t *m, int turn) {
 }
 
 /* Should be called after do_move. */
-void do_accumulator(struct position *pos, move_t *m) {
-	assert(*m);
-	assert(!pos->mailbox[move_from(m)]);
-	assert(pos->mailbox[move_to(m)]);
+void do_accumulator(struct position *pos, move_t *move) {
+	assert(*move);
+	assert(!pos->mailbox[move_from(move)]);
+	assert(pos->mailbox[move_to(move)]);
 	if (!option_nnue)
 		return;
-	int target_square = move_to(m);
+	int target_square = move_to(move);
 	if (uncolored_piece(pos->mailbox[target_square]) == KING) {
 		refresh_accumulator(pos, other_color(pos->turn));
-		if (move_capture(m)) {
+		if (move_capture(move)) {
 			unsigned index;
 			int turn = pos->turn;
 			int king_square = orient_horizontal(turn, ctz(pos->piece[turn][KING]));
-			index = make_index(turn, target_square, colored_piece(move_capture(m), turn), king_square);
+			index = make_index(turn, target_square, colored_piece(move_capture(move), turn), king_square);
 			remove_index(index, pos->accumulation, pos->psqtaccumulation, turn);
 		}
-		else if (move_flag(m) == 3) {
+		else if (move_flag(move) == MOVE_CASTLE) {
 			unsigned index;
 			int turn = pos->turn;
 			int king_square = orient_horizontal(turn, ctz(pos->piece[turn][KING]));
@@ -439,29 +439,29 @@ void do_accumulator(struct position *pos, move_t *m) {
 		}
 	}
 	else {
-		do_update_accumulator(pos, m, BLACK);
-		do_update_accumulator(pos, m, WHITE);
+		do_update_accumulator(pos, move, BLACK);
+		do_update_accumulator(pos, move, WHITE);
 	}
 }
 
 /* Should be called after undo_move. */
-void undo_accumulator(struct position *pos, move_t *m) {
-	assert(*m);
-	assert(pos->mailbox[move_from(m)]);
+void undo_accumulator(struct position *pos, move_t *move) {
+	assert(*move);
+	assert(pos->mailbox[move_from(move)]);
 	if (!option_nnue)
 		return;
-	int source_square = move_from(m);
-	int target_square = move_to(m);
+	int source_square = move_from(move);
+	int target_square = move_to(move);
 	if (uncolored_piece(pos->mailbox[source_square]) == KING) {
 		refresh_accumulator(pos, pos->turn);
-		if (move_capture(m)) {
+		if (move_capture(move)) {
 			unsigned index;
 			int turn = other_color(pos->turn);
 			int king_square = orient_horizontal(turn, ctz(pos->piece[turn][KING]));
-			index = make_index(turn, target_square, colored_piece(move_capture(m), turn), king_square);
+			index = make_index(turn, target_square, colored_piece(move_capture(move), turn), king_square);
 			add_index(index, pos->accumulation, pos->psqtaccumulation, turn);
 		}
-		else if (move_flag(m) == 3) {
+		else if (move_flag(move) == MOVE_CASTLE) {
 			unsigned index;
 			int turn = other_color(pos->turn);
 			int king_square = orient_horizontal(turn, ctz(pos->piece[turn][KING]));
@@ -494,8 +494,8 @@ void undo_accumulator(struct position *pos, move_t *m) {
 		}
 	}
 	else {
-		undo_update_accumulator(pos, m, BLACK);
-		undo_update_accumulator(pos, m, WHITE);
+		undo_update_accumulator(pos, move, BLACK);
+		undo_update_accumulator(pos, move, WHITE);
 	}
 }
 

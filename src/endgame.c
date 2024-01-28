@@ -344,7 +344,7 @@ int32_t evaluate_KQKX(const struct position *pos, int strong_side) {
 	int weak_king = ctz(pos->piece[weak_side][KING]);
 	int strong_king = ctz(pos->piece[strong_side][KING]);
 	assert(verify_material(pos, strong_side, mv[QUEEN]));
-	assert(verify_material(pos, weak_side, mv[PIECE]));
+	assert(verify_material(pos, weak_side, mv[piece]));
 	return VALUE_WIN + material_value[QUEEN] - material_value[piece] + push_toward(strong_king, weak_king) + 0x8 * push_toward_edge(weak_king) - pos->halfmove;
 }
 
@@ -367,11 +367,11 @@ int is_KXK(const struct position *pos, int color) {
 }
 
 /* Should be called before do_move. */
-void do_endgame_key(struct position *pos, const move_t *m) {
-	assert(*m);
-	assert(pos->mailbox[move_from(m)]);
+void do_endgame_key(struct position *pos, const move_t *move) {
+	assert(*move);
+	assert(pos->mailbox[move_from(move)]);
 	int turn = pos->turn;
-	int victim = uncolored_piece(pos->mailbox[move_to(m)]);
+	int victim = uncolored_piece(pos->mailbox[move_to(move)]);
 	if (victim) {
 		int before = popcount(pos->piece[other_color(turn)][victim]);
 		int after = before - 1;
@@ -379,21 +379,21 @@ void do_endgame_key(struct position *pos, const move_t *m) {
 		pos->endgame_key ^= endgame_key(other_color(turn), victim, before);
 		pos->endgame_key ^= endgame_key(other_color(turn), victim, after);
 	}
-	if (move_flag(m) == MOVE_EN_PASSANT) {
+	if (move_flag(move) == MOVE_EN_PASSANT) {
 		int before = popcount(pos->piece[other_color(turn)][PAWN]);
 		int after = before - 1;
 		assert(before);
 		pos->endgame_key ^= endgame_key(other_color(turn), PAWN, before);
 		pos->endgame_key ^= endgame_key(other_color(turn), PAWN, after);
 	}
-	if (move_flag(m) == MOVE_PROMOTION) {
+	if (move_flag(move) == MOVE_PROMOTION) {
 		int before_pawn = popcount(pos->piece[turn][PAWN]);
 		int after_pawn = before_pawn - 1;
 		assert(before_pawn);
 		pos->endgame_key ^= endgame_key(turn, PAWN, before_pawn);
 		pos->endgame_key ^= endgame_key(turn, PAWN, after_pawn);
 
-		int piece = move_promote(m) + 2;
+		int piece = move_promote(move) + 2;
 		int before = popcount(pos->piece[turn][piece]);
 		int after = before + 1;
 		pos->endgame_key ^= endgame_key(turn, piece, before);
@@ -402,11 +402,11 @@ void do_endgame_key(struct position *pos, const move_t *m) {
 }
 
 /* Should be called before undo_move. */
-void undo_endgame_key(struct position *pos, const move_t *m) {
-	assert(*m);
-	assert(!pos->mailbox[move_from(m)]);
-	assert(pos->mailbox[move_to(m)]);
-	int victim = move_capture(m);
+void undo_endgame_key(struct position *pos, const move_t *move) {
+	assert(*move);
+	assert(!pos->mailbox[move_from(move)]);
+	assert(pos->mailbox[move_to(move)]);
+	int victim = move_capture(move);
 	int turn = other_color(pos->turn);
 	if (victim) {
 		int before = popcount(pos->piece[other_color(turn)][victim]);
@@ -414,19 +414,19 @@ void undo_endgame_key(struct position *pos, const move_t *m) {
 		pos->endgame_key ^= endgame_key(other_color(turn), victim, before);
 		pos->endgame_key ^= endgame_key(other_color(turn), victim, after);
 	}
-	if (move_flag(m) == MOVE_EN_PASSANT) {
+	if (move_flag(move) == MOVE_EN_PASSANT) {
 		int before = popcount(pos->piece[other_color(turn)][PAWN]);
 		int after = before + 1;
 		pos->endgame_key ^= endgame_key(other_color(turn), PAWN, before);
 		pos->endgame_key ^= endgame_key(other_color(turn), PAWN, after);
 	}
-	if (move_flag(m) == MOVE_PROMOTION) {
+	if (move_flag(move) == MOVE_PROMOTION) {
 		int before_pawn = popcount(pos->piece[turn][PAWN]);
 		int after_pawn = before_pawn + 1;
 		pos->endgame_key ^= endgame_key(turn, PAWN, before_pawn);
 		pos->endgame_key ^= endgame_key(turn, PAWN, after_pawn);
 
-		int piece = move_promote(m) + 2;
+		int piece = move_promote(move) + 2;
 		int before = popcount(pos->piece[turn][piece]);
 		int after = before - 1;
 		pos->endgame_key ^= endgame_key(turn, piece, before);

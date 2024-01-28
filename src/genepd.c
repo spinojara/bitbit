@@ -106,30 +106,30 @@ int already_written(struct position *pos, uint64_t *written_keys, int i) {
 int genepd_position(struct position *pos, struct transpositiontable *tt, uint64_t *written_keys, int i, uint64_t *seed) {
 	genepd_startpos(pos, seed);
 
-	move_t movelist[MOVES_MAX];
+	move_t moves[MOVES_MAX];
 	int moves_num = moves_min;
 	moves_num += xorshift64(seed) % (moves_max + 1 - moves_min);
 		
-	for (int moves = 0; moves < moves_num; moves++) {
-		generate_all(pos, movelist);
-		int c = move_count(movelist);
+	for (int m = 0; m < moves_num; m++) {
+		movegen_legal(pos, moves, MOVETYPE_ALL);
+		int c = move_count(moves);
 		if (!c)
 			return 1;
 
-		move_t m = 0;
+		move_t move = 0;
 		for (int j = 0; j < 16 && m == 0; j++) {
-			m = movelist[xorshift64(seed) % c];
-			int piece = uncolored_piece(pos->mailbox[move_from(&m)]);
+			move = moves[xorshift64(seed) % c];
+			int piece = uncolored_piece(pos->mailbox[move_from(&move)]);
 			if (minor_pieces && (piece == ROOK || piece == QUEEN || piece == KING))
-				m = 0;
+				move = 0;
 		}
-		if (!m)
+		if (!move)
 			return 1;
-		do_move(pos, &m);
+		do_move(pos, &move);
 	}
 
-	generate_all(pos, movelist);
-	if (!movelist[0] ||
+	movegen_legal(pos, moves, MOVETYPE_ALL);
+	if (!moves[0] ||
 			(unique && already_written(pos, written_keys, i)) ||
 			(filter_depth >= 0 && abs(search(pos, filter_depth, 0, 0, 0, NULL, tt, NULL, 1)) > centipawns))
 		return 1;

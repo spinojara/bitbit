@@ -82,14 +82,14 @@ static inline void transposition_set(struct transposition *e, const struct posit
 	e->bound = bound;
 }
 
-static inline void transposition_store(struct transpositiontable *tt, const struct position *pos, int32_t evaluation, int depth, int bound, move_t m) {
+static inline void transposition_store(struct transpositiontable *tt, const struct position *pos, int32_t evaluation, int depth, int bound, move_t move) {
 	if (interrupt || !option_transposition)
 		return;
 	struct transposition *e = transposition_get(tt, pos);
 	if ((bound == BOUND_EXACT && e->bound != BOUND_EXACT) ||
 			e->zobrist_key != pos->zobrist_key ||
 			depth >= e->depth)
-		transposition_set(e, pos, evaluation, depth, bound, m);
+		transposition_set(e, pos, evaluation, depth, bound, move);
 }
 
 static inline int32_t adjust_score_mate_store(int32_t evaluation, int ply) {
@@ -139,9 +139,9 @@ int transposition_occupancy(struct transpositiontable *tt, int node_type);
 
 void transposition_init(void);
 
-void do_zobrist_key(struct position *pos, const move_t *m);
+void do_zobrist_key(struct position *pos, const move_t *move);
 
-void undo_zobrist_key(struct position *pos, const move_t *m);
+void undo_zobrist_key(struct position *pos, const move_t *move);
 
 void do_null_zobrist_key(struct position *pos, int en_passant);
 

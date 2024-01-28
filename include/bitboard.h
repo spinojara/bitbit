@@ -94,7 +94,7 @@ static inline uint64_t rotate_bytes(uint64_t b) {
 void print_bitboard(uint64_t b);
 
 static inline uint64_t single(uint64_t b) {
-	return !(b & (b - 1));
+	return b && !clear_ls1b(b);
 }
 
 static inline uint64_t insert_zero(uint64_t b, int i) {

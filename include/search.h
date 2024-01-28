@@ -50,7 +50,7 @@ struct searchinfo {
 	int interrupt;
 };
 
-int32_t search(struct position *pos, int depth, int verbose, int etime, int movetime, move_t *m, struct transpositiontable *tt, struct history *history, int iterative);
+int32_t search(struct position *pos, int depth, int verbose, int etime, int movetime, move_t *move, struct transpositiontable *tt, struct history *history, int iterative);
 
 void search_init(void);
 

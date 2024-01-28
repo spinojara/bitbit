@@ -20,10 +20,17 @@
 #include "position.h"
 #include "move.h"
 
-move_t *generate_all(const struct position *pos, move_t *move_list);
+enum {
+	MOVETYPE_QUIET    = 0x1,
+	MOVETYPE_NONQUIET = 0x2,
+	MOVETYPE_ALL      = MOVETYPE_QUIET | MOVETYPE_NONQUIET,
+	MOVETYPE_ESCAPE   = 0x4,
+};
 
-int move_count(const move_t *m);
+move_t *movegen(const struct position *pos, const struct pstate *pstate, move_t *moves, unsigned type);
 
-move_t *generate_quiescence(const struct position *pos, move_t *move_list);
+move_t *movegen_legal(const struct position *pos, move_t *moves, unsigned type);
+
+int move_count(const move_t *moves);
 
 #endif

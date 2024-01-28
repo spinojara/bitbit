@@ -20,6 +20,7 @@
 #include <stdint.h>
 
 #include "bitboard.h"
+#include "position.h"
 #include "magicbitboard.h"
 
 void attackgen_init(void);
@@ -44,24 +45,42 @@ static inline uint64_t pawn_double_push(uint64_t pawns, uint64_t all, int color)
 	return pawns & ~shift(all, down) & ~shift_twice(all, down) & (color ? RANK_2 : RANK_7);
 }
 
-static inline uint64_t knight_attacks(int square, uint64_t own_pieces) {
-	return knight_attacks_lookup[square] & ~own_pieces;
+static inline uint64_t knight_attacks(int square, uint64_t own) {
+	return knight_attacks_lookup[square] & ~own;
 }
 
-static inline uint64_t bishop_attacks(int square, uint64_t own, uint64_t allb) {
-	return bishop_attacks_lookup[bishop_index(square, allb)] & ~own;
+static inline uint64_t bishop_attacks(int square, uint64_t own, uint64_t all) {
+	return bishop_attacks_lookup[bishop_index(square, all)] & ~own;
 }
 
-static inline uint64_t rook_attacks(int square, uint64_t own, uint64_t allb) {
-	return rook_attacks_lookup[rook_index(square, allb)] & ~own;
+static inline uint64_t rook_attacks(int square, uint64_t own, uint64_t all) {
+	return rook_attacks_lookup[rook_index(square, all)] & ~own;
 }
 
-static inline uint64_t queen_attacks(int square, uint64_t own, uint64_t allb) {
-	return (bishop_attacks_lookup[bishop_index(square, allb)] | rook_attacks_lookup[rook_index(square, allb)]) & ~own;
+static inline uint64_t queen_attacks(int square, uint64_t own, uint64_t all) {
+	return (bishop_attacks_lookup[bishop_index(square, all)] | rook_attacks_lookup[rook_index(square, all)]) & ~own;
 }
 
 static inline uint64_t king_attacks(int square, uint64_t own) {
 	return king_attacks_lookup[square] & ~own;
+}
+
+static inline uint64_t attacks(int piece, int square, uint64_t own, uint64_t all) {
+	switch (piece) {
+	case KNIGHT:
+		return knight_attacks(square, own);
+	case BISHOP:
+		return bishop_attacks(square, own, all);
+	case ROOK:
+		return rook_attacks(square, own, all);
+	case QUEEN:
+		return queen_attacks(square, own, all);
+	case KING:
+		return king_attacks(square, own);
+	default:
+		assert(0);
+		return 0;
+	}
 }
 
 #endif

@@ -20,34 +20,24 @@
 
 #include "moveorder.h"
 #include "bitboard.h"
+#include "movegen.h"
 #include "util.h"
 
-static inline int good_capture(struct position *pos, move_t *m, int threshold) {
-	return is_capture(pos, m) && see_geq(pos, m, threshold);
+static inline int good_capture(struct position *pos, move_t *move, int threshold) {
+	return (is_capture(pos, move) && see_geq(pos, move, threshold)) || (move_flag(move) == MOVE_EN_PASSANT && 0 >= threshold);
 }
 
-static inline int is_quiet(struct position *pos, move_t *m, int threshold) {
-	UNUSED(threshold);
-	return !pos->mailbox[move_to(m)];
+static inline int promotion(struct position *pos, move_t *move, int threshold) {
+	UNUSED(pos);
+	return move_flag(move) == MOVE_PROMOTION && move_promote(move) + 2 >= threshold;
 }
 
-int find_next(int index, struct position *pos, move_t *move_list, int (*filter)(struct position *, move_t *, int), int threshold) {
-	for (int i = index; move_list[i]; i++) {
-		if (filter(pos, &move_list[i], threshold)) {
-			move_t m = move_list[i];
-			move_list[i] = move_list[index];
-			move_list[index] = m;
-			return 1;
-		}
-	}
-	return 0;
-}
-
-int place_first(int index, move_t *move_list, move_t m) {
-	for (int i = index; move_list[i]; i++) {
-		if (m == move_list[i]) {
-			move_list[i] = move_list[index];
-			move_list[index] = m;
+int find_next(struct movepicker *mp, int (*filter)(struct position *, move_t *, int), int threshold) {
+	for (int i = 0; mp->move[i]; i++) {
+		if (filter(mp->pos, &mp->move[i], threshold)) {
+			move_t move = mp->move[i];
+			mp->move[i] = mp->move[0];
+			mp->move[0] = move;
 			return 1;
 		}
 	}
@@ -55,77 +45,123 @@ int place_first(int index, move_t *move_list, move_t m) {
 }
 
 void sort_moves(struct movepicker *mp) {
-	if (!mp->move_list[mp->index])
+	if (!mp->move[0])
 		return;
-	for (int i = 1 + mp->index; mp->move_list[i]; i++) {
-		int64_t val = mp->evaluation_list[i];
-		move_t m = mp->move_list[i];
+	for (int i = 1; mp->move[i]; i++) {
+		int64_t eval = mp->eval[i];
+		move_t move = mp->move[i];
 		int j;
-		for (j = i - 1; j >= mp->index && mp->evaluation_list[j] < val; j--) {
-			mp->evaluation_list[j + 1] = mp->evaluation_list[j];
-			mp->move_list[j + 1] = mp->move_list[j];
+		for (j = i - 1; j >= 0 && mp->eval[j] < eval; j--) {
+			mp->eval[j + 1] = mp->eval[j];
+			mp->move[j + 1] = mp->move[j];
 		}
-		mp->evaluation_list[j + 1] = val;
-		mp->move_list[j + 1] = m;
+		mp->eval[j + 1] = eval;
+		mp->move[j + 1] = move;
 	}
 }
 
-void evaluate_moves(struct movepicker *mp) {
-	for (int i = mp->index; mp->move_list[i]; i++) {
-		move_t *ptr = &mp->move_list[i];
-		int square_from = move_from(ptr);
-		int square_to = move_to(ptr);
+void evaluate_nonquiet(struct movepicker *mp) {
+	for (int i = 0; mp->move[i]; i++) {
+		move_t *move = &mp->move[i];
+		int square_from = move_from(move);
+		int square_to = move_to(move);
 		int attacker = mp->pos->mailbox[square_from];
 		int victim = mp->pos->mailbox[square_to];
-		if (victim)
-			mp->evaluation_list[i] = mvv_lva(attacker, victim);
-		else
-			mp->evaluation_list[i] = mp->si->history_moves[attacker][square_to];
+		mp->eval[i] = victim ? mvv_lva(attacker, victim) : 0;
 	}
 }
 
+void evaluate_quiet(struct movepicker *mp) {
+	for (int i = 0; mp->move[i]; i++) {
+		move_t *move = &mp->move[i];
+		int from = move_from(move);
+		int to = move_to(move);
+		int attacker = mp->pos->mailbox[from];
+		mp->eval[i] = mp->si->history_moves[attacker][to];
+	}
+}
+
+void filter_moves(struct movepicker *mp) {
+	for (int i = 0; mp->move[i]; i++) {
+		if (mp->move[i] == mp->ttmove || mp->move[i] == mp->killer1 || mp->move[i] == mp->killer2) {
+			mp->move[i] = mp->end[-1];
+			*--mp->end = 0;
+		}
+	}
+}
+
+/* Need to check for duplicates with tt and killer moves somehow. */
 move_t next_move(struct movepicker *mp) {
+	int i;
 	switch (mp->stage) {
 	case STAGE_TT:
 		mp->stage++;
-		if (mp->ttmove && place_first(mp->index, mp->move_list, mp->ttmove))
-			return mp->move_list[mp->index++];
+		if (mp->ttmove)
+			return mp->ttmove;
 		/* fallthrough */
-	case STAGE_SORT:
-		evaluate_moves(mp);
+	case STAGE_GENNONQUIET:
+		mp->stage++;
+		mp->end = movegen(mp->pos, mp->pstate, mp->move, MOVETYPE_NONQUIET);
+		filter_moves(mp);
+		/* fallthrough */
+	case STAGE_SORTNONQUIET:
+		evaluate_nonquiet(mp);
 		sort_moves(mp);
 		mp->stage++;
 		/* fallthrough */
 	case STAGE_GOODCAPTURE:
-		if (find_next(mp->index, mp->pos, mp->move_list, &good_capture, 100))
-			return mp->move_list[mp->index++];
+		if (find_next(mp, &good_capture, 100))
+			return *mp->move++;
+		mp->stage++;
+		/* fallthrough */
+	case STAGE_PROMOTION:
+		if (find_next(mp, &promotion, QUEEN))
+			return *mp->move++;
 		mp->stage++;
 		/* fallthrough */
 	case STAGE_KILLER1:
 		mp->stage++;
-		if (mp->killer1 && place_first(mp->index, mp->move_list, mp->killer1))
-			return mp->move_list[mp->index++];
+		if (mp->killer1)
+			return mp->killer1;
 		/* fallthrough */
 	case STAGE_KILLER2:
 		mp->stage++;
-		if (mp->killer2 && place_first(mp->index, mp->move_list, mp->killer2))
-			return mp->move_list[mp->index++];
+		if (mp->killer2)
+			return mp->killer2;
 		/* fallthrough */
 	case STAGE_OKCAPTURE:
-		if (find_next(mp->index, mp->pos, mp->move_list, &good_capture, 0))
-			return mp->move_list[mp->index++];
+		if (find_next(mp, &good_capture, 0))
+			return *mp->move++;
+		mp->stage++;
+		/* fallthrough */
+	case STAGE_GENQUIET:
+		if (mp->quiescence && !mp->pstate->checkers)
+			return 0;
+		/* First put all the bad leftovers at the end. */
+		for (i = 0; mp->move[i]; i++)
+			mp->bad[-i] = mp->move[i];
+		mp->bad[-i] = 0;
+
+		mp->stage++;
+		mp->end = movegen(mp->pos, mp->pstate, mp->move, MOVETYPE_QUIET);
+		filter_moves(mp);
+		/* fallthrough */
+	case STAGE_SORTQUIET:
+		evaluate_quiet(mp);
+		sort_moves(mp);
 		mp->stage++;
 		/* fallthrough */
 	case STAGE_QUIET:
-		if (find_next(mp->index, mp->pos, mp->move_list, &is_quiet, 0))
-			return mp->move_list[mp->index++];
+		if (*mp->move)
+			return *mp->move++;
 		mp->stage++;
 		/* fallthrough */
-	case STAGE_BADCAPTURE:
-			return mp->move_list[mp->index++];
+	case STAGE_BAD:
+		if (*mp->bad)
+			return *mp->bad--;
 		mp->stage++;
 		/* fallthrough */
-	case STAGE_NONE:
+	case STAGE_DONE:
 		return 0;
 	default:
 		assert(0);
@@ -133,15 +169,25 @@ move_t next_move(struct movepicker *mp) {
 	}
 }
 
-void movepicker_init(struct movepicker *mp, struct position *pos, move_t *move_list, move_t ttmove, move_t killer1, move_t killer2, const struct searchinfo *si) {
+void movepicker_init(struct movepicker *mp, int quiescence, struct position *pos, const struct pstate *pstate, move_t ttmove, move_t killer1, move_t killer2, const struct searchinfo *si) {
+	mp->quiescence = quiescence;
+
+	mp->move = mp->moves;
+	mp->move[0] = 0;
+	mp->eval = mp->evals;
+	mp->eval[0] = 0;
+	mp->bad = &mp->moves[MOVES_MAX - 1];
+
 	mp->pos = pos;
-	mp->move_list = move_list;
+	mp->pstate = pstate;
 	mp->si = si;
 
-	mp->ttmove = ttmove;
-	mp->killer1 = killer1;
-	mp->killer2 = killer2;
+	mp->ttmove = (!quiescence || mp->pstate->checkers || is_capture(mp->pos, &ttmove) || move_flag(&ttmove) == MOVE_PROMOTION) &&
+		pseudo_legal(mp->pos, mp->pstate, &ttmove) ?
+		ttmove : 0;
 
-	mp->stage = 0;
-	mp->index = 0;
+	mp->killer1 = pseudo_legal(mp->pos, mp->pstate, &killer1) ? killer1 : 0;
+	mp->killer2 = pseudo_legal(mp->pos, mp->pstate, &killer2) ? killer2 : 0;
+
+	mp->stage = STAGE_TT;
 }

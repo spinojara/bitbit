@@ -24,22 +24,27 @@
 
 enum {
 	STAGE_TT,
-	STAGE_SORT,
+	STAGE_GENNONQUIET,
+	STAGE_SORTNONQUIET,
 	STAGE_GOODCAPTURE,
+	STAGE_PROMOTION,
 	STAGE_KILLER1,
 	STAGE_KILLER2,
 	STAGE_OKCAPTURE,
+	STAGE_GENQUIET,
+	STAGE_SORTQUIET,
 	STAGE_QUIET,
-	STAGE_BADCAPTURE,
-	STAGE_NONE,
+	STAGE_BAD,
+	STAGE_DONE,
 };
 
 struct movepicker {
 	struct position *pos;
-	move_t *move_list;
-	int64_t evaluation_list[MOVES_MAX];
+	const struct pstate *pstate;
+	move_t moves[MOVES_MAX], *move, *bad, *end;
+	int64_t evals[MOVES_MAX], *eval;
 	int stage;
-	int index;
+	int quiescence;
 
 	move_t ttmove;
 	move_t killer1, killer2;
@@ -48,6 +53,6 @@ struct movepicker {
 
 move_t next_move(struct movepicker *mp);
 
-void movepicker_init(struct movepicker *mp, struct position *pos, move_t *move_list, move_t ttmove, move_t killer1, move_t killer2, const struct searchinfo *si);
+void movepicker_init(struct movepicker *mp, int quiescence, struct position *pos, const struct pstate *pstate, move_t ttmove, move_t killer1, move_t killer2, const struct searchinfo *si);
 
 #endif

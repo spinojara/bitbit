@@ -40,8 +40,19 @@ struct position {
 	uint64_t zobrist_key;
 	uint64_t endgame_key;
 
-	alignas(64) int16_t accumulation[2][K_HALF_DIMENSIONS];
-	alignas(64) int32_t psqtaccumulation[2];
+	int16_t accumulation[2][K_HALF_DIMENSIONS];
+	int32_t psqtaccumulation[2];
+};
+
+struct pstate {
+	uint64_t checkers;
+	uint64_t attacked;
+	/* Set if checkers contains exactly one bit.
+	 * checkray = between(ctz(checkers), king_square) | checkers;
+	 * If checkers is not exactly one bit it is set to 0.
+	 */
+	uint64_t checkray;
+	uint64_t pinned;
 };
 
 struct partialposition {
@@ -75,6 +86,8 @@ enum color { BLACK, WHITE };
 
 enum colored_piece { EMPTY, WHITE_PAWN, WHITE_KNIGHT, WHITE_BISHOP, WHITE_ROOK, WHITE_QUEEN, WHITE_KING, BLACK_PAWN, BLACK_KNIGHT, BLACK_BISHOP, BLACK_ROOK, BLACK_QUEEN, BLACK_KING };
 
+void pstate_init(const struct position *pos, struct pstate *pstate);
+
 uint64_t generate_checkers(const struct position *pos, int color);
 uint64_t generate_attackers(const struct position *pos, int square, int color);
 uint64_t generate_attacked(const struct position *pos, int color);
@@ -104,6 +117,10 @@ static inline int colored_piece(int piece, int color) {
 
 static inline int uncolored_piece(int piece) {
 	return piece - WHITE_KING * (piece > WHITE_KING);
+}
+
+static inline int color_of_piece(int piece) {
+	return piece <= WHITE_KING;
 }
 
 static inline int rank_of(int square) {
