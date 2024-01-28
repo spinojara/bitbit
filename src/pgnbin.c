@@ -60,9 +60,6 @@ int32_t search_material(struct position *pos, int ply, int alpha, int beta) {
 	uint64_t checkers = generate_checkers(pos, pos->turn);
 	int32_t eval = evaluate_material(pos), best_eval = -VALUE_INFINITE;
 
-	move_t move_list[MOVES_MAX];
-	generate_quiescence(pos, move_list);
-
 	if (!checkers) {
 		if (eval >= beta)
 			return beta;
@@ -71,13 +68,15 @@ int32_t search_material(struct position *pos, int ply, int alpha, int beta) {
 		best_eval = eval;
 	}
 
+	struct pstate pstate;
+	pstate_init(pos, &pstate);
 	struct movepicker mp;
-	movepicker_init(&mp, pos, move_list, 0, 0, 0, &gsi);
-	move_t m;
-	while ((m = next_move(&mp))) {
-		do_move(pos, &m);
+	movepicker_init(&mp, 1, pos, &pstate, 0, 0, 0, &gsi);
+	move_t move;
+	while ((move = next_move(&mp))) {
+		do_move(pos, &move);
 		eval = -search_material(pos, ply + 1, -beta, -alpha);
-		undo_move(pos, &m);
+		undo_move(pos, &move);
 
 		if (eval > best_eval) {
 			best_eval = eval;
@@ -133,7 +132,7 @@ void start_fen(struct position *pos, FILE *f) {
 
 void write_fens(struct position *pos, int result, FILE *fin, FILE *fout) {
 	char *ptr[2] = { 0 }, line[BUFSIZ];
-	move_t m = 0;
+	move_t move = 0;
 	int moves = 0;
 	int flag = 0;
 	int16_t perspective_result;
@@ -159,8 +158,8 @@ void write_fens(struct position *pos, int result, FILE *fin, FILE *fout) {
 					if (ptr[1][i] == 'M')
 						goto early_exit;
 
-			m = string_to_move(pos, ptr[0]);
-			if (m) {
+			move = string_to_move(pos, ptr[0]);
+			if (move) {
 				if (moves >= skip_first) {
 					perspective_result = (2 * pos->turn - 1) * VALUE_MATE * result;
 					if (skip_endgames) {
@@ -187,9 +186,9 @@ void write_fens(struct position *pos, int result, FILE *fin, FILE *fout) {
 					}
 
 					fwrite(&perspective_result, 2, 1, fout);
-					fwrite(&m, 2, 1, fout);
+					fwrite(&move, 2, 1, fout);
 				}
-				do_move(pos, &m);
+				do_move(pos, &move);
 				moves++;
 			}
 

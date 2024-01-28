@@ -559,8 +559,8 @@ void print_history_pgn(const struct history *h) {
 
 	struct position pos;
 	memcpy(&pos, &h->start, sizeof(pos));
-	move_t m[POSITIONS_MAX];
-	memcpy(m, h->move, sizeof(m));
+	move_t move[POSITIONS_MAX];
+	memcpy(move, h->move, sizeof(move));
 
 	char str[8];
 	for (int i = 0; i < h->ply; i++) {
@@ -570,10 +570,10 @@ void print_history_pgn(const struct history *h) {
 		else if (!i && !pos.turn) {
 			printf("%i. ... ", pos.fullmove);
 		}
-		printf("%s ", move_str_pgn(str, &pos, m + i));
+		printf("%s ", move_str_pgn(str, &pos, move + i));
 		if (!pos.turn)
 			printf("\n");
-		do_move(&pos, m + i);
+		do_move(&pos, move + i);
 	}
 	if (h->ply)
 		printf("\n");

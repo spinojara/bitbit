@@ -41,8 +41,8 @@ enum {
 struct movepicker {
 	struct position *pos;
 	const struct pstate *pstate;
-	move_t movelist[MOVES_MAX], *move, *bad, *end;
-	int64_t evallist[MOVES_MAX], *eval;
+	move_t moves[MOVES_MAX], *move, *bad, *end;
+	int64_t evals[MOVES_MAX], *eval;
 	int stage;
 	int quiescence;
 

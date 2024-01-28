@@ -23,13 +23,13 @@
 #include "movegen.h"
 #include "util.h"
 
-static inline int good_capture(struct position *pos, move_t *m, int threshold) {
-	return (is_capture(pos, m) && see_geq(pos, m, threshold)) || (move_flag(m) == MOVE_EN_PASSANT && 0 >= threshold);
+static inline int good_capture(struct position *pos, move_t *move, int threshold) {
+	return (is_capture(pos, move) && see_geq(pos, move, threshold)) || (move_flag(move) == MOVE_EN_PASSANT && 0 >= threshold);
 }
 
-static inline int promotion(struct position *pos, move_t *m, int threshold) {
+static inline int promotion(struct position *pos, move_t *move, int threshold) {
 	UNUSED(pos);
-	return move_flag(m) == MOVE_PROMOTION && move_promote(m) + 2 >= threshold;
+	return move_flag(move) == MOVE_PROMOTION && move_promote(move) + 2 >= threshold;
 }
 
 int find_next(struct movepicker *mp, int (*filter)(struct position *, move_t *, int), int threshold) {
@@ -60,27 +60,11 @@ void sort_moves(struct movepicker *mp) {
 	}
 }
 
-#if 0
-void evaluate_moves(struct movepicker *mp) {
-	for (int i = 0; mp->move[i]; i++) {
-		move_t *ptr = &mp->move[i];
-		int square_from = move_from(ptr);
-		int square_to = move_to(ptr);
-		int attacker = mp->pos->mailbox[square_from];
-		int victim = mp->pos->mailbox[square_to];
-		if (victim)
-			mp->evaluation_list[i] = mvv_lva(attacker, victim);
-		else
-			mp->evaluation_list[i] = mp->si->history_moves[attacker][square_to];
-	}
-}
-#endif
-
 void evaluate_nonquiet(struct movepicker *mp) {
 	for (int i = 0; mp->move[i]; i++) {
-		move_t *ptr = &mp->move[i];
-		int square_from = move_from(ptr);
-		int square_to = move_to(ptr);
+		move_t *move = &mp->move[i];
+		int square_from = move_from(move);
+		int square_to = move_to(move);
 		int attacker = mp->pos->mailbox[square_from];
 		int victim = mp->pos->mailbox[square_to];
 		mp->eval[i] = victim ? mvv_lva(attacker, victim) : 0;
@@ -89,9 +73,9 @@ void evaluate_nonquiet(struct movepicker *mp) {
 
 void evaluate_quiet(struct movepicker *mp) {
 	for (int i = 0; mp->move[i]; i++) {
-		move_t *ptr = &mp->move[i];
-		int from = move_from(ptr);
-		int to = move_to(ptr);
+		move_t *move = &mp->move[i];
+		int from = move_from(move);
+		int to = move_to(move);
 		int attacker = mp->pos->mailbox[from];
 		mp->eval[i] = mp->si->history_moves[attacker][to];
 	}
@@ -117,7 +101,7 @@ move_t next_move(struct movepicker *mp) {
 		/* fallthrough */
 	case STAGE_GENNONQUIET:
 		mp->stage++;
-		mp->end = moves(mp->pos, mp->pstate, mp->move, MOVETYPE_NONQUIET);
+		mp->end = movegen(mp->pos, mp->pstate, mp->move, MOVETYPE_NONQUIET);
 		filter_moves(mp);
 		/* fallthrough */
 	case STAGE_SORTNONQUIET:
@@ -159,7 +143,7 @@ move_t next_move(struct movepicker *mp) {
 		mp->bad[-i] = 0;
 
 		mp->stage++;
-		mp->end = moves(mp->pos, mp->pstate, mp->move, MOVETYPE_QUIET);
+		mp->end = movegen(mp->pos, mp->pstate, mp->move, MOVETYPE_QUIET);
 		filter_moves(mp);
 		/* fallthrough */
 	case STAGE_SORTQUIET:
@@ -188,11 +172,11 @@ move_t next_move(struct movepicker *mp) {
 void movepicker_init(struct movepicker *mp, int quiescence, struct position *pos, const struct pstate *pstate, move_t ttmove, move_t killer1, move_t killer2, const struct searchinfo *si) {
 	mp->quiescence = quiescence;
 
-	mp->move = mp->movelist;
+	mp->move = mp->moves;
 	mp->move[0] = 0;
-	mp->eval = mp->evallist;
+	mp->eval = mp->evals;
 	mp->eval[0] = 0;
-	mp->bad = &mp->movelist[MOVES_MAX - 1];
+	mp->bad = &mp->moves[MOVES_MAX - 1];
 
 	mp->pos = pos;
 	mp->pstate = pstate;

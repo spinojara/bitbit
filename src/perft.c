@@ -28,27 +28,28 @@
 uint64_t perft(struct position *pos, int depth, int verbose) {
 	if (depth <= 0 || interrupt)
 		return 0;
+
+	move_t moves[MOVES_MAX];
 	struct pstate pstate;
 	pstate_init(pos, &pstate);
-	move_t move_list[MOVES_MAX];
-	moves(pos, &pstate, move_list, MOVETYPE_ALL);
-	uint64_t nodes = 0, count;
+	movegen(pos, &pstate, moves, MOVETYPE_ALL);
 
-	for (move_t *ptr = move_list; *ptr; ptr++) {
-		if (!legal(pos, &pstate, ptr))
+	uint64_t nodes = 0, count;
+	for (move_t *move = moves; *move; move++) {
+		if (!legal(pos, &pstate, move))
 			continue;
 		if (depth == 1) {
 			count = 1;
 			nodes++;
 		}
 		else {
-			do_move(pos, ptr);
+			do_move(pos, move);
 			count = perft(pos, depth - 1, 0);
-			undo_move(pos, ptr);
+			undo_move(pos, move);
 			nodes += count;
 		}
 		if (verbose && !interrupt) {
-			print_move(ptr);
+			print_move(move);
 			printf(": %" PRIu64 "\n", count);
 		}
 	}

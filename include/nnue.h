@@ -65,12 +65,12 @@ void add_index_slow(unsigned index, int16_t accumulation[2][K_HALF_DIMENSIONS], 
 
 void refresh_accumulator(struct position *pos, int turn);
 
-void do_update_accumulator(struct position *pos, move_t *m, int turn);
-void undo_update_accumulator(struct position *pos, move_t *m, int turn);
+void do_update_accumulator(struct position *pos, move_t *move, int turn);
+void undo_update_accumulator(struct position *pos, move_t *move, int turn);
 
-void do_accumulator(struct position *pos, move_t *m);
+void do_accumulator(struct position *pos, move_t *move);
 
-void undo_accumulator(struct position *pos, move_t *m);
+void undo_accumulator(struct position *pos, move_t *move);
 
 int32_t evaluate_nnue(struct position *pos);
 

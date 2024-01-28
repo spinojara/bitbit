@@ -1514,10 +1514,10 @@ size_t grad(FILE *f, struct position *pos) {
 
 	size_t actual_size = 0;
 	while (actual_size < BATCH_SIZE) {
-		move_t m = 0;
-		fread(&m, 2, 1, f);
-		if (m)
-			do_move(pos, &m);
+		move_t move = 0;
+		fread(&move, 2, 1, f);
+		if (move)
+			do_move(pos, &move);
 		else
 			fread(pos, sizeof(struct partialposition), 1, f);
 

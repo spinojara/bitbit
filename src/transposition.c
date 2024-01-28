@@ -70,13 +70,13 @@ void transposition_init(void) {
 }
 
 /* Should be called before do_move. */
-void do_zobrist_key(struct position *pos, const move_t *m) {
+void do_zobrist_key(struct position *pos, const move_t *move) {
 	assert(*m);
 	assert(pos->mailbox[move_from(m)]);
 	if (!option_transposition && !option_history)
 		return;
-	int source_square = move_from(m);
-	int target_square = move_to(m);
+	int source_square = move_from(move);
+	int target_square = move_to(move);
 
 	pos->zobrist_key ^= zobrist_en_passant_key(pos->en_passant);
 
@@ -88,7 +88,7 @@ void do_zobrist_key(struct position *pos, const move_t *m) {
 
 	pos->zobrist_key ^= zobrist_turn_key();
 
-	if (is_capture(pos, m))
+	if (is_capture(pos, move))
 		pos->zobrist_key ^= zobrist_piece_key(pos->mailbox[target_square] - 1, target_square);
 
 	if (source_square + 16 == target_square && pos->mailbox[source_square] == WHITE_PAWN)
@@ -96,23 +96,24 @@ void do_zobrist_key(struct position *pos, const move_t *m) {
 	if (source_square - 16 == target_square && pos->mailbox[source_square] == BLACK_PAWN)
 		pos->zobrist_key ^= zobrist_en_passant_key(source_square - 8);
 
-	if (move_flag(m) == 1) {
+	switch (move_flag(move)) {
+	case MOVE_EN_PASSANT:
 		if (pos->turn)
 			pos->zobrist_key ^= zobrist_piece_key(BLACK_PAWN - 1, target_square - 8);
 		else
 			pos->zobrist_key ^= zobrist_piece_key(WHITE_PAWN - 1, target_square + 8);
-	}
-	else if (move_flag(m) == 2) {
+		break;
+	case MOVE_PROMOTION:
 		if (pos->turn) {
 			pos->zobrist_key ^= zobrist_piece_key(WHITE_PAWN - 1, target_square);
-			pos->zobrist_key ^= zobrist_piece_key(move_promote(m) + 1, target_square);
+			pos->zobrist_key ^= zobrist_piece_key(move_promote(move) + 1, target_square);
 		}
 		else {
 			pos->zobrist_key ^= zobrist_piece_key(BLACK_PAWN - 1, target_square);
-			pos->zobrist_key ^= zobrist_piece_key(move_promote(m) + 7, target_square);
+			pos->zobrist_key ^= zobrist_piece_key(move_promote(move) + 7, target_square);
 		}
-	}
-	else if (move_flag(m) == 3) {
+		break;
+	case MOVE_CASTLE:
 		switch (target_square) {
 		case g1:
 			pos->zobrist_key ^= zobrist_piece_key(WHITE_ROOK - 1, h1);
@@ -131,44 +132,48 @@ void do_zobrist_key(struct position *pos, const move_t *m) {
 			pos->zobrist_key ^= zobrist_piece_key(BLACK_ROOK - 1, d8);
 			break;
 		}
+		break;
+	default:
+		break;
 	}
 }
 
 /* Should be called before undo_move. */
-void undo_zobrist_key(struct position *pos, const move_t *m) {
-	assert(*m);
-	assert(!pos->mailbox[move_from(m)]);
-	assert(pos->mailbox[move_to(m)]);
+void undo_zobrist_key(struct position *pos, const move_t *move) {
+	assert(*move);
+	assert(!pos->mailbox[move_from(move)]);
+	assert(pos->mailbox[move_to(move)]);
 	if (!option_transposition && !option_history)
 		return;
-	int source_square = move_from(m);
-	int target_square = move_to(m);
+	int source_square = move_from(move);
+	int target_square = move_to(move);
 
 	pos->zobrist_key ^= zobrist_en_passant_key(pos->en_passant);
-	pos->zobrist_key ^= zobrist_en_passant_key(move_en_passant(m));
+	pos->zobrist_key ^= zobrist_en_passant_key(move_en_passant(move));
 
 	pos->zobrist_key ^= zobrist_castle_key(pos->castle);
-	pos->zobrist_key ^= zobrist_castle_key(move_castle(m));
+	pos->zobrist_key ^= zobrist_castle_key(move_castle(move));
 
 	pos->zobrist_key ^= zobrist_piece_key(pos->mailbox[target_square] - 1, source_square);
 	pos->zobrist_key ^= zobrist_piece_key(pos->mailbox[target_square] - 1, target_square);
 
 	pos->zobrist_key ^= zobrist_turn_key();
 
-	if (move_capture(m)) {
+	if (move_capture(move)) {
 		if (pos->turn)
-			pos->zobrist_key ^= zobrist_piece_key(move_capture(m) - 1, target_square);
+			pos->zobrist_key ^= zobrist_piece_key(move_capture(move) - 1, target_square);
 		else
-			pos->zobrist_key ^= zobrist_piece_key(move_capture(m) + 5, target_square);
+			pos->zobrist_key ^= zobrist_piece_key(move_capture(move) + 5, target_square);
 	}
 
-	if (move_flag(m) == 1) {
+	switch (move_flag(move)) {
+	case MOVE_EN_PASSANT:
 		if (pos->turn)
 			pos->zobrist_key ^= zobrist_piece_key(WHITE_PAWN - 1, target_square + 8);
 		else
 			pos->zobrist_key ^= zobrist_piece_key(BLACK_PAWN - 1, target_square - 8);
-	}
-	else if (move_flag(m) == 2) {
+		break;
+	case MOVE_PROMOTION:
 		if (pos->turn) {
 			pos->zobrist_key ^= zobrist_piece_key(BLACK_PAWN - 1, source_square);
 			pos->zobrist_key ^= zobrist_piece_key(pos->mailbox[target_square] - 1, source_square);
@@ -177,8 +182,8 @@ void undo_zobrist_key(struct position *pos, const move_t *m) {
 			pos->zobrist_key ^= zobrist_piece_key(WHITE_PAWN - 1, source_square);
 			pos->zobrist_key ^= zobrist_piece_key(pos->mailbox[target_square] - 1, source_square);
 		}
-	}
-	else if (move_flag(m) == 3) {
+		break;
+	case MOVE_CASTLE:
 		switch (target_square) {
 		case g1:
 			pos->zobrist_key ^= zobrist_piece_key(WHITE_ROOK - 1, h1);
@@ -197,6 +202,9 @@ void undo_zobrist_key(struct position *pos, const move_t *m) {
 			pos->zobrist_key ^= zobrist_piece_key(BLACK_ROOK - 1, d8);
 			break;
 		}
+		break;
+	default:
+		break;
 	}
 }
 

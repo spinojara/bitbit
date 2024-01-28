@@ -73,7 +73,7 @@ int main(int argc, char **argv) {
 
 	uint64_t piece_square[7][64] = { 0 };
 
-	move_t m;
+	move_t move;
 	int16_t eval;
 	size_t total = 0;
 	size_t count = 0;
@@ -84,10 +84,10 @@ int main(int argc, char **argv) {
 		count++;
 		if (count % 20000 == 0)
 			printf("collecting data: %lu\r", count);
-		m = 0;
-		fread(&m, 2, 1, f);
-		if (m) {
-			do_move(&pos, &m);
+		move = 0;
+		fread(&move, 2, 1, f);
+		if (move) {
+			do_move(&pos, &move);
 		}
 		else {
 			fread(&pos, sizeof(struct partialposition), 1, f);

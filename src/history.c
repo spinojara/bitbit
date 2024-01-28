@@ -20,9 +20,9 @@
 
 #include "transposition.h"
 
-void history_next(struct position *pos, struct history *h, move_t m) {
+void history_next(struct position *pos, struct history *h, move_t move) {
 	h->zobrist_key[h->ply] = pos->zobrist_key;
-	h->move[h->ply] = m;
+	h->move[h->ply] = move;
 	do_zobrist_key(pos, h->move + h->ply);
 	do_move(pos, h->move + h->ply);
 	h->ply++;

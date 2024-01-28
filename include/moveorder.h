@@ -29,7 +29,7 @@ static inline int mvv_lva(int attacker, int victim) {
 	return mvv_lva_lookup[attacker + 13 * victim];
 }
 
-int see_geq(struct position *pos, const move_t *m, int32_t value);
+int see_geq(struct position *pos, const move_t *move, int32_t value);
 
 void moveorder_init(void);
 

@@ -31,7 +31,7 @@ struct history {
 
 void history_reset(const struct position *pos, struct history *h);
 
-void history_next(struct position *pos, struct history *h, move_t m);
+void history_next(struct position *pos, struct history *h, move_t move);
 
 void history_previous(struct position *pos, struct history *h);
 

@@ -163,29 +163,29 @@ struct threadinfo *choose_thread(struct threadinfo *threadinfo, int n_threads) {
 void write_thread(FILE *f, struct threadinfo *threadinfo, uint64_t *curr_fens, uint64_t fens) {
 	int fd = threadinfo->fd[0];
 	int16_t eval;
-	move_t m = 0;
+	move_t move = 0;
 	uint64_t gen_fens = 0;
 	uint64_t written_fens = 0;
 
 	struct partialposition pos;
 
 	while (1) {
-		if (!read(fd, &m, 2)) {
+		if (!read(fd, &move, 2)) {
 			fprintf(stderr, "MAIN THREAD READ ERROR\n");
 			exit(1);
 		}
-		if (m == synchronize_threads) {
+		if (move == synchronize_threads) {
 			break;
 		}
-		if (!fwrite(&m, 2, 1, f)) {
+		if (!fwrite(&move, 2, 1, f)) {
 			fprintf(stderr, "MAIN THREAD WRITE ERROR\n");
 			exit(1);
 		}
-		if (move_from(&m) == h8 && move_to(&m) == h8) {
+		if (move_from(&move) == h8 && move_to(&move) == h8) {
 			fprintf(stderr, "MAIN THREAD GOT BAD MOVE ERROR\n");
 			exit(1);
 		}
-		if (!m) {
+		if (!move) {
 			if (!read(fd, &pos, sizeof(pos))) {
 				fprintf(stderr, "MAIN THREAD READ ERROR\n");
 				exit(1);
@@ -235,25 +235,25 @@ void *worker(void *arg) {
 	startpos(&pos);
 	startkey(&pos);
 	history_reset(&pos, &h);
-	move_t move_list[MOVES_MAX];
+	move_t moves[MOVES_MAX];
 	int *random_move = malloc(random_move_max_ply * sizeof(*random_move));
 	random_move_flags(random_move, &seed);
-	move_t m;
+	move_t move;
 	int16_t eval;
 
 	unsigned int gen_fens = 0;
 	int drawn_score_count = 0;
 	while (1) {
-		m = 0;
+		move = 0;
 		/* Maybe randomly vary depth. */
 		int depth_now = depth;
-		eval = search(&pos, depth_now, 0, 0, 0, &m, tt, &h, 0);
+		eval = search(&pos, depth_now, 0, 0, 0, &move, tt, &h, 0);
 
 		/* Check for fens that we dont want to write. */
-		int skip = is_capture(&pos, &m) || generate_checkers(&pos, pos.turn) ||
-			move_flag(&m) || position_already_written(&pos) || !bernoulli(exp(-pos.halfmove / 8.0), &seed);
+		int skip = is_capture(&pos, &move) || generate_checkers(&pos, pos.turn) ||
+			move_flag(&move) || position_already_written(&pos) || !bernoulli(exp(-pos.halfmove / 8.0), &seed);
 
-		int stop_game = !m || (eval != VALUE_NONE && abs(eval) > eval_limit) ||
+		int stop_game = !move || (eval != VALUE_NONE && abs(eval) > eval_limit) ||
 				pos.halfmove >= 100 || h.ply >= write_max_ply ||
 				is_repetition(&pos, &h, 0, 2) || probable_long_draw(&h, eval, &drawn_score_count) ||
 				endgame_probe(&pos);
@@ -288,8 +288,8 @@ void *worker(void *arg) {
 #endif
 
 		if (!stop_game && h.ply < random_move_max_ply && random_move[h.ply]) {
-			generate_all(&pos, move_list);
-			m = move_list[xorshift64(&seed) % move_count(move_list)];
+			movegen_legal(&pos, moves, MOVETYPE_ALL);
+			move = moves[xorshift64(&seed) % move_count(moves)];
 		}
 
 		if (stop_game) {
@@ -320,12 +320,12 @@ void *worker(void *arg) {
 			continue;
 		}
 		else {
-			history_next(&pos, &h, m);
+			history_next(&pos, &h, move);
 		}
 
 		if (h.ply == write_min_ply) {
-			m = 0;
-			if (!write(fd, &m, 2)) {
+			move = 0;
+			if (!write(fd, &move, 2)) {
 				fprintf(stderr, "WRITE ERROR ON THREAD %d\n", threadn);
 				exit(1);
 			}
@@ -341,7 +341,7 @@ void *worker(void *arg) {
 				exit(1);
 			}
 			gen_fens++;
-			if (!write(fd, &m, 2)) {
+			if (!write(fd, &move, 2)) {
 				fprintf(stderr, "WRITE ERROR ON THREAD %d\n", threadn);
 				exit(1);
 			}

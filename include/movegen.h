@@ -27,10 +27,10 @@ enum {
 	MOVETYPE_ESCAPE   = 0x4,
 };
 
-move_t *moves(const struct position *pos, const struct pstate *pstate, move_t *move, unsigned type);
+move_t *movegen(const struct position *pos, const struct pstate *pstate, move_t *moves, unsigned type);
 
-move_t *generate_all(const struct position *pos, move_t *move_list);
+move_t *movegen_legal(const struct position *pos, move_t *moves, unsigned type);
 
-int move_count(const move_t *m);
+int move_count(const move_t *moves);
 
 #endif

@@ -27,10 +27,10 @@
 #include "movegen.h"
 #include "attackgen.h"
 
-void do_move(struct position *pos, move_t *m) {
-	assert(*m);
-	int source_square = move_from(m);
-	int target_square = move_to(m);
+void do_move(struct position *pos, move_t *move) {
+	assert(*move);
+	int source_square = move_from(move);
+	int target_square = move_to(move);
 	assert(pos->mailbox[source_square]);
 	assert(color_of_piece(pos->mailbox[source_square]) == pos->turn);
 	assert(uncolored_piece(pos->mailbox[target_square]) != KING);
@@ -40,9 +40,9 @@ void do_move(struct position *pos, move_t *m) {
 	uint64_t to = bitboard(target_square);
 	uint64_t from_to = from | to;
 
-	move_set_castle(m, pos->castle);
-	move_set_en_passant(m, pos->en_passant);
-	move_set_halfmove(m, pos->halfmove);
+	move_set_castle(move, pos->castle);
+	move_set_en_passant(move, pos->en_passant);
+	move_set_halfmove(move, pos->halfmove);
 
 	pos->en_passant = 0;
 	pos->halfmove++;
@@ -51,7 +51,7 @@ void do_move(struct position *pos, move_t *m) {
 
 	if (pos->mailbox[target_square]) {
 		pos->piece[other_color(pos->turn)][uncolored_piece(pos->mailbox[target_square])] ^= to;
-		move_set_captured(m, uncolored_piece(pos->mailbox[target_square]));
+		move_set_captured(move, uncolored_piece(pos->mailbox[target_square]));
 		pos->piece[other_color(pos->turn)][ALL] ^= to;
 		pos->halfmove = 0;
 	}
@@ -70,18 +70,20 @@ void do_move(struct position *pos, move_t *m) {
 	pos->mailbox[target_square] = pos->mailbox[source_square];
 	pos->mailbox[source_square] = EMPTY;
 
-	if (move_flag(m) == 1) {
-		int direction = 2 * pos->turn - 1;
+	int direction;
+	switch (move_flag(move)) {
+	case MOVE_EN_PASSANT:
+		direction = 2 * pos->turn - 1;
 		pos->piece[other_color(pos->turn)][PAWN] ^= bitboard(target_square - direction * 8);
 		pos->piece[other_color(pos->turn)][ALL] ^= bitboard(target_square - direction * 8);
 		pos->mailbox[target_square - direction * 8] = EMPTY;
-	}
-	else if (move_flag(m) == 2) {
+		break;
+	case MOVE_PROMOTION:
 		pos->piece[pos->turn][PAWN] ^= to;
-		pos->piece[pos->turn][move_promote(m) + 2] ^= to;
-		pos->mailbox[target_square] = colored_piece(move_promote(m) + 2, pos->turn);
-	}
-	else if (move_flag(m) == 3) {
+		pos->piece[pos->turn][move_promote(move) + 2] ^= to;
+		pos->mailbox[target_square] = colored_piece(move_promote(move) + 2, pos->turn);
+		break;
+	case MOVE_CASTLE:
 		switch (target_square) {
 		case g1:
 			pos->piece[WHITE][ROOK] ^= 0xA0;
@@ -108,6 +110,9 @@ void do_move(struct position *pos, move_t *m) {
 			pos->mailbox[d8] = BLACK_ROOK;
 			break;
 		}
+		break;
+	default:
+		break;
 	}
 
 	if (!pos->turn)
@@ -115,34 +120,36 @@ void do_move(struct position *pos, move_t *m) {
 	pos->turn = other_color(pos->turn);
 }
 
-void undo_move(struct position *pos, const move_t *m) {
-	assert(*m);
-	int source_square = move_from(m);
-	int target_square = move_to(m);
+void undo_move(struct position *pos, const move_t *move) {
+	assert(*move);
+	int source_square = move_from(move);
+	int target_square = move_to(move);
 	assert(pos->mailbox[target_square]);
 
 	uint64_t from = bitboard(source_square);
 	uint64_t to = bitboard(target_square);
 	uint64_t from_to = from | to;
 
-	pos->castle = move_castle(m);
-	pos->en_passant = move_en_passant(m);
-	pos->halfmove = move_halfmove(m);
+	pos->castle = move_castle(move);
+	pos->en_passant = move_en_passant(move);
+	pos->halfmove = move_halfmove(move);
 	pos->turn = other_color(pos->turn);
 
-	if (move_flag(m) == 1) {
-		int direction = 2 * pos->turn - 1;
+	int direction;
+	switch (move_flag(move)) {
+	case MOVE_EN_PASSANT:
+		direction = 2 * pos->turn - 1;
 		pos->piece[other_color(pos->turn)][PAWN] ^= bitboard(target_square - direction * 8);
 		pos->piece[other_color(pos->turn)][ALL] ^= bitboard(target_square - direction * 8);
 		pos->mailbox[target_square - direction * 8] = colored_piece(PAWN, other_color(pos->turn));
-	}
-	else if (move_flag(m) == 2) {
+		break;
+	case MOVE_PROMOTION:
 		pos->piece[pos->turn][PAWN] ^= to;
 		pos->piece[pos->turn][uncolored_piece(pos->mailbox[target_square])] ^= to;
 		/* Later gets updated as a normal move would. */
 		pos->mailbox[target_square] = colored_piece(PAWN, pos->turn);
-	}
-	else if (move_flag(m) == 3) {
+		break;
+	case MOVE_CASTLE:
 		switch (target_square) {
 		case g1:
 			pos->piece[WHITE][ROOK] ^= 0xA0;
@@ -169,6 +176,9 @@ void undo_move(struct position *pos, const move_t *m) {
 			pos->mailbox[d8] = EMPTY;
 			break;
 		}
+		break;
+	default:
+		break;
 	}
 
 	pos->piece[pos->turn][uncolored_piece(pos->mailbox[target_square])] ^= from_to;
@@ -177,10 +187,10 @@ void undo_move(struct position *pos, const move_t *m) {
 	pos->mailbox[source_square] = pos->mailbox[target_square];
 	pos->mailbox[target_square] = EMPTY;
 
-	if (move_capture(m)) {
-		pos->piece[other_color(pos->turn)][move_capture(m)] ^= to;
+	if (move_capture(move)) {
+		pos->piece[other_color(pos->turn)][move_capture(move)] ^= to;
 		pos->piece[other_color(pos->turn)][ALL] ^= to;
-		pos->mailbox[target_square] = colored_piece(move_capture(m), other_color(pos->turn));
+		pos->mailbox[target_square] = colored_piece(move_capture(move), other_color(pos->turn));
 	}
 
 	if (!pos->turn)
@@ -318,37 +328,39 @@ int legal(const struct position *pos, const struct pstate *pstate, const move_t 
 	return piece == KING || !(pstate->pinned & from) || (ray(ctz(pos->piece[us][KING]), from_square) & to);
 }
 
-void print_move(const move_t *m) {
+void print_move(const move_t *move) {
 	char move_from_str[3];
 	char move_to_str[3];
-	algebraic(move_from_str, move_from(m));
-	algebraic(move_to_str, move_to(m));
+	algebraic(move_from_str, move_from(move));
+	algebraic(move_to_str, move_to(move));
 	printf("%s%s", move_from_str, move_to_str);
-	if (move_flag(m) == 2)
-		printf("%c", "nbrq"[move_promote(m)]);
+	if (move_flag(move) == MOVE_PROMOTION)
+		printf("%c", "nbrq"[move_promote(move)]);
 }
 
 /* str needs to be at least 6 bytes. */
-char *move_str_algebraic(char *str, const move_t *m) {
-	algebraic(str, move_from(m));
-	algebraic(str + 2, move_to(m));
+char *move_str_algebraic(char *str, const move_t *move) {
+	algebraic(str, move_from(move));
+	algebraic(str + 2, move_to(move));
 	str[4] = str[5] = '\0';
-	if (move_flag(m) == 2)
-		str[4] = "nbrq"[move_promote(m)];
+	if (move_flag(move) == MOVE_PROMOTION)
+		str[4] = "nbrq"[move_promote(move)];
 	return str;
 }
 
 /* str needs to be at least 8 bytes. */
 /* m can be illegal. */
-char *move_str_pgn(char *str, const struct position *pos, const move_t *m) {
-	if (!is_legal(pos, m))
+char *move_str_pgn(char *str, const struct position *pos, const move_t *move) {
+	struct pstate pstate;
+	pstate_init(pos, &pstate);
+	if (!(pseudo_legal(pos, &pstate, move) && legal(pos, &pstate, move)))
 		return NULL;
-	int f = file_of(move_from(m));
-	int r = rank_of(move_from(m));
+	int f = file_of(move_from(move));
+	int r = rank_of(move_from(move));
 	int i = 0;
 
 	str[i] = '\0';
-	switch (uncolored_piece(pos->mailbox[move_from(m)])) {
+	switch (uncolored_piece(pos->mailbox[move_from(move)])) {
 	case PAWN:
 		break;
 	case KNIGHT:
@@ -365,11 +377,11 @@ char *move_str_pgn(char *str, const struct position *pos, const move_t *m) {
 		break;
 	/* King. */
 	case KING:
-		if (f == 4 && file_of(move_to(m)) == 6) {
+		if (f == 4 && file_of(move_to(move)) == 6) {
 			sprintf(str, "O-O");
 			i = 3;
 		}
-		else if (f == 4 && file_of(move_to(m)) == 2) {
+		else if (f == 4 && file_of(move_to(move)) == 2) {
 			sprintf(str, "O-O-O");
 			i = 5;
 		}
@@ -379,25 +391,25 @@ char *move_str_pgn(char *str, const struct position *pos, const move_t *m) {
 		break;
 	}
 
+	move_t moves[MOVES_MAX];
 	uint64_t attackers = 0;
-	if (uncolored_piece(pos->mailbox[move_from(m)]) == PAWN) {
-		if (is_capture(pos, m) || move_flag(m) == 1)
-			attackers = rank(move_from(m));
+	if (uncolored_piece(pos->mailbox[move_from(move)]) == PAWN) {
+		if (is_capture(pos, move) || move_flag(move) == MOVE_EN_PASSANT)
+			attackers = rank(move_from(move));
 		else
-			attackers = bitboard(move_from(m));
+			attackers = bitboard(move_from(move));
 	}
 	else {
-		move_t move_list[MOVES_MAX];
-		generate_all(pos, move_list);
-		for (move_t *ptr = move_list; *ptr; ptr++) {
-			if (move_to(ptr) == move_to(m) && pos->mailbox[move_from(ptr)] == pos->mailbox[move_from(m)])
+		movegen_legal(pos, moves, MOVETYPE_ALL);
+		for (move_t *ptr = moves; *ptr; ptr++) {
+			if (move_to(ptr) == move_to(move) && pos->mailbox[move_from(ptr)] == pos->mailbox[move_from(move)])
 				attackers |= bitboard(move_from(ptr));
 		}
 	}
 	assert(attackers);
 
-	if (popcount(attackers & file(move_from(m))) > 1) {
-		if (popcount(attackers & rank(move_from(m))) > 1) {
+	if (popcount(attackers & file(move_from(move))) > 1) {
+		if (popcount(attackers & rank(move_from(move))) > 1) {
 			str[i++] = "abcdefgh"[f];
 			str[i++] = "12345678"[r];
 		}
@@ -409,27 +421,24 @@ char *move_str_pgn(char *str, const struct position *pos, const move_t *m) {
 		str[i++] = "abcdefgh"[f];
 	}
 
-	if (pos->mailbox[move_to(m)] || move_flag(m) == 1)
+	if (pos->mailbox[move_to(move)] || move_flag(move) == MOVE_EN_PASSANT)
 		str[i++] = 'x';
 	if (str[0] != 'O') {
-		algebraic(str + i, move_to(m));
+		algebraic(str + i, move_to(move));
 		i += 2;
 	}
 
-	if (move_flag(m) == 2) {
+	if (move_flag(move) == MOVE_PROMOTION) {
 		str[i++] = '=';
-		str[i++] = "NBRQ"[move_promote(m)];
+		str[i++] = "NBRQ"[move_promote(move)];
 	}
 	
-	struct position pos_t;
-	move_t m_t;
-	m_t = *m;
-	memcpy(&pos_t, pos, sizeof(pos_t));
-	do_move(&pos_t, &m_t);
-	move_t movelist[MOVES_MAX];
-	generate_all(&pos_t, movelist);
-	int mate = !movelist[0];
-	uint64_t checkers = generate_checkers(&pos_t, pos_t.turn);
+	move_t movet = *move;
+	struct position post = *pos;
+	do_move(&post, &movet);
+	movegen_legal(&post, moves, MOVETYPE_ALL);
+	int mate = !moves[0];
+	uint64_t checkers = generate_checkers(&post, post.turn);
 
 	if (mate && checkers)
 		str[i++] = '#';
@@ -443,26 +452,17 @@ char *move_str_pgn(char *str, const struct position *pos, const move_t *m) {
 move_t string_to_move(const struct position *pos, const char *str) {
 	if (!str)
 		return 0;
-	move_t move_list[MOVES_MAX];
-	generate_all(pos, move_list);
+	move_t moves[MOVES_MAX];
+	movegen_legal(pos, moves, MOVETYPE_ALL);
 	char str_t[8];
-	for (move_t *move_ptr = move_list; *move_ptr; move_ptr++) {
-		move_str_algebraic(str_t, move_ptr);
+	for (move_t *move = moves; *move; move++) {
+		move_str_algebraic(str_t, move);
 		if (strcmp(str_t, str) == 0)
-			return *move_ptr;
-		move_str_pgn(str_t, pos, move_ptr);
+			return *move;
+		move_str_pgn(str_t, pos, move);
 		if (strcmp(str_t, str) == 0)
-			return *move_ptr;
+			return *move;
 	}
-	return 0;
-}
-
-int is_legal(const struct position *pos, const move_t *m) {
-	move_t move_list[MOVES_MAX];
-	generate_all(pos, move_list);
-	for (move_t *move_ptr = move_list; *move_ptr; move_ptr++)
-		if ((*m & 0xFFFF) == (*move_ptr & 0xFFFF))
-			return 1;
 	return 0;
 }
 
