@@ -84,7 +84,7 @@ static inline void store_killer_move(const move_t *move, int ply, move_t killers
 static inline void store_history_move(const struct position *pos, const move_t *move, int depth, int64_t history_moves[13][64]) {
 	if (interrupt)
 		return;
-	assert(*m);
+	assert(*move);
 	assert(0 <= depth && depth < DEPTH_MAX);
 	history_moves[pos->mailbox[move_from(move)]][move_to(move)] += (uint64_t)1 << min(depth, 32);
 }

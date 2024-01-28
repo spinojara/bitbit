@@ -71,8 +71,8 @@ void transposition_init(void) {
 
 /* Should be called before do_move. */
 void do_zobrist_key(struct position *pos, const move_t *move) {
-	assert(*m);
-	assert(pos->mailbox[move_from(m)]);
+	assert(*move);
+	assert(pos->mailbox[move_from(move)]);
 	if (!option_transposition && !option_history)
 		return;
 	int source_square = move_from(move);
