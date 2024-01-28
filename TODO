@@ -1,11 +1,8 @@
 - Add checks for malloc.
 - Aspiration window should probably return VALUE_NONE if interrupted.
-- Try pgnbin but don't consider pawn captures with --quiet option.
 - Use offsetof instead of partialposition.
 - Try pgo (profile guided optimization).
 - Profile code using gcov, operf and gprof.
-- Don't use memcpy in unnecessary places, like copying a struct.
-  Use struct assignment instead e.g. pos1 = pos2.
 - Create unit tests for important, and error prone, parts.
 
 VERY IMPORTANT

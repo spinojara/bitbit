@@ -36,7 +36,7 @@ void history_previous(struct position *pos, struct history *h) {
 
 void history_reset(const struct position *pos, struct history *h) {
 	memset(h, 0, sizeof(*h));
-	memcpy(&h->start, pos, sizeof(h->start));
+	h->start = *pos;
 }
 
 int seldepth(const struct history *h) {
