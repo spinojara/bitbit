@@ -209,7 +209,6 @@ int main(int argc, char **argv) {
 			fprintf(stderr, "error: branch\n");
 			return 1;
 		}
-		printf("branch: %s\n", branch);
 
 		if (!mkdtemp(dtemp)) {
 			fprintf(stderr, "error: failed to create temporary directory\n");
@@ -220,7 +219,7 @@ int main(int argc, char **argv) {
 		if (pid == -1)
 			return 1;
 
-		/* This should never fail. */
+		/* This can fail if branch does not exist. */
 		if (pid == 0) {
 			execlp("git", "git", "clone",
 				"https://github.com/Spinojara/bitbit.git",
@@ -230,7 +229,9 @@ int main(int argc, char **argv) {
 				dtemp,
 				(char *)NULL);
 			fprintf(stderr, "error: exec git clone\n");
-			return 1;
+			status = BRANCHERROR;
+			sendall(ssl, &status, 1);
+			goto CLEANUP;
 		}
 
 		if (waitpid(pid, &wstatus, 0) == -1 || WEXITSTATUS(wstatus)) {
@@ -290,7 +291,7 @@ int main(int argc, char **argv) {
 			fprintf(stderr, "error: git apply\n");
 			status = PATCHERROR;
 			sendall(ssl, &status, 1);
-			continue;
+			goto CLEANUP;
 		}
 
 		pid = fork();
@@ -308,10 +309,22 @@ int main(int argc, char **argv) {
 			fprintf(stderr, "error: make\n");
 			status = MAKEERROR;
 			sendall(ssl, &status, 1);
-			continue;
+			goto CLEANUP;
 		}
 
 		char H = sprt(games, trinomial, pentanomial, alpha, beta, maintime, increment, elo0, elo1, &llh, threads, ssl);
+		if (H == HCANCEL)
+			goto CLEANUP;
+
+		status = H == HERROR ? RUNERROR : TESTDONE;
+		if (sendall(ssl, &status, 1) ||
+				sendall(ssl, (char *)trinomial, 3 * sizeof(*trinomial)) ||
+				sendall(ssl, (char *)pentanomial, 5 * sizeof(*pentanomial)) ||
+				sendall(ssl, (char *)&llh, 8) ||
+				sendall(ssl, &H, 1))
+			return 1;
+
+CLEANUP:
 		if (chdir("/tmp")) {
 			fprintf(stderr, "error: chdir /tmp\n");
 			return 1;
@@ -322,16 +335,6 @@ int main(int argc, char **argv) {
 			return 1;
 		}
 
-		if (H == HCANCEL)
-			continue;
-
-		status = H == HERROR ? RUNERROR : TESTDONE;
-		if (sendall(ssl, &status, 1) ||
-				sendall(ssl, (char *)trinomial, 3 * sizeof(*trinomial)) ||
-				sendall(ssl, (char *)pentanomial, 5 * sizeof(*pentanomial)) ||
-				sendall(ssl, (char *)&llh, 8) ||
-				sendall(ssl, &H, 1))
-			return 1;
 	}
 
 	SSL_close(ssl);

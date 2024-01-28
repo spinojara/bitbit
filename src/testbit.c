@@ -197,9 +197,8 @@ int main(int argc, char **argv) {
 			sendall(ssl, (char *)timecontrol, 16);
 			sendall(ssl, (char *)alphabeta, 16);
 			sendall(ssl, (char *)elo, 16);
-			sendall(ssl, branch, 128);
 
-			recvexact(ssl, buf, 1);
+			sendall(ssl, branch, 128);
 
 			sendfile(ssl, filefd);
 

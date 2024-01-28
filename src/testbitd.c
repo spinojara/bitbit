@@ -606,7 +606,9 @@ int main(int argc, char **argv) {
 											 "Queue          %s\n"
 											 "Start          %s\n",
 											 id,
-											 status == PATCHERROR ? "Patch Error" : "Make Error",
+											 status == PATCHERROR ? "Patch Error" :
+											 status == BRANCHERROR ? "Branch Error" :
+											 "Make Error",
 											 branch,
 											 maintime, increment,
 											 elo0, elo1,
@@ -778,7 +780,7 @@ int main(int argc, char **argv) {
 						sqlite3_bind_double(stmt, 8, nan(""));
 						sqlite3_bind_double(stmt, 9, nan(""));
 						sqlite3_bind_zeroblob(stmt, 10, connection->len);
-						sqlite3_bind_text(stmt, 10, connection->branch, 128, NULL);
+						sqlite3_bind_text(stmt, 11, connection->branch, 128, NULL);
 						sqlite3_step(stmt);
 						connection->id = sqlite3_column_int(stmt, 0);
 						sqlite3_step(stmt);
@@ -816,7 +818,11 @@ int main(int argc, char **argv) {
 						break;
 					case CANCELLED:
 					case RUNNING:
-						if (recvexact(ssl, buf, 1) || (buf[0] != TESTDONE && buf[0] != PATCHERROR && buf[0] != MAKEERROR && buf[0] != TESTRUNNING)) {
+						if (recvexact(ssl, buf, 1) || (buf[0] != TESTDONE &&
+									buf[0] != BRANCHERROR &&
+									buf[0] != PATCHERROR &&
+									buf[0] != MAKEERROR &&
+									buf[0] != TESTRUNNING)) {
 							/* Requeue the test if the node closes unless the test was cancelled. */
 							sqlite3_prepare_v2(db,
 									"UPDATE tests SET "
@@ -936,6 +942,7 @@ int main(int argc, char **argv) {
 							sqlite3_step(stmt);
 							sqlite3_finalize(stmt);
 							break;
+						case BRANCHERROR:
 						case PATCHERROR:
 						case MAKEERROR:
 							sqlite3_prepare_v2(db,
