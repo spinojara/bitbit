@@ -219,7 +219,7 @@ int main(int argc, char **argv) {
 		if (pid == -1)
 			return 1;
 
-		/* This can fail if branch does not exist. */
+		/* This should never fail. */
 		if (pid == 0) {
 			execlp("git", "git", "clone",
 				"https://github.com/Spinojara/bitbit.git",
@@ -229,14 +229,16 @@ int main(int argc, char **argv) {
 				dtemp,
 				(char *)NULL);
 			fprintf(stderr, "error: exec git clone\n");
-			status = BRANCHERROR;
-			sendall(ssl, &status, 1);
-			goto CLEANUP;
+			return 1;
 		}
 
+		/* This can fail if branch does not exist. */
+		int brancherror = 0;
 		if (waitpid(pid, &wstatus, 0) == -1 || WEXITSTATUS(wstatus)) {
 			fprintf(stderr, "error: git clone\n");
-			return 1;
+			status = BRANCHERROR;
+			sendall(ssl, &status, 1);
+			brancherror = 1;
 		}
 
 		if (chdir(dtemp)) {
@@ -254,6 +256,9 @@ int main(int argc, char **argv) {
 				break;
 		}
 		close(fd);
+
+		if (brancherror)
+			goto CLEANUP;
 
 		pid = fork();
 		if (pid == -1)

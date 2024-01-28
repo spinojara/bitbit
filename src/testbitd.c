@@ -593,6 +593,7 @@ int main(int argc, char **argv) {
 											 elo, pm,
 											 llh, A, B);
 									break;
+								case BRANCHERROR:
 								case PATCHERROR:
 								case MAKEERROR:
 									sprintf(buf, RED "Id             %d\n"
