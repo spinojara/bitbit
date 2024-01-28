@@ -363,7 +363,8 @@ int is_KXK(const struct position *pos, int color) {
 	return !(pos->piece[other_color(color)][ALL] ^ pos->piece[other_color(color)][KING]) &&
 			(pos->piece[color][ROOK] ||
 			 pos->piece[color][QUEEN] ||
-			 (popcount(pos->piece[color][KNIGHT] | pos->piece[color][BISHOP]) >= 3));
+			 (popcount(pos->piece[color][KNIGHT] | pos->piece[color][BISHOP]) >= 3) ||
+			 (popcount(pos->piece[color][BISHOP]) >= 2));
 }
 
 /* Should be called before do_move. */
