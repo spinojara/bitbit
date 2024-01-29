@@ -823,7 +823,8 @@ int main(int argc, char **argv) {
 									buf[0] != BRANCHERROR &&
 									buf[0] != PATCHERROR &&
 									buf[0] != MAKEERROR &&
-									buf[0] != TESTRUNNING)) {
+									buf[0] != RUNERROR &&
+									buf[0] != TESTRUNNING) {
 							/* Requeue the test if the node closes unless the test was cancelled. */
 							sqlite3_prepare_v2(db,
 									"UPDATE tests SET "
@@ -863,6 +864,7 @@ int main(int argc, char **argv) {
 						case TESTRUNNING:
 							sendall(ssl, &yourstatus, 1);
 							/* fallthrough */
+						case RUNERROR:
 						case TESTDONE:
 							 /* Read hypothesis, trinomial and pentanomial. */
 							if (recvexact(ssl, (char *)trinomial, 3 * sizeof(*trinomial)) ||
