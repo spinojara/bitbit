@@ -824,7 +824,7 @@ int main(int argc, char **argv) {
 									buf[0] != PATCHERROR &&
 									buf[0] != MAKEERROR &&
 									buf[0] != RUNERROR &&
-									buf[0] != TESTRUNNING) {
+									buf[0] != TESTRUNNING)) {
 							/* Requeue the test if the node closes unless the test was cancelled. */
 							sqlite3_prepare_v2(db,
 									"UPDATE tests SET "
