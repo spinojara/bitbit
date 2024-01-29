@@ -32,10 +32,13 @@ extern int option_transposition;
 extern int option_history;
 
 enum {
-	BOUND_NONE  = 0,
-	BOUND_LOWER = 1,
-	BOUND_UPPER = 2,
-	BOUND_EXACT = 3,
+	BOUND_LOWER = 0x1,
+	BOUND_UPPER = 0x2,
+	BOUND_EXACT = BOUND_LOWER | BOUND_UPPER,
+};
+
+enum {
+	TRANSPOSITION_OLD_MOVE = 0x1,
 };
 
 struct transposition {
@@ -44,6 +47,7 @@ struct transposition {
 	uint8_t depth;
 	uint8_t bound;
 	uint16_t move;
+	uint8_t flags;
 };
 
 struct transpositiontable {
@@ -74,7 +78,7 @@ static inline struct transposition *transposition_probe(const struct transpositi
 static inline void transposition_set(struct transposition *e, const struct position *pos, int32_t evaluation, int depth, int bound, move_t move) {
 	assert(-VALUE_INFINITE < evaluation && evaluation < VALUE_INFINITE);
 	/* Keep old move if none available. */
-	if (e->zobrist_key != pos->zobrist_key || move)
+	if (move)
 		e->move = (uint16_t)move;
 	e->zobrist_key = pos->zobrist_key;
 	e->eval = evaluation;
@@ -90,8 +94,6 @@ static inline void transposition_store(struct transpositiontable *tt, const stru
 			depth >= e->depth ||
 			(bound == BOUND_EXACT && e->bound != BOUND_EXACT))
 		transposition_set(e, pos, evaluation, depth, bound, move);
-	else if (!e->move)
-		e->move = (uint16_t)move;
 }
 
 static inline int32_t adjust_score_mate_store(int32_t evaluation, int ply) {
