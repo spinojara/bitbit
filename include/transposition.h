@@ -74,7 +74,7 @@ static inline struct transposition *transposition_probe(const struct transpositi
 static inline void transposition_set(struct transposition *e, const struct position *pos, int32_t evaluation, int depth, int bound, move_t move) {
 	assert(-VALUE_INFINITE < evaluation && evaluation < VALUE_INFINITE);
 	/* Keep old move if none available. */
-	if (move)
+	if (e->zobrist_key != pos->zobrist_key || move)
 		e->move = (uint16_t)move;
 	e->zobrist_key = pos->zobrist_key;
 	e->eval = evaluation;
@@ -86,10 +86,12 @@ static inline void transposition_store(struct transpositiontable *tt, const stru
 	if (interrupt || !option_transposition)
 		return;
 	struct transposition *e = transposition_get(tt, pos);
-	if ((bound == BOUND_EXACT && e->bound != BOUND_EXACT) ||
-			e->zobrist_key != pos->zobrist_key ||
-			depth >= e->depth)
+	if (e->zobrist_key != pos->zobrist_key ||
+			depth >= e->depth ||
+			(bound == BOUND_EXACT && e->bound != BOUND_EXACT))
 		transposition_set(e, pos, evaluation, depth, bound, move);
+	else if (!e->move)
+		e->move = (uint16_t)move;
 }
 
 static inline int32_t adjust_score_mate_store(int32_t evaluation, int ply) {
@@ -111,6 +113,7 @@ static inline int32_t adjust_score_mate_get(int32_t evaluation, int ply) {
 	return evaluation + adjustment;
 }
 
+/* Can avoid the multiplication here if we instead do square + 64 * piece. */
 static inline uint64_t zobrist_piece_key(int piece, int square) {
 	return zobrist_keys[piece + 12 * square];
 }
