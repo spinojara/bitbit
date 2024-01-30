@@ -165,7 +165,7 @@ int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, s
 	int tthit = e != NULL;
 	int32_t tteval = tthit ? adjust_score_mate_get(e->eval, ply) : VALUE_NONE;
 	int ttbound = tthit ? e->bound : 0;
-	move_t ttmove = tthit ? e->move : 0;
+	move_t ttmove_unsafe = tthit ? e->move : 0;
 	if (!pv_node && tthit && ttbound & (tteval >= beta ? BOUND_LOWER : BOUND_UPPER))
 		return tteval;
 
@@ -181,6 +181,7 @@ int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, s
 			alpha = best_eval;
 	}
 
+	move_t ttmove = pseudo_legal(pos, &pstate, &ttmove_unsafe) ? ttmove_unsafe : 0;
 	struct movepicker mp;
 	movepicker_init(&mp, 1, pos, &pstate, ttmove, 0, 0, si);
 	move_t best_move = 0;
@@ -261,7 +262,7 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	int32_t tteval = tthit ? adjust_score_mate_get(e->eval, ply) : VALUE_NONE;
 	int ttbound = tthit ? e->bound : 0;
 	int ttdepth = tthit ? e->depth : 0;
-	move_t ttmove = root_node ? si->pv[0][0] : tthit ? e->move : 0;
+	move_t ttmove_unsafe = root_node ? si->pv[0][0] : tthit ? e->move : 0;
 	if (!pv_node && tthit && ttdepth >= depth && ttbound & (tteval >= beta ? BOUND_LOWER : BOUND_UPPER))
 		return tteval;
 
@@ -270,6 +271,9 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	
 	if (depth == 0 && !pstate.checkers)
 		return quiescence(pos, ply, alpha, beta, si, &pstate, ss);
+
+	move_t ttmove = pseudo_legal(pos, &pstate, &ttmove_unsafe) ? ttmove_unsafe : 0;
+	int ttcapture = ttmove ? is_capture(pos, &ttmove) : 0;
 
 	if (pstate.checkers)
 		goto skip_pruning;
@@ -350,8 +354,6 @@ skip_pruning:;
 
 	struct movepicker mp;
 	movepicker_init(&mp, 0, pos, &pstate, ttmove, si->killers[ply][0], si->killers[ply][1], si);
-
-	int ttcapture = ttmove ? is_capture(pos, &ttmove) : 0;
 
 	move_t move;
 	int move_index = -1;

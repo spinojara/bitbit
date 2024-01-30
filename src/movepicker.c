@@ -121,12 +121,12 @@ move_t next_move(struct movepicker *mp) {
 		/* fallthrough */
 	case STAGE_KILLER1:
 		mp->stage++;
-		if (mp->killer1)
+		if (pseudo_legal(mp->pos, mp->pstate, &mp->killer1))
 			return mp->killer1;
 		/* fallthrough */
 	case STAGE_KILLER2:
 		mp->stage++;
-		if (mp->killer2)
+		if (pseudo_legal(mp->pos, mp->pstate, &mp->killer2))
 			return mp->killer2;
 		/* fallthrough */
 	case STAGE_OKCAPTURE:
@@ -185,24 +185,14 @@ void movepicker_init(struct movepicker *mp, int quiescence, struct position *pos
 	mp->pos = pos;
 	mp->pstate = pstate;
 	mp->si = si;
-	/* Set quiescence flag based on checkers so that
-	 * we don't have to keep checking the checkers flag.
-	 */
-
 	/* Now we keep checking for mp->quiescence on the
 	 * different stages because it might get changed
 	 * from negamax.
 	 */
+	mp->ttmove = (!mp->quiescence || is_capture(mp->pos, &ttmove) || move_flag(&ttmove) == MOVE_PROMOTION) ? ttmove : 0;
 
-	/* Maybe check pseudo_legal outside movepicker.
-	 * The variable ttcapture would be affected.
-	 */
-	mp->ttmove = (!mp->quiescence || is_capture(mp->pos, &ttmove) || move_flag(&ttmove) == MOVE_PROMOTION) &&
-		pseudo_legal(mp->pos, mp->pstate, &ttmove) ?
-		ttmove : 0;
-
-	mp->killer1 = pseudo_legal(mp->pos, mp->pstate, &killer1) ? killer1 : 0;
-	mp->killer2 = pseudo_legal(mp->pos, mp->pstate, &killer2) ? killer2 : 0;
+	mp->killer1 = killer1;
+	mp->killer2 = killer2;
 
 	mp->stage = STAGE_TT;
 }
