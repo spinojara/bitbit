@@ -29,6 +29,8 @@
 
 void do_move(struct position *pos, move_t *move) {
 	assert(*move);
+	/* Remove old flags. */
+	*move &= 0xFFFF;
 	int source_square = move_from(move);
 	int target_square = move_to(move);
 	assert(pos->mailbox[source_square]);

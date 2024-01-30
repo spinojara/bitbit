@@ -67,7 +67,6 @@ void print_pv(struct position *pos, move_t *pv_move, int ply) {
 	do_move(pos, pv_move);
 	print_pv(pos, pv_move + 1, ply + 1);
 	undo_move(pos, pv_move);
-	*pv_move = *pv_move & 0xFFFF;
 }
 
 static inline void store_killer_move(const move_t *move, int ply, move_t killers[][2]) {
@@ -75,10 +74,10 @@ static inline void store_killer_move(const move_t *move, int ply, move_t killers
 		return;
 	assert(0 <= ply && ply < DEPTH_MAX);
 	assert(*move);
-	if ((*move & 0xFFFF) == killers[ply][0])
+	if (move_compare(*move, killers[ply][0]) || move_compare(*move, killers[ply][1]))
 		return;
 	killers[ply][1] = killers[ply][0];
-	killers[ply][0] = *move & 0xFFFF;
+	killers[ply][0] = *move;
 }
 
 static inline void store_history_move(const struct position *pos, const move_t *move, int depth, int64_t history_moves[13][64]) {
@@ -93,7 +92,7 @@ static inline void store_pv_move(const move_t *move, int ply, move_t pv[DEPTH_MA
 	if (interrupt)
 		return;
 	assert(*move);
-	pv[ply][ply] = *move & 0xFFFF;
+	pv[ply][ply] = *move;
 	memcpy(pv[ply] + ply + 1, pv[ply + 1] + ply + 1, sizeof(**pv) * (DEPTH_MAX - (ply + 1)));
 }
 
@@ -375,7 +374,7 @@ skip_pruning:;
 				extensions = 1;
 			}
 #if 0
-			else if (!root_node && depth >= 5 && ttmove == move && !excluded_move && e->bound & BOUND_LOWER && e->depth >= depth - 3) {
+			else if (!root_node && depth >= 5 && move_compare(ttmove, move) && !excluded_move && e->bound & BOUND_LOWER && e->depth >= depth - 3) {
 				int reduction = 3;
 				int new_depth = depth - reduction;
 
@@ -452,7 +451,7 @@ skip_pruning:;
 				r -= 1;
 			if (!move_capture(&move) && ttcapture)
 				r += 1;
-			if (cut_node && move != si->killers[ply][0] && move != si->killers[ply][1])
+			if (cut_node && !move_compare(move, si->killers[ply][0]) && !move_compare(move, si->killers[ply][1]))
 				r += 1;
 
 			int lmr_depth = clamp(new_depth - r, 1, new_depth);

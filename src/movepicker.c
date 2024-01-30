@@ -83,7 +83,9 @@ void evaluate_quiet(struct movepicker *mp) {
 
 void filter_moves(struct movepicker *mp) {
 	for (int i = 0; mp->move[i]; i++) {
-		if (mp->move[i] == mp->ttmove || mp->move[i] == mp->killer1 || mp->move[i] == mp->killer2) {
+		if (move_compare(mp->move[i], mp->ttmove) ||
+				move_compare(mp->move[i], mp->killer1) ||
+				move_compare(mp->move[i], mp->killer2)) {
 			mp->move[i] = mp->end[-1];
 			*--mp->end = 0;
 		}
