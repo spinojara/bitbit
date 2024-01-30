@@ -77,9 +77,12 @@ static inline struct transposition *transposition_probe(const struct transpositi
 
 static inline void transposition_set(struct transposition *e, const struct position *pos, int32_t evaluation, int depth, int bound, move_t move) {
 	assert(-VALUE_INFINITE < evaluation && evaluation < VALUE_INFINITE);
+	e->flags = 0;
 	/* Keep old move if none available. */
 	if (move)
 		e->move = (uint16_t)move;
+	else
+		e->flags |= TRANSPOSITION_OLD_MOVE;
 	e->zobrist_key = pos->zobrist_key;
 	e->eval = evaluation;
 	e->depth = depth;
@@ -94,6 +97,8 @@ static inline void transposition_store(struct transpositiontable *tt, const stru
 			depth >= e->depth ||
 			(bound == BOUND_EXACT && e->bound != BOUND_EXACT))
 		transposition_set(e, pos, evaluation, depth, bound, move);
+	else if (move && e->flags & TRANSPOSITION_OLD_MOVE)
+		e->move = (uint16_t)move;
 }
 
 static inline int32_t adjust_score_mate_store(int32_t evaluation, int ply) {
