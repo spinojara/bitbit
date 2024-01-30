@@ -162,13 +162,15 @@ int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, s
 		return draw(si);
 
 	struct transposition *e = transposition_probe(si->tt, pos);
-	int32_t tteval = e ? adjust_score_mate_get(e->eval, ply) : VALUE_NONE;
-	move_t ttmove = e ? e->move : 0;
-	if (!pv_node && e && e->bound & (tteval >= beta ? BOUND_LOWER : BOUND_UPPER))
+	int tthit = e != NULL;
+	int32_t tteval = tthit ? adjust_score_mate_get(e->eval, ply) : VALUE_NONE;
+	int ttbound = tthit ? e->bound : 0;
+	move_t ttmove = tthit ? e->move : 0;
+	if (!pv_node && tthit && ttbound & (tteval >= beta ? BOUND_LOWER : BOUND_UPPER))
 		return tteval;
 
 	if (!pstate.checkers) {
-		if (e && e->bound & (tteval >= beta ? BOUND_LOWER : BOUND_UPPER))
+		if (tthit && ttbound & (tteval >= beta ? BOUND_LOWER : BOUND_UPPER))
 			best_eval = tteval;
 		else
 			best_eval = eval;
@@ -255,9 +257,12 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	move_t excluded_move = ss->excluded_move;
 
 	struct transposition *e = excluded_move ? NULL : transposition_probe(si->tt, pos);
-	int32_t tteval = e ? adjust_score_mate_get(e->eval, ply) : VALUE_NONE;
-	move_t ttmove = root_node ? si->pv[0][0] : e ? e->move : 0;
-	if (!pv_node && e && e->depth >= depth && e->bound & (tteval >= beta ? BOUND_LOWER : BOUND_UPPER))
+	int tthit = e != NULL;
+	int32_t tteval = tthit ? adjust_score_mate_get(e->eval, ply) : VALUE_NONE;
+	int ttbound = tthit ? e->bound : 0;
+	int ttdepth = tthit ? e->depth : 0;
+	move_t ttmove = root_node ? si->pv[0][0] : tthit ? e->move : 0;
+	if (!pv_node && tthit && ttdepth >= depth && ttbound & (tteval >= beta ? BOUND_LOWER : BOUND_UPPER))
 		return tteval;
 
 	struct pstate pstate;
@@ -271,7 +276,10 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 
 #if 0
 	int32_t static_eval = evaluate(pos);
+	if (tteval != VALUE_NONE && ttbound & (tteval >= static_eval ? BOUND_LOWER : BOUND_UPPER))
+		static_eval = tteval;
 #endif
+
 #if 0
 	/* Razoring. */
 	if (!pv_node && depth <= 8 && static_eval + 100 + 150 * depth * depth < alpha) {
@@ -312,13 +320,19 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	if ((pv_node || cut_node) && !excluded_move && depth >= 4 && !ttmove) {
 		int reduction = 3;
 		int new_depth = depth - reduction;
-		negamax(pos, new_depth, ply, alpha, beta, cut_node, si, ss);
-		struct transposition *ne = transposition_probe(si->tt, pos);
-		if (ne) {
-			if (!e || ne->depth >= e->depth) {
-				e = ne;
+		negamax(pos, new_depth, ply, -VALUE_MATE, beta, cut_node, si, ss);
+		e = transposition_probe(si->tt, pos);
+		if (e) {
+			/* Not this tthit, but last tthit. */
+			if (!tthit) {
 				tteval = adjust_score_mate_get(e->eval, ply);
+				ttbound = e->bound;
+				ttdepth = e->depth;
+				/* Can once more update static_eval but maybe
+				 * we won't use it anyway.
+				 */
 			}
+			tthit = 1;
 			ttmove = e->move;
 		}
 	}
@@ -453,7 +467,7 @@ skip_pruning:;
 				full_depth_search = 1;
 		}
 		else {
-			/* If this is not a pv node, then alpha = beta + 1 or, -beta = -alpha - 1.
+			/* If this is not a pv node, then alpha = beta + 1, or -beta = -alpha - 1.
 			 * Our full depth search will thus search in the full interval [-beta, -alpha].
 			 * If this is a pv node and we are not at the first child, then the child is
 			 * an expected cut node. We should thus do a full depth search.
