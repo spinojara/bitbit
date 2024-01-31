@@ -123,12 +123,14 @@ move_t next_move(struct movepicker *mp) {
 		/* fallthrough */
 	case STAGE_KILLER1:
 		mp->stage++;
-		if (pseudo_legal(mp->pos, mp->pstate, &mp->killer1))
+		if (!move_compare(mp->killer1, mp->ttmove) &&
+				pseudo_legal(mp->pos, mp->pstate, &mp->killer1))
 			return mp->killer1;
 		/* fallthrough */
 	case STAGE_KILLER2:
 		mp->stage++;
-		if (pseudo_legal(mp->pos, mp->pstate, &mp->killer2))
+		if (!move_compare(mp->killer2, mp->ttmove) &&
+				pseudo_legal(mp->pos, mp->pstate, &mp->killer2))
 			return mp->killer2;
 		/* fallthrough */
 	case STAGE_OKCAPTURE:
