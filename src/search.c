@@ -80,6 +80,57 @@ static inline void store_killer_move(const move_t *move, int ply, move_t killers
 	killers[ply][0] = *move;
 }
 
+/* Suppose that h_0 is the original value of history.
+ * After adding a bonus b we get h_1 = h_0 + b.
+ * We scale the value back a little so that it doesn't
+ * grow too large in either direction. If we scale by
+ * a real number alpha we get h_2 = alpha * h_1.
+ *
+ * This stabilizes whenever h_0 = h_2. This gives
+ * h_1 - b = alpha * h_1 which implies h_1 * (1 - alpha) = b.
+ * h_1 = b / (1 - alpha) and h_0 = b / (1 - alpha) - b =
+ * b * alpha / (1 - alpha) which gives b / h_0 = 1 / alpha - 1.
+ *
+ * We choose e.g. alpha = 15 / 16.
+ */
+static inline void add_history(int64_t *history, int64_t bonus) {
+	*history += bonus;
+	*history = 15 * *history / 16;
+}
+
+static inline void update_history(struct searchinfo *si, const struct position *pos, int depth, int ply, move_t *best_move, int32_t best_eval, int32_t beta, move_t *captures, move_t *quiets) {
+	int64_t bonus = 16 * depth * depth;
+
+	int our_piece = pos->mailbox[move_from(best_move)];
+	int their_piece = move_capture(best_move);
+
+	if (!their_piece) {
+		add_history(&si->quiet_history[our_piece][move_to(best_move)], bonus);
+		
+		if (move_flag(best_move) != MOVE_PROMOTION) {
+			if (best_eval >= beta)
+				store_killer_move(best_move, ply, si->killers);
+
+			for (int i = 0; quiets[i]; i++) {
+				int square = move_to(&quiets[i]);
+				int piece = pos->mailbox[move_from(&quiets[i])];
+				add_history(&si->quiet_history[piece][square], -bonus);
+			}
+		}
+
+	}
+	else {
+		add_history(&si->capture_history[our_piece][their_piece][move_to(best_move)], bonus);
+	}
+
+	for (int i = 0; captures[i]; i++) {
+		int square = move_to(&captures[i]);
+		int piece1 = pos->mailbox[move_from(&captures[i])];
+		int piece2 = move_capture(&captures[i]);
+		add_history(&si->capture_history[piece1][piece2][square], -bonus);
+	}
+}
+
 static inline void store_history_move(const struct position *pos, const move_t *move, int depth, int64_t history_moves[13][64]) {
 	if (interrupt)
 		return;
@@ -320,10 +371,10 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 #endif
 #if 0
 	/* Internal iterative deepening. */
-	if ((pv_node || cut_node) && !excluded_move && depth >= 4 && !ttmove) {
+	if (depth >= 4 && (pv_node || cut_node) && !(ttbound & BOUND_UPPER) && !excluded_move && !ttmove) {
 		int reduction = 3;
 		int new_depth = depth - reduction;
-		negamax(pos, new_depth, ply, -VALUE_MATE, beta, cut_node, si, ss);
+		negamax(pos, new_depth, ply, alpha, beta, cut_node, si, ss);
 		e = transposition_probe(si->tt, pos);
 		if (e) {
 			/* Not this tthit, but last tthit. */
@@ -337,6 +388,7 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 			}
 			tthit = 1;
 			ttmove = e->move;
+			ttmove = pseudo_legal(pos, &pstate, &ttmove) ? ttmove : 0;
 		}
 	}
 #endif
@@ -354,14 +406,15 @@ skip_pruning:;
 	struct movepicker mp;
 	movepicker_init(&mp, 0, pos, &pstate, ttmove, si->killers[ply][0], si->killers[ply][1], si);
 
-	move_t move;
+	move_t move, quiets[MOVES_MAX], captures[MOVES_MAX];
+	int n_quiets = 0, n_captures = 0;
 	int move_index = -1;
 	while ((move = next_move(&mp))) {
+
 		if (!legal(pos, &pstate, &move) || move == excluded_move)
 			continue;
 
 		move_index++;
-
 #if 0
 		if (!root_node && !pstate.checkers && move_index > depth * depth / 2)
 			mp.quiescence = 1;
@@ -508,23 +561,33 @@ skip_pruning:;
 
 				if (pv_node)
 					store_pv_move(&move, ply, si->pv);
-				if (!is_capture(pos, &move) && move_flag(&move) != 2)
-					store_history_move(pos, &move, depth, si->history_moves);
 
-				if (pv_node && eval < beta) {
+				if (pv_node && eval < beta)
 					alpha = eval;
-				}
-				else {
-					if (!is_capture(pos, &move) && move_flag(&move) != 2)
-						store_killer_move(&move, ply, si->killers);
+				else
 					break;
-				}
 			}
 		}
+		/* If this move was not good we reduce its stats.
+		 * Note that in non-pv nodes we will only ever
+		 * have one best move and the problem of overwriting
+		 * best moves will not be a problem.
+		 */
+		if (move != best_move) {
+			if (move_capture(&move))
+				captures[n_captures++] = move;
+			else
+				quiets[n_quiets++] = move;
+		}
 	}
-	if (move_index == -1)
+	if (move_index == -1) {
 		best_eval = excluded_move ? alpha :
 			pstate.checkers ? -VALUE_MATE + ply : 0;
+	}
+	else if (best_move) {
+		captures[n_captures] = quiets[n_quiets] = 0;
+		update_history(si, pos, depth, ply, &best_move, best_eval, beta, captures, quiets);
+	}
 	int bound = (best_eval >= beta) ? BOUND_LOWER : (pv_node && best_move) ? BOUND_EXACT : BOUND_UPPER;
 	if (!excluded_move)
 		transposition_store(si->tt, pos, adjust_score_mate_store(best_eval, ply), depth, bound, best_move);

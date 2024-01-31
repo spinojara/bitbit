@@ -24,15 +24,15 @@
 #include "evaluate.h"
 #include "transposition.h"
 
-int mvv_lva_lookup[13 * 13];
+int mvv_lva_lookup[7 * 7];
 
 unsigned move_order_piece_value[] = { 0, 100, 300, 300, 500, 900, 0 };
 
 void mvv_lva_init(void) {
-	for (int attacker = 0; attacker < 13; attacker++)
-		for (int victim = 0; victim < 13; victim++)
-			mvv_lva_lookup[attacker + 13 * victim] = move_order_piece_value[uncolored_piece(victim)] -
-			                                         move_order_piece_value[uncolored_piece(attacker)];
+	for (int attacker = 0; attacker < 7; attacker++)
+		for (int victim = 0; victim < 7; victim++)
+			mvv_lva_lookup[attacker + 7 * victim] = move_order_piece_value[victim] -
+			                                         move_order_piece_value[attacker];
 }
 
 int see_geq(struct position *pos, const move_t *move, int32_t value) {
@@ -160,6 +160,28 @@ int see_geq(struct position *pos, const move_t *move, int32_t value) {
 	pos->piece[them][ALL] ^= tob;
 	pos->piece[us][attacker] ^= tob | fromb;
 	pos->piece[us][ALL] ^= tob | fromb;
+	return ret;
+}
+
+/* For quiet moves. */
+uint64_t generate_defenders(struct position *pos, const move_t *move) {
+	const int us = pos->turn;
+	assert(!pos->mailbox[them]);
+
+	int from_square = move_from(move);
+	int to_square = move_to(move);
+	uint64_t from = bitboard(from_square);
+	uint64_t to = bitboard(to_square);
+	int attacker = uncolored_piece(pos->mailbox[from_square]);
+
+	pos->piece[us][attacker] ^= to | from;
+	pos->piece[us][ALL] ^= to | from;
+
+	uint64_t ret = generate_attackers(pos, to_square, us);
+
+	pos->piece[us][attacker] ^= to | from;
+	pos->piece[us][ALL] ^= to | from;
+
 	return ret;
 }
 

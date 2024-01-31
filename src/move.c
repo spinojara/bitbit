@@ -240,18 +240,18 @@ int pseudo_legal(const struct position *pos, const struct pstate *pstate, const 
 			 * is faulty.
 			 */
 			if (pos->castle & 0x1 && to_square == g1 &&
-					!(all & 0x60) && !(pstate->attacked & 0x60))
+					!(all & 0x60) && !(pstate->attacked[ALL] & 0x60))
 				return 1;
 			if (pos->castle & 0x2 && to_square == c1 &&
-					!(all & 0xE) && !(pstate->attacked & 0xC))
+					!(all & 0xE) && !(pstate->attacked[ALL] & 0xC))
 				return 1;
 		}
 		else {
 			if (pos->castle & 0x4 && to_square == g8 &&
-					!(all & 0x6000000000000000) && !(pstate->attacked & 0x6000000000000000))
+					!(all & 0x6000000000000000) && !(pstate->attacked[ALL] & 0x6000000000000000))
 				return 1;
 			if (pos->castle & 0x8 && to_square == c8 &&
-					!(all & 0xE00000000000000) && !(pstate->attacked & 0xC00000000000000))
+					!(all & 0xE00000000000000) && !(pstate->attacked[ALL] & 0xC00000000000000))
 				return 1;
 		}
 		return 0;
@@ -280,7 +280,7 @@ int pseudo_legal(const struct position *pos, const struct pstate *pstate, const 
 		return 0;
 	}
 
-	if (piece == KING && pstate->attacked & to)
+	if (piece == KING && pstate->attacked[ALL] & to)
 		return 0;
 
 	if (single(pstate->checkers)) {

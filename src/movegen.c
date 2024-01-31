@@ -166,7 +166,7 @@ static inline move_t *movegen_king(const struct position *pos, const struct psta
 
 	int source = ctz(pos->piece[us][KING]), target;
 
-	uint64_t attack = attacks(KING, source, own, all) & targets & ~pstate->attacked;
+	uint64_t attack = attacks(KING, source, own, all) & targets & ~pstate->attacked[ALL];
 	while (attack) {
 		target = ctz(attack);
 		*moves++ = new_move(source, target, 0, 0);
@@ -176,18 +176,18 @@ static inline move_t *movegen_king(const struct position *pos, const struct psta
 	if (type & MOVETYPE_QUIET && !pstate->checkers) {
 		if (us) {
 			if (pos->castle & 0x1 && !(all & 0x60) &&
-					!(pstate->attacked & 0x60))
+					!(pstate->attacked[ALL] & 0x60))
 				*moves++ = new_move(e1, g1, MOVE_CASTLE, 0);
 			if (pos->castle & 0x2 && !(all & 0xE) &&
-					!(pstate->attacked & 0xC))
+					!(pstate->attacked[ALL] & 0xC))
 				*moves++ = new_move(e1, c1, MOVE_CASTLE, 0);
 		}
 		else {
 			if (pos->castle & 0x4 && !(all & 0x6000000000000000) &&
-					!(pstate->attacked & 0x6000000000000000))
+					!(pstate->attacked[ALL] & 0x6000000000000000))
 				*moves++ = new_move(e8, g8, MOVE_CASTLE, 0);
 			if (pos->castle & 0x8 && !(all & 0xE00000000000000) &&
-					!(pstate->attacked & 0xC00000000000000))
+					!(pstate->attacked[ALL] & 0xC00000000000000))
 				*moves++ = new_move(e8, c8, MOVE_CASTLE, 0);
 		}
 	}

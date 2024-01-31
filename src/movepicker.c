@@ -66,18 +66,33 @@ void evaluate_nonquiet(struct movepicker *mp) {
 		int square_from = move_from(move);
 		int square_to = move_to(move);
 		int attacker = mp->pos->mailbox[square_from];
-		int victim = mp->pos->mailbox[square_to];
-		mp->eval[i] = victim ? mvv_lva(attacker, victim) : 0;
+		int victim = uncolored_piece(mp->pos->mailbox[square_to]);
+		mp->eval[i] = mp->si->capture_history[attacker][victim][square_to] / 512;
+		mp->eval[i] += victim ? mvv_lva(uncolored_piece(attacker), victim) : 0;
 	}
 }
 
 void evaluate_quiet(struct movepicker *mp) {
+	uint64_t attacked[7] = { 0 };
+	attacked[KNIGHT] = attacked[BISHOP] = mp->pstate->attacked[PAWN];
+	attacked[ROOK] = attacked[BISHOP] | mp->pstate->attacked[KNIGHT] | mp->pstate->attacked[BISHOP];
+	attacked[QUEEN] = attacked[ROOK] | mp->pstate->attacked[ROOK];
+
 	for (int i = 0; mp->move[i]; i++) {
 		move_t *move = &mp->move[i];
-		int from = move_from(move);
-		int to = move_to(move);
-		int attacker = mp->pos->mailbox[from];
-		mp->eval[i] = mp->si->history_moves[attacker][to];
+		int from_square = move_from(move);
+		uint64_t from = bitboard(from_square);
+		int to_square = move_to(move);
+		uint64_t to = bitboard(to_square);
+		int attacker = mp->pos->mailbox[from_square];
+		mp->eval[i] = mp->si->quiet_history[attacker][to_square];
+		attacker = uncolored_piece(attacker);
+		if (from & attacked[attacker])
+			mp->eval[i] += 10000;
+		if (to & attacked[attacker])
+			mp->eval[i] -= 15000;
+		else if (to & mp->pstate->attacked[ALL] && !generate_defenders(mp->pos, move))
+			mp->eval[i] -= 12500;
 	}
 }
 
