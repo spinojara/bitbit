@@ -95,7 +95,7 @@ static inline void store_killer_move(const move_t *move, int ply, move_t killers
  */
 static inline void add_history(int64_t *history, int64_t bonus) {
 	*history += bonus;
-	*history = 15 * *history / 16;
+	*history -= *history / 16;
 }
 
 static inline void update_history(struct searchinfo *si, const struct position *pos, int depth, int ply, move_t *best_move, int32_t best_eval, int32_t beta, move_t *captures, move_t *quiets) {
