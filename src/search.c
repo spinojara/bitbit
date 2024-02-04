@@ -104,22 +104,19 @@ static inline void update_history(struct searchinfo *si, const struct position *
 	int our_piece = pos->mailbox[move_from(best_move)];
 	int their_piece = move_capture(best_move);
 
-	if (!their_piece) {
+	if (!their_piece && move_flag(best_move) != MOVE_PROMOTION) {
 		add_history(&si->quiet_history[our_piece][move_to(best_move)], bonus);
 		
-		if (move_flag(best_move) != MOVE_PROMOTION) {
-			if (best_eval >= beta)
-				store_killer_move(best_move, ply, si->killers);
+		if (best_eval >= beta)
+			store_killer_move(best_move, ply, si->killers);
 
-			for (int i = 0; quiets[i]; i++) {
-				int square = move_to(&quiets[i]);
-				int piece = pos->mailbox[move_from(&quiets[i])];
-				add_history(&si->quiet_history[piece][square], -bonus);
-			}
+		for (int i = 0; quiets[i]; i++) {
+			int square = move_to(&quiets[i]);
+			int piece = pos->mailbox[move_from(&quiets[i])];
+			add_history(&si->quiet_history[piece][square], -bonus);
 		}
-
 	}
-	else {
+	else if (move_flag(best_move) != MOVE_PROMOTION) {
 		add_history(&si->capture_history[our_piece][their_piece][move_to(best_move)], bonus);
 	}
 
@@ -573,7 +570,7 @@ skip_pruning:;
 		 * have one best move and the problem of overwriting
 		 * best moves will not be a problem.
 		 */
-		if (move != best_move) {
+		if (!move_compare(move, best_move)) {
 			if (move_capture(&move))
 				captures[n_captures++] = move;
 			else
