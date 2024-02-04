@@ -128,14 +128,6 @@ static inline void update_history(struct searchinfo *si, const struct position *
 	}
 }
 
-static inline void store_history_move(const struct position *pos, const move_t *move, int depth, int64_t history_moves[13][64]) {
-	if (interrupt)
-		return;
-	assert(*move);
-	assert(0 <= depth && depth < DEPTH_MAX);
-	history_moves[pos->mailbox[move_from(move)]][move_to(move)] += (uint64_t)1 << min(depth, 32);
-}
-
 static inline void store_pv_move(const move_t *move, int ply, move_t pv[DEPTH_MAX][DEPTH_MAX]) {
 	if (interrupt)
 		return;
