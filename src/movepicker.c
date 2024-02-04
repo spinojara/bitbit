@@ -85,7 +85,7 @@ void evaluate_quiet(struct movepicker *mp) {
 		int to_square = move_to(move);
 		uint64_t to = bitboard(to_square);
 		int attacker = mp->pos->mailbox[from_square];
-		mp->eval[i] = mp->si->quiet_history[attacker][to_square];
+		mp->eval[i] = mp->si->quiet_history[attacker][from_square][to_square];
 		attacker = uncolored_piece(attacker);
 		if (from & attacked[attacker])
 			mp->eval[i] += 10000;

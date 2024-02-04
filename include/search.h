@@ -40,7 +40,7 @@ struct searchinfo {
 
 	move_t pv[DEPTH_MAX][DEPTH_MAX];
 	move_t killers[DEPTH_MAX][2];
-	int64_t quiet_history[13][64];
+	int64_t quiet_history[13][64][64];
 	int64_t capture_history[13][7][64];
 
 	struct transpositiontable *tt;

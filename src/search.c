@@ -105,7 +105,7 @@ static inline void update_history(struct searchinfo *si, const struct position *
 	int their_piece = move_capture(best_move);
 
 	if (!their_piece && move_flag(best_move) != MOVE_PROMOTION) {
-		add_history(&si->quiet_history[our_piece][move_to(best_move)], bonus);
+		add_history(&si->quiet_history[our_piece][move_from(best_move)][move_to(best_move)], bonus);
 		
 		if (best_eval >= beta)
 			store_killer_move(best_move, ply, si->killers);
@@ -113,7 +113,7 @@ static inline void update_history(struct searchinfo *si, const struct position *
 		for (int i = 0; quiets[i]; i++) {
 			int square = move_to(&quiets[i]);
 			int piece = pos->mailbox[move_from(&quiets[i])];
-			add_history(&si->quiet_history[piece][square], -bonus);
+			add_history(&si->quiet_history[piece][move_from(&quiets[i])][square], -bonus);
 		}
 	}
 	else if (move_flag(best_move) != MOVE_PROMOTION) {
