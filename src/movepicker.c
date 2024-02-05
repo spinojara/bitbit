@@ -24,7 +24,7 @@
 #include "util.h"
 
 static inline int good_capture(struct position *pos, move_t *move, int threshold) {
-	return (is_capture(pos, move) && see_geq(pos, move, threshold)) || (move_flag(move) == MOVE_EN_PASSANT && 0 >= threshold);
+	return (is_capture(pos, move) || move_flag(move) == MOVE_EN_PASSANT) && see_geq(pos, move, threshold);
 }
 
 static inline int promotion(struct position *pos, move_t *move, int threshold) {
@@ -66,7 +66,7 @@ void evaluate_nonquiet(struct movepicker *mp) {
 		int square_from = move_from(move);
 		int square_to = move_to(move);
 		int attacker = mp->pos->mailbox[square_from];
-		int victim = uncolored_piece(mp->pos->mailbox[square_to]);
+		int victim = move_flag(move) == MOVE_EN_PASSANT ? PAWN : uncolored_piece(mp->pos->mailbox[square_to]);
 		mp->eval[i] = mp->si->capture_history[attacker][victim][square_to] / 512;
 		mp->eval[i] += victim ? mvv_lva(uncolored_piece(attacker), victim) : 0;
 	}
@@ -100,7 +100,8 @@ void filter_moves(struct movepicker *mp) {
 	for (int i = 0; mp->move[i]; i++) {
 		if (move_compare(mp->move[i], mp->ttmove) ||
 				move_compare(mp->move[i], mp->killer1) ||
-				move_compare(mp->move[i], mp->killer2)) {
+				move_compare(mp->move[i], mp->killer2) ||
+				move_compare(mp->move[i], mp->counter_move)) {
 			mp->move[i] = mp->end[-1];
 			*--mp->end = 0;
 		}
@@ -136,6 +137,11 @@ move_t next_move(struct movepicker *mp) {
 			return *mp->move++;
 		mp->stage++;
 		/* fallthrough */
+	case STAGE_OKCAPTURE:
+		if (find_next(mp, &good_capture, 0))
+			return *mp->move++;
+		mp->stage++;
+		/* fallthrough */
 	case STAGE_KILLER1:
 		mp->stage++;
 		if (!move_compare(mp->killer1, mp->ttmove) &&
@@ -148,10 +154,13 @@ move_t next_move(struct movepicker *mp) {
 				pseudo_legal(mp->pos, mp->pstate, &mp->killer2))
 			return mp->killer2;
 		/* fallthrough */
-	case STAGE_OKCAPTURE:
-		if (find_next(mp, &good_capture, 0))
-			return *mp->move++;
+	case STAGE_COUNTER_MOVE:
 		mp->stage++;
+		if (!move_compare(mp->counter_move, mp->ttmove) && !move_compare(mp->counter_move, mp->killer1) &&
+				!move_compare(mp->counter_move, mp->killer2) &&
+				pseudo_legal(mp->pos, mp->pstate, &mp->counter_move)) {
+			return mp->counter_move;
+		}
 		/* fallthrough */
 	case STAGE_GENQUIET:
 		if (mp->quiescence)
@@ -192,7 +201,7 @@ move_t next_move(struct movepicker *mp) {
 	}
 }
 
-void movepicker_init(struct movepicker *mp, int quiescence, struct position *pos, const struct pstate *pstate, move_t ttmove, move_t killer1, move_t killer2, const struct searchinfo *si) {
+void movepicker_init(struct movepicker *mp, int quiescence, struct position *pos, const struct pstate *pstate, move_t ttmove, move_t killer1, move_t killer2, move_t counter_move, const struct searchinfo *si) {
 	mp->quiescence = quiescence && !pstate->checkers;
 
 	mp->move = mp->moves;
@@ -212,6 +221,7 @@ void movepicker_init(struct movepicker *mp, int quiescence, struct position *pos
 
 	mp->killer1 = killer1;
 	mp->killer2 = killer2;
+	mp->counter_move = counter_move;
 
 	mp->stage = STAGE_TT;
 }

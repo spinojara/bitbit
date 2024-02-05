@@ -36,6 +36,8 @@ void mvv_lva_init(void) {
 }
 
 int see_geq(struct position *pos, const move_t *move, int32_t value) {
+	if (move_flag(move) == MOVE_EN_PASSANT)
+		return 0 >= value;
 	const int us = pos->turn;
 	const int them = other_color(us);
 

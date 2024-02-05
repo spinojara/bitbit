@@ -98,17 +98,23 @@ static inline void add_history(int64_t *history, int64_t bonus) {
 	*history -= *history / 16;
 }
 
-static inline void update_history(struct searchinfo *si, const struct position *pos, int depth, int ply, move_t *best_move, int32_t best_eval, int32_t beta, move_t *captures, move_t *quiets) {
+static inline void update_history(struct searchinfo *si, const struct position *pos, int depth, int ply, move_t *best_move, int32_t best_eval, int32_t beta, move_t *captures, move_t *quiets, const struct searchstack *ss) {
 	int64_t bonus = 16 * depth * depth;
 
 	int our_piece = pos->mailbox[move_from(best_move)];
 	int their_piece = move_capture(best_move);
 
-	if (!their_piece && move_flag(best_move) != MOVE_PROMOTION) {
+	if (!their_piece && move_flag(best_move) != MOVE_PROMOTION && move_flag(best_move) != MOVE_EN_PASSANT) {
 		add_history(&si->quiet_history[our_piece][move_from(best_move)][move_to(best_move)], bonus);
 		
 		if (best_eval >= beta)
 			store_killer_move(best_move, ply, si->killers);
+
+		move_t old_move = (ss - 1)->move;
+		if (old_move) {
+			int square = move_to(&old_move);
+			si->counter_move[pos->mailbox[square]][square] = *best_move;
+		}
 
 		for (int i = 0; quiets[i]; i++) {
 			int square = move_to(&quiets[i]);
@@ -116,7 +122,7 @@ static inline void update_history(struct searchinfo *si, const struct position *
 			add_history(&si->quiet_history[piece][move_from(&quiets[i])][square], -bonus);
 		}
 	}
-	else if (move_flag(best_move) != MOVE_PROMOTION) {
+	else if (move_flag(best_move) != MOVE_PROMOTION && move_flag(best_move) != MOVE_EN_PASSANT) {
 		add_history(&si->capture_history[our_piece][their_piece][move_to(best_move)], bonus);
 	}
 
@@ -222,7 +228,7 @@ int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, s
 
 	move_t ttmove = pseudo_legal(pos, &pstate, &ttmove_unsafe) ? ttmove_unsafe : 0;
 	struct movepicker mp;
-	movepicker_init(&mp, 1, pos, &pstate, ttmove, 0, 0, si);
+	movepicker_init(&mp, 1, pos, &pstate, ttmove, 0, 0, 0, si);
 	move_t best_move = 0;
 	move_t move;
 	int move_index = -1;
@@ -342,7 +348,7 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 #endif
 #if 0
 	/* Null move pruning. */
-	if (!pv_node && (ss - 1)->move && depth >= 3 && has_sliding_piece(pos)) {
+	if (!pv_node && (ss - 1)->move && static_eval >= beta && depth >= 3 && has_sliding_piece(pos)) {
 		int reduction = 3;
 		int new_depth = clamp(depth - reduction, 1, depth);
 		int ep = pos->en_passant;
@@ -392,8 +398,14 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 skip_pruning:;
 	move_t best_move = 0;
 
+	move_t counter_move = 0;
+	move_t old_move = (ss - 1)->move;
+	if (old_move) {
+		int square = move_to(&old_move);
+		counter_move = si->counter_move[pos->mailbox[square]][square];
+	}
 	struct movepicker mp;
-	movepicker_init(&mp, 0, pos, &pstate, ttmove, si->killers[ply][0], si->killers[ply][1], si);
+	movepicker_init(&mp, 0, pos, &pstate, ttmove, si->killers[ply][0], si->killers[ply][1], counter_move, si);
 
 	move_t move, quiets[MOVES_MAX], captures[MOVES_MAX];
 	int n_quiets = 0, n_captures = 0;
@@ -404,10 +416,6 @@ skip_pruning:;
 			continue;
 
 		move_index++;
-#if 0
-		if (!root_node && !pstate.checkers && move_index > depth * depth / 2)
-			mp.quiescence = 1;
-#endif
 
 		/* Extensions. */
 		int extensions = 0;
@@ -538,6 +546,7 @@ skip_pruning:;
 		undo_endgame_key(pos, &move);
 		undo_move(pos, &move);
 		undo_accumulator(pos, &move);
+
 		if (interrupt || si->interrupt)
 			return 0;
 
@@ -575,7 +584,7 @@ skip_pruning:;
 	}
 	else if (best_move) {
 		captures[n_captures] = quiets[n_quiets] = 0;
-		update_history(si, pos, depth, ply, &best_move, best_eval, beta, captures, quiets);
+		update_history(si, pos, depth, ply, &best_move, best_eval, beta, captures, quiets, ss);
 	}
 	int bound = (best_eval >= beta) ? BOUND_LOWER : (pv_node && best_move) ? BOUND_EXACT : BOUND_UPPER;
 	if (!excluded_move)

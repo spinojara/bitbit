@@ -28,9 +28,10 @@ enum {
 	STAGE_SORTNONQUIET,
 	STAGE_GOODCAPTURE,
 	STAGE_PROMOTION,
+	STAGE_OKCAPTURE,
 	STAGE_KILLER1,
 	STAGE_KILLER2,
-	STAGE_OKCAPTURE,
+	STAGE_COUNTER_MOVE,
 	STAGE_GENQUIET,
 	STAGE_SORTQUIET,
 	STAGE_QUIET,
@@ -48,11 +49,12 @@ struct movepicker {
 
 	move_t ttmove;
 	move_t killer1, killer2;
+	move_t counter_move;
 	const struct searchinfo *si;
 };
 
 move_t next_move(struct movepicker *mp);
 
-void movepicker_init(struct movepicker *mp, int quiescence, struct position *pos, const struct pstate *pstate, move_t ttmove, move_t killer1, move_t killer2, const struct searchinfo *si);
+void movepicker_init(struct movepicker *mp, int quiescence, struct position *pos, const struct pstate *pstate, move_t ttmove, move_t killer1, move_t killer2, move_t counter_move, const struct searchinfo *si);
 
 #endif
