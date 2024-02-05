@@ -409,7 +409,7 @@ void undo_endgame_key(struct position *pos, const move_t *move) {
 	assert(pos->mailbox[move_to(move)]);
 	int victim = move_capture(move);
 	int turn = other_color(pos->turn);
-	if (victim) {
+	if (victim && move_flag(move) != MOVE_EN_PASSANT) {
 		int before = popcount(pos->piece[other_color(turn)][victim]);
 		int after = before + 1;
 		pos->endgame_key ^= endgame_key(other_color(turn), victim, before);

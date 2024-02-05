@@ -324,7 +324,7 @@ void do_update_accumulator(struct position *pos, move_t *move, int turn) {
 	index = make_index(turn, target_square, pos->mailbox[target_square], king_square);
 	add_index(index, pos->accumulation, pos->psqtaccumulation, turn);
 
-	if (move_capture(move)) {
+	if (move_capture(move) && move_flag(move) != MOVE_EN_PASSANT) {
 		index = make_index(turn, target_square, colored_piece(move_capture(move), pos->turn), king_square);
 		remove_index(index, pos->accumulation, pos->psqtaccumulation, turn);
 	}
@@ -363,7 +363,7 @@ void undo_update_accumulator(struct position *pos, move_t *move, int turn) {
 	index = make_index(turn, source_square, pos->mailbox[source_square], king_square);
 	add_index(index, pos->accumulation, pos->psqtaccumulation, turn);
 
-	if (move_capture(move)) {
+	if (move_capture(move) && move_flag(move) != MOVE_EN_PASSANT) {
 		index = make_index(turn, target_square, colored_piece(move_capture(move), other_color(pos->turn)), king_square);
 		add_index(index, pos->accumulation, pos->psqtaccumulation, turn);
 	}

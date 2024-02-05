@@ -79,6 +79,7 @@ void do_move(struct position *pos, move_t *move) {
 		pos->piece[other_color(pos->turn)][PAWN] ^= bitboard(target_square - direction * 8);
 		pos->piece[other_color(pos->turn)][ALL] ^= bitboard(target_square - direction * 8);
 		pos->mailbox[target_square - direction * 8] = EMPTY;
+		move_set_captured(move, PAWN);
 		break;
 	case MOVE_PROMOTION:
 		pos->piece[pos->turn][PAWN] ^= to;
@@ -189,7 +190,7 @@ void undo_move(struct position *pos, const move_t *move) {
 	pos->mailbox[source_square] = pos->mailbox[target_square];
 	pos->mailbox[target_square] = EMPTY;
 
-	if (move_capture(move)) {
+	if (move_capture(move) && move_flag(move) != MOVE_EN_PASSANT) {
 		pos->piece[other_color(pos->turn)][move_capture(move)] ^= to;
 		pos->piece[other_color(pos->turn)][ALL] ^= to;
 		pos->mailbox[target_square] = colored_piece(move_capture(move), other_color(pos->turn));
