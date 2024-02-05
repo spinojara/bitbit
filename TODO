@@ -8,3 +8,9 @@
 VERY IMPORTANT
 - Verify that the new transposition table works correctly.
 - Verify that the new static exchange evaluation works correctly.
+
+IDEAS
+- Add an Elo option which works by randomly skipping moves in the
+  search tree. The higher the ply the higher the chance of skipping.
+  Should not skip anything at very low plies like 0 and 1 (depending
+  on Elo).
