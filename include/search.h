@@ -29,6 +29,8 @@ typedef int64_t timepoint_t;
 struct searchstack {
 	move_t move;
 	move_t excluded_move;
+
+	int32_t static_eval;
 };
 
 struct searchinfo {

@@ -324,14 +324,14 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 		goto skip_pruning;
 
 #if 1
-	int32_t static_eval = evaluate(pos);
-	if (tteval != VALUE_NONE && ttbound & (tteval >= static_eval ? BOUND_LOWER : BOUND_UPPER))
-		static_eval = tteval;
+	int32_t estimated_eval = ss->static_eval = evaluate(pos);
+	if (tteval != VALUE_NONE && ttbound & (tteval >= estimated_eval ? BOUND_LOWER : BOUND_UPPER))
+		estimated_eval = tteval;
 #endif
 
 #if 1
 	/* Razoring (33 Elo). */
-	if (!pv_node && depth <= 8 && static_eval + 100 + 150 * depth * depth < alpha) {
+	if (!pv_node && depth <= 8 && estimated_eval + 100 + 150 * depth * depth < alpha) {
 		eval = quiescence(pos, ply, alpha - 1, alpha, si, &pstate, ss);
 		if (eval < alpha)
 			return eval;
@@ -339,13 +339,13 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 #endif
 #if 1
 	/* Futility pruning (61 Elo). */
-	if (!pv_node && depth <= 6 && static_eval - 200 * depth > beta)
-		return static_eval;
+	if (!pv_node && depth <= 6 && estimated_eval - 200 * depth > beta)
+		return estimated_eval;
 #endif
-#if 0
+#if 1
 	/* Null move pruning. */
-	if (!pv_node && (ss - 1)->move && static_eval >= beta && depth >= 3 && has_sliding_piece(pos)) {
-		int reduction = 3;
+	if (!pv_node && (ss - 1)->move && estimated_eval >= beta && depth >= 3 && has_sliding_piece(pos)) {
+		int reduction = 4;
 		int new_depth = clamp(depth - reduction, 1, depth);
 		int ep = pos->en_passant;
 		do_null_zobrist_key(pos, 0);
