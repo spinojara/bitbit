@@ -337,8 +337,8 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 			return eval;
 	}
 #endif
-#if 0
-	/* Futility pruning. */
+#if 1
+	/* Futility pruning (61 Elo). */
 	if (!pv_node && depth <= 6 && static_eval - 200 * depth > beta)
 		return static_eval;
 #endif
