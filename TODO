@@ -4,6 +4,8 @@
 - Try pgo (profile guided optimization).
 - Profile code using gcov, operf and gprof.
 - Create unit tests for important, and error prone, parts.
+- Make transposition table partly associative.
+- Improve time management.
 
 VERY IMPORTANT
 - Verify that the new transposition table works correctly.
