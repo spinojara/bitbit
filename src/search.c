@@ -323,27 +323,23 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	if (pstate.checkers)
 		goto skip_pruning;
 
-#if 0
+#if 1
 	int32_t static_eval = evaluate(pos);
 	if (tteval != VALUE_NONE && ttbound & (tteval >= static_eval ? BOUND_LOWER : BOUND_UPPER))
 		static_eval = tteval;
 #endif
 
-#if 0
-	/* Razoring. */
+#if 1
+	/* Razoring (33 Elo). */
 	if (!pv_node && depth <= 8 && static_eval + 100 + 150 * depth * depth < alpha) {
-		char fen[128];
-		printf("Trying to razor in interval %d, %d\n", alpha, beta);
-		printf("%s\n", pos_to_fen(fen, pos));
 		eval = quiescence(pos, ply, alpha - 1, alpha, si, &pstate, ss);
 		if (eval < alpha)
 			return eval;
-		printf("Didn't razor\n");
 	}
 #endif
 #if 0
 	/* Futility pruning. */
-	if (!pv_node && depth <= 6 && static_eval - 200 > beta)
+	if (!pv_node && depth <= 6 && static_eval - 200 * depth > beta)
 		return static_eval;
 #endif
 #if 0
