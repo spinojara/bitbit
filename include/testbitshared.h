@@ -37,8 +37,8 @@ enum {
 };
 
 enum {
+	TESTHYPOTHESIS,
 	TESTELO,
-	TESTHYPOTHESES,
 };
 
 enum {

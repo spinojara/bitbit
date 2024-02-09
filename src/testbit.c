@@ -44,8 +44,8 @@ int main(int argc, char **argv) {
 	int raw_id = -1;
 	double alpha = 0.025;
 	double beta = 0.025;
-	double eloerror = -1.0;
-	char testtype = TESTHYPOTHESES;
+	double eloerror = 4;
+	char testtype = TESTHYPOTHESIS;
 
 	for (int i = 1; i < argc; i++) {
 		if (!strcmp(argv[i], "--port")) {
@@ -109,11 +109,11 @@ int main(int argc, char **argv) {
 			beta = strtod(argv[i], NULL);
 		}
 		else if (!strcmp(argv[i], "--elo")) {
+			testtype = TESTELO;
 			i++;
 			if (!(i < argc))
 				break;
 			eloerror = strtod(argv[i], NULL);
-			testtype = TESTELO;
 		}
 		else if (hostname) {
 			path = argv[i];

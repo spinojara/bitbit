@@ -235,7 +235,6 @@ int main(int argc, char **argv) {
 				"https://github.com/Spinojara/bitbit.git",
 				"--branch", branch,
 				"--single-branch",
-				"--depth", "1",
 				dtemp,
 				(char *)NULL);
 			fprintf(stderr, "error: exec git clone\n");
@@ -256,9 +255,13 @@ int main(int argc, char **argv) {
 			return 1;
 		}
 
+		pid = fork();
+		if (pid == -1)
+			return 1;
+
 		/* This should never fail. */
 		if (pid == 0) {
-			execlp("git", "reset", "--hard", commit, (char *)NULL);
+			execlp("git", "git", "reset", "--hard", commit, (char *)NULL);
 			fprintf(stderr, "error: exec git reset\n");
 			return 1;
 		}

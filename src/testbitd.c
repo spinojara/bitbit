@@ -276,7 +276,7 @@ int main(int argc, char **argv) {
 			"p4        INTEGER, "
 			"patch     BLOB, "
 			"branch    TEXT, "
-			"commit    TEXT"
+			"commit_   TEXT"
 			");",
 			NULL, NULL, NULL);
 	if (r) {
@@ -297,7 +297,7 @@ int main(int argc, char **argv) {
 		/* Loop through queue and start available tests. */
 		r = sqlite3_prepare_v2(db,
 				"SELECT id, maintime, increment, alpha, beta, elo0, elo1, branch, "
-				"commit, eloerror, testtype "
+				"commit_, eloerror, testtype "
 				"FROM tests WHERE status = ? ORDER BY queuetime ASC;",
 				-1, &stmt, NULL);
 		sqlite3_bind_int(stmt, 1, TESTQUEUE);
@@ -427,7 +427,7 @@ int main(int argc, char **argv) {
 									"SELECT id, status, maintime, increment, alpha, beta, "
 									"elo0, elo1, queuetime, starttime, donetime, elo, pm, "
 									"result, llh, t0, t1, t2, p0, p1, p2, p3, p4, branch, "
-									"commit, eloerror, testtype FROM ("
+									"commit_, eloerror, testtype FROM ("
 									"SELECT * FROM tests ORDER BY CASE WHEN status = ? "
 									"THEN 1 ELSE 0 END DESC, queuetime DESC LIMIT ?) ORDER "
 									"BY CASE WHEN status = ? THEN 1 ELSE 0 END ASC, "
@@ -478,7 +478,7 @@ int main(int argc, char **argv) {
 
 								long games = t0 + t1 + t2;
 								if (status == TESTRUNNING && games > 0) {
-									if (testtype == TESTHYPOTHESES) {
+									if (testtype == TESTHYPOTHESIS) {
 										double multiplier = 0.0;
 										donetime = 0;
 										if (llh > 0.001)
@@ -522,7 +522,7 @@ int main(int argc, char **argv) {
 											 "Elo Error      %lg\n"
 											 "Queue          %s\n",
 											 id,
-											 testtype == TESTELO ? "Elo" : "Hyptheses",
+											 testtype == TESTELO ? "Elo" : "Hypothesis",
 											 branch,
 											 commit,
 											 maintime, increment,
@@ -553,7 +553,7 @@ int main(int argc, char **argv) {
 											 "Games (Approx) %ld\n"
 											 "ETA            %s\n",
 											 id,
-											 testtype == TESTELO ? "Elo" : "Hyptheses",
+											 testtype == TESTELO ? "Elo" : "Hypothesis",
 											 branch,
 											 commit,
 											 maintime, increment,
@@ -590,7 +590,7 @@ int main(int argc, char **argv) {
 											 "LLH            %lg (%lg, %lg)\n"
 											 "Result         %s\n",
 											 id,
-											 testtype == TESTELO ? "Elo" : "Hyptheses",
+											 testtype == TESTELO ? "Elo" : "Hypothesis",
 											 branch,
 											 commit,
 											 maintime, increment,
@@ -628,7 +628,7 @@ int main(int argc, char **argv) {
 											 "Elo            %lg +- %lg\n"
 											 "LLH            %lg (%lg, %lg)\n",
 											 id,
-											 testtype == TESTELO ? "Elo" : "Hyptheses",
+											 testtype == TESTELO ? "Elo" : "Hypothesis",
 											 status == TESTCANCEL ? "Cancelled" : "Runtime Error",
 											 branch,
 											 commit,
@@ -662,7 +662,7 @@ int main(int argc, char **argv) {
 											 "Queue          %s\n"
 											 "Start          %s\n",
 											 id,
-											 testtype == TESTELO ? "Elo" : "Hyptheses",
+											 testtype == TESTELO ? "Elo" : "Hypothesis",
 											 status == PATCHERROR ? "Patch Error" :
 											 status == BRANCHERROR ? "Branch Error" :
 											 status == COMMITERROR ? "Commit Error" :
@@ -730,10 +730,8 @@ int main(int argc, char **argv) {
 					switch (connection->status) {
 					case PASSWORD:
 						if (recvexact(ssl, buf, 128) || strcmp(password, buf)) {
-							if (connection->id == CLIENT) {
-								str = "Permission denied\n";
-								sendall(ssl, str, strlen(str));
-							}
+							str = "Permission denied\n";
+							sendall(ssl, str, strlen(str));
 							del_from_pdfs(pdfs, connections, i, &fd_count);
 							break;
 						}
@@ -842,7 +840,7 @@ int main(int argc, char **argv) {
 						/* Queue this test. */
 						sqlite3_prepare_v2(db,
 								"INSERT INTO tests (status, maintime, increment, alpha, beta, "
-								"elo0, elo1, queuetime, elo, pm, patch, branch, commit, eloerror, "
+								"elo0, elo1, queuetime, elo, pm, patch, branch, commit_, eloerror, "
 								"testtype) VALUES "
 								"(?, ?, ?, ?, ?, ?, ?, unixepoch(), ?, ?, ?, ?, ?, ?, ?) RETURNING id;",
 								-1, &stmt, NULL);

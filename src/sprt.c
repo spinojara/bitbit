@@ -337,9 +337,9 @@ int sprt(int testtype, unsigned long games, uint64_t trinomial[3], uint64_t pent
 
 				/* We only check every 8 game pairs. */
 				if (N % 8 == 0) {
-					if ((H = sprt_check(pentanomial, alpha, beta, elo0, elo1, llh)) != HNONE && testtype == TESTELO)
+					if ((H = sprt_check(pentanomial, alpha, beta, elo0, elo1, llh)) != HNONE && testtype == TESTHYPOTHESIS)
 						break;
-					if (sprt_check_elo(pentanomial, eloerror) && testtype == TESTHYPOTHESES)
+					if (sprt_check_elo(pentanomial, eloerror) && testtype == TESTELO)
 						break;
 
 					else if (ssl) {
@@ -352,8 +352,7 @@ int sprt(int testtype, unsigned long games, uint64_t trinomial[3], uint64_t pent
 								sendall(ssl, &status, 1))
 							break;
 						char mystatus;
-						recvexact(ssl, &mystatus, 1);
-						if (mystatus == CANCELLED) {
+						if (recvexact(ssl, &mystatus, 1) || mystatus == CANCELLED) {
 							H = HCANCEL;
 							break;
 						}
@@ -368,8 +367,8 @@ int sprt(int testtype, unsigned long games, uint64_t trinomial[3], uint64_t pent
 	kill(pid, SIGINT);
 	waitpid(pid, NULL, 0);
 	free(results);
-	if (trinomial[0] + trinomial[1] + trinomial[2] != games &&
-			((testtype == TESTHYPOTHESES && H == HNONE) || (testtype == TESTELO && !sprt_check_elo(pentanomial, eloerror))))
+	if (trinomial[0] + trinomial[1] + trinomial[2] != games && H != HCANCEL &&
+			((testtype == TESTHYPOTHESIS && H == HNONE) || (testtype == TESTELO && !sprt_check_elo(pentanomial, eloerror))))
 		H = HERROR;
 	return H;
 }
