@@ -330,7 +330,7 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 #endif
 
 #if 1
-	/* Razoring (33 Elo). */
+	/* Razoring. */
 	if (!pv_node && depth <= 8 && estimated_eval + 100 + 150 * depth * depth < alpha) {
 		eval = quiescence(pos, ply, alpha - 1, alpha, si, &pstate, ss);
 		if (eval < alpha)
@@ -338,7 +338,7 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	}
 #endif
 #if 1
-	/* Futility pruning (61 Elo). */
+	/* Futility pruning. */
 	if (!pv_node && depth <= 6 && estimated_eval - 200 * depth > beta)
 		return estimated_eval;
 #endif
