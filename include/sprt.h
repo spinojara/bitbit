@@ -27,7 +27,7 @@ enum {
 	HCANCEL,
 };
 
-int sprt(unsigned long games, uint64_t trinomial[3], uint64_t pentanomial[5], double alpha, double beta, double maintime, double increment, double elo0, double elo1, double *llh, int threads, void *ssl);
+int sprt(int testtype, unsigned long games, uint64_t trinomial[3], uint64_t pentanomial[5], double alpha, double beta, double eloerror, double maintime, double increment, double elo0, double elo1, double *llh, int threads, void *ssl);
 
 double sprt_elo(const unsigned long N[5], double *plusminus);
 

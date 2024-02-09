@@ -31,8 +31,6 @@
 #include "util.h"
 #include "testbitshared.h"
 
-#define eps 1.0e-6
-
 #define ALPHA(i) ((double)i / 4)
 
 double sigmoid(double x) {
@@ -91,6 +89,13 @@ double loglikelihood(double mu, double C, const double n[5]) {
 	}
 
 	return sum;
+}
+
+int sprt_check_elo(const unsigned long N[5], double eloerror) {
+	double plusminus;
+	sprt_elo(N, &plusminus);
+
+	return fabs(plusminus) <= eloerror;
 }
 
 /* The perspective is from player 1 according to <doc/mle_pentanomial.pdf>.
@@ -236,7 +241,7 @@ int update_nomials(unsigned long trinomial[3], unsigned long pentanomial[5], str
 	return 1;
 }
 
-int sprt(unsigned long games, uint64_t trinomial[3], uint64_t pentanomial[5], double alpha, double beta, double maintime, double increment, double elo0, double elo1, double *llh, int threads, void *ssl) {
+int sprt(int testtype, unsigned long games, uint64_t trinomial[3], uint64_t pentanomial[5], double alpha, double beta, double eloerror, double maintime, double increment, double elo0, double elo1, double *llh, int threads, void *ssl) {
 	char gamesstr[1024];
 	char concurrencystr[1024];
 	char timestr[1024];
@@ -332,9 +337,11 @@ int sprt(unsigned long games, uint64_t trinomial[3], uint64_t pentanomial[5], do
 
 				/* We only check every 8 game pairs. */
 				if (N % 8 == 0) {
-					if ((H = sprt_check(pentanomial, alpha, beta, elo0, elo1, llh)) != HNONE) {
+					if ((H = sprt_check(pentanomial, alpha, beta, elo0, elo1, llh)) != HNONE && testtype == TESTELO)
 						break;
-					}
+					if (sprt_check_elo(pentanomial, eloerror) && testtype == TESTHYPOTHESES)
+						break;
+
 					else if (ssl) {
 						/* Send update to server. */
 						char status = TESTRUNNING;
@@ -361,7 +368,8 @@ int sprt(unsigned long games, uint64_t trinomial[3], uint64_t pentanomial[5], do
 	kill(pid, SIGINT);
 	waitpid(pid, NULL, 0);
 	free(results);
-	if (trinomial[0] + trinomial[1] + trinomial[2] != games && H == HNONE)
+	if (trinomial[0] + trinomial[1] + trinomial[2] != games &&
+			((testtype == TESTHYPOTHESES && H == HNONE) || (testtype == TESTELO && !sprt_check_elo(pentanomial, eloerror))))
 		H = HERROR;
 	return H;
 }

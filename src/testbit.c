@@ -34,11 +34,18 @@ int main(int argc, char **argv) {
 	char type = CLIENT;
 	char *hostname = NULL;
 	char *port = "2718";
-	char *path_or_id = NULL;
-	char *branch_or_status = NULL;
+	char *path = NULL;
+	char branch[128] = "master";
+	char commit[128] = "HEAD";
+	char *action = NULL;
 
 	int32_t patch_lines = 24;
 	int32_t tests = 4;
+	int raw_id = -1;
+	double alpha = 0.025;
+	double beta = 0.025;
+	double eloerror = -1.0;
+	char testtype = TESTHYPOTHESES;
 
 	for (int i = 1; i < argc; i++) {
 		if (!strcmp(argv[i], "--port")) {
@@ -65,21 +72,61 @@ int main(int argc, char **argv) {
 				break;
 			tests = atoi(argv[i]);
 		}
-		else if (path_or_id) {
-			branch_or_status = argv[i];
+		else if (!strcmp(argv[i], "--id")) {
+			i++;
+			if (!(i < argc))
+				break;
+			raw_id = atoi(argv[i]);
+		}
+		else if (!strcmp(argv[i], "--action")) {
+			i++;
+			if (!(i < argc))
+				break;
+			action = argv[i];
+		}
+		else if (!strcmp(argv[i], "--branch")) {
+			i++;
+			if (!(i < argc))
+				break;
+			strncpy(branch, argv[i], 127);
+		}
+		else if (!strcmp(argv[i], "--commit")) {
+			i++;
+			if (!(i < argc))
+				break;
+			strncpy(commit, argv[i], 127);
+		}
+		else if (!strcmp(argv[i], "--alpha")) {
+			i++;
+			if (!(i < argc))
+				break;
+			alpha = strtod(argv[i], NULL);
+		}
+		else if (!strcmp(argv[i], "--beta")) {
+			i++;
+			if (!(i < argc))
+				break;
+			beta = strtod(argv[i], NULL);
+		}
+		else if (!strcmp(argv[i], "--elo")) {
+			i++;
+			if (!(i < argc))
+				break;
+			eloerror = strtod(argv[i], NULL);
+			testtype = TESTELO;
 		}
 		else if (hostname) {
-			path_or_id = argv[i];
+			path = argv[i];
 		}
 		else {
 			hostname = argv[i];
 		}
 	}
 
-	if (!hostname || (type == CLIENT && !path_or_id) || (type == UPDATE &&
-				(!path_or_id || !branch_or_status || !strint(path_or_id) ||
-				 (strcmp(branch_or_status, "cancel") && strcmp(branch_or_status, "requeue"))))) {
-		fprintf(stderr, "usage: testbit hostname [filename | --log | --update id status]\n");
+	if (!hostname || (type == CLIENT && (!path || alpha <= 0.0 || alpha >= 1.0 || beta <= 0.0 || beta >= 1.0 || eloerror <= 0.0)) ||
+			(type == UPDATE && (raw_id < 0 || !action ||
+				 (strcmp(action, "cancel") && strcmp(action, "requeue"))))) {
+		fprintf(stderr, "usage: testbit hostname [filename | --log | --update] [--branch branch] [--commit commit] [--id id] [--action action]\n");
 		return 1;
 	}
 
@@ -179,34 +226,33 @@ int main(int argc, char **argv) {
 		sendall(ssl, password, 128);
 
 		if (type == CLIENT) {
-			int filefd = open(path_or_id, O_RDONLY, 0);
+			int filefd = open(path, O_RDONLY, 0);
 			if (filefd == -1) {
-				fprintf(stderr, "error: failed to open file \"%s\"\n", path_or_id);
+				fprintf(stderr, "error: failed to open file \"%s\"\n", path);
 				SSL_close(ssl);
 				return 1;
 			}
 
-			char branch[128] = "master";
-			if (branch_or_status)
-				memcpy(branch, branch_or_status, 128);
-	
 			/* Architecture dependent. */
 			double timecontrol[2] = { 10.0, 0.1 };
-			double alphabeta[2] = { 0.025, 0.025 };
+			double alphabeta[2] = { alpha, beta};
 			double elo[2] = { 0.0, 4.0 };
 			sendall(ssl, (char *)timecontrol, 16);
 			sendall(ssl, (char *)alphabeta, 16);
 			sendall(ssl, (char *)elo, 16);
+			sendall(ssl, (char *)&eloerror, 8);
+			sendall(ssl, (char *)&testtype, 1);
 
 			sendall(ssl, branch, 128);
+			sendall(ssl, commit, 128);
 
 			sendfile(ssl, filefd);
 
 			close(filefd);
 		}
 		else if (type == UPDATE) {
-			uint64_t id = strint(path_or_id);
-			char newstatus = branch_or_status[0] == 'c' ? TESTCANCEL : TESTQUEUE;
+			uint64_t id = raw_id;
+			char newstatus = action[0] == 'c' ? TESTCANCEL : TESTQUEUE;
 			sendall(ssl, (char *)&id, sizeof(id));
 			sendall(ssl, &newstatus, 1);
 		}

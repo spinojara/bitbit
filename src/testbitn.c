@@ -181,6 +181,8 @@ int main(int argc, char **argv) {
 		double maintime, increment;
 		double alpha, beta;
 		double elo0, elo1;
+		double eloerror;
+		char testtype;
 		uint64_t trinomial[3] = { 0 };
 		uint64_t pentanomial[5] = { 0 };
 		unsigned long games = 65536;
@@ -192,7 +194,7 @@ int main(int argc, char **argv) {
 			return 1;
 		}
 
-		if (recvexact(ssl, buf, 48)) {
+		if (recvexact(ssl, buf, 57)) {
 			fprintf(stderr, "error: constants\n");
 			return 1;
 		}
@@ -203,10 +205,18 @@ int main(int argc, char **argv) {
 		beta = ((double *)buf)[3];
 		elo0 = ((double *)buf)[4];
 		elo1 = ((double *)buf)[5];
+		eloerror = ((double *)buf)[6];
+		testtype = ((char *)buf)[56];
 
 		char branch[128];
 		if (recvexact(ssl, branch, 128)) {
 			fprintf(stderr, "error: branch\n");
+			return 1;
+		}
+
+		char commit[128];
+		if (recvexact(ssl, commit, 128)) {
+			fprintf(stderr, "error: commit\n");
 			return 1;
 		}
 
@@ -233,17 +243,31 @@ int main(int argc, char **argv) {
 		}
 
 		/* This can fail if branch does not exist. */
-		int brancherror = 0;
+		int error = 0;
 		if (waitpid(pid, &wstatus, 0) == -1 || WEXITSTATUS(wstatus)) {
 			fprintf(stderr, "error: git clone\n");
 			status = BRANCHERROR;
 			sendall(ssl, &status, 1);
-			brancherror = 1;
+			error = 1;
 		}
 
 		if (chdir(dtemp)) {
 			fprintf(stderr, "error: chdir %s\n", dtemp);
 			return 1;
+		}
+
+		/* This should never fail. */
+		if (pid == 0) {
+			execlp("git", "reset", "--hard", commit, (char *)NULL);
+			fprintf(stderr, "error: exec git reset\n");
+			return 1;
+		}
+
+		if (waitpid(pid, &wstatus, 0) == -1 || WEXITSTATUS(wstatus)) {
+			fprintf(stderr, "error: git reset\n");
+			status = COMMITERROR;
+			sendall(ssl, &status, 1);
+			error = 1;
 		}
 
 		int fd = open("patch", O_WRONLY | O_CREAT, 0644);
@@ -257,7 +281,7 @@ int main(int argc, char **argv) {
 		}
 		close(fd);
 
-		if (brancherror)
+		if (error)
 			goto CLEANUP;
 
 		pid = fork();
@@ -317,7 +341,7 @@ int main(int argc, char **argv) {
 			goto CLEANUP;
 		}
 
-		char H = sprt(games, trinomial, pentanomial, alpha, beta, maintime, increment, elo0, elo1, &llh, threads, ssl);
+		char H = sprt(testtype, games, trinomial, pentanomial, alpha, beta, eloerror, maintime, increment, elo0, elo1, &llh, threads, ssl);
 		if (H == HCANCEL)
 			goto CLEANUP;
 

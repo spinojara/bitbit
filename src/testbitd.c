@@ -55,12 +55,15 @@ struct connection {
 	double increment;
 	double alpha;
 	double beta;
+	double eloerror;
 	double elo0;
 	double elo1;
+	char testtype;
 
 	size_t len;
 	char *patch;
 	char branch[128];
+	char commit[128];
 
 	SSL *ssl;
 };
@@ -248,10 +251,12 @@ int main(int argc, char **argv) {
 			"CREATE TABLE IF NOT EXISTS tests ("
 			"id        INTEGER PRIMARY KEY, "
 			"status    INTEGER, "
+			"testtype  INTEGER, "
 			"maintime  REAL, "
 			"increment REAL, "
 			"alpha     REAL, "
 			"beta      REAL, "
+			"eloerror  REAL, "
 			"elo0      REAL, "
 			"elo1      REAL, "
 			"queuetime INTEGER, "
@@ -270,7 +275,8 @@ int main(int argc, char **argv) {
 			"p3        INTEGER, "
 			"p4        INTEGER, "
 			"patch     BLOB, "
-			"branch    TEXT"
+			"branch    TEXT, "
+			"commit    TEXT"
 			");",
 			NULL, NULL, NULL);
 	if (r) {
@@ -290,7 +296,8 @@ int main(int argc, char **argv) {
 	while (1) {
 		/* Loop through queue and start available tests. */
 		r = sqlite3_prepare_v2(db,
-				"SELECT id, maintime, increment, alpha, beta, elo0, elo1, branch "
+				"SELECT id, maintime, increment, alpha, beta, elo0, elo1, branch, "
+				"commit, eloerror, testtype "
 				"FROM tests WHERE status = ? ORDER BY queuetime ASC;",
 				-1, &stmt, NULL);
 		sqlite3_bind_int(stmt, 1, TESTQUEUE);
@@ -311,6 +318,12 @@ int main(int argc, char **argv) {
 					const char *branch = (const char *)sqlite3_column_text(stmt, 7);
 					snprintf(connection->branch, 128, branch);
 					connection->branch[127] = '\0';
+					const char *commit = (const char *)sqlite3_column_text(stmt, 8);
+					snprintf(connection->commit, 128, commit);
+					connection->commit[127] = '\0';
+					connection->eloerror = sqlite3_column_double(stmt, 9);
+					connection->testtype = sqlite3_column_int(stmt, 10);
+
 					sqlite3_prepare_v2(db,
 							"UPDATE tests SET starttime = unixepoch(), status = ? "
 							"WHERE id = ?;",
@@ -332,7 +345,10 @@ int main(int argc, char **argv) {
 					sendall(ssl, (char *)timecontrol, 16);
 					sendall(ssl, (char *)alphabeta, 16);
 					sendall(ssl, (char *)elo, 16);
+					sendall(ssl, (char *)&connection->eloerror, 8);
+					sendall(ssl, (char *)&connection->testtype, 1);
 					sendall(ssl, connection->branch, 128);
+					sendall(ssl, connection->commit, 128);
 					sendall(ssl, connection->patch, connection->len);
 					sendall(ssl, "\0", 1);
 
@@ -410,7 +426,8 @@ int main(int argc, char **argv) {
 							sqlite3_prepare_v2(db,
 									"SELECT id, status, maintime, increment, alpha, beta, "
 									"elo0, elo1, queuetime, starttime, donetime, elo, pm, "
-									"result, llh, t0, t1, t2, p0, p1, p2, p3, p4, branch FROM ("
+									"result, llh, t0, t1, t2, p0, p1, p2, p3, p4, branch, "
+									"commit, eloerror, testtype FROM ("
 									"SELECT * FROM tests ORDER BY CASE WHEN status = ? "
 									"THEN 1 ELSE 0 END DESC, queuetime DESC LIMIT ?) ORDER "
 									"BY CASE WHEN status = ? THEN 1 ELSE 0 END ASC, "
@@ -447,6 +464,9 @@ int main(int argc, char **argv) {
 								int p3 = sqlite3_column_int(stmt, 21);
 								int p4 = sqlite3_column_int(stmt, 22);
 								const char *branch = (const char *)sqlite3_column_text(stmt, 23);
+								const char *commit = (const char *)sqlite3_column_text(stmt, 24);
+								double eloerror = sqlite3_column_double(stmt, 25);
+								char testtype = sqlite3_column_int(stmt, 26);
 								long expectedgames = 0;
 
 								double A = log(beta / (1 - alpha));
@@ -458,17 +478,24 @@ int main(int argc, char **argv) {
 
 								long games = t0 + t1 + t2;
 								if (status == TESTRUNNING && games > 0) {
-									double multiplier = 0.0;
-									donetime = 0;
-									if (llh > 0.001)
-										multiplier = B / llh;
-									else if (llh < -0.001)
-										multiplier = A / llh;
-									if (multiplier) {
-										expectedgames = multiplier * games;
-										/* Add 15 seconds for compilation time. */
+									if (testtype == TESTHYPOTHESES) {
+										double multiplier = 0.0;
+										donetime = 0;
+										if (llh > 0.001)
+											multiplier = B / llh;
+										else if (llh < -0.001)
+											multiplier = A / llh;
+										if (multiplier) {
+											expectedgames = multiplier * games;
+										}
+									}
+									else if (testtype == TESTELO) {
+										expectedgames = pm * pm * games / (eloerror * eloerror);
+									}
+									if (expectedgames > games) {
+										/* Add 30 seconds for compilation time. */
 										time_t now = time(NULL);
-										time_t run = (now - (queuetime + 15));
+										time_t run = (now - (queuetime + 30));
 										donetime = now + run * (expectedgames - games) / games;
 									}
 								}
@@ -483,30 +510,39 @@ int main(int argc, char **argv) {
 								switch (status) {
 								case TESTQUEUE:
 									sprintf(buf, YLW "Id             %d\n"
+											 "Test           %s\n"
 											 "Status         Queue\n"
 											 "Branch         %s\n"
+											 "Commit         %s\n"
 											 "Timecontrol    %lg+%lg\n"
 											 "H0             Elo < %lg\n"
 											 "H1             Elo > %lg\n"
 											 "Alpha          %lg\n"
 											 "Beta           %lg\n"
+											 "Elo Error      %lg\n"
 											 "Queue          %s\n",
 											 id,
+											 testtype == TESTELO ? "Elo" : "Hyptheses",
 											 branch,
+											 commit,
 											 maintime, increment,
 											 elo0, elo1,
 											 alpha, beta,
+											 eloerror,
 											 queuestr);
 									break;
 								case TESTRUNNING:
 									sprintf(buf, MGT "Id             %d\n"
+											 "Test           %s\n"
 											 "Status         Running\n"
 											 "Branch         %s\n"
+											 "Commit         %s\n"
 											 "Timecontrol    %lg+%lg\n"
 											 "H0             Elo < %lg\n"
 											 "H1             Elo > %lg\n"
 											 "Alpha          %lg\n"
 											 "Beta           %lg\n"
+											 "Elo Error      %lg\n"
 											 "Queue          %s\n"
 											 "Start          %s\n"
 											 "Games          %d\n"
@@ -517,10 +553,13 @@ int main(int argc, char **argv) {
 											 "Games (Approx) %ld\n"
 											 "ETA            %s\n",
 											 id,
+											 testtype == TESTELO ? "Elo" : "Hyptheses",
 											 branch,
+											 commit,
 											 maintime, increment,
 											 elo0, elo1,
 											 alpha, beta,
+											 eloerror,
 											 queuestr,
 											 startstr,
 											 t0 + t1 + t2, t0, t1, t2,
@@ -531,13 +570,16 @@ int main(int argc, char **argv) {
 									break;
 								case TESTDONE:
 									sprintf(buf, GRN "Id             %d\n"
+											 "Test           %s\n"
 											 "Status         Done\n"
 											 "Branch         %s\n"
+											 "Commit         %s\n"
 											 "Timecontrol    %lg+%lg\n"
 											 "H0             Elo < %lg\n"
 											 "H1             Elo > %lg\n"
 											 "Alpha          %lg\n"
 											 "Beta           %lg\n"
+											 "Elo Error      %lg\n"
 											 "Queue          %s\n"
 											 "Start          %s\n"
 											 "Done           %s\n"
@@ -548,10 +590,13 @@ int main(int argc, char **argv) {
 											 "LLH            %lg (%lg, %lg)\n"
 											 "Result         %s\n",
 											 id,
+											 testtype == TESTELO ? "Elo" : "Hyptheses",
 											 branch,
+											 commit,
 											 maintime, increment,
 											 elo0, elo1,
 											 alpha, beta,
+											 eloerror,
 											 queuestr,
 											 startstr,
 											 donestr,
@@ -564,13 +609,16 @@ int main(int argc, char **argv) {
 								case TESTCANCEL:
 								case RUNERROR:
 									sprintf(buf, RED "Id             %d\n"
+											 "Test           %s\n"
 											 "Status         %s\n"
 											 "Branch         %s\n"
+											 "Commit         %s\n"
 											 "Timecontrol    %lg+%lg\n"
 											 "H0             Elo < %lg\n"
 											 "H1             Elo > %lg\n"
 											 "Alpha          %lg\n"
 											 "Beta           %lg\n"
+											 "Elo Error      %lg\n"
 											 "Queue          %s\n"
 											 "Start          %s\n"
 											 "Done           %s\n"
@@ -580,11 +628,14 @@ int main(int argc, char **argv) {
 											 "Elo            %lg +- %lg\n"
 											 "LLH            %lg (%lg, %lg)\n",
 											 id,
+											 testtype == TESTELO ? "Elo" : "Hyptheses",
 											 status == TESTCANCEL ? "Cancelled" : "Runtime Error",
 											 branch,
+											 commit,
 											 maintime, increment,
 											 elo0, elo1,
 											 alpha, beta,
+											 eloerror,
 											 queuestr,
 											 startstr,
 											 donestr,
@@ -594,26 +645,34 @@ int main(int argc, char **argv) {
 											 llh, A, B);
 									break;
 								case BRANCHERROR:
+								case COMMITERROR:
 								case PATCHERROR:
 								case MAKEERROR:
 									sprintf(buf, RED "Id             %d\n"
+											 "Test           %s\n"
 											 "Status         %s\n"
 											 "Branch         %s\n"
+											 "Commit         %s\n"
 											 "Timecontrol    %lg+%lg\n"
 											 "H0             Elo < %lg\n"
 											 "H1             Elo > %lg\n"
 											 "Alpha          %lg\n"
 											 "Beta           %lg\n"
+											 "Elo Error      %lg\n"
 											 "Queue          %s\n"
 											 "Start          %s\n",
 											 id,
+											 testtype == TESTELO ? "Elo" : "Hyptheses",
 											 status == PATCHERROR ? "Patch Error" :
 											 status == BRANCHERROR ? "Branch Error" :
+											 status == COMMITERROR ? "Commit Error" :
 											 "Make Error",
 											 branch,
+											 commit,
 											 maintime, increment,
 											 elo0, elo1,
 											 alpha, beta,
+											 eloerror,
 											 queuestr,
 											 startstr);
 								}
@@ -726,7 +785,7 @@ int main(int argc, char **argv) {
 						}
 
 						/* Architecture dependent. */
-						if (recvexact(ssl, buf, 48)) {
+						if (recvexact(ssl, buf, 57)) {
 							str = "error: bad constants\n";
 							sendall(ssl, str, strlen(str));
 							del_from_pdfs(pdfs, connections, i, &fd_count);
@@ -738,6 +797,8 @@ int main(int argc, char **argv) {
 						connection->beta = ((double *)buf)[3];
 						connection->elo0 = ((double *)buf)[4];
 						connection->elo1 = ((double *)buf)[5];
+						connection->eloerror = ((double *)buf)[6];
+						connection->testtype = ((char *)buf)[56];
 						connection->len = 0;
 						connection->patch = NULL;
 						if (recvexact(ssl, connection->branch, 128)) {
@@ -747,6 +808,19 @@ int main(int argc, char **argv) {
 							break;
 						}
 						connection->branch[127] = '\0';
+						if (recvexact(ssl, connection->commit, 128)) {
+							str = "error: bad commit\n";
+							sendall(ssl, str, strlen(str));
+							del_from_pdfs(pdfs, connections, i, &fd_count);
+							break;
+						}
+						connection->commit[127] = '\0';
+
+						connection->alpha = fclamp(connection->alpha, eps, 1.0 - eps);
+						connection->beta = fclamp(connection->beta, eps, 1.0 - eps);
+						connection->eloerror = fmax(connection->eloerror, eps);
+						connection->maintime = fmax(connection->maintime, eps);
+						connection->increment = fmax(connection->increment, eps);
 
 						size_t n;
 						while (SSL_read_ex(ssl, buf, sizeof(buf) - 1, &n)) {
@@ -768,8 +842,9 @@ int main(int argc, char **argv) {
 						/* Queue this test. */
 						sqlite3_prepare_v2(db,
 								"INSERT INTO tests (status, maintime, increment, alpha, beta, "
-								"elo0, elo1, queuetime, elo, pm, patch, branch) VALUES "
-								"(?, ?, ?, ?, ?, ?, ?, unixepoch(), ?, ?, ?, ?) RETURNING id;",
+								"elo0, elo1, queuetime, elo, pm, patch, branch, commit, eloerror, "
+								"testtype) VALUES "
+								"(?, ?, ?, ?, ?, ?, ?, unixepoch(), ?, ?, ?, ?, ?, ?, ?) RETURNING id;",
 								-1, &stmt, NULL);
 						sqlite3_bind_int(stmt, 1, TESTQUEUE);
 						sqlite3_bind_double(stmt, 2, connection->maintime);
@@ -782,6 +857,9 @@ int main(int argc, char **argv) {
 						sqlite3_bind_double(stmt, 9, nan(""));
 						sqlite3_bind_zeroblob(stmt, 10, connection->len);
 						sqlite3_bind_text(stmt, 11, connection->branch, 128, NULL);
+						sqlite3_bind_text(stmt, 12, connection->commit, 128, NULL);
+						sqlite3_bind_double(stmt, 13, connection->eloerror);
+						sqlite3_bind_int(stmt, 14, connection->testtype);
 						sqlite3_step(stmt);
 						connection->id = sqlite3_column_int(stmt, 0);
 						sqlite3_step(stmt);
@@ -821,6 +899,7 @@ int main(int argc, char **argv) {
 					case RUNNING:
 						if (recvexact(ssl, buf, 1) || (buf[0] != TESTDONE &&
 									buf[0] != BRANCHERROR &&
+									buf[0] != COMMITERROR &&
 									buf[0] != PATCHERROR &&
 									buf[0] != MAKEERROR &&
 									buf[0] != RUNERROR &&
@@ -946,6 +1025,7 @@ int main(int argc, char **argv) {
 							sqlite3_finalize(stmt);
 							break;
 						case BRANCHERROR:
+						case COMMITERROR:
 						case PATCHERROR:
 						case MAKEERROR:
 							sqlite3_prepare_v2(db,

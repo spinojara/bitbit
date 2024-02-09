@@ -22,6 +22,8 @@
 
 #include "bitboard.h"
 
+const double eps = 1.0e-6;
+
 /* <http://vigna.di.unimi.it/ftp/papers/xorshift.pdf> */
 uint64_t gseed = SEED;
 uint64_t gxorshift64(void) {
