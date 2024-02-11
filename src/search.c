@@ -330,7 +330,7 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 #endif
 
 #if 1
-	/* Razoring. */
+	/* Razoring (37+-5 Elo). */
 	if (!pv_node && depth <= 8 && estimated_eval + 100 + 150 * depth * depth < alpha) {
 		eval = quiescence(pos, ply, alpha - 1, alpha, si, &pstate, ss);
 		if (eval < alpha)
@@ -338,12 +338,12 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	}
 #endif
 #if 1
-	/* Futility pruning. */
+	/* Futility pruning (60+-8 Elo). */
 	if (!pv_node && depth <= 6 && estimated_eval - 200 * depth > beta)
 		return estimated_eval;
 #endif
 #if 1
-	/* Null move pruning. */
+	/* Null move pruning (43+-6 Elo). */
 	if (!pv_node && (ss - 1)->move && estimated_eval >= beta && depth >= 3 && has_sliding_piece(pos)) {
 		int reduction = 4;
 		int new_depth = clamp(depth - reduction, 1, depth);
@@ -373,7 +373,7 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 				tteval = adjust_score_mate_get(e->eval, ply);
 				ttbound = e->bound;
 				ttdepth = e->depth;
-				/* Can once more update static_eval but maybe
+				/* Can once more update estimated_eval but maybe
 				 * we won't use it anyway.
 				 */
 			}
