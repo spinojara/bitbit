@@ -314,14 +314,14 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	struct pstate pstate;
 	pstate_init(pos, &pstate);
 	
-	if (depth == 0 && !pstate.checkers)
-		return quiescence(pos, ply, alpha, beta, si, &pstate, ss);
-
 	move_t ttmove = pseudo_legal(pos, &pstate, &ttmove_unsafe) ? ttmove_unsafe : 0;
 	int ttcapture = ttmove ? is_capture(pos, &ttmove) : 0;
 
 	if (pstate.checkers)
 		goto skip_pruning;
+
+	if (depth == 0)
+		return quiescence(pos, ply, alpha, beta, si, &pstate, ss);
 
 #if 1
 	int32_t estimated_eval = ss->static_eval = evaluate(pos);
@@ -416,9 +416,6 @@ skip_pruning:;
 		/* Extensions. */
 		int extensions = 0;
 		if (ply < 2 * si->root_depth) {
-			if (pstate.checkers) {
-				extensions = 1;
-			}
 #if 0
 			else if (!root_node && depth >= 5 && move_compare(ttmove, move) && !excluded_move && e->bound & BOUND_LOWER && e->depth >= depth - 3) {
 				int reduction = 3;
