@@ -413,6 +413,12 @@ skip_pruning:;
 
 		move_index++;
 
+		if (!root_node) {
+			/* Late move pruning (85+-5 Elo). */
+			if (move_index >= 4 + depth * depth)
+				mp.prune = 1;
+		}
+
 		/* Extensions. */
 		int extensions = 0;
 		if (ply < 2 * si->root_depth) {

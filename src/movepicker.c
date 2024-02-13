@@ -180,15 +180,11 @@ move_t next_move(struct movepicker *mp) {
 		mp->stage++;
 		/* fallthrough */
 	case STAGE_QUIET:
-		if (mp->quiescence)
-			return 0;
-		if (*mp->move)
+		if (*mp->move && !mp->prune)
 			return *mp->move++;
 		mp->stage++;
 		/* fallthrough */
 	case STAGE_BAD:
-		if (mp->quiescence)
-			return 0;
 		if (*mp->bad)
 			return *mp->bad--;
 		mp->stage++;
@@ -203,6 +199,7 @@ move_t next_move(struct movepicker *mp) {
 
 void movepicker_init(struct movepicker *mp, int quiescence, struct position *pos, const struct pstate *pstate, move_t ttmove, move_t killer1, move_t killer2, move_t counter_move, const struct searchinfo *si) {
 	mp->quiescence = quiescence && !pstate->checkers;
+	mp->prune = 0;
 
 	mp->move = mp->moves;
 	mp->move[0] = 0;

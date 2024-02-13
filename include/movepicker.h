@@ -46,6 +46,7 @@ struct movepicker {
 	int64_t evals[MOVES_MAX], *eval;
 	int stage;
 	int quiescence;
+	int prune;
 
 	move_t ttmove;
 	move_t killer1, killer2;
