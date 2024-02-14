@@ -422,51 +422,41 @@ skip_pruning:;
 		/* Extensions. */
 		int extensions = 0;
 		if (ply < 2 * si->root_depth) {
-#if 0
-			else if (!root_node && depth >= 5 && move_compare(ttmove, move) && !excluded_move && e->bound & BOUND_LOWER && e->depth >= depth - 3) {
+#if 1
+			if (!root_node && depth >= 5 && move_compare(ttmove, move) && !excluded_move && ttbound & BOUND_LOWER && ttdepth >= depth - 3) {
 				int reduction = 3;
 				int new_depth = depth - reduction;
 
-				int32_t singular_beta = tteval - 4 * depth;
+				int32_t singular_beta = tteval - 2 * depth;
 
 				ss->excluded_move = move;
 				eval = negamax(pos, new_depth, ply, singular_beta - 1, singular_beta, cut_node, si, ss);
 				ss->excluded_move = 0;
 
-				//char fen[128];
-				/* If eval < singular_beta we have the following inequalities,
-				 * eval < singular_beta < tteval < exact_tteval since tteval is
+				/* Singular extension (29+-5 Elo).
+				 * If eval < singular_beta we have the following inequalities,
+				 * eval < singular_beta < tteval <= exact_eval since tteval is
 				 * a lower bound. In particular all moves except ttmove fail
 				 * low on [singular_beta - 1, singular_beta] and ttmove is the
 				 * single best move by some margin.
 				 */
-				if (eval < singular_beta) {
-#if 0
-					printf("%s\n", pos_to_fen(fen, pos));
-					print_move(&ttmove);
-					printf("\n%d\n", tteval);
-					printf("%d\n", singular_beta);
-					printf("%d\n", eval);
-#endif
+				if (eval < singular_beta)
 					extensions = 1;
-				}
-#if 0
-				/* If singular_beta >= beta and the search did not fail low,
-				 * it failed high. ttmove fails high for the search [alpha, beta]
-				 * and some other move fails high for [singular_beta - 1, singular_beta].
-				 * In particular since singular_beta >= beta, the move fails high also for
-				 * [alpha, beta] and there are at least 2 moves which make the search
-				 * [alpha, beta] fail high. We assume that at least one of the two moves
-				 * fail high also for the higher depth search and we have a beta cutoff.
-				 */
 #if 1
+				/* Now eval >= singular_beta. If also singular_beta >= beta
+				 * we get the inequalities
+				 * eval >= singular_beta >= beta and we have another move
+				 * that fails high. We assume at least one move fails high
+				 * on a regular search and we thus return beta.
+				 */
+#if 0
 				else if (singular_beta >= beta) {
 					return singular_beta;
 				}
 #endif
-#if 1
+#if 0
 				/* We get the following inequalities,
-				 * eval < singular_beta < beta < tteval < exact_tteval.
+				 * singular_beta < beta <= tteval < exact_eval.
 				 */
 				else if (tteval >= beta) {
 					extensions = -2;
