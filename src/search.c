@@ -443,25 +443,27 @@ skip_pruning:;
 				if (eval < singular_beta)
 					extensions = 1;
 #if 1
-				/* Now eval >= singular_beta. If also singular_beta >= beta
+				/* Multi cut (6+-4 Elo).
+				 * Now eval >= singular_beta. If also singular_beta >= beta
 				 * we get the inequalities
 				 * eval >= singular_beta >= beta and we have another move
 				 * that fails high. We assume at least one move fails high
 				 * on a regular search and we thus return beta.
 				 */
-#if 0
-				else if (singular_beta >= beta) {
+#if 1
+				else if (singular_beta >= beta && !pstate.checkers)
 					return singular_beta;
-				}
 #endif
-#if 0
 				/* We get the following inequalities,
 				 * singular_beta < beta <= tteval < exact_eval.
 				 */
-				else if (tteval >= beta) {
-					extensions = -2;
+#if 0
+				else if (tteval >= beta && !pstate.checkers) {
+					extensions = -1;
 				}
-				else if (tteval <= alpha && tteval <= eval) {
+#endif
+#if 0
+				else if (tteval <= alpha && tteval <= eval && !pstate.checkers) {
 					extensions = -1;
 				}
 #endif
