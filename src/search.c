@@ -485,7 +485,7 @@ skip_pruning:;
 
 		/* Late move reductions. */
 		int full_depth_search = 0;
-		if (depth >= 2 && !pstate.checkers && move_index >= (1 + pv_node) && (!move_capture(&move) || cut_node)) {
+		if (new_depth >= 2 && !pstate.checkers && move_index >= (1 + pv_node) && (!move_capture(&move) || cut_node)) {
 			int r = late_move_reduction(move_index, depth);
 
 			if (pv_node)
@@ -505,7 +505,7 @@ skip_pruning:;
 			/* If eval > alpha, then negamax < -alpha but we expected negamax >= -alpha. We
 			 * must therefore research this node.
 			 */
-			if (eval > alpha)
+			if (eval > alpha && new_depth > lmr_depth)
 				full_depth_search = 1;
 		}
 		else {
