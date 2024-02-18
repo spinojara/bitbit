@@ -21,24 +21,50 @@
 
 #include "util.h"
 
-int time_man(int etime, int32_t saved_evaluation[256], int depth) {
-	int var = 0;
-	if (depth > 2)
-		var = variance(saved_evaluation + depth - 3, 3);
-	int a = (double)etime / 20 * (1 + (double)var / 4096);
-	return a;
-}
-
-void time_init(struct position *pos, int etime, struct searchinfo *si) {
-	if (!etime)
+void time_init(struct position *pos, struct timeinfo *ti) {
+	if (!ti)
 		return;
 
-	int moves_left = max(25, 50 - pos->fullmove);
+	ti->start = time_now();
 
-	si->time_optimal = 1000 * etime / moves_left + si->time_start;
-	si->time_stop = 1000 * etime / 10 + si->time_start;
+	ti->stop_on_time = ti->movetime || ti->etime[0] || ti->etime[1] || ti->einc[0] || ti->einc[1];
+	if (!ti->stop_on_time)
+		return;
+
+	if (ti->movetime) {
+		ti->optimal = ti->maximal = ti->movetime;
+		return;
+	}
+
+	ti->us = pos->turn;
+
+	ti->best_move = 0;
+	ti->best_move_changes = -1;
+	ti->tries = 0;
+
+	if (ti->movestogo <= 0)
+		ti->movestogo = max(30, 60 - pos->fullmove / 2);
+
+	timepoint_t time_left = ti->etime[ti->us] + ti->movestogo * ti->einc[ti->us];
+
+	ti->optimal = time_left / ti->movestogo;
+	ti->maximal = 0.8 * ti->etime[ti->us];
 }
 
-int stop_searching(struct searchinfo *si) {
-	return time_now() >= si->time_optimal;
+int stop_searching(struct timeinfo *ti, move_t best_move) {
+	if (!ti)
+		return 0;
+
+	if (!move_compare(ti->best_move, best_move))
+		ti->best_move_changes++;
+	else
+		ti->best_move_changes--;
+	ti->best_move_changes = max(ti->best_move_changes, 0);
+	ti->best_move = best_move;
+	ti->tries++;
+
+	double margin = 1.2;
+
+	return ti->stop_on_time && (time_since(ti) >= ti->maximal ||
+		time_since(ti) * margin >= ti->optimal * (0.8 * ti->tries + 2.0 * ti->best_move_changes) / ti->tries);
 }

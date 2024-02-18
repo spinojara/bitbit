@@ -31,6 +31,7 @@
 #include "perft.h"
 #include "init.h"
 #include "search.h"
+#include "timeman.h"
 #include "evaluate.h"
 #include "transposition.h"
 #include "version.h"
@@ -249,29 +250,23 @@ int interface_go(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
 	int depth = 255;
-	int wtime = 0;
-	int btime = 0;
-	int winc = 0;
-	int binc = 0;
-	int movetime = 0;
-	UNUSED(winc);
-	UNUSED(binc);
+	struct timeinfo ti = { 0 };
 	for (int i = 1; i < argc - 1; i++) {
 		if (strcmp(argv[i], "depth") == 0)
 			depth = strint(argv[i + 1]);
 		if (strcmp(argv[i], "wtime") == 0)
-			wtime = strint(argv[i + 1]);
+			ti.etime[WHITE] = 1000 * strint(argv[i + 1]);
 		if (strcmp(argv[i], "btime") == 0)
-			btime = strint(argv[i + 1]);
+			ti.etime[BLACK] = 1000 * strint(argv[i + 1]);
 		if (strcmp(argv[i], "winc") == 0)
-			winc = strint(argv[i + 1]);
+			ti.einc[WHITE] = 1000 * strint(argv[i + 1]);
 		if (strcmp(argv[i], "binc") == 0)
-			binc = strint(argv[i + 1]);
+			ti.einc[BLACK] = 1000 * strint(argv[i + 1]);
 		if (strcmp(argv[i], "movetime") == 0)
-			movetime = strint(argv[i + 1]);
+			ti.movetime = 1000 * strint(argv[i + 1]);
 	}
 
-	search(&pos, depth, 1, pos.turn ? wtime : btime, movetime, NULL, &tt, &history, 1);
+	search(&pos, depth, 1, &ti, NULL, &tt, &history, 1);
 	return DONE;
 }
 

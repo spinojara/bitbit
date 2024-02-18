@@ -181,8 +181,8 @@ int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, s
 		return 0;
 	if (ply >= DEPTH_MAX)
 		return evaluate(pos);
-	if ((si->nodes & (0x1000 - 1)) == 0)
-		check_time(si);
+	if ((si->nodes & (0x1000 - 1)) == 0 && check_time(si->ti))
+		si->interrupt = 1;
 
 	const int pv_node = (beta != alpha + 1);
 
@@ -272,8 +272,8 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 		return 0;
 	if (ply >= DEPTH_MAX)
 		return evaluate(pos);
-	if ((si->nodes & (0x1000 - 1)) == 0)
-		check_time(si);
+	if ((si->nodes & (0x1000 - 1)) == 0 && check_time(si->ti))
+		si->interrupt = 1;
 
 	if (si->history)
 		si->history->zobrist_key[si->history->ply + ply] = pos->zobrist_key;
@@ -610,26 +610,21 @@ int32_t aspiration_window(struct position *pos, int depth, int32_t last, struct 
 	return evaluation;
 }
 
-int32_t search(struct position *pos, int depth, int verbose, int etime, int movetime, move_t *move, struct transpositiontable *tt, struct history *history, int iterative) {
+int32_t search(struct position *pos, int depth, int verbose, struct timeinfo *ti, move_t *move, struct transpositiontable *tt, struct history *history, int iterative) {
 	assert(option_history == (history != NULL));
 	depth = min(depth, DEPTH_MAX);
 
-	timepoint_t ts = time_now();
-	if (etime && !movetime)
-		movetime = etime / 5;
-
 	struct searchinfo si = { 0 };
-	si.time_start = ts;
-	si.time_stop = movetime ? si.time_start + 1000 * movetime : 0;
+	si.ti = ti;
 	si.tt = tt;
 	si.history = history;
 
 	struct searchstack ss[DEPTH_MAX + 1] = { 0 };
 
-	time_init(pos, etime, &si);
+	time_init(pos, si.ti);
 
 	char str[8];
-	int32_t eval = VALUE_NONE, best_eval = VALUE_NONE;
+	int32_t eval = VALUE_NONE;
 
 	refresh_accumulator(pos, 0);
 	refresh_accumulator(pos, 1);
@@ -659,12 +654,11 @@ int32_t search(struct position *pos, int depth, int verbose, int etime, int move
 		 * Use move even from a partial and interrupted search.
 		 */
 		best_move = si.pv[0][0];
-		best_eval = eval;
 
 		if (interrupt || si.interrupt)
 			break;
 
-		timepoint_t tp = time_now() - ts;
+		timepoint_t tp = time_since(si.ti);
 		if (verbose) {
 			printf("info depth %d ", d);
 			if (history)
@@ -682,7 +676,7 @@ int32_t search(struct position *pos, int depth, int verbose, int etime, int move
 			print_pv(pos, si.pv[0], 0);
 			printf("\n");
 		}
-		if (etime && stop_searching(&si))
+		if (stop_searching(si.ti, best_move))
 			break;
 	}
 
@@ -691,7 +685,7 @@ int32_t search(struct position *pos, int depth, int verbose, int etime, int move
 	if (move && !interrupt)
 		*move = best_move;
 
-	return best_eval;
+	return eval;
 }
 
 void search_init(void) {
