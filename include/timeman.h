@@ -45,7 +45,6 @@ struct timeinfo {
 
 	move_t best_move;
 	double best_move_changes;
-	int tries;
 
 	double multiplier;
 };

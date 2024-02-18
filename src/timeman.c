@@ -40,7 +40,6 @@ void time_init(struct position *pos, struct timeinfo *ti) {
 
 	ti->best_move = 0;
 	ti->best_move_changes = -1.0;
-	ti->tries = 0;
 
 	if (ti->movestogo <= 0)
 		ti->movestogo = max(30, 60 - pos->fullmove / 2);
@@ -61,7 +60,6 @@ int stop_searching(struct timeinfo *ti, move_t best_move) {
 		ti->best_move_changes /= 2;
 
 	ti->best_move = best_move;
-	ti->tries++;
 
 	double margin = 1.2;
 	double instability = 0.8 + 2.0 * ti->best_move_changes;
