@@ -39,7 +39,7 @@ void time_init(struct position *pos, struct timeinfo *ti) {
 	ti->us = pos->turn;
 
 	ti->best_move = 0;
-	ti->best_move_changes = -1;
+	ti->best_move_changes = -1.0;
 	ti->tries = 0;
 
 	if (ti->movestogo <= 0)
@@ -58,13 +58,14 @@ int stop_searching(struct timeinfo *ti, move_t best_move) {
 	if (!move_compare(ti->best_move, best_move))
 		ti->best_move_changes++;
 	else
-		ti->best_move_changes--;
-	ti->best_move_changes = max(ti->best_move_changes, 0);
+		ti->best_move_changes /= 2;
+
 	ti->best_move = best_move;
 	ti->tries++;
 
 	double margin = 1.2;
+	double instability = 0.8 + 2.0 * ti->best_move_changes;
 
 	return ti->stop_on_time && (time_since(ti) >= ti->maximal ||
-		time_since(ti) * margin >= ti->optimal * (0.8 * ti->tries + 2.0 * ti->best_move_changes) / ti->tries);
+		time_since(ti) * margin >= ti->optimal * instability);
 }
