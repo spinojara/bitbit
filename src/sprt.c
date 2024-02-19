@@ -279,7 +279,7 @@ int sprt(int testtype, unsigned long games, uint64_t trinomial[3], uint64_t pent
 		execlp("c-chess-cli-unbuffered", "c-chess-cli-unbuffered", "-each", timestr,
 				"-games", gamesstr,
 				"-concurrency", concurrencystr,
-				"-openings", "file=etc/book/5d6m100k.epd", "order=random",
+				"-openings", "file=etc/book/testbit-50cp5d6m100k.epd", "order=random",
 				"-repeat",
 				"-engine", "cmd=./bitbitold", "name=bitbitold",
 				"-engine", "cmd=./bitbit", (char *)NULL);
