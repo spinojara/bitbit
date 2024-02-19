@@ -46,7 +46,7 @@ struct position {
 
 struct pstate {
 	uint64_t checkers;
-	uint64_t attacked;
+	uint64_t attacked[7];
 	/* Set if checkers contains exactly one bit.
 	 * checkray = between(ctz(checkers), king_square) | checkers;
 	 * If checkers is not exactly one bit it is set to 0.
@@ -90,7 +90,7 @@ void pstate_init(const struct position *pos, struct pstate *pstate);
 
 uint64_t generate_checkers(const struct position *pos, int color);
 uint64_t generate_attackers(const struct position *pos, int square, int color);
-uint64_t generate_attacked(const struct position *pos, int color);
+void generate_attacked(const struct position *pos, int color, uint64_t attacked[7]);
 uint64_t generate_pinned(const struct position *pos, int color);
 uint64_t generate_blockers(const struct position *pos, uint64_t pinners, int king_square);
 uint64_t generate_pinners(const struct position *pos, uint64_t pinned, int color);

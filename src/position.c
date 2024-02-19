@@ -58,61 +58,72 @@ void pstate_init(const struct position *pos, struct pstate *pstate) {
 	const int us = pos->turn;
 	const int them = other_color(us);
 	pstate->checkers = generate_checkers(pos, us);
-	pstate->attacked = generate_attacked(pos, them);
+	generate_attacked(pos, them, pstate->attacked);
 	pstate->checkray = single(pstate->checkers) ? between(ctz(pos->piece[us][KING]), ctz(pstate->checkers)) | pstate->checkers : 0;
 	pstate->pinned = generate_pinned(pos, us);
 }
 
 uint64_t generate_checkers(const struct position *pos, int color) {
-	return generate_attackers(pos, ctz(pos->piece[color][KING]), color);
+	return generate_attackers(pos, ctz(pos->piece[color][KING]), other_color(color));
 }
 
 uint64_t generate_attackers(const struct position *pos, int square, int color) {
 	uint64_t attackers = 0;
-	const unsigned up = color ? N : S;
+	const unsigned up = color ? S : N;
 
-	attackers |= (shift(pos->piece[color][KING], up | E) | shift(pos->piece[color][KING], up | W)) & pos->piece[other_color(color)][PAWN];
-	attackers |= rook_attacks(square, 0, pos->piece[WHITE][ALL] | pos->piece[BLACK][ALL]) & (pos->piece[other_color(color)][ROOK] | pos->piece[other_color(color)][QUEEN]);
-	attackers |= bishop_attacks(square, 0, pos->piece[WHITE][ALL] | pos->piece[BLACK][ALL]) & (pos->piece[other_color(color)][BISHOP] | pos->piece[other_color(color)][QUEEN]);
-	attackers |= knight_attacks(square, 0) & pos->piece[other_color(color)][KNIGHT];
+	attackers |= (shift(bitboard(square), up | E) | shift(bitboard(square), up | W)) & pos->piece[color][PAWN];
+	attackers |= rook_attacks(square, 0, pos->piece[WHITE][ALL] | pos->piece[BLACK][ALL]) & (pos->piece[color][ROOK] | pos->piece[color][QUEEN]);
+	attackers |= bishop_attacks(square, 0, pos->piece[WHITE][ALL] | pos->piece[BLACK][ALL]) & (pos->piece[color][BISHOP] | pos->piece[color][QUEEN]);
+	attackers |= knight_attacks(square, 0) & pos->piece[color][KNIGHT];
 
 	return attackers;
 }
 
-uint64_t generate_attacked(const struct position *pos, int color) {
-	uint64_t attacked = 0;
+void generate_attacked(const struct position *pos, int color, uint64_t attacked[7]) {
 	const unsigned up = color ? N : S;
 	uint64_t piece;
 	int square;
 
 	square = ctz(pos->piece[color][KING]);
 
-	attacked = king_attacks(square, 0);
-	attacked |= shift(pos->piece[color][PAWN], up | E);
-	attacked |= shift(pos->piece[color][PAWN], up | W);
+	attacked[KING] = king_attacks(square, 0);
+	attacked[PAWN] = 0;
+	attacked[PAWN] |= shift(pos->piece[color][PAWN], up | E);
+	attacked[PAWN] |= shift(pos->piece[color][PAWN], up | W);
 
+	attacked[KNIGHT] = 0;
 	piece = pos->piece[color][KNIGHT];
 	while (piece) {
 		square = ctz(piece);
-		attacked |= knight_attacks(square, 0);
+		attacked[KNIGHT] |= knight_attacks(square, 0);
 		piece = clear_ls1b(piece);
 	}
 
-	piece = pos->piece[color][BISHOP] | pos->piece[color][QUEEN];
+	attacked[BISHOP] = 0;
+	piece = pos->piece[color][BISHOP];
 	while (piece) {
 		square = ctz(piece);
-		attacked |= bishop_attacks(square, 0, (pos->piece[WHITE][ALL] | pos->piece[BLACK][ALL]) ^ pos->piece[other_color(color)][KING]);
+		attacked[BISHOP] |= bishop_attacks(square, 0, all_pieces(pos) ^ pos->piece[other_color(color)][KING]);
 		piece = clear_ls1b(piece);
 	}
 
-	piece = pos->piece[color][ROOK] | pos->piece[color][QUEEN];
+	attacked[ROOK] = 0;
+	piece = pos->piece[color][ROOK];
 	while (piece) {
 		square = ctz(piece);
-		attacked |= rook_attacks(square, 0, (pos->piece[WHITE][ALL] | pos->piece[BLACK][ALL]) ^ pos->piece[other_color(color)][KING]);
+		attacked[ROOK] |= rook_attacks(square, 0, all_pieces(pos) ^ pos->piece[other_color(color)][KING]);
 		piece = clear_ls1b(piece);
 	}
 
-	return attacked;
+	attacked[QUEEN] = 0;
+	piece = pos->piece[color][QUEEN];
+	while (piece) {
+		square = ctz(piece);
+		attacked[ROOK] |= queen_attacks(square, 0, all_pieces(pos) ^ pos->piece[other_color(color)][KING]);
+		piece = clear_ls1b(piece);
+	}
+
+	attacked[ALL] = attacked[PAWN] | attacked[KNIGHT] | attacked[BISHOP] | attacked[ROOK] | attacked[QUEEN] | attacked[KING];
 }
 
 uint64_t generate_pinned(const struct position *pos, int color) {

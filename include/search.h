@@ -29,18 +29,18 @@ typedef int64_t timepoint_t;
 struct searchstack {
 	move_t move;
 	move_t excluded_move;
+
+	int32_t static_eval;
 };
 
 struct searchinfo {
 	uint64_t nodes;
 
-	timepoint_t time_start;
-	timepoint_t time_optimal;
-	timepoint_t time_stop;
-
 	move_t pv[DEPTH_MAX][DEPTH_MAX];
 	move_t killers[DEPTH_MAX][2];
-	int64_t history_moves[13][64];
+	move_t counter_move[13][64];
+	int64_t quiet_history[13][64][64];
+	int64_t capture_history[13][7][64];
 
 	struct transpositiontable *tt;
 	struct history *history;
@@ -48,9 +48,11 @@ struct searchinfo {
 	int root_depth;
 
 	int interrupt;
+
+	struct timeinfo *ti;
 };
 
-int32_t search(struct position *pos, int depth, int verbose, int etime, int movetime, move_t *move, struct transpositiontable *tt, struct history *history, int iterative);
+int32_t search(struct position *pos, int depth, int verbose, struct timeinfo *ti, move_t *move, struct transpositiontable *tt, struct history *history, int iterative);
 
 void search_init(void);
 

@@ -247,7 +247,7 @@ void *worker(void *arg) {
 		move = 0;
 		/* Maybe randomly vary depth. */
 		int depth_now = depth;
-		eval = search(&pos, depth_now, 0, 0, 0, &move, tt, &h, 0);
+		eval = search(&pos, depth_now, 0, NULL, &move, tt, &h, 0);
 
 		/* Check for fens that we dont want to write. */
 		int skip = is_capture(&pos, &move) || generate_checkers(&pos, pos.turn) ||

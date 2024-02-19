@@ -23,13 +23,15 @@
 #include "position.h"
 #include "search.h"
 
-extern int mvv_lva_lookup[13 * 13];
+extern int mvv_lva_lookup[7 * 7];
 
 static inline int mvv_lva(int attacker, int victim) {
-	return mvv_lva_lookup[attacker + 13 * victim];
+	return mvv_lva_lookup[attacker + 7 * victim];
 }
 
 int see_geq(struct position *pos, const move_t *move, int32_t value);
+
+uint64_t generate_defenders(struct position *pos, const move_t *move);
 
 void moveorder_init(void);
 

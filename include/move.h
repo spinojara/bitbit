@@ -65,6 +65,10 @@ static inline move_t new_move(int source_square, int target_square, int flag, in
 	return source_square | (target_square << 6) | (flag << 12) | (promotion << 14);
 }
 
+static inline int move_compare(move_t move1, move_t move2) {
+	return (move1 & 0xFFFF) == (move2 & 0xFFFF);
+}
+
 int pseudo_legal(const struct position *pos, const struct pstate *pstate, const move_t *move);
 
 int legal(const struct position *pos, const struct pstate *pstate, const move_t *move);

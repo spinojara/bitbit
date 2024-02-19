@@ -22,15 +22,36 @@
 #include <stddef.h>
 
 #include "search.h"
+#include "move.h"
 #include "position.h"
 
-typedef int64_t timepoint_t;
+typedef timepoint_t int64_t;
 
-int time_man(int etime, int32_t saved_evaluation[256], int depth);
+struct timeinfo {
+	int stop_on_time;
 
-void time_init(struct position *pos, int etime, struct searchinfo *si);
+	int movestogo;
 
-int stop_searching(struct searchinfo *si);
+	timepoint_t etime[2];
+	timepoint_t einc[2];
+
+	timepoint_t movetime;
+
+	timepoint_t start;
+	timepoint_t optimal;
+	timepoint_t maximal;
+
+	int us;
+
+	move_t best_move;
+	double best_move_changes;
+
+	double multiplier;
+};
+
+void time_init(struct position *pos, struct timeinfo *ti);
+
+int stop_searching(struct timeinfo *si, move_t best_move);
 
 static inline timepoint_t time_now(void) {
 	struct timeval t;
@@ -38,9 +59,16 @@ static inline timepoint_t time_now(void) {
 	return t.tv_sec * 1000000 + t.tv_usec;
 }
 
-static inline void check_time(struct searchinfo *si) {
-	if (si->time_stop && time_now() >= si->time_stop)
-		si->interrupt = 1;
+static inline timepoint_t time_since(const struct timeinfo *ti) {
+	return time_now() - ti->start;
+}
+
+static inline int check_time(const struct timeinfo *ti) {
+	if (!ti)
+		return 0;
+	if (ti->stop_on_time && time_since(ti) >= ti->maximal)
+		return 1;
+	return 0;
 }
 
 #endif

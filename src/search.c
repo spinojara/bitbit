@@ -67,7 +67,6 @@ void print_pv(struct position *pos, move_t *pv_move, int ply) {
 	do_move(pos, pv_move);
 	print_pv(pos, pv_move + 1, ply + 1);
 	undo_move(pos, pv_move);
-	*pv_move = *pv_move & 0xFFFF;
 }
 
 static inline void store_killer_move(const move_t *move, int ply, move_t killers[][2]) {
@@ -75,25 +74,71 @@ static inline void store_killer_move(const move_t *move, int ply, move_t killers
 		return;
 	assert(0 <= ply && ply < DEPTH_MAX);
 	assert(*move);
-	if ((*move & 0xFFFF) == killers[ply][0])
+	if (move_compare(*move, killers[ply][0]) || move_compare(*move, killers[ply][1]))
 		return;
 	killers[ply][1] = killers[ply][0];
-	killers[ply][0] = *move & 0xFFFF;
+	killers[ply][0] = *move;
 }
 
-static inline void store_history_move(const struct position *pos, const move_t *move, int depth, int64_t history_moves[13][64]) {
-	if (interrupt)
-		return;
-	assert(*move);
-	assert(0 <= depth && depth < DEPTH_MAX);
-	history_moves[pos->mailbox[move_from(move)]][move_to(move)] += (uint64_t)1 << min(depth, 32);
+/* Suppose that h_0 is the original value of history.
+ * After adding a bonus b we get h_1 = h_0 + b.
+ * We scale the value back a little so that it doesn't
+ * grow too large in either direction. If we scale by
+ * a real number alpha we get h_2 = alpha * h_1.
+ *
+ * This stabilizes whenever h_0 = h_2. This gives
+ * h_1 - b = alpha * h_1 which implies h_1 * (1 - alpha) = b.
+ * h_1 = b / (1 - alpha) and h_0 = b / (1 - alpha) - b =
+ * b * alpha / (1 - alpha) which gives b / h_0 = 1 / alpha - 1.
+ *
+ * We choose e.g. alpha = 15 / 16.
+ */
+static inline void add_history(int64_t *history, int64_t bonus) {
+	*history += bonus;
+	*history -= *history / 16;
+}
+
+static inline void update_history(struct searchinfo *si, const struct position *pos, int depth, int ply, move_t *best_move, int32_t best_eval, int32_t beta, move_t *captures, move_t *quiets, const struct searchstack *ss) {
+	int64_t bonus = 16 * depth * depth;
+
+	int our_piece = pos->mailbox[move_from(best_move)];
+	int their_piece = move_capture(best_move);
+
+	if (!their_piece && move_flag(best_move) != MOVE_PROMOTION && move_flag(best_move) != MOVE_EN_PASSANT) {
+		add_history(&si->quiet_history[our_piece][move_from(best_move)][move_to(best_move)], bonus);
+		
+		if (best_eval >= beta)
+			store_killer_move(best_move, ply, si->killers);
+
+		move_t old_move = (ss - 1)->move;
+		if (old_move) {
+			int square = move_to(&old_move);
+			si->counter_move[pos->mailbox[square]][square] = *best_move;
+		}
+
+		for (int i = 0; quiets[i]; i++) {
+			int square = move_to(&quiets[i]);
+			int piece = pos->mailbox[move_from(&quiets[i])];
+			add_history(&si->quiet_history[piece][move_from(&quiets[i])][square], -bonus);
+		}
+	}
+	else if (move_flag(best_move) != MOVE_PROMOTION && move_flag(best_move) != MOVE_EN_PASSANT) {
+		add_history(&si->capture_history[our_piece][their_piece][move_to(best_move)], bonus);
+	}
+
+	for (int i = 0; captures[i]; i++) {
+		int square = move_to(&captures[i]);
+		int piece1 = pos->mailbox[move_from(&captures[i])];
+		int piece2 = move_capture(&captures[i]);
+		add_history(&si->capture_history[piece1][piece2][square], -bonus);
+	}
 }
 
 static inline void store_pv_move(const move_t *move, int ply, move_t pv[DEPTH_MAX][DEPTH_MAX]) {
 	if (interrupt)
 		return;
 	assert(*move);
-	pv[ply][ply] = *move & 0xFFFF;
+	pv[ply][ply] = *move;
 	memcpy(pv[ply] + ply + 1, pv[ply + 1] + ply + 1, sizeof(**pv) * (DEPTH_MAX - (ply + 1)));
 }
 
@@ -136,8 +181,8 @@ int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, s
 		return 0;
 	if (ply >= DEPTH_MAX)
 		return evaluate(pos);
-	if ((si->nodes & (0x1000 - 1)) == 0)
-		check_time(si);
+	if ((si->nodes & (0x1000 - 1)) == 0 && check_time(si->ti))
+		si->interrupt = 1;
 
 	const int pv_node = (beta != alpha + 1);
 
@@ -162,13 +207,15 @@ int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, s
 		return draw(si);
 
 	struct transposition *e = transposition_probe(si->tt, pos);
-	int32_t tteval = e ? adjust_score_mate_get(e->eval, ply) : VALUE_NONE;
-	move_t ttmove = e ? e->move : 0;
-	if (!pv_node && e && e->bound & (tteval >= beta ? BOUND_LOWER : BOUND_UPPER))
+	int tthit = e != NULL;
+	int32_t tteval = tthit ? adjust_score_mate_get(e->eval, ply) : VALUE_NONE;
+	int ttbound = tthit ? e->bound : 0;
+	move_t ttmove_unsafe = tthit ? e->move : 0;
+	if (!pv_node && tthit && ttbound & (tteval >= beta ? BOUND_LOWER : BOUND_UPPER))
 		return tteval;
 
 	if (!pstate.checkers) {
-		if (e && e->bound & (tteval >= beta ? BOUND_LOWER : BOUND_UPPER))
+		if (tthit && ttbound & (tteval >= beta ? BOUND_LOWER : BOUND_UPPER))
 			best_eval = tteval;
 		else
 			best_eval = eval;
@@ -179,8 +226,9 @@ int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, s
 			alpha = best_eval;
 	}
 
+	move_t ttmove = pseudo_legal(pos, &pstate, &ttmove_unsafe) ? ttmove_unsafe : 0;
 	struct movepicker mp;
-	movepicker_init(&mp, 1, pos, &pstate, ttmove, 0, 0, si);
+	movepicker_init(&mp, 1, pos, &pstate, ttmove, 0, 0, 0, si);
 	move_t best_move = 0;
 	move_t move;
 	int move_index = -1;
@@ -224,8 +272,8 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 		return 0;
 	if (ply >= DEPTH_MAX)
 		return evaluate(pos);
-	if ((si->nodes & (0x1000 - 1)) == 0)
-		check_time(si);
+	if ((si->nodes & (0x1000 - 1)) == 0 && check_time(si->ti))
+		si->interrupt = 1;
 
 	if (si->history)
 		si->history->zobrist_key[si->history->ply + ply] = pos->zobrist_key;
@@ -255,40 +303,49 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	move_t excluded_move = ss->excluded_move;
 
 	struct transposition *e = excluded_move ? NULL : transposition_probe(si->tt, pos);
-	int32_t tteval = e ? adjust_score_mate_get(e->eval, ply) : VALUE_NONE;
-	move_t ttmove = root_node ? si->pv[0][0] : e ? e->move : 0;
-	if (!pv_node && e && e->depth >= depth && e->bound & (tteval >= beta ? BOUND_LOWER : BOUND_UPPER))
+	int tthit = e != NULL;
+	int32_t tteval = tthit ? adjust_score_mate_get(e->eval, ply) : VALUE_NONE;
+	int ttbound = tthit ? e->bound : 0;
+	int ttdepth = tthit ? e->depth : 0;
+	move_t ttmove_unsafe = root_node ? si->pv[0][0] : tthit ? e->move : 0;
+	if (!pv_node && tthit && ttdepth >= depth && ttbound & (tteval >= beta ? BOUND_LOWER : BOUND_UPPER))
 		return tteval;
 
 	struct pstate pstate;
 	pstate_init(pos, &pstate);
 	
-	if (depth == 0 && !pstate.checkers)
-		return quiescence(pos, ply, alpha, beta, si, &pstate, ss);
+	move_t ttmove = pseudo_legal(pos, &pstate, &ttmove_unsafe) ? ttmove_unsafe : 0;
+	int ttcapture = ttmove ? is_capture(pos, &ttmove) : 0;
 
 	if (pstate.checkers)
 		goto skip_pruning;
 
-#if 0
-	int32_t static_eval = evaluate(pos);
+	if (depth == 0)
+		return quiescence(pos, ply, alpha, beta, si, &pstate, ss);
+
+#if 1
+	int32_t estimated_eval = ss->static_eval = evaluate(pos);
+	if (tteval != VALUE_NONE && ttbound & (tteval >= estimated_eval ? BOUND_LOWER : BOUND_UPPER))
+		estimated_eval = tteval;
 #endif
-#if 0
-	/* Razoring. */
-	if (!pv_node && depth <= 8 && static_eval + 300 + 250 * depth * depth < alpha) {
-		eval = quiescence(pos, ply + 1, alpha - 1, alpha, si, ss + 1);
+
+#if 1
+	/* Razoring (37+-5 Elo). */
+	if (!pv_node && depth <= 8 && estimated_eval + 100 + 150 * depth * depth < alpha) {
+		eval = quiescence(pos, ply, alpha - 1, alpha, si, &pstate, ss);
 		if (eval < alpha)
 			return eval;
 	}
 #endif
-#if 0
-	/* Futility pruning. */
-	if (!pv_node && depth <= 6 && static_eval - 200 > beta)
-		return static_eval;
+#if 1
+	/* Futility pruning (60+-8 Elo). */
+	if (!pv_node && depth <= 6 && estimated_eval - 200 * depth > beta)
+		return estimated_eval;
 #endif
-#if 0
-	/* Null move pruning. */
-	if (!pv_node && (ss - 1)->move && static_eval >= beta && depth >= 3 && has_sliding_piece(pos)) {
-		int reduction = 3;
+#if 1
+	/* Null move pruning (43+-6 Elo). */
+	if (!pv_node && (ss - 1)->move && estimated_eval >= beta && depth >= 3 && has_sliding_piece(pos)) {
+		int reduction = 4;
 		int new_depth = clamp(depth - reduction, 1, depth);
 		int ep = pos->en_passant;
 		do_null_zobrist_key(pos, 0);
@@ -303,23 +360,30 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 			return beta;
 	}
 #endif
-#if 1
+#if 0
 	/* Internal iterative deepening. */
-	if ((pv_node || cut_node) && !excluded_move && depth >= 4 && !ttmove) {
+	if (depth >= 4 && (pv_node || cut_node) && !(ttbound & BOUND_UPPER) && !excluded_move && !ttmove) {
 		int reduction = 3;
 		int new_depth = depth - reduction;
 		negamax(pos, new_depth, ply, alpha, beta, cut_node, si, ss);
-		struct transposition *ne = transposition_probe(si->tt, pos);
-		if (ne) {
-			if (!e || ne->depth >= e->depth) {
-				e = ne;
+		e = transposition_probe(si->tt, pos);
+		if (e) {
+			/* Not this tthit, but last tthit. */
+			if (!tthit) {
 				tteval = adjust_score_mate_get(e->eval, ply);
+				ttbound = e->bound;
+				ttdepth = e->depth;
+				/* Can once more update estimated_eval but maybe
+				 * we won't use it anyway.
+				 */
 			}
+			tthit = 1;
 			ttmove = e->move;
+			ttmove = pseudo_legal(pos, &pstate, &ttmove) ? ttmove : 0;
 		}
 	}
 #endif
-#if 1
+#if 0
 	if (pv_node && depth >= 3 && !ttmove)
         	depth -= 2;
 
@@ -330,81 +394,76 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 skip_pruning:;
 	move_t best_move = 0;
 
+	move_t counter_move = 0;
+	move_t old_move = (ss - 1)->move;
+	if (old_move) {
+		int square = move_to(&old_move);
+		counter_move = si->counter_move[pos->mailbox[square]][square];
+	}
 	struct movepicker mp;
-	movepicker_init(&mp, 0, pos, &pstate, ttmove, si->killers[ply][0], si->killers[ply][1], si);
+	movepicker_init(&mp, 0, pos, &pstate, ttmove, si->killers[ply][0], si->killers[ply][1], counter_move, si);
 
-	int ttcapture = ttmove ? is_capture(pos, &ttmove) : 0;
-
-	move_t move;
+	move_t move, quiets[MOVES_MAX], captures[MOVES_MAX];
+	int n_quiets = 0, n_captures = 0;
 	int move_index = -1;
 	while ((move = next_move(&mp))) {
-#if 0
-		if (root_node) {
-			print_move(&m);
-			printf(" from stage %d\n", mp.stage);
-		}
-#endif
+
 		if (!legal(pos, &pstate, &move) || move == excluded_move)
 			continue;
 
 		move_index++;
 
+		if (!root_node) {
+			/* Late move pruning (85+-5 Elo). */
+			if (move_index >= 4 + depth * depth)
+				mp.prune = 1;
+		}
+
 		/* Extensions. */
 		int extensions = 0;
 		if (ply < 2 * si->root_depth) {
-			if (pstate.checkers) {
-				extensions = 1;
-			}
 #if 1
-			else if (!root_node && depth >= 5 && ttmove == move && !excluded_move && e->bound & BOUND_LOWER && e->depth >= depth - 3) {
+			if (!root_node && depth >= 5 && move_compare(ttmove, move) && !excluded_move && ttbound & BOUND_LOWER && ttdepth >= depth - 3) {
 				int reduction = 3;
 				int new_depth = depth - reduction;
 
-				int32_t singular_beta = tteval - 4 * depth;
+				int32_t singular_beta = tteval - 2 * depth;
 
 				ss->excluded_move = move;
 				eval = negamax(pos, new_depth, ply, singular_beta - 1, singular_beta, cut_node, si, ss);
 				ss->excluded_move = 0;
 
-				//char fen[128];
-				/* If eval < singular_beta we have the following inequalities,
-				 * eval < singular_beta < tteval < exact_tteval since tteval is
+				/* Singular extension (29+-5 Elo).
+				 * If eval < singular_beta we have the following inequalities,
+				 * eval < singular_beta < tteval <= exact_eval since tteval is
 				 * a lower bound. In particular all moves except ttmove fail
 				 * low on [singular_beta - 1, singular_beta] and ttmove is the
 				 * single best move by some margin.
 				 */
-				if (eval < singular_beta) {
-#if 0
-					printf("%s\n", pos_to_fen(fen, pos));
-					print_move(&ttmove);
-					printf("\n%d\n", tteval);
-					printf("%d\n", singular_beta);
-					printf("%d\n", eval);
-#endif
+				if (eval < singular_beta)
 					extensions = 1;
-				}
-#if 0
-				/* If singular_beta >= beta and the search did not fail low,
-				 * it failed high. ttmove fails high for the search [alpha, beta]
-				 * and some other move fails high for [singular_beta - 1, singular_beta].
-				 * In particular since singular_beta >= beta, the move fails high also for
-				 * [alpha, beta] and there are at least 2 moves which make the search
-				 * [alpha, beta] fail high. We assume that at least one of the two moves
-				 * fail high also for the higher depth search and we have a beta cutoff.
+#if 1
+				/* Multi cut (6+-4 Elo).
+				 * Now eval >= singular_beta. If also singular_beta >= beta
+				 * we get the inequalities
+				 * eval >= singular_beta >= beta and we have another move
+				 * that fails high. We assume at least one move fails high
+				 * on a regular search and we thus return beta.
 				 */
 #if 1
-				else if (singular_beta >= beta) {
+				else if (singular_beta >= beta && !pstate.checkers)
 					return singular_beta;
+#endif
+				/* We get the following inequalities,
+				 * singular_beta < beta <= tteval < exact_eval.
+				 */
+#if 0
+				else if (tteval >= beta && !pstate.checkers) {
+					extensions = -1;
 				}
 #endif
-#if 1
-				/* We get the following inequalities,
-				 * eval < singular_beta < beta < tteval < exact_tteval.
-				 */
-				else if (tteval >= beta) {
-					extensions = -2;
-				}
-				else if (tteval <= alpha && tteval <= eval) {
+#if 0
+				else if (tteval <= alpha && tteval <= eval && !pstate.checkers) {
 					extensions = -1;
 				}
 #endif
@@ -426,14 +485,14 @@ skip_pruning:;
 
 		/* Late move reductions. */
 		int full_depth_search = 0;
-		if (depth >= 2 && !pstate.checkers && move_index >= (1 + pv_node) && (!move_capture(&move) || cut_node)) {
+		if (new_depth >= 2 && !pstate.checkers && move_index >= (1 + pv_node) && (!move_capture(&move) || cut_node)) {
 			int r = late_move_reduction(move_index, depth);
 
 			if (pv_node)
 				r -= 1;
 			if (!move_capture(&move) && ttcapture)
 				r += 1;
-			if (cut_node && move != si->killers[ply][0] && move != si->killers[ply][1])
+			if (cut_node && !move_compare(move, si->killers[ply][0]) && !move_compare(move, si->killers[ply][1]))
 				r += 1;
 
 			int lmr_depth = clamp(new_depth - r, 1, new_depth);
@@ -446,11 +505,11 @@ skip_pruning:;
 			/* If eval > alpha, then negamax < -alpha but we expected negamax >= -alpha. We
 			 * must therefore research this node.
 			 */
-			if (eval > alpha)
+			if (eval > alpha && new_depth > lmr_depth)
 				full_depth_search = 1;
 		}
 		else {
-			/* If this is not a pv node, then alpha = beta + 1 or, -beta = -alpha - 1.
+			/* If this is not a pv node, then alpha = beta + 1, or -beta = -alpha - 1.
 			 * Our full depth search will thus search in the full interval [-beta, -alpha].
 			 * If this is a pv node and we are not at the first child, then the child is
 			 * an expected cut node. We should thus do a full depth search.
@@ -478,6 +537,7 @@ skip_pruning:;
 		undo_endgame_key(pos, &move);
 		undo_move(pos, &move);
 		undo_accumulator(pos, &move);
+
 		if (interrupt || si->interrupt)
 			return 0;
 
@@ -490,23 +550,33 @@ skip_pruning:;
 
 				if (pv_node)
 					store_pv_move(&move, ply, si->pv);
-				if (!is_capture(pos, &move) && move_flag(&move) != 2)
-					store_history_move(pos, &move, depth, si->history_moves);
 
-				if (pv_node && eval < beta) {
+				if (pv_node && eval < beta)
 					alpha = eval;
-				}
-				else {
-					if (!is_capture(pos, &move) && move_flag(&move) != 2)
-						store_killer_move(&move, ply, si->killers);
+				else
 					break;
-				}
 			}
 		}
+		/* If this move was not good we reduce its stats.
+		 * Note that in non-pv nodes we will only ever
+		 * have one best move and the problem of overwriting
+		 * best moves will not be a problem.
+		 */
+		if (!move_compare(move, best_move)) {
+			if (move_capture(&move))
+				captures[n_captures++] = move;
+			else
+				quiets[n_quiets++] = move;
+		}
 	}
-	if (move_index == -1)
+	if (move_index == -1) {
 		best_eval = excluded_move ? alpha :
 			pstate.checkers ? -VALUE_MATE + ply : 0;
+	}
+	else if (best_move) {
+		captures[n_captures] = quiets[n_quiets] = 0;
+		update_history(si, pos, depth, ply, &best_move, best_eval, beta, captures, quiets, ss);
+	}
 	int bound = (best_eval >= beta) ? BOUND_LOWER : (pv_node && best_move) ? BOUND_EXACT : BOUND_UPPER;
 	if (!excluded_move)
 		transposition_store(si->tt, pos, adjust_score_mate_store(best_eval, ply), depth, bound, best_move);
@@ -540,26 +610,21 @@ int32_t aspiration_window(struct position *pos, int depth, int32_t last, struct 
 	return evaluation;
 }
 
-int32_t search(struct position *pos, int depth, int verbose, int etime, int movetime, move_t *move, struct transpositiontable *tt, struct history *history, int iterative) {
+int32_t search(struct position *pos, int depth, int verbose, struct timeinfo *ti, move_t *move, struct transpositiontable *tt, struct history *history, int iterative) {
 	assert(option_history == (history != NULL));
 	depth = min(depth, DEPTH_MAX);
 
-	timepoint_t ts = time_now();
-	if (etime && !movetime)
-		movetime = etime / 5;
-
 	struct searchinfo si = { 0 };
-	si.time_start = ts;
-	si.time_stop = movetime ? si.time_start + 1000 * movetime : 0;
+	si.ti = ti;
 	si.tt = tt;
 	si.history = history;
 
 	struct searchstack ss[DEPTH_MAX + 1] = { 0 };
 
-	time_init(pos, etime, &si);
+	time_init(pos, si.ti);
 
 	char str[8];
-	int32_t eval = VALUE_NONE, best_eval = VALUE_NONE;
+	int32_t eval = VALUE_NONE;
 
 	refresh_accumulator(pos, 0);
 	refresh_accumulator(pos, 1);
@@ -589,12 +654,11 @@ int32_t search(struct position *pos, int depth, int verbose, int etime, int move
 		 * Use move even from a partial and interrupted search.
 		 */
 		best_move = si.pv[0][0];
-		best_eval = eval;
 
 		if (interrupt || si.interrupt)
 			break;
 
-		timepoint_t tp = time_now() - ts;
+		timepoint_t tp = time_since(si.ti);
 		if (verbose) {
 			printf("info depth %d ", d);
 			if (history)
@@ -612,7 +676,7 @@ int32_t search(struct position *pos, int depth, int verbose, int etime, int move
 			print_pv(pos, si.pv[0], 0);
 			printf("\n");
 		}
-		if (etime && stop_searching(&si))
+		if (stop_searching(si.ti, best_move))
 			break;
 	}
 
@@ -621,7 +685,7 @@ int32_t search(struct position *pos, int depth, int verbose, int etime, int move
 	if (move && !interrupt)
 		*move = best_move;
 
-	return best_eval;
+	return eval;
 }
 
 void search_init(void) {

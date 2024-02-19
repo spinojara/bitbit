@@ -29,6 +29,8 @@
 
 void do_move(struct position *pos, move_t *move) {
 	assert(*move);
+	/* Remove old flags. */
+	*move &= 0xFFFF;
 	int source_square = move_from(move);
 	int target_square = move_to(move);
 	assert(pos->mailbox[source_square]);
@@ -77,6 +79,7 @@ void do_move(struct position *pos, move_t *move) {
 		pos->piece[other_color(pos->turn)][PAWN] ^= bitboard(target_square - direction * 8);
 		pos->piece[other_color(pos->turn)][ALL] ^= bitboard(target_square - direction * 8);
 		pos->mailbox[target_square - direction * 8] = EMPTY;
+		move_set_captured(move, PAWN);
 		break;
 	case MOVE_PROMOTION:
 		pos->piece[pos->turn][PAWN] ^= to;
@@ -187,7 +190,7 @@ void undo_move(struct position *pos, const move_t *move) {
 	pos->mailbox[source_square] = pos->mailbox[target_square];
 	pos->mailbox[target_square] = EMPTY;
 
-	if (move_capture(move)) {
+	if (move_capture(move) && move_flag(move) != MOVE_EN_PASSANT) {
 		pos->piece[other_color(pos->turn)][move_capture(move)] ^= to;
 		pos->piece[other_color(pos->turn)][ALL] ^= to;
 		pos->mailbox[target_square] = colored_piece(move_capture(move), other_color(pos->turn));
@@ -238,18 +241,18 @@ int pseudo_legal(const struct position *pos, const struct pstate *pstate, const 
 			 * is faulty.
 			 */
 			if (pos->castle & 0x1 && to_square == g1 &&
-					!(all & 0x60) && !(pstate->attacked & 0x60))
+					!(all & 0x60) && !(pstate->attacked[ALL] & 0x60))
 				return 1;
 			if (pos->castle & 0x2 && to_square == c1 &&
-					!(all & 0xE) && !(pstate->attacked & 0xC))
+					!(all & 0xE) && !(pstate->attacked[ALL] & 0xC))
 				return 1;
 		}
 		else {
 			if (pos->castle & 0x4 && to_square == g8 &&
-					!(all & 0x6000000000000000) && !(pstate->attacked & 0x6000000000000000))
+					!(all & 0x6000000000000000) && !(pstate->attacked[ALL] & 0x6000000000000000))
 				return 1;
 			if (pos->castle & 0x8 && to_square == c8 &&
-					!(all & 0xE00000000000000) && !(pstate->attacked & 0xC00000000000000))
+					!(all & 0xE00000000000000) && !(pstate->attacked[ALL] & 0xC00000000000000))
 				return 1;
 		}
 		return 0;
@@ -278,7 +281,7 @@ int pseudo_legal(const struct position *pos, const struct pstate *pstate, const 
 		return 0;
 	}
 
-	if (piece == KING && pstate->attacked & to)
+	if (piece == KING && pstate->attacked[ALL] & to)
 		return 0;
 
 	if (single(pstate->checkers)) {

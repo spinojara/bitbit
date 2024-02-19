@@ -71,7 +71,7 @@ int32_t search_material(struct position *pos, int ply, int alpha, int beta) {
 	struct pstate pstate;
 	pstate_init(pos, &pstate);
 	struct movepicker mp;
-	movepicker_init(&mp, 1, pos, &pstate, 0, 0, 0, &gsi);
+	movepicker_init(&mp, 1, pos, &pstate, 0, 0, 0, 0, &gsi);
 	move_t move;
 	while ((move = next_move(&mp))) {
 		do_move(pos, &move);

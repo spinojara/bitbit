@@ -159,7 +159,7 @@ void undo_zobrist_key(struct position *pos, const move_t *move) {
 
 	pos->zobrist_key ^= zobrist_turn_key();
 
-	if (move_capture(move)) {
+	if (move_capture(move) && move_flag(move) != MOVE_EN_PASSANT) {
 		if (pos->turn)
 			pos->zobrist_key ^= zobrist_piece_key(move_capture(move) - 1, target_square);
 		else
