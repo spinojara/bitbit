@@ -131,7 +131,7 @@ int genepd_position(struct position *pos, struct transpositiontable *tt, uint64_
 	movegen_legal(pos, moves, MOVETYPE_ALL);
 	if (!moves[0] ||
 			(unique && already_written(pos, written_keys, i)) ||
-			(filter_depth >= 0 && abs(search(pos, filter_depth, 0, 0, 0, NULL, tt, NULL, 1)) > centipawns))
+			(filter_depth >= 0 && abs(search(pos, filter_depth, 0, NULL, NULL, tt, NULL, 1)) > centipawns))
 		return 1;
 	return 0;
 }
