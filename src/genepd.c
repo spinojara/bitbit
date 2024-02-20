@@ -117,7 +117,7 @@ int genepd_position(struct position *pos, struct transpositiontable *tt, uint64_
 			return 1;
 
 		move_t move = 0;
-		for (int j = 0; j < 16 && m == 0; j++) {
+		for (int j = 0; j < 16 && move == 0; j++) {
 			move = moves[xorshift64(seed) % c];
 			int piece = uncolored_piece(pos->mailbox[move_from(&move)]);
 			if (minor_pieces && (piece == ROOK || piece == QUEEN || piece == KING))
