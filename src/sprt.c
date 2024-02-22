@@ -245,12 +245,9 @@ int sprt(int testtype, unsigned long games, uint64_t trinomial[3], uint64_t pent
 	char gamesstr[1024];
 	char concurrencystr[1024];
 	char timestr[1024];
-	char threadstr[1024];
-	int concurrency = 5;
 	sprintf(gamesstr, "%lu", games);
-	sprintf(concurrencystr, "%d", concurrency);
+	sprintf(concurrencystr, "%d", threads);
 	sprintf(timestr, "tc=%lg+%lg", maintime, increment);
-	sprintf(threadstr, "%d", threads);
 
 	memset(trinomial, 0, sizeof(3 * *trinomial));
 	memset(pentanomial, 0, sizeof(5 * *pentanomial));
