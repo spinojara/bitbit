@@ -672,6 +672,7 @@ int32_t search(struct position *pos, int depth, int verbose, struct timeinfo *ti
 				printf("cp %d", eval);
 			printf(" nodes %ld time %ld ", si.nodes, tp / 1000);
 			printf("nps %ld ", tp ? 1000000 * si.nodes / tp : 0);
+			printf("hashfull %d ", hashfull(tt));
 			printf("pv");
 			print_pv(pos, si.pv[0], 0);
 			printf("\n");

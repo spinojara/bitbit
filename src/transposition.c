@@ -37,27 +37,41 @@ uint64_t zobrist_keys[12 * 64 + 1 + 16 + 8];
 static uint64_t start;
 
 void transposition_clear(struct transpositiontable *tt) {
-	memset(tt->table, 0, tt->size * sizeof(*tt->table));
+	memset(tt->transpositionset, 0, tt->size * sizeof(*tt->transpositionset));
 }
 
 int transposition_alloc(struct transpositiontable *tt, size_t bytes) {
-	tt->size = bytes / sizeof(*tt->table);
-	tt->table = malloc(tt->size * sizeof(*tt->table));
-	if (tt->size && !tt->table)
+	tt->size = bytes / sizeof(*tt->transpositionset);
+	tt->transpositionset = malloc(tt->size * sizeof(*tt->transpositionset));
+	if (tt->size && !tt->transpositionset)
 		return 1;
 	transposition_clear(tt);
 	return 0;
 }
 
-int transposition_occupancy(struct transpositiontable *tt, int bound) {
+int transposition_occupancy(const struct transpositiontable *tt, int bound) {
 	uint64_t occupied = 0;
 	for (size_t i = 0; i < tt->size; i++) {
-		struct transposition *e = &tt->table[i];
-		if (bound ? (e->bound == bound) :
-			e->bound > 0)
-			occupied++;
+		const struct transpositionset *s = &tt->transpositionset[i];
+		for (int j = 0; j < SET_ASSOCIATIVITY; j++) {
+			const struct transposition *e = &s->transposition[j];
+			if (bound ? (e->bound == bound) :
+				e->bound > 0)
+				occupied++;
+		}
 	}
-	return 1000 * occupied / tt->size;
+	return 1000 * occupied / (tt->size * SET_ASSOCIATIVITY);
+}
+
+int hashfull(const struct transpositiontable *tt) {
+	if (!tt || tt->size < 1000)
+		return 0;
+	int occupied = 0;
+	for (size_t i = 0; i < 1000; i++)
+		for (int j = 0; j < SET_ASSOCIATIVITY; j++)
+			if (tt->transpositionset[i].transposition[j].bound)
+				occupied++;
+	return occupied / SET_ASSOCIATIVITY;
 }
 
 void transposition_init(void) {
@@ -234,5 +248,5 @@ void refresh_zobrist_key(struct position *pos) {
 }
 
 void transposition_free(struct transpositiontable *tt) {
-	free(tt->table);
+	free(tt->transpositionset);
 }

@@ -28,6 +28,9 @@
 #include "interrupt.h"
 #include "util.h"
 
+#define SET_ASSOCIATIVITY 2
+#define AGE_YOUNG (SET_ASSOCIATIVITY - 1)
+
 extern int option_transposition;
 extern int option_history;
 
@@ -48,30 +51,45 @@ struct transposition {
 	uint8_t bound;
 	uint16_t move;
 	uint8_t flags;
+	uint8_t age;
+};
+
+struct transpositionset {
+	struct transposition transposition[SET_ASSOCIATIVITY];
 };
 
 struct transpositiontable {
-	struct transposition *table;
+	struct transpositionset *transpositionset;
 	uint32_t size;
 };
 
 extern uint64_t zobrist_keys[];
-extern uint64_t *test;
 
 static inline uint64_t transposition_index(uint64_t size, uint64_t key) {
 	return ((key & 0xFFFFFFFF) * size) >> 32;
 }
 
-static inline struct transposition *transposition_get(const struct transpositiontable *tt, const struct position *pos) {
-	return &tt->table[transposition_index(tt->size, pos->zobrist_key)];
+static inline struct transpositionset *transpositionset_get(const struct transpositiontable *tt, const struct position *pos) {
+	return &tt->transpositionset[transposition_index(tt->size, pos->zobrist_key)];
 }
 
 static inline struct transposition *transposition_probe(const struct transpositiontable *tt, const struct position *pos) {
 	if (!option_transposition)
 		return NULL;
-	struct transposition *e = transposition_get(tt, pos);
-	if (e->zobrist_key == pos->zobrist_key)
-		return e;
+	struct transpositionset *s = transpositionset_get(tt, pos);
+	for (int i = 0; i < SET_ASSOCIATIVITY; i++) {
+		struct transposition *e = &s->transposition[i];
+		if (e->zobrist_key == pos->zobrist_key) {
+#if 0
+			for (int j = 0; j < SET_ASSOCIATIVITY; j++) {
+				struct transposition *f = &s->transposition[j];
+				f->age -= f->age > e->age;
+			}
+			e->age = AGE_YOUNG;
+#endif
+			return e;
+		}
+	}
 	return NULL;
 }
 
@@ -89,10 +107,33 @@ static inline void transposition_set(struct transposition *e, const struct posit
 	e->bound = bound;
 }
 
-static inline void transposition_store(struct transpositiontable *tt, const struct position *pos, int32_t evaluation, int depth, int bound, move_t move) {
+static inline struct transposition *transposition_replace(struct transpositionset *s, const struct position *pos) {
+	struct transposition *e = NULL, *f;
+	unsigned age = AGE_YOUNG;
+	for (int i = 0; i < SET_ASSOCIATIVITY; i++) {
+		f = &s->transposition[i];
+		if (f->zobrist_key == pos->zobrist_key)
+			return f;
+		if (f->age <= age) {
+			e = f;
+			age = e->age;
+		}
+	}
+#if 1
+	for (int i = 0; i < SET_ASSOCIATIVITY; i++) {
+		f = &s->transposition[i];
+		f->age -= f->age > e->age;
+	}
+	e->age = AGE_YOUNG;
+#endif
+	return e;
+}
+
+static inline void transposition_store(const struct transpositiontable *tt, const struct position *pos, int32_t evaluation, int depth, int bound, move_t move) {
 	if (interrupt || !option_transposition)
 		return;
-	struct transposition *e = transposition_get(tt, pos);
+	struct transpositionset *s = transpositionset_get(tt, pos);
+	struct transposition *e = transposition_replace(s, pos);
 	if (e->zobrist_key != pos->zobrist_key ||
 			depth >= e->depth ||
 			(bound == BOUND_EXACT && e->bound != BOUND_EXACT))
@@ -145,7 +186,8 @@ int transposition_alloc(struct transpositiontable *tt, size_t bytes);
 
 void transposition_free(struct transpositiontable *tt);
 
-int transposition_occupancy(struct transpositiontable *tt, int node_type);
+int transposition_occupancy(const struct transpositiontable *tt, int node_type);
+int hashfull(const struct transpositiontable *tt);
 
 void transposition_init(void);
 
