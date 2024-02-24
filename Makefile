@@ -88,7 +88,7 @@ SRC_TEXELTUNE  = texeltune.c $(subst evaluate,texel-evaluate,\
 		 $(subst pawn,texel-pawn,$(SRC)))
 SRC_GENBITBASE = genbitbase.c $(SRC_BASE)
 SRC_BATCH      = $(addprefix pic-,batch.c $(SRC_BASE))
-SRC_VISUALIZE  = visualize.c util.c
+SRC_VISUALIZE  = pic-visualize.c pic-util.c
 SRC_NNUESOURCE = nnuesource.c util.c
 SRC_TESTBIT    = testbit.c testbitshared.c util.c
 SRC_TESTBITD   = testbitd.c testbitshared.c util.c sprt.c

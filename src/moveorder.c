@@ -168,7 +168,7 @@ int see_geq(struct position *pos, const move_t *move, int32_t value) {
 /* For quiet moves. */
 uint64_t generate_defenders(struct position *pos, const move_t *move) {
 	const int us = pos->turn;
-	assert(!pos->mailbox[them]);
+	assert(!pos->mailbox[move_to(move)]);
 
 	int from_square = move_from(move);
 	int to_square = move_to(move);

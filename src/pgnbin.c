@@ -74,6 +74,9 @@ int32_t search_material(struct position *pos, int ply, int alpha, int beta) {
 	movepicker_init(&mp, 1, pos, &pstate, 0, 0, 0, 0, &gsi);
 	move_t move;
 	while ((move = next_move(&mp))) {
+		if (!legal(pos, &pstate, &move))
+			continue;
+
 		do_move(pos, &move);
 		eval = -search_material(pos, ply + 1, -beta, -alpha);
 		undo_move(pos, &move);

@@ -275,7 +275,7 @@ struct parameter parameters[] = {
 
 	PARAMETER(&phase_max,                 1, TYPE_INT,   WEIGHTDECAY_NO,  TUNE_YES),
 	PARAMETER(&phase_min,                 1, TYPE_INT,   WEIGHTDECAY_NO,  TUNE_YES),
-	PARAMETER(&phase_knight,              1, TYPE_INT,   WEIGHTDECAY_NO,  TUNE_YES),
+	PARAMETER(&phase_knight,              1, TYPE_INT,   WEIGHTDECAY_NO,  TUNE_NO),
 	PARAMETER(&phase_bishop,              1, TYPE_INT,   WEIGHTDECAY_NO,  TUNE_YES),
 	PARAMETER(&phase_rook,                1, TYPE_INT,   WEIGHTDECAY_NO,  TUNE_YES),
 	PARAMETER(&phase_queen,               1, TYPE_INT,   WEIGHTDECAY_NO,  TUNE_YES),
