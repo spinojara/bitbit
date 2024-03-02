@@ -55,14 +55,14 @@
 
 atomic_uint_least64_t *hash_table;
 
-const size_t tt_GiB = 12;
+size_t tt_GiB = 12;
 
-const int random_move_max_ply = 25;
-const int random_move_count = 7;
-const int write_min_ply = 16;
-const int write_max_ply = 400;
-const int adj_draw_ply = 80;
-const int eval_limit = 3000;
+int random_move_max_ply = 25;
+int random_moves = 7;
+int write_min_ply = 16;
+int write_max_ply = 400;
+int adj_draw_ply = 80;
+int eval_limit = 3000;
 
 const int report_dot_every = 1000;
 const int dots_per_clear = 20;
@@ -87,14 +87,14 @@ pthread_mutex_t lock;
 atomic_int stop = 0;
 
 timepoint_t last_time;
-uint64_t last_fens = 0;
-uint64_t dot_last_fens = 0;
-void report(uint64_t curr_fens, uint64_t fens) {
+int last_fens = 0;
+int dot_last_fens = 0;
+void report(int curr_fens, int fens) {
 	if (curr_fens != last_fens && curr_fens % report_every == 0) {
 		timepoint_t tp = time_now();
 		time_t total = fens * (time(NULL) - start) / curr_fens;
 		time_t done = start + total;
-		printf("\r%ld%% %ld fens at %ld fens/second. Eta is %s", 100 * curr_fens / fens, curr_fens, tp - last_time ? 1000000 * (curr_fens - last_fens) / (tp - last_time) : 0,
+		printf("\r%d%% %d fens at %ld fens/second. Eta is %s", 100 * curr_fens / fens, curr_fens, tp - last_time ? 1000000l * (curr_fens - last_fens) / (tp - last_time) : 0,
 				ctime(&done));
 		fflush(stdout);
 		last_time = tp;
@@ -102,7 +102,7 @@ void report(uint64_t curr_fens, uint64_t fens) {
 	}
 }
 
-void report_dot(uint64_t curr_fens) {
+void report_dot(int curr_fens) {
 	if (curr_fens != dot_last_fens && curr_fens % report_dot_every == 0) {
 		if (curr_fens % (dots_per_clear * report_dot_every) == 0)
 			printf("\33[2K\r");
@@ -135,7 +135,7 @@ int probable_long_draw(struct history *h, int32_t eval, int *drawn_score_count) 
 
 void random_move_flags(int *random_move, uint64_t *seed) {
 	for (int i = 0; i < random_move_max_ply; i++)
-		random_move[i] = (i < random_move_count);
+		random_move[i] = (i < random_moves);
 
 	for (int i = random_move_max_ply - 1; i > 0; i--) {
 		int j = xorshift64(seed) % (i + 1);
@@ -145,11 +145,11 @@ void random_move_flags(int *random_move, uint64_t *seed) {
 	}
 }
 
-struct threadinfo *choose_thread(struct threadinfo *threadinfo, int n_threads) {
+struct threadinfo *choose_thread(struct threadinfo *threadinfo, int threads) {
 	int thread;
 	int ret;
 	int64_t most = -1;
-	for (ret = 0, thread = 0; thread < n_threads; thread++) {
+	for (ret = 0, thread = 0; thread < threads; thread++) {
 		int available = atomic_load(&threadinfo[thread].available);
 		assert(available >= 0);
 		if (available >= most) {
@@ -160,12 +160,12 @@ struct threadinfo *choose_thread(struct threadinfo *threadinfo, int n_threads) {
 	return most > 0 ? &threadinfo[ret] : NULL;
 }
 
-void write_thread(FILE *f, struct threadinfo *threadinfo, uint64_t *curr_fens, uint64_t fens) {
+void write_thread(FILE *f, struct threadinfo *threadinfo, int *curr_fens, int fens) {
 	int fd = threadinfo->fd[0];
 	int16_t eval;
 	move_t move = 0;
-	uint64_t gen_fens = 0;
-	uint64_t written_fens = 0;
+	int gen_fens = 0;
+	int written_fens = 0;
 
 	struct partialposition pos;
 
@@ -353,8 +353,73 @@ void *worker(void *arg) {
 }
 
 int main(int argc, char **argv) {
-	UNUSED(argc);
-	UNUSED(argv);
+	int threads = 1;
+	int fens = 500000;
+	int depth = 5;
+	for (int i = 1; i < argc; i++) {
+		if (!strcmp(argv[i], "--tt")) {
+			i++;
+			if (!(i < argc))
+				break;
+			tt_GiB = strint(argv[i]);
+		}
+		else if (!strcmp(argv[i], "--random-move-max-ply")) {
+			i++;
+			if (!(i < argc))
+				break;
+			random_move_max_ply = strint(argv[i]);
+		}
+		else if (!strcmp(argv[i], "--random-moves")) {
+			i++;
+			if (!(i < argc))
+				break;
+			random_moves = strint(argv[i]);
+		}
+		else if (!strcmp(argv[i], "--write-min-ply")) {
+			i++;
+			if (!(i < argc))
+				break;
+			write_min_ply = strint(argv[i]);
+		}
+		else if (!strcmp(argv[i], "--write-max-ply")) {
+			i++;
+			if (!(i < argc))
+				break;
+			write_max_ply = strint(argv[i]);
+		}
+		else if (!strcmp(argv[i], "--adj-draw-ply")) {
+			i++;
+			if (!(i < argc))
+				break;
+			adj_draw_ply = strint(argv[i]);
+		}
+		else if (!strcmp(argv[i], "--eval-limit")) {
+			i++;
+			if (!(i < argc))
+				break;
+			eval_limit = strint(argv[i]);
+		}
+		else if (!strcmp(argv[i], "--threads")) {
+			i++;
+			if (!(i < argc))
+				break;
+			threads = strint(argv[i]);
+		}
+		else if (!strcmp(argv[i], "--depth")) {
+			i++;
+			if (!(i < argc))
+				break;
+			depth = strint(argv[i]);
+		}
+		else {
+			fens = strint(argv[i]);
+		}
+	}
+
+	if (threads <= 0 || depth <= 0 || fens <= 0) {
+		fprintf(stderr, "error: threads, depth or fens are negative\n");
+		exit(1);
+	}
 
 	magicbitboard_init();
 	attackgen_init();
@@ -382,24 +447,23 @@ int main(int argc, char **argv) {
 	option_endgame       = 1;
 	option_damp          = 1;
 
-	int n_threads = 12;
-	int depth = 5;
-	uint64_t fens = 500000;
+	if (!tt_GiB)
+		option_transposition = 0;
 
 	uint64_t seed = time(NULL);
 
-	pthread_t *thread = malloc(n_threads * sizeof(*thread));
-	struct threadinfo *threadinfo = calloc(n_threads, sizeof(*threadinfo));
+	pthread_t *thread = malloc(threads * sizeof(*thread));
+	struct threadinfo *threadinfo = calloc(threads, sizeof(*threadinfo));
 
 	pthread_mutex_init(&lock, NULL);
 
-	for (int i = 0; i < n_threads; i++) {
+	for (int i = 0; i < threads; i++) {
 		if (pipe(threadinfo[i].fd) == -1)
 			exit(1);
 		threadinfo[i].depth = depth;
 		threadinfo[i].seed = seed + i;
 		threadinfo[i].threadn = i;
-		transposition_alloc(&threadinfo[i].tt, tt_GiB * 1024 * 1024 * 1024 / n_threads);
+		transposition_alloc(&threadinfo[i].tt, tt_GiB * 1024 * 1024 * 1024 / threads);
 		pthread_create(&thread[i], NULL, worker, &threadinfo[i]);
 	}
 
@@ -408,9 +472,9 @@ int main(int argc, char **argv) {
 	FILE *f = fopen("nnue.bin", "wb");
 
 	last_time = time_now();
-	uint64_t curr_fens = 0;
+	int curr_fens = 0;
 	while (curr_fens < fens) {
-		struct threadinfo *ti = choose_thread(threadinfo, n_threads);
+		struct threadinfo *ti = choose_thread(threadinfo, threads);
 		if (ti)
 			write_thread(f, ti, &curr_fens, fens);
 		else
@@ -419,7 +483,7 @@ int main(int argc, char **argv) {
 
 	fclose(f);
 
-	for (int i = 0; i < n_threads; i++) {
+	for (int i = 0; i < threads; i++) {
 		pthread_join(thread[i], NULL);
 		transposition_free(&threadinfo[i].tt);
 	}
