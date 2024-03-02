@@ -17,6 +17,7 @@
 #ifndef KRKP_H
 #define KRKP_H
 
+#include "bitbase.h"
 #include "bitboard.h"
 #include "position.h"
 

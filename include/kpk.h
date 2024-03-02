@@ -17,6 +17,7 @@
 #ifndef KPK_H
 #define KPK_H
 
+#include "bitbase.h"
 #include "bitboard.h"
 #include "position.h"
 
