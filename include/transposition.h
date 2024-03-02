@@ -102,22 +102,31 @@ static inline void transposition_store(struct transpositiontable *tt, const stru
 }
 
 static inline int32_t adjust_score_mate_store(int32_t evaluation, int ply) {
-	int32_t adjustment = 0;
+	if (evaluation == VALUE_NONE)
+		return VALUE_NONE;
+
 	if (evaluation >= VALUE_MATE_IN_MAX_PLY)
-		adjustment = ply;
+		return evaluation + ply;
 	else if (evaluation <= -VALUE_MATE_IN_MAX_PLY)
-		adjustment = -ply;
-	return evaluation + adjustment;
+		return evaluation - ply;
+	return evaluation;
 }
 
-static inline int32_t adjust_score_mate_get(int32_t evaluation, int ply) {
-	int32_t adjustment = 0;
-	/* Should probably be more careful as to not return false mates. */
-	if (evaluation >= VALUE_MATE_IN_MAX_PLY)
-		adjustment = -ply;
-	else if (evaluation <= -VALUE_MATE_IN_MAX_PLY)
-		adjustment = ply;
-	return evaluation + adjustment;
+static inline int32_t adjust_score_mate_get(int32_t evaluation, int ply, int halfmove) {
+	if (evaluation == VALUE_NONE)
+		return VALUE_NONE;
+
+	if (evaluation >= VALUE_MATE_IN_MAX_PLY) {
+		if (VALUE_MATE - evaluation > 100 - halfmove)
+			return VALUE_MATE_IN_MAX_PLY - 1;
+		return evaluation - ply;
+	}
+	else if (evaluation <= -VALUE_MATE_IN_MAX_PLY) {
+		if (VALUE_MATE + evaluation > 100 - halfmove)
+			return -VALUE_MATE_IN_MAX_PLY + 1;
+		return evaluation + ply;
+	}
+	return evaluation;
 }
 
 /* Can avoid the multiplication here if we instead do square + 64 * piece. */

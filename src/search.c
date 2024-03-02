@@ -38,7 +38,7 @@
 #include "option.h"
 #include "endgame.h"
 
-static int reductions[DEPTH_MAX] = { 0 };
+static int reductions[PLY_MAX] = { 0 };
 
 /* We choose r(x,y)=Clog(x)log(y)+D because it is increasing and concave.
  * It is also relatively simple. If x is constant, y > y' and by
@@ -52,7 +52,7 @@ static int reductions[DEPTH_MAX] = { 0 };
  * sqrt(C)=sqrt(1024/((log(3)-log(2))log(255))). D is experimental for now.
  */
 static inline int late_move_reduction(int index, int depth) {
-	assert(0 <= depth && depth < DEPTH_MAX);
+	assert(0 <= depth && depth < PLY_MAX);
 	int r = reductions[index] * reductions[depth];
 	return (r >> 10) + 1;
 }
@@ -61,7 +61,7 @@ void print_pv(struct position *pos, move_t *pv_move, int ply) {
 	struct pstate pstate;
 	pstate_init(pos, &pstate);
 	char str[8];
-	if (!(ply < DEPTH_MAX) || !(pseudo_legal(pos, &pstate, pv_move) && legal(pos, &pstate, pv_move)))
+	if (!(ply < PLY_MAX) || !(pseudo_legal(pos, &pstate, pv_move) && legal(pos, &pstate, pv_move)))
 		return;
 	printf(" %s", move_str_algebraic(str, pv_move));
 	do_move(pos, pv_move);
@@ -72,7 +72,7 @@ void print_pv(struct position *pos, move_t *pv_move, int ply) {
 static inline void store_killer_move(const move_t *move, int ply, move_t killers[][2]) {
 	if (interrupt)
 		return;
-	assert(0 <= ply && ply < DEPTH_MAX);
+	assert(0 <= ply && ply < PLY_MAX);
 	assert(*move);
 	if (move_compare(*move, killers[ply][0]) || move_compare(*move, killers[ply][1]))
 		return;
@@ -134,12 +134,12 @@ static inline void update_history(struct searchinfo *si, const struct position *
 	}
 }
 
-static inline void store_pv_move(const move_t *move, int ply, move_t pv[DEPTH_MAX][DEPTH_MAX]) {
+static inline void store_pv_move(const move_t *move, int ply, move_t pv[PLY_MAX][PLY_MAX]) {
 	if (interrupt)
 		return;
 	assert(*move);
 	pv[ply][ply] = *move;
-	memcpy(pv[ply] + ply + 1, pv[ply + 1] + ply + 1, sizeof(**pv) * (DEPTH_MAX - (ply + 1)));
+	memcpy(pv[ply] + ply + 1, pv[ply + 1] + ply + 1, sizeof(**pv) * (PLY_MAX - (ply + 1)));
 }
 
 /* Random drawn score to avoid threefold blindness. */
@@ -179,7 +179,7 @@ static inline int32_t evaluate(const struct position *pos) {
 int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, struct searchinfo *si, const struct pstate *pstateptr, struct searchstack *ss) {
 	if (interrupt || si->interrupt)
 		return 0;
-	if (ply >= DEPTH_MAX)
+	if (ply >= PLY_MAX)
 		return evaluate(pos);
 	if ((si->nodes & (0x1000 - 1)) == 0 && check_time(si->ti))
 		si->interrupt = 1;
@@ -200,7 +200,7 @@ int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, s
 
 	int32_t eval = evaluate(pos), best_eval = -VALUE_INFINITE;
 
-	if (ply >= DEPTH_MAX)
+	if (ply >= PLY_MAX)
 		return pstate.checkers ? 0 : eval;
 
 	if (pos->halfmove >= 100 || (option_history && is_repetition(pos, si->history, ply, 1 + pv_node)))
@@ -208,14 +208,14 @@ int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, s
 
 	struct transposition *e = transposition_probe(si->tt, pos);
 	int tthit = e != NULL;
-	int32_t tteval = tthit ? adjust_score_mate_get(e->eval, ply) : VALUE_NONE;
+	int32_t tteval = tthit ? adjust_score_mate_get(e->eval, ply, pos->halfmove) : VALUE_NONE;
 	int ttbound = tthit ? e->bound : 0;
 	move_t ttmove_unsafe = tthit ? e->move : 0;
-	if (!pv_node && tthit && ttbound & (tteval >= beta ? BOUND_LOWER : BOUND_UPPER))
+	if (!pv_node && tthit && normal_eval(tteval) && ttbound & (tteval >= beta ? BOUND_LOWER : BOUND_UPPER))
 		return tteval;
 
 	if (!pstate.checkers) {
-		if (tthit && ttbound & (tteval >= beta ? BOUND_LOWER : BOUND_UPPER))
+		if (tthit && normal_eval(tteval) && ttbound & (tteval >= beta ? BOUND_LOWER : BOUND_UPPER))
 			best_eval = tteval;
 		else
 			best_eval = eval;
@@ -270,7 +270,7 @@ int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, s
 int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t beta, int cut_node, struct searchinfo *si, struct searchstack *ss) {
 	if (interrupt || si->interrupt)
 		return 0;
-	if (ply >= DEPTH_MAX)
+	if (ply >= PLY_MAX)
 		return evaluate(pos);
 	if ((si->nodes & (0x1000 - 1)) == 0 && check_time(si->ti))
 		si->interrupt = 1;
@@ -279,9 +279,9 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 		si->history->zobrist_key[si->history->ply + ply] = pos->zobrist_key;
 
 	int32_t eval = VALUE_NONE, best_eval = -VALUE_INFINITE;
-	depth = max(0, depth);
+	depth = max(0, min(depth, PLY_MAX - 1));
 
-	assert(0 <= depth && depth < DEPTH_MAX);
+	assert(0 <= depth && depth < PLY_MAX);
 
 	const int root_node = (ply == 0);
 	const int pv_node = (beta != alpha + 1);
@@ -304,11 +304,12 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 
 	struct transposition *e = excluded_move ? NULL : transposition_probe(si->tt, pos);
 	int tthit = e != NULL;
-	int32_t tteval = tthit ? adjust_score_mate_get(e->eval, ply) : VALUE_NONE;
+	int32_t tteval = tthit ? adjust_score_mate_get(e->eval, ply, pos->halfmove) : VALUE_NONE;
 	int ttbound = tthit ? e->bound : 0;
 	int ttdepth = tthit ? e->depth : 0;
 	move_t ttmove_unsafe = root_node ? si->pv[0][0] : tthit ? e->move : 0;
-	if (!pv_node && tthit && ttdepth >= depth && ttbound & (tteval >= beta ? BOUND_LOWER : BOUND_UPPER))
+
+	if (!pv_node && tthit && normal_eval(tteval) && ttdepth >= depth && ttbound & (tteval >= beta ? BOUND_LOWER : BOUND_UPPER))
 		return tteval;
 
 	struct pstate pstate;
@@ -612,14 +613,14 @@ int32_t aspiration_window(struct position *pos, int depth, int32_t last, struct 
 
 int32_t search(struct position *pos, int depth, int verbose, struct timeinfo *ti, move_t *move, struct transpositiontable *tt, struct history *history, int iterative) {
 	assert(option_history == (history != NULL));
-	depth = min(depth, DEPTH_MAX);
+	depth = min(depth, PLY_MAX);
 
 	struct searchinfo si = { 0 };
 	si.ti = ti;
 	si.tt = tt;
 	si.history = history;
 
-	struct searchstack ss[DEPTH_MAX + 1] = { 0 };
+	struct searchstack ss[PLY_MAX + 1] = { 0 };
 
 	time_init(pos, si.ti);
 
@@ -689,7 +690,7 @@ int32_t search(struct position *pos, int depth, int verbose, struct timeinfo *ti
 }
 
 void search_init(void) {
-	for (int i = 1; i < DEPTH_MAX; i++)
+	for (int i = 1; i < PLY_MAX; i++)
 		/* sqrt(C) * log(i) */
 		reductions[i] = (int)(21.34 * log(i));
 }

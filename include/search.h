@@ -21,8 +21,7 @@
 #include "move.h"
 #include "interface.h"
 #include "transposition.h"
-
-#define DEPTH_MAX (0x100)
+#include "evaluate.h"
 
 typedef int64_t timepoint_t;
 
@@ -36,8 +35,8 @@ struct searchstack {
 struct searchinfo {
 	uint64_t nodes;
 
-	move_t pv[DEPTH_MAX][DEPTH_MAX];
-	move_t killers[DEPTH_MAX][2];
+	move_t pv[PLY_MAX][PLY_MAX];
+	move_t killers[PLY_MAX][2];
 	move_t counter_move[13][64];
 	int64_t quiet_history[13][64][64];
 	int64_t capture_history[13][7][64];

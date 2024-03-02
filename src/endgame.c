@@ -244,6 +244,20 @@ int32_t evaluate_KBPK(const struct position *pos, int strong_side) {
 	return eval;
 }
 
+int32_t evaluate_KNPK(const struct position *pos, int strong_side) {
+	int weak_side = other_color(strong_side);
+	UNUSED(weak_side);
+	assert(verify_material(pos, strong_side, mv[KNIGHT] + mv[PAWN]));
+	assert(verify_material(pos, weak_side, 0));
+	int pawn_square = orient_horizontal(strong_side, ctz(pos->piece[strong_side][PAWN]));
+	int f = file_of(pawn_square);
+	int r = rank_of(pawn_square);
+	int32_t eval = r;
+	if ((0 < f && f < 7) || r != 6 || bitbase_KPK_probe(pos, strong_side) == BITBASE_WIN)
+		eval += VALUE_WIN + material_value[KNIGHT] + material_value[PAWN] - pos->halfmove;
+	return eval;
+}
+
 int32_t evaluate_KRKP(const struct position *pos, int strong_side) {
 	int weak_side = other_color(strong_side);
 	assert(verify_material(pos, strong_side, mv[ROOK]));
@@ -356,14 +370,21 @@ int32_t evaluate_KXK(const struct position *pos, int strong_side) {
 	int32_t material = 0;
 	for (int piece = PAWN; piece < KING; piece++)
 		material += material_value[piece] * popcount(pos->piece[strong_side][piece]);
-	return VALUE_WIN + material + push_toward(strong_king, weak_king) + 0x8 * push_toward_edge(weak_king) - pos->halfmove;
+	int32_t pawn_bonus = 0;
+	uint64_t pawns = pos->piece[strong_side][PAWN];
+	while (pawns) {
+		int square = ctz(pawns);
+		pawn_bonus += rank_of(orient_horizontal(strong_side, square));
+		pawns = clear_ls1b(pawns);
+	}
+	return VALUE_WIN + material + 0x4 * pawn_bonus + push_toward(strong_king, weak_king) + 0x8 * push_toward_edge(weak_king) - pos->halfmove;
 }
 
 int is_KXK(const struct position *pos, int color) {
 	return !(pos->piece[other_color(color)][ALL] ^ pos->piece[other_color(color)][KING]) &&
 			(pos->piece[color][ROOK] ||
 			 pos->piece[color][QUEEN] ||
-			 (popcount(pos->piece[color][KNIGHT] | pos->piece[color][BISHOP]) >= 3) ||
+			 (popcount(pos->piece[color][KNIGHT] | pos->piece[color][BISHOP] | pos->piece[color][PAWN]) >= 3) ||
 			 (popcount(pos->piece[color][BISHOP]) >= 2));
 }
 
@@ -442,6 +463,7 @@ void endgame_init(void) {
 	
 	endgame_store("KPK",   &evaluate_KPK);
 	endgame_store("KPKP",  &evaluate_KPKP);
+	endgame_store("KNPK",  &evaluate_KNPK);
 	endgame_store("KBPK",  &evaluate_KBPK);
 	endgame_store("KRKP",  &evaluate_KRKP);
 	endgame_store("KRKN",  &evaluate_KRKN);
@@ -455,7 +477,7 @@ void endgame_init(void) {
 	endgame_store("KQKB",  &evaluate_KQKX);
 	endgame_store("KQKR",  &evaluate_KQKX);
 	for (int color = 0; color < 2; color++) {
-		endgame_KXK[color].evaluate = evaluate_KXK;
+		endgame_KXK[color].evaluate = &evaluate_KXK;
 		endgame_KXK[color].strong_side = color;
 	}
 }
