@@ -61,6 +61,7 @@ void pstate_init(const struct position *pos, struct pstate *pstate) {
 	generate_attacked(pos, them, pstate->attacked);
 	pstate->checkray = single(pstate->checkers) ? between(ctz(pos->piece[us][KING]), ctz(pstate->checkers)) | pstate->checkers : 0;
 	pstate->pinned = generate_pinned(pos, us);
+	generate_check_threats(pos, us, pstate->check_threats);
 }
 
 uint64_t generate_checkers(const struct position *pos, int color) {
@@ -164,6 +165,18 @@ uint64_t generate_pinners(const struct position *pos, uint64_t pinned, int color
 	}
 
 	return ret;
+}
+
+void generate_check_threats(const struct position *pos, int color, uint64_t check_threats[7]) {
+	const int them = other_color(color);
+	const unsigned down = color ? S : N;
+	int square = ctz(pos->piece[them][KING]);
+
+	check_threats[ALL] = 0;
+	check_threats[PAWN] = shift(pos->piece[them][KING], down | W) | shift(pos->piece[them][KING], down | E);
+	for (int piece = KNIGHT; piece <= QUEEN; piece++)
+		check_threats[piece] = attacks(piece, square, 0, all_pieces(pos));
+	check_threats[KING] = 0;
 }
 
 int square(const char *algebraic) {

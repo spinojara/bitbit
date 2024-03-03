@@ -93,6 +93,9 @@ void evaluate_quiet(struct movepicker *mp) {
 			mp->eval[i] -= 15000;
 		else if (to & mp->pstate->attacked[ALL] && !generate_defenders(mp->pos, move))
 			mp->eval[i] -= 12500;
+
+		if (to & mp->pstate->check_threats[attacker])
+			mp->eval[i] += 5000;
 	}
 }
 

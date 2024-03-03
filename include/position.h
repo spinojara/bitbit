@@ -53,6 +53,7 @@ struct pstate {
 	 */
 	uint64_t checkray;
 	uint64_t pinned;
+	uint64_t check_threats[7];
 };
 
 struct partialposition {
@@ -94,6 +95,7 @@ void generate_attacked(const struct position *pos, int color, uint64_t attacked[
 uint64_t generate_pinned(const struct position *pos, int color);
 uint64_t generate_blockers(const struct position *pos, uint64_t pinners, int king_square);
 uint64_t generate_pinners(const struct position *pos, uint64_t pinned, int color);
+void generate_check_threats(const struct position *pos, int color, uint64_t check_threats[7]);
 
 static inline int other_color(int color) {
 	return color ^ WHITE ^ BLACK;
