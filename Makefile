@@ -184,11 +184,6 @@ clean:
 	rm -rf obj dep
 	rm -f src/nnueweights.c $(BIN)
 
-doc: doc/maximumlikelihood.pdf doc/elo.pdf
-
-doc/%.pdf: doc/src/%.tex doc/src/%.bib
-	latexmk -pdf -cd $< -output-directory=../../doc
-
 options:
 	@echo "CC      = $(CC)"
 	@echo "CFLAGS  = $(CFLAGS)"
@@ -197,5 +192,5 @@ options:
 
 -include $(DEP)
 .PRECIOUS: dep/%.d
-.SUFFIXES: .c .h .d .tex .pdf
-.PHONY: all everything clean install install-everything uninstall doc options
+.SUFFIXES: .c .h .d
+.PHONY: all everything clean install install-everything uninstall options
