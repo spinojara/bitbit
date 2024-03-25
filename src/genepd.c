@@ -38,6 +38,7 @@
  * actually chess18.
  */
 int chess960 = 0;
+char *endgame = NULL;
 int moves_max = 16;
 int moves_min = 8;
 int unique = 0;
@@ -45,10 +46,7 @@ int centipawns = 50;
 int filter_depth = -1;
 int minor_pieces = 0;
 
-void genepd_startpos(struct position *pos, uint64_t *seed) {
-	startpos(pos);
-	if (!chess960)
-		return;
+void startpos_chess960(struct position *pos, uint64_t *seed) {
 	for (int sq = b1; sq < h1; sq++) {
 		if (sq == e1)
 			continue;
@@ -92,6 +90,98 @@ void genepd_startpos(struct position *pos, uint64_t *seed) {
 		pos->piece[color][ALL] = 0;
 		for (int piece = PAWN; piece <= KING; piece++)
 			pos->piece[color][ALL] |= pos->piece[color][piece];
+	}
+}
+
+int startpos_endgame(struct position *pos, uint64_t *seed) {
+	int color = xorshift64(seed) % 2;
+
+	memset(pos, 0, sizeof(*pos));
+	pos->turn = color;
+	pos->fullmove = 1;
+
+	uint64_t available;
+
+	int king_counter = 0;
+	int piece, upiece, square;
+
+	for (char *c = endgame; *c; c++) {
+		//printf("looping: %c\n", *c);
+		switch (*c) {
+		case 'P':
+			piece = colored_piece(PAWN, color);
+			break;
+		case 'N':
+			piece = colored_piece(KNIGHT, color);
+			break;
+		case 'B':
+			piece = colored_piece(BISHOP, color);
+			break;
+		case 'R':
+			piece = colored_piece(ROOK, color);
+			break;
+		case 'Q':
+			piece = colored_piece(QUEEN, color);
+			break;
+		case 'K':
+			king_counter++;
+			if (king_counter == 2)
+				color = other_color(color);
+			piece = colored_piece(KING, color);
+			break;
+		default:
+			return 1;
+		}
+
+		upiece = uncolored_piece(piece);
+
+		available = ~(pos->piece[BLACK][ALL] | pos->piece[WHITE][ALL]);
+		if (king_counter == 2 && upiece == KING)
+			available &= ~generate_attacked_all(pos, other_color(color));
+
+		/* This should never happen if their are not too many pieces. */
+		if (!available)
+			return 1;
+
+		int available_num = popcount(available);
+		int index = 0, max_index = xorshift64(seed) % available_num;
+
+		//print_bitboard(available);
+
+		square = 0;
+		while (1) {
+			if (get_bit(available, square)) {
+				if (index >= max_index)
+					break;
+				index++;
+			}
+			square++;
+		}
+
+		pos->mailbox[square] = piece;
+		pos->piece[color][upiece] |= bitboard(square);
+		pos->piece[color][ALL] |= bitboard(square);
+	}
+
+	//print_position(pos);
+
+	if (king_counter != 2)
+		return 1;
+
+	return 0;
+}
+
+void genepd_startpos(struct position *pos, uint64_t *seed) {
+	startpos(pos);
+
+	if (chess960)
+		startpos_chess960(pos, seed);
+	else if (endgame) {
+		int ret = startpos_endgame(pos, seed);
+		if (ret) {
+			fprintf(stderr, "error: bad endgame %s\n", endgame);
+			exit(1);
+		}
 	}
 }
 
@@ -169,6 +259,12 @@ int main(int argc, char **argv) {
 			if (!(i < argc))
 				break;
 			moves_max = strint(argv[i]);
+		}
+		else if (!strcmp(argv[i], "--endgame")) {
+			i++;
+			if (!(i < argc))
+				break;
+			endgame = argv[i];
 		}
 		else if (!strncmp(argv[i], "--", 2))
 			printf("ignoring unknown option: %s\n", argv[i]);

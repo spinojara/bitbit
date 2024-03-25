@@ -25,6 +25,8 @@
 #include "attackgen.h"
 #include "tables.h"
 #include "option.h"
+#include "endgame.h"
+#include "kpk.h"
 
 void store_information(struct position *pos, uint64_t piece_square[7][64]) {
 	for (int color = 0; color < 2; color++) {
@@ -78,8 +80,13 @@ int main(int argc, char **argv) {
 	size_t total = 0;
 	size_t count = 0;
 	size_t games = 0;
+	size_t draws = 0;
 	size_t a = 0;
 	size_t c = 0;
+	char startfen[128] = { 0 };
+	char fen[128];
+	char movestr[16];
+	int print_flag = 0;
 	while (1) {
 		count++;
 		if (count % 20000 == 0)
@@ -87,12 +94,16 @@ int main(int argc, char **argv) {
 		move = 0;
 		fread(&move, 2, 1, f);
 		if (move) {
+			if (print_flag)
+				printf("%s\n", move_str_pgn(movestr, &pos, &move));
+			print_flag = 0;
 			do_move(&pos, &move);
 		}
 		else {
 			fread(&pos, sizeof(struct partialposition), 1, f);
 			if (!feof(f))
 				games++;
+			pos_to_fen(startfen, &pos);
 		}
 		
 		fread(&eval, 2, 1, f);
@@ -102,36 +113,54 @@ int main(int argc, char **argv) {
 		if (eval == VALUE_NONE)
 			continue;
 
-#if 0
+#if 1
 		const int material_values[] = { 0, 1, 3, 3, 5, 9, 0 };
 		int material[2] = { 0 };
 		for (int color = 0; color < 2; color++) {
-			for (int piece = pawn; piece < king; piece++) {
+			for (int piece = PAWN; piece < KING; piece++) {
 				uint64_t b = pos.piece[color][piece];
 				material[color] += material_values[piece] * popcount(b);
 			}
 		}
 
-		int material_delta = abs(material[white] - material[black]);
-		
-		if (material_delta >= 3 && eval == 0 && pos.halfmove <= 0) {
-			char fen[128];
+#if 0
+		if ((material[WHITE] == 4 && material[BLACK] == 0) ||
+				(material[WHITE] == 0 && material[BLACK] == 4)) {
+			int bitbase = bitbase_KPK_probe(&pos, pos.turn);
 			print_position(&pos);
 			printf("%s\n", pos_to_fen(fen, &pos));
+			printf("start: %s\n", startfen);
+			printf("bitbase: %d\n", bitbase);
+			printf("eval: %d\n", eval);
+		}
+#endif
+#if 1
+		int material_delta = abs(material[WHITE] - material[BLACK]);
+		
+		if (material_delta >= 3 && eval == 0 && pos.halfmove <= 0) {
+			print_position(&pos);
+			printf("%s\n", pos_to_fen(fen, &pos));
+			printf("start: %s\n", startfen);
 			printf("%d\n", (2 * pos.turn - 1) * evaluate_classical(&pos));
 			printf("%d\n", pos.turn ? eval : -eval);
+			print_flag = 1;
 			if (eval == 0)
 				c++;
 			a++;
 		}
 #endif
+#endif
 
 		store_information(&pos, piece_square);
 		total++;
+
+		if (eval == 0)
+			draws++;
 	}
 	printf("\033[2K");
 	printf("total positions: %lu\n", total);
 	printf("total games: %lu\n", games);
+	printf("draw percent: %lg\n", (double)draws / games);
 	printf("percent: %f\n", (double)c / a);
 	for (int piece = PAWN; piece <= KING; piece++)
 		print_information(piece_square[piece], total);
