@@ -184,13 +184,7 @@ clean:
 	rm -rf obj dep
 	rm -f src/nnueweights.c $(BIN)
 
-options:
-	@echo "CC      = $(CC)"
-	@echo "CFLAGS  = $(CFLAGS)"
-	@echo "LDFLAGS = $(LDFLAGS)"
-	@echo "LDLIBS  = $(LDLIBS)"
-
 -include $(DEP)
 .PRECIOUS: dep/%.d
 .SUFFIXES: .c .h .d
-.PHONY: all everything clean install install-everything uninstall options
+.PHONY: all everything clean install install-everything uninstall
