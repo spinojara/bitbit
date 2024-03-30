@@ -77,8 +77,7 @@ SRC            = $(SRC_BASE) perft.c search.c evaluate.c tables.c \
 SRC_ALL        = $(SRC_BASE) $(SRC) $(SRC_BIBIT) $(SRC_GENNNUE) \
 		 $(SRC_GENEPD) $(SRC_HISTOGRAM) $(SRC_PGNBIN) \
 		 $(SRC_TEXELTUNE) $(SRC_GENBITBASE) $(SRC_BATCH) \
-		 $(SRC_VISUALIZE) $(SRC_NNUESOURCE) $(SRC_TESTBIT) \
-		 $(SRC_TESTBITD) $(SRC_TESTBITN)
+		 $(SRC_VISUALIZE) $(SRC_NNUESOURCE)
 SRC_BITBIT     = bitbit.c $(SRC)
 SRC_GENNNUE    = gennnue.c $(SRC)
 SRC_GENEPD     = genepd.c $(SRC)
@@ -90,9 +89,6 @@ SRC_GENBITBASE = genbitbase.c $(SRC_BASE)
 SRC_BATCH      = $(addprefix pic-,batch.c $(SRC_BASE))
 SRC_VISUALIZE  = pic-visualize.c pic-util.c
 SRC_NNUESOURCE = nnuesource.c util.c
-SRC_TESTBIT    = testbit.c testbitshared.c util.c
-SRC_TESTBITD   = testbitd.c testbitshared.c util.c sprt.c
-SRC_TESTBITN   = testbitn.c testbitshared.c util.c sprt.c
 
 DEP = $(sort $(patsubst %.c,dep/%.d,$(SRC_ALL)))
 
@@ -106,13 +102,9 @@ OBJ_texeltune       = $(patsubst %.c,obj/%.o,$(SRC_TEXELTUNE))
 OBJ_genbitbase      = $(patsubst %.c,obj/%.o,$(SRC_GENBITBASE))
 OBJ_libbatch.so     = $(patsubst %.c,obj/%.o,$(SRC_BATCH))
 OBJ_libvisualize.so = $(patsubst %.c,obj/%.o,$(SRC_VISUALIZE))
-OBJ_testbit         = $(patsubst %.c,obj/%.o,$(SRC_TESTBIT))
-OBJ_testbitd        = $(patsubst %.c,obj/%.o,$(SRC_TESTBITD))
-OBJ_testbitn        = $(patsubst %.c,obj/%.o,$(SRC_TESTBITN))
 
 BIN            = bitbit nnuesource gennnue genepd histogram pgnbin \
-		 texeltune genbitbase libbatch.so libvisualize.so \
-		 testbit testbitd testbitn
+		 texeltune genbitbase libbatch.so libvisualize.so
 
 PREFIX = /usr/local
 BINDIR = $(PREFIX)/bin
@@ -142,9 +134,6 @@ src/nnueweights.c: nnuesource Makefile
 	./nnuesource $(NNUE)
 
 gennnue:         LDLIBS += -pthread
-testbit:         LDLIBS += -lssl -lcrypto
-testbitd:        LDLIBS += -lssl -lcrypto -lsqlite3
-testbitn:        LDLIBS += -lssl -lcrypto
 %.so:            LDFLAGS += -shared
 
 obj/gennnue.o:   CFLAGS += $(DSYZYGY) -pthread
@@ -166,19 +155,9 @@ install: all
 	sed "s/VERSION/$(VERSION)/g" < man/bitbit.6 > $(DESTDIR)$(MAN6DIR)/bitbit.6
 	chmod 644 $(DESTDIR)$(MAN6DIR)/bitbit.6
 
-install-everything: everything install
-	mkdir -p $(DESTDIR)/var/lib/testbit
-	cp -f testbit $(DESTDIR)$(BINDIR)/testbit
-	chmod 755 $(DESTDIR)$(BINDIR)/testbit
-	cp -f testbitd $(DESTDIR)$(BINDIR)/testbitd
-	chmod 755 $(DESTDIR)$(BINDIR)/testbitd
-	cp -f testbitn $(DESTDIR)$(BINDIR)/testbitn
-	chmod 755 $(DESTDIR)$(BINDIR)/testbitn
-
 uninstall:
-	rm -f $(DESTDIR)$(BINDIR)/{bitbit,testbit,testbitd,testbitn}
+	rm -f $(DESTDIR)$(BINDIR)/bitbit
 	rm -f $(DESTDIR)$(MAN6DIR)/bitbit.6
-	rm -rf $(DESTDIR)/var/lib/testbit
 
 clean:
 	rm -rf obj dep
@@ -187,4 +166,4 @@ clean:
 -include $(DEP)
 .PRECIOUS: dep/%.d
 .SUFFIXES: .c .h .d
-.PHONY: all everything clean install install-everything uninstall
+.PHONY: all everything clean install uninstall
