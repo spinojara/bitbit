@@ -349,8 +349,8 @@ int main(void) {
 
 void write_bitbase(char *name, uint32_t *bitbase, size_t table_size) {
 	char path[BUFSIZ] = "files/";
-	appendstr(path, name);
-	appendstr(path, ".bin");
+	strcat(path, name);
+	strcat(path, ".bin");
 
 	FILE *f = fopen(path, "w");
 	if (!f)

@@ -50,8 +50,6 @@ int find_char(const char *s, char c);
 /* Returns 0 if s is not a non negative integer. */
 int strint(const char *s);
 
-char *appendstr(char *dest, const char *src);
-
 int variance(int32_t *arr, int len);
 
 void printdigits(int d);

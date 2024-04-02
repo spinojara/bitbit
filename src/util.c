@@ -61,14 +61,6 @@ int strint(const char *s) {
 	return ret;
 }
 
-char *appendstr(char *dest, const char *src) {
-	size_t i, n;
-	for (n = 0; dest[n]; n++);
-	for (i = 0; i <= strlen(src); i++)
-		dest[n + i] = src[i];
-	return dest;
-}
-
 int variance(int32_t *arr, int len) {
 	if (len < 2)
 		return -1;
