@@ -14,8 +14,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef TEXELTUNE_H
-#define TEXELTUNE_H
+#ifndef TEXELBIT_H
+#define TEXELBIT_H
 
 #include "evaluate.h"
 

@@ -171,7 +171,7 @@ int startpos_endgame(struct position *pos, uint64_t *seed) {
 	return 0;
 }
 
-void genepd_startpos(struct position *pos, uint64_t *seed) {
+void epdbit_startpos(struct position *pos, uint64_t *seed) {
 	startpos(pos);
 
 	if (chess960)
@@ -193,8 +193,8 @@ int already_written(struct position *pos, uint64_t *written_keys, int i) {
 	return 0;
 }
 
-int genepd_position(struct position *pos, struct transpositiontable *tt, uint64_t *written_keys, int i, uint64_t *seed) {
-	genepd_startpos(pos, seed);
+int epdbit_position(struct position *pos, struct transpositiontable *tt, uint64_t *written_keys, int i, uint64_t *seed) {
+	epdbit_startpos(pos, seed);
 
 	move_t moves[MOVES_MAX];
 	int moves_num = moves_min;
@@ -318,7 +318,7 @@ int main(int argc, char **argv) {
 	for (int i = 0; i < count; i++) {
 		char fen[128];
 		transposition_clear(&tt);
-		if (genepd_position(&pos, &tt, written_keys, i, &seed)) {
+		if (epdbit_position(&pos, &tt, written_keys, i, &seed)) {
 			i--;
 			continue;
 		}

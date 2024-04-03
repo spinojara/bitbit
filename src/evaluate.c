@@ -26,7 +26,7 @@
 #include "tables.h"
 #include "nnue.h"
 #include "option.h"
-#include "texeltune.h"
+#include "texelbit.h"
 
 CONST score_t king_on_open_file     = S( -8, -4);
 CONST score_t knight_outpost        = S( 33, 13);

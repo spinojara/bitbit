@@ -67,44 +67,44 @@ ifneq ($(SYZYGY), )
 	DSYZYGY := -DSYZYGY=$(SYZYGY)
 endif
 
-SRC_BASE       = bitboard.c magicbitboard.c attackgen.c move.c \
-		 util.c position.c movegen.c
-SRC            = $(SRC_BASE) perft.c search.c evaluate.c tables.c \
-		 interface.c transposition.c init.c timeman.c \
-		 interrupt.c pawn.c history.c movepicker.c \
-		 moveorder.c option.c endgame.c nnue.c kpk.c \
-		 kpkp.c krkp.c nnueweights.c
-SRC_ALL        = $(SRC_BASE) $(SRC) $(SRC_BIBIT) $(SRC_GENNNUE) \
-		 $(SRC_GENEPD) $(SRC_HISTOGRAM) $(SRC_PGNBIN) \
-		 $(SRC_TEXELTUNE) $(SRC_GENBITBASE) $(SRC_BATCH) \
-		 $(SRC_VISUALIZE) $(SRC_NNUESOURCE)
-SRC_BITBIT     = bitbit.c $(SRC)
-SRC_GENNNUE    = gennnue.c $(SRC)
-SRC_GENEPD     = genepd.c $(SRC)
-SRC_HISTOGRAM  = histogram.c $(SRC)
-SRC_PGNBIN     = pgnbin.c $(SRC)
-SRC_TEXELTUNE  = texeltune.c $(subst evaluate,texel-evaluate,\
-		 $(subst pawn,texel-pawn,$(SRC)))
-SRC_GENBITBASE = genbitbase.c $(SRC_BASE)
-SRC_BATCH      = $(addprefix pic-,batch.c $(SRC_BASE))
-SRC_VISUALIZE  = pic-visualize.c pic-util.c
-SRC_NNUESOURCE = nnuesource.c util.c
+SRC_BASE     = bitboard.c magicbitboard.c attackgen.c move.c \
+	       util.c position.c movegen.c
+SRC          = $(SRC_BASE) perft.c search.c evaluate.c tables.c \
+	       interface.c transposition.c init.c timeman.c \
+	       interrupt.c pawn.c history.c movepicker.c \
+	       moveorder.c option.c endgame.c nnue.c kpk.c \
+	       kpkp.c krkp.c nnueweights.c
+SRC_ALL      = $(SRC_BASE) $(SRC) $(SRC_BIBIT) $(SRC_GNNUEBIT) \
+	       $(SRC_EPDBIT) $(SRC_HISTBIT) $(SRC_PGNBIT) \
+	       $(SRC_TEXELBIT) $(SRC_BASEBIT) $(SRC_BATCHBIT) \
+	       $(SRC_VISBIT) $(SRC_WNNUEBIT)
+SRC_BITBIT   = bitbit.c $(SRC)
+SRC_GNNUEBIT = gnnuebit.c $(SRC)
+SRC_EPDBIT   = epdbit.c $(SRC)
+SRC_HISTBIT  = histbit.c $(SRC)
+SRC_PGNBIT   = pgnbit.c $(SRC)
+SRC_TEXELBIT = texelbit.c $(subst evaluate,texel-evaluate,\
+	       $(subst pawn,texel-pawn,$(SRC)))
+SRC_BASEBIT  = basebit.c $(SRC_BASE)
+SRC_BATCHBIT = $(addprefix pic-,batchbit.c $(SRC_BASE))
+SRC_VISBIT   = pic-visbit.c pic-util.c
+SRC_WNNUEBIT = wnnuebit.c util.c
 
 DEP = $(sort $(patsubst %.c,dep/%.d,$(SRC_ALL)))
 
-OBJ_bitbit          = $(patsubst %.c,obj/%.o,$(SRC_BITBIT))
-OBJ_gennnue         = $(patsubst %.c,obj/%.o,$(SRC_GENNNUE))
-OBJ_genepd          = $(patsubst %.c,obj/%.o,$(SRC_GENEPD))
-OBJ_nnuesource      = $(patsubst %.c,obj/%.o,$(SRC_NNUESOURCE))
-OBJ_histogram       = $(patsubst %.c,obj/%.o,$(SRC_HISTOGRAM))
-OBJ_pgnbin          = $(patsubst %.c,obj/%.o,$(SRC_PGNBIN))
-OBJ_texeltune       = $(patsubst %.c,obj/%.o,$(SRC_TEXELTUNE))
-OBJ_genbitbase      = $(patsubst %.c,obj/%.o,$(SRC_GENBITBASE))
-OBJ_libbatch.so     = $(patsubst %.c,obj/%.o,$(SRC_BATCH))
-OBJ_libvisualize.so = $(patsubst %.c,obj/%.o,$(SRC_VISUALIZE))
+OBJ_bitbit         = $(patsubst %.c,obj/%.o,$(SRC_BITBIT))
+OBJ_gnnuebit       = $(patsubst %.c,obj/%.o,$(SRC_GNNUEBIT))
+OBJ_epdbit         = $(patsubst %.c,obj/%.o,$(SRC_EPDBIT))
+OBJ_wnnuebit       = $(patsubst %.c,obj/%.o,$(SRC_WNNUEBIT))
+OBJ_histbit        = $(patsubst %.c,obj/%.o,$(SRC_HISTBIT))
+OBJ_pgnbit         = $(patsubst %.c,obj/%.o,$(SRC_PGNBIT))
+OBJ_texelbit       = $(patsubst %.c,obj/%.o,$(SRC_TEXELBIT))
+OBJ_basebit        = $(patsubst %.c,obj/%.o,$(SRC_BASEBIT))
+OBJ_libbatchbit.so = $(patsubst %.c,obj/%.o,$(SRC_BATCHBIT))
+OBJ_libvisbit.so   = $(patsubst %.c,obj/%.o,$(SRC_VISBIT))
 
-BIN            = bitbit nnuesource gennnue genepd histogram pgnbin \
-		 texeltune genbitbase libbatch.so libvisualize.so
+BIN = bitbit wnnuebit gnnuebit epdbit histbit pgnbit \
+      texelbit basebit libbatchbit.so libvisbit.so
 
 PREFIX = /usr/local
 BINDIR = $(PREFIX)/bin
@@ -130,14 +130,14 @@ obj/texel-%.o: src/%.c dep/%.d
 	@mkdir -p obj
 	$(CC) $(CFLAGS) -DTRACE -c $< -o $@
 
-src/nnueweights.c: nnuesource Makefile
-	./nnuesource $(NNUE)
+src/nnueweights.c: wnnuebit Makefile
+	./wnnuebit $(NNUE)
 
-gennnue:         LDLIBS += -pthread
-%.so:            LDFLAGS += -shared
+gnnuebit:       LDLIBS += -pthread
+%.so:           LDFLAGS += -shared
 
-obj/gennnue.o:   CFLAGS += $(DSYZYGY) -pthread
-obj/init.o:      CFLAGS += -DVERSION=$(VERSION)
+obj/gnnuebit.o: CFLAGS += $(DSYZYGY) -pthread
+obj/init.o:     CFLAGS += -DVERSION=$(VERSION)
 obj/interface.o obj/option.o: CFLAGS += -DTT=$(TT)
 
 dep/nnueweights.d:

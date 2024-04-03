@@ -23,7 +23,7 @@
 #include "bitboard.h"
 #include "util.h"
 #include "option.h"
-#include "texeltune.h"
+#include "texelbit.h"
 
 CONST score_t supported_pawn     = S(  9, 12);
 CONST score_t backward_pawn[4]   = { S(  2,  0), S( -6,-10), S( -7, -5), S( -7, -5), };
