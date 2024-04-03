@@ -127,6 +127,12 @@ void generate_attacked(const struct position *pos, int color, uint64_t attacked[
 	attacked[ALL] = attacked[PAWN] | attacked[KNIGHT] | attacked[BISHOP] | attacked[ROOK] | attacked[QUEEN] | attacked[KING];
 }
 
+uint64_t generate_attacked_all(const struct position *pos, int color) {
+	uint64_t attacked[7];
+	generate_attacked(pos, color, attacked);
+	return attacked[ALL];
+}
+
 uint64_t generate_pinned(const struct position *pos, int color) {
 	uint64_t pinners = pos->piece[other_color(color)][ALL];
 	return generate_blockers(pos, pinners, ctz(pos->piece[color][KING]));

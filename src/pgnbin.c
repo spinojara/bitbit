@@ -28,15 +28,11 @@
 #include "attackgen.h"
 #include "position.h"
 #include "move.h"
-#include "evaluate.h"
 #include "option.h"
-#include "tables.h"
 #include "moveorder.h"
 #include "endgame.h"
 #include "movegen.h"
 #include "movepicker.h"
-
-const int quiet_eval_delta = 50;
 
 int skip_mates = 0;
 int shuffle = 0;
@@ -44,6 +40,7 @@ int quiet = 0;
 int skip_first = 0;
 int skip_endgames = 0;
 int skip_halfmove = 0;
+int skip_checks = 0;
 
 static const struct searchinfo gsi = { 0 };
 
@@ -56,7 +53,7 @@ int32_t evaluate_material(const struct position *pos) {
 	return pos->turn ? eval : -eval;
 }
 
-int32_t search_material(struct position *pos, int ply, int alpha, int beta) {
+int32_t search_material(struct position *pos, int alpha, int beta) {
 	uint64_t checkers = generate_checkers(pos, pos->turn);
 	int32_t eval = evaluate_material(pos), best_eval = -VALUE_INFINITE;
 
@@ -76,11 +73,11 @@ int32_t search_material(struct position *pos, int ply, int alpha, int beta) {
 	while ((move = next_move(&mp))) {
 		if (!legal(pos, &pstate, &move))
 			continue;
-
+		
 		do_move(pos, &move);
-		eval = -search_material(pos, ply + 1, -beta, -alpha);
+		eval = -search_material(pos, -beta, -alpha);
 		undo_move(pos, &move);
-
+		
 		if (eval > best_eval) {
 			best_eval = eval;
 			if (eval > alpha) {
@@ -175,13 +172,24 @@ void write_fens(struct position *pos, int result, FILE *fin, FILE *fout) {
 					if (skip_halfmove && !gbernoulli(exp(-pos->halfmove)))
 						skip = 1;
 
-					if (quiet && (generate_checkers(pos, pos->turn)
-						      || search_material(pos, 0, -VALUE_INFINITE, VALUE_INFINITE) != evaluate_material(pos)))
+					if (!skip && quiet && (generate_checkers(pos, pos->turn) ||
+								is_capture(pos, &move) ||
+								move_flag(&move) == MOVE_EN_PASSANT ||
+								move_flag(&move) == MOVE_PROMOTION ||
+								search_material(pos, -VALUE_INFINITE, VALUE_INFINITE) != evaluate_material(pos)))
 						skip = 1;
+
+					if (!skip && skip_checks) {
+						do_move(pos, &move);
+						if (generate_checkers(pos, pos->turn))
+							skip = 1;
+						undo_move(pos, &move);
+					}
+
 
 					if (skip)
 						perspective_result = VALUE_NONE;
-
+					
 					/* This is the first written move. */
 					if (moves == skip_first) {
 						fwrite(&zero, 2, 1, fout);
@@ -217,6 +225,8 @@ int main(int argc, char **argv) {
 			shuffle = 1;
 		else if (!strcmp(argv[i], "--quiet"))
 			quiet = 1;
+		else if (!strcmp(argv[i], "--skip-checks"))
+			skip_checks = 1;
 		else if (!strcmp(argv[i], "--skip-endgames"))
 			skip_endgames = 1;
 		else if (!strcmp(argv[i], "--skip-halfmove"))
@@ -255,14 +265,12 @@ int main(int argc, char **argv) {
 	option_nnue = 0;
 	option_transposition = 0;
 	option_history = 0;
-	option_endgame = 0;
+	option_endgame = 1;
 	option_damp = 0;
 
 	magicbitboard_init();
 	attackgen_init();
 	bitboard_init();
-	tables_init();
-	search_init();
 	moveorder_init();
 	position_init();
 	endgame_init();
