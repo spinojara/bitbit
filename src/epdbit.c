@@ -14,11 +14,13 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#define _GNU_SOURCE
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
 #include <time.h>
+#include <getopt.h>
 
 #include "util.h"
 #include "option.h"
@@ -37,14 +39,15 @@
  * that the rooks and king are in their original position. This option is thus
  * actually chess18.
  */
-int chess960 = 0;
-char *endgame = NULL;
-int moves_max = 16;
-int moves_min = 8;
-int unique = 0;
-int centipawns = 50;
-int filter_depth = -1;
-int minor_pieces = 0;
+static int chess960 = 0;
+static char *endgame = NULL;
+static int moves_max = 16;
+static int moves_min = 8;
+static int unique = 0;
+static int centipawns = -1;
+static int filter_depth = -1;
+static int minor_pieces = 0;
+static int verbose = 0;
 
 void startpos_chess960(struct position *pos, uint64_t *seed) {
 	for (int sq = b1; sq < h1; sq++) {
@@ -221,70 +224,87 @@ int epdbit_position(struct position *pos, struct transpositiontable *tt, uint64_
 	movegen_legal(pos, moves, MOVETYPE_ALL);
 	if (!moves[0] ||
 			(unique && already_written(pos, written_keys, i)) ||
-			(filter_depth >= 0 && abs(search(pos, filter_depth, 0, NULL, NULL, tt, NULL, 1)) > centipawns))
+			(centipawns >= 0 && filter_depth >= 0 && abs(search(pos, filter_depth, 0, NULL, NULL, tt, NULL, 1)) > centipawns))
 		return 1;
 	return 0;
 }
 
 int main(int argc, char **argv) {
-	int count = 0;
-	char *outfilename = "out.epd";
-	for (int i = 1; i < argc; i++) {
-		if (!strcmp(argv[i], "--chess960"))
-			chess960 = 1;
-		else if (!strcmp(argv[i], "--unique"))
-			unique = 1;
-		else if (!strcmp(argv[i], "--minor-pieces"))
-			minor_pieces = 1;
-		else if (!strcmp(argv[i], "--centipawns")) {
-			i++;
-			if (!(i < argc))
-				break;
-			centipawns = strint(argv[i]);
-		}
-		else if (!strcmp(argv[i], "--filter-depth")) {
-			i++;
-			if (!(i < argc))
-				break;
-			filter_depth = strint(argv[i]);
-		}
-		else if (!strcmp(argv[i], "--moves-min")) {
-			i++;
-			if (!(i < argc))
-				break;
-			moves_min = strint(argv[i]);
-		}
-		else if (!strcmp(argv[i], "--moves-max")) {
-			i++;
-			if (!(i < argc))
-				break;
-			moves_max = strint(argv[i]);
-		}
-		else if (!strcmp(argv[i], "--endgame")) {
-			i++;
-			if (!(i < argc))
-				break;
-			endgame = argv[i];
-		}
-		else if (!strncmp(argv[i], "--", 2))
-			printf("ignoring unknown option: %s\n", argv[i]);
-		else if (!count)
-			count = strint(argv[i]);
-		else
-			outfilename = argv[i];
-	}
+	long count;
+	char *path;
+	static struct option opts[] = {
+		{ "verbose",      no_argument,       NULL, 'v' },
+		{ "chess960",     no_argument,       NULL, 'c' },
+		{ "minor-pieces", no_argument,       NULL, 'm' },
+		{ "unique",       no_argument,       NULL, 'u' },
+		{ "centipawns",   required_argument, NULL, 'p' },
+		{ "filter-depth", required_argument, NULL, 'd' },
+		{ "moves-min",    required_argument, NULL, 'n' },
+		{ "moves-max",    required_argument, NULL, 'N' },
+		{ "endgame",      required_argument, NULL, 'e' },
+		{ NULL,           0,                 NULL,  0  },
+	};
 
-	if (!count) {
-		fprintf(stderr, "number of fens to generate needs to be greater than 0\n");
+	char *endptr;
+	int c, option_index = 0;
+	int error = 0;
+	while ((c = getopt_long(argc, argv, "vcmup:f:n:N:e:", opts, &option_index)) != -1) {
+		switch (c) {
+		case 'v':
+			verbose = 1;
+			break;
+		case 'c':
+			chess960 = 1;
+			break;
+		case 'm':
+			minor_pieces = 1;
+			break;
+		case 'u':
+			unique = 1;
+			break;
+		case 'p':
+			centipawns = strtol(optarg, &endptr, 10);
+			if (*endptr != '\0')
+				return 2;
+			break;
+		case 'd':
+			filter_depth = strtol(optarg, &endptr, 10);
+			if (*endptr != '\0')
+				return 2;
+			break;
+		case 'n':
+			moves_min = strtol(optarg, &endptr, 10);
+			if (*endptr != '\0')
+				return 2;
+			break;
+		case 'N':
+			moves_max = strtol(optarg, &endptr, 10);
+			if (*endptr != '\0')
+				return 2;
+			break;
+		case 'e':
+			endgame = optarg;
+			break;
+		default:
+			error = 1;
+			break;
+		}
+	}
+	if (error)
 		return 1;
+	if (optind + 1 >= argc || (count = strtol(argv[optind], &endptr, 10)) <= 0 || *endptr != '\0') {
+		fprintf(stderr, "usage: %s fens file\n", argv[0]);
+		return 3;
 	}
 	if (moves_max < moves_min || moves_min < 0) {
-		fprintf(stderr, "moves-min must be at least 0 and moves-max cannot be less than moves-min\n");
+		fprintf(stderr, "error: moves-min must be at least 0 and moves-max cannot be less than moves-min\n");
 		return 1;
 	}
-	FILE *fout = fopen(outfilename, "w");
-	if (!fout) {
-		fprintf(stderr, "failed to open file \"%s\"\n", outfilename);
+	path = argv[optind + 1];
+
+	FILE *file = fopen(path, "w");
+	if (!file) {
+		fprintf(stderr, "error: failed to open file \"%s\"\n", path);
 		return 1;
 	}
 
@@ -323,8 +343,9 @@ int main(int argc, char **argv) {
 			continue;
 		}
 		pos_to_fen(fen, &pos);
-		printf("%s\n", fen);
-		fprintf(fout, "%s\n", fen);
+		if (verbose)
+			printf("%s\n", fen);
+		fprintf(file, "%s\n", fen);
 		if (unique) {
 			refresh_zobrist_key(&pos);
 			written_keys[i] = pos.zobrist_key;
@@ -335,5 +356,5 @@ int main(int argc, char **argv) {
 		transposition_free(&tt);
 	if (unique)
 		free(written_keys);
-	fclose(fout);
+	fclose(file);
 }

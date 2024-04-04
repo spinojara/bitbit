@@ -14,6 +14,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
@@ -21,6 +22,7 @@
 #include <inttypes.h>
 #include <time.h>
 #include <math.h>
+#include <getopt.h>
 
 #include "util.h"
 #include "bitboard.h"
@@ -41,6 +43,7 @@ int skip_first = 0;
 int skip_endgames = 0;
 int skip_halfmove = 0;
 int skip_checks = 0;
+int verbose = 0;
 
 static const struct searchinfo gsi = { 0 };
 
@@ -130,7 +133,7 @@ void start_fen(struct position *pos, FILE *f) {
 	return;
 }
 
-void write_fens(struct position *pos, int result, FILE *fin, FILE *fout) {
+void write_fens(struct position *pos, int result, FILE *infile, FILE *outfile) {
 	char *ptr[2] = { 0 }, line[BUFSIZ];
 	move_t move = 0;
 	int moves = 0;
@@ -138,7 +141,7 @@ void write_fens(struct position *pos, int result, FILE *fin, FILE *fout) {
 	int16_t perspective_result;
 	const uint16_t zero = 0;
 
-	while ((ptr[0] = fgets(line, sizeof(line), fin))) {
+	while ((ptr[0] = fgets(line, sizeof(line), infile))) {
 		if (*ptr[0] == '\n' || *ptr[0] == '[') {
 			if (flag)
 				break;
@@ -192,12 +195,12 @@ void write_fens(struct position *pos, int result, FILE *fin, FILE *fout) {
 					
 					/* This is the first written move. */
 					if (moves == skip_first) {
-						fwrite(&zero, 2, 1, fout);
-						fwrite(pos, sizeof(struct partialposition), 1, fout);
+						fwrite(&zero, 2, 1, outfile);
+						fwrite(pos, sizeof(struct partialposition), 1, outfile);
 					}
 
-					fwrite(&perspective_result, 2, 1, fout);
-					fwrite(&move, 2, 1, fout);
+					fwrite(&perspective_result, 2, 1, outfile);
+					fwrite(&move, 2, 1, outfile);
 				}
 				do_move(pos, &move);
 				moves++;
@@ -211,55 +214,78 @@ early_exit:
 	/* If at least one move has been written. */
 	if (moves > skip_first) {
 		perspective_result = VALUE_NONE;
-		fwrite(&perspective_result, 2, 1, fout);
+		fwrite(&perspective_result, 2, 1, outfile);
 	}
 }
 
 int main(int argc, char **argv) {
-	char *infilename = NULL;
-	char *outfilename = "out.bin";
-	for (int i = 1; i < argc; i++) {
-		if (!strcmp(argv[i], "--skip-mates"))
+	char *inpath;
+	char *outpath;
+	static struct option opts[] = {
+		{ "verbose",       no_argument,       NULL, 'v' },
+		{ "skip-mates",    no_argument,       NULL, 'm' },
+		{ "shuffle",       no_argument,       NULL, 's' },
+		{ "quiet",         no_argument,       NULL, 'q' },
+		{ "skip-checks",   no_argument,       NULL, 'c' },
+		{ "skip-endgames", no_argument,       NULL, 'e' },
+		{ "skip-halfmove", no_argument,       NULL, 'h' },
+		{ "skip-first",    required_argument, NULL, 'f' },
+		{ NULL,            0,                 NULL,  0  },
+	};
+	char *endptr;
+	int c, option_index = 0;
+	int error = 0;
+	while ((c = getopt_long(argc, argv, "vmsqcehf:", opts, &option_index)) != -1) {
+		switch (c) {
+		case 'v':
+			verbose = 1;
+			break;
+		case 'm':
 			skip_mates = 1;
-		else if (!strcmp(argv[i], "--shuffle"))
+			break;
+		case 's':
 			shuffle = 1;
-		else if (!strcmp(argv[i], "--quiet"))
+			break;
+		case 'q':
 			quiet = 1;
-		else if (!strcmp(argv[i], "--skip-checks"))
+			break;
+		case 'c':
 			skip_checks = 1;
-		else if (!strcmp(argv[i], "--skip-endgames"))
+			break;
+		case 'e':
 			skip_endgames = 1;
-		else if (!strcmp(argv[i], "--skip-halfmove"))
+			break;
+		case 'h':
 			skip_halfmove = 1;
-		else if (!strcmp(argv[i], "--skip-first")) {
-			i++;
-			if (!(i < argc))
-				break;
-			skip_first = strint(argv[i]);
-		}
-		else if (strncmp(argv[i], "--", 2)) {
-			if (!infilename)
-				infilename = argv[i];
-			else
-				outfilename = argv[i];
-		}
-		else {
-			printf("ignoring unknown option: %s\n", argv[i]);
+			break;
+		case 'f':
+			skip_first = strtol(optarg, &endptr, 10);
+			if (*endptr != '\0')
+				return 2;
+			break;
+		default:
+			error = 1;
+			break;
 		}
 	}
-	if (!infilename) {
-		fprintf(stderr, "provide a filename\n");
-		exit(1);
+	if (error)
+		return 1;
+	if (optind + 1 >= argc) {
+		fprintf(stderr, "usage: %s infile outfile\n", argv[0]);
+		return 3;
 	}
-	FILE *fin = fopen(infilename, "r");
-	if (!fin) {
-		fprintf(stderr, "failed to open file \"%s\"\n", infilename);
+	inpath = argv[optind];
+	outpath = argv[optind + 1];
+
+	FILE *infile = fopen(inpath, "r");
+	if (!infile) {
+		fprintf(stderr, "failed to open file \"%s\"\n", inpath);
 		exit(2);
 	}
-	FILE *fout = fopen(outfilename, "wb");
-	if (!fout) {
-		fprintf(stderr, "failed to open file \"%s\"\n", outfilename);
-		exit(3);
+	FILE *outfile = fopen(outpath, "r");
+	if (!outfile) {
+		fprintf(stderr, "failed to open file \"%s\"\n", outpath);
+		exit(2);
 	}
 
 	option_nnue = 0;
@@ -278,16 +304,16 @@ int main(int argc, char **argv) {
 
 	size_t total = 0, count;
 	char line[BUFSIZ];
-	while (fgets(line, sizeof(line), fin))
+	while (fgets(line, sizeof(line), infile))
 		if (strstr(line, "[Round"))
 			total++;
 
 	long *offset = malloc(total * sizeof(*offset));
-	fseek(fin, 0, SEEK_SET);
+	fseek(infile, 0, SEEK_SET);
 	count = 0;
-	while (fgets(line, sizeof(line), fin))
+	while (fgets(line, sizeof(line), infile))
 		if (strstr(line, "[Round"))
-			offset[count++] = ftell(fin);
+			offset[count++] = ftell(infile);
 
 	/* Fisher-Yates shuffle. */
 	if (shuffle) {
@@ -300,16 +326,16 @@ int main(int argc, char **argv) {
 	}
 
 	struct position pos;
-	fseek(fin, 0, SEEK_SET);
 	for (count = 0; count < total; count++) {
-		fseek(fin, offset[count], SEEK_SET);
-		int result = parse_result(fin);
-		printf("collecting data: %lu\r", count + 1);
-		start_fen(&pos, fin);
-		write_fens(&pos, result, fin, fout);
+		fseek(infile, offset[count], SEEK_SET);
+		int result = parse_result(infile);
+		if (verbose)
+			printf("%ld / %ld\n", count, total);
+		start_fen(&pos, infile);
+		write_fens(&pos, result, infile, outfile);
 	}
 
 	free(offset);
-	fclose(fin);
-	fclose(fout);
+	fclose(infile);
+	fclose(outfile);
 }

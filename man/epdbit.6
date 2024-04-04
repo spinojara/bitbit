@@ -1,0 +1,76 @@
+.\" bitbit, a bitboard based chess engine written in c.
+.\" Copyright (C) 2022-2024 Isak Ellmer
+.\"
+.\" This program is free software: you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License, version 2 as
+.\" published by the Free Software Foundation.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+.Dd 2024\-04\-04
+.Dt EPDBIT 6
+.Os
+.Sh NAME
+.Nm epdbit
+.Nd create epd openings books
+.Sh SYNOPSIS
+.Nm
+.Op Fl vmu
+.Op Fl c | Fl e Ar endgame
+.Op Fl p Ar centipawns Fl d Ar filter-depth
+.Op Fl n Ar moves-min
+.Op Fl N Ar moves-max
+.Ar fens
+.Ar file
+.Sh DESCRIPTION
+.Nm
+creates an epd opening book containing
+.Ar fens
+fens. The opening book is saved to
+.Ar file .
+.Pp
+The options are as follows:
+.Pp
+.Bl -tag -width Ds
+.It Fl v , \-verbose
+Verbose mode.
+.Nm
+prints the generated fens to stdout.
+.It Fl m , \-minor-pieces
+Only move the minor pieces and pawns.
+.It Fl u , \-unique
+Don't generate duplicate openings.
+.It Fl c , \-chess960
+Generate a chess960 opening book.
+.It Fl e , \-endgame Ar endgame
+Generate endgames.
+.Ar endgame
+is of the form KXKX, i.e. KQKRP.
+.It Fl p , \-centipawns Ar centipawns
+Only generate openings where the evaluation difference is below or equal to
+.Ar centipawns .
+.It Fl d , \-filter\-depth Ar filter\-depth
+Search the positions to depth
+.Ar depth
+when filtering positions by evaluation difference.
+.It Fl n , \-moves\-min Ar moves\-min
+Make a minimum of
+.Ar moves\-min
+moves when generating a position.
+.It Fl N , \-moves\-max Ar moves\-max
+Make a maximum of
+.Ar moves\-max
+moves when generating a position.
+.El
+.Sh SEE ALSO
+.Xr bitbit 6 ,
+.Xr pgnbit 6
+.Sh AUTHORS
+.Nm
+is written by Isak Ellmer.

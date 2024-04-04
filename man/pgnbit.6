@@ -1,0 +1,63 @@
+.\" bitbit, a bitboard based chess engine written in c.
+.\" Copyright (C) 2022-2024 Isak Ellmer
+.\"
+.\" This program is free software: you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License, version 2 as
+.\" published by the Free Software Foundation.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+.Dd 2024\-04\-04
+.Dt PGNBIT 6
+.Os
+.Sh NAME
+.Nm pgnbit
+.Nd pgn file parser
+.Sh SYNOPSIS
+.Nm
+.Op Fl vmsqceh
+.Op Fl f Ar skip-first
+.Ar infile
+.Ar outfile
+.Sh DESCRIPTION
+.Nm
+creates an epd opening book containing
+.Ar fens
+fens. The opening book is saved to
+.Ar file .
+.Pp
+The options are as follows:
+.Pp
+.Bl -tag -width Ds
+.It Fl v , \-verbose
+Verbose mode.
+.It Fl m , \-skip\-mates
+Skip any moves where a mate has been found.
+.It Fl s , \-shuffle
+Shuffle the games.
+.It Fl q , \-quiet
+Skip any position which are not quiet.
+.It Fl c , \-skip\-checks
+Skip any move that gives check.
+.It Fl e , \-skip\-endgames
+Skip endgames.
+.It Fl h , \-skip\-halfmove
+Skip based on halfmove. The probability of keeping a move is exp(-halfmove).
+The higher the halfmove is, the higher the probability of skipping.
+.It Fl f , \-skip\-first Ar skip\-first
+Skip first
+.Ar skip\-first
+moves of every game.
+.El
+.Sh SEE ALSO
+.Xr bitbit 6 ,
+.Xr epdbit 6
+.Sh AUTHORS
+.Nm
+is written by Isak Ellmer.

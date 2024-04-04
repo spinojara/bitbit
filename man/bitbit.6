@@ -13,147 +13,143 @@
 .\" You should have received a copy of the GNU General Public License
 .\" along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-.TH BITBIT 6 "2022-11-11" "bitbit VERSION" "Games Manual"
-.SH NAME
-bitbit \- a bitboard based chess engine written in c
-.SH SYNOPSIS
-.B bitbit
-[\fIOPTION\fR...]
-.SH DESCRIPTION
-\fBbitbit\fR, a bitboard based chess engine written in c implementing the
-uci protocol.
-.PP
-It is possible to cancel all calculations with \fBSIGINT\fR.
-.PP
-Multiple commands may be given to \fBbitbit\fR at startup by separating
-them with " , ".
-See examples.
-.SH OPTIONS
-.TP
-\fB--version\fR
-Shows bitbit's version, then exits.
-.TP
-\fBhelp\fR
-.br
-Displays a general help page.
-.TP
-\fBversion\fR
-.br
-Shows bitbit's version.
-.TP
-\fBquit\fR
-.br
-Exits bitbit.
-.TP
-\fBclear\fR
-.br
-Clears the screen.
-.TP
-\fBmove\fR [\fIMOVE\fR]
-.br
-Does a move. The move string can be either in standard notation or
-long algebraic notation e.g. Nf3 or g1f3.
-.TP
-\fBundo\fR
-.br
-Undos the last move.
-.TP
-\fBflip\fR
-.br
+.Dd 2024\-04\-04
+.Dt BITBIT 6
+.Os
+.Sh NAME
+.Nm bitbit
+.Nd a bitboard based chess engine written in c
+.Sh SYNOPSIS
+.Nm
+.Op Fl v
+.Op Ar command ...
+.Sh DESCRIPTION
+.Nm
+is a bitboard based chess engine written in c. It implements the uci protocol.
+.Pp
+If a
+.Ar command
+is specified,
+.Nm
+parses and executes the command and then exits.
+.Nm
+parses commands separated by commas as commands to be executed after one another.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl v , \-version
+Display the version and exit.
+.El
+.Sh COMMANDS
+.Bl -tag -width Ds
+.It Ic version
+Display the version.
+.It Ic help
+Display a general help page.
+.It Ic quit
+Exit
+.Nm .
+.It Ic clear
+Clear the screen.
+.It Ic move Ar move
+Make the move
+.Ar move
+on the board.
+.Ar move
+can be either in standard notation or long algebraic notation e.g. Nf3 or g1f3.
+.It Ic undo
+Undo the last made move on the board.
+.It Ic flip
 Flips the side to move.
-.TP
-\fBperft\fR [\fIDEPTH\fR]
-.br
-Executes a performance test.
-.TP
-\fBposition\fR [\fIOPTION\fR] [\fIARG\fR]
-.br
-Sets or shows information about the position.
-.in +2n
-\fBfen\fR The passed argument is in fen format.
-.br
-\fBstartpos\fR Sets the start position.
-.br
-.in +2n
-\fBmoves\fR moves are passed in long algebraic notation after either a fen is
-given or the option startpos.
-.TP
-\fBgo\fR [\fIOPTION\fR]
-.br
-Evaluates the position.
-.in +2n
-\fBwtime\fR
-.br
-\fBbtime\fR Respective side's time in milliseconds.
-.br
-\fBwinc\fR
-.br
-\fBbinc\fR Respective side's increment in milliseconds.
-.br
-\fBdepth\fR Max depth to search.
-.br
-\fBmovetime\fR Max time to search in milliseconds.
-.TP
-\fBtt\fR [\fIOPTION\fR] [\fISIZE\fR]
-.br
-Sets or shows information about the transposition table.
-.in +2n
-\fBclear\fR Empties the transposition table.
-.TP
-\fBisready\fR
-.br
-Prints "readyok" if engine is ready.
-.TP
-\fBucinewgame\fR
-.br
-Resets engine for a new game.
-.TP
-\fBuci\fR
-.br
-Prints information about the engine.
-.SH EXIT STATUS
-.PP
-If \fBbitbit\fR was killed by a signal it returns the signal + 128.
-If \fBbitbit\fR exits successfully it returns 0.
-.PP
-If an error was encountered \fBbitbit\fR returns:
-.PP
-1
-.in +4n
-\fBbitbit\fR failed to find magic number.
-.PP
-2
-.in +4n
-\fBbitbit\fR failed to allocate transposition table because size was
-too small.
-.PP
-3
-.in +4n
-\fBbitbit\fR failed to allocate transposition table due to malloc.
-.SH EXAMPLES
-Evaluate the starting position to depth 12 and then exit.
-.PP
-.in +4n
-.EX
-$ \fBbitbit go depth 12 , quit\fR
-.EE
-.PP
+.It Ic mirror
+Mirrors the board by color.
+.It Ic perft Ar depth
+Executes a performance tests of depth
+.Ar depth
+on the current board.
+.It Ic position Oo Cm startpos | fen Ar fen Oc Op Cm moves Ar moves
+Display the board. If
+.Cm startpos
+or
+.Cm fen 
+is specified it sets the board accordingly. It then makes the moves in the space
+separated list of moves
+.Ar moves
+on the board.
+.It Ic stop
+Stop the currently executing command.
+.It Ic eval
+Display evaluation information about the board.
+.It Ic go Oo Cm depth Ar depth Oc Oo Cm wtime Ar wtime Oc Oo Cm btime Ar btime \
+Oc Oo Cm winc Ar winc Oc Oo Cm binc Ar binc Oc Oo Cm movetime Ar movetime Oc
+Search the board recursively to depth
+.Ar depth
+or until
+.Ar movetime
+milliseconds runs out. If any of the options
+.Ar wtime , btime , winc
+or
+.Ar binc
+are supplied,
+.Nm
+calculates the optimal search time in milliseconds.
+.It Ic tt
+Display transposition table information.
+.It Ic isready
+Print
+.Dq readyok .
+.It Ic uci
+Display uci related information.
+.It Ic ucinewgame
+Setup
+.Nm
+for a new game.
+.It Ic setoption Cm name Ar name Cm value Ar value
+Set uci option
+.Ar name
+to
+.Ar value .
+.El
+.Sh EXIT STATUS
+.Nm
+exists 0 on success. If
+.Nm
+fails to allocate the transposition table it exists 1.
+.El
+.Sh EXAMPLES
+Search the starting position to depth 4 and then exit.
+.Pp
+.D1 $ Ic bitbit go depth 4 \&, quit
+.D1 bitbit Copyright (C) 2022-2024 Isak Ellmer
+.D1 info depth 1 seldepth 2 score cp 23 nodes 20 time 0 nps 270270 pv d2d4
+.D1 info depth 2 seldepth 3 score cp 45 nodes 65 time 0 nps 303738 pv d2d4 e7e6
+.D1 info depth 3 seldepth 8 score cp 27 nodes 502 time 0 nps 713068 pv g1f3 d7d5 \
+d2d4
+.D1 info depth 4 seldepth 8 score cp 27 nodes 972 time 1 nps 617927 pv d2d4 g8f6 \
+g1f3 d7d5
+.D1 bestmove d2d4
+.Pp
 Set a position, do a performance test to depth 6 and then exit.
-.PP
-.in +4n
-.EX
-$ \fBbitbit\fR
-bitbit Copyright (C) 2022-2024 Isak Ellmer
-> \fBposition fen r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1\fR
-> \fBperft 6\fR
-g1h1: 149335005
-c4c5: 92063670
-d2d4: 124002076
-f3d4: 129579089
-b4c5: 87986826
-f1f2: 123078367
-nodes: 706045033
-time: 1.60
-mnps: 441
-> \fBquit\fR
-.EE
+.Pp
+.D1 $ Ic bitbit
+.D1 bitbit Copyright (C) 2022\-2024 Isak Ellmer
+.D1 Ic position fen r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq \
+\- 0 1
+.D1 Ic perft 6
+.D1 c4c5: 92063670
+.D1 d2d4: 124002076
+.D1 f3d4: 129579089
+.D1 b4c5: 87986826
+.D1 f1f2: 123078367
+.D1 g1h1: 149335005
+.D1 nodes: 706045033
+.D1 time: 2.26
+.D1 mnps: 312
+.D1 Ic quit
+.Pp
+.Sh SEE ALSO
+.Xr epdbit 6 ,
+.Xr pgnbit 6
+.Sh AUTHORS
+.Nm
+is written by Isak Ellmer.

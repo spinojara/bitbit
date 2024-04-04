@@ -44,24 +44,24 @@ struct command {
 	int (*ptr)(int argc, char **argv);
 };
 
+int interface_version(int argc, char **argv);
 int interface_help(int argc, char **argv);
+int interface_quit(int argc, char **argv);
+int interface_clear(int argc, char **argv);
 int interface_move(int argc, char **argv);
 int interface_undo(int argc, char **argv);
 int interface_flip(int argc, char **argv);
 int interface_mirror(int argc, char **argv);
 int interface_perft(int argc, char **argv);
 int interface_position(int argc, char **argv);
-int interface_clear(int argc, char **argv);
 int interface_stop(int argc, char **argv);
-int interface_quit(int argc, char **argv);
 int interface_eval(int argc, char **argv);
 int interface_go(int argc, char **argv);
-int interface_version(int argc, char **argv);
 int interface_tt(int argc, char **argv);
 int interface_isready(int argc, char **argv);
 int interface_uci(int argc, char **argv);
-int interface_setoption(int argc, char **argv);
 int interface_ucinewgame(int argc, char **argv);
+int interface_setoption(int argc, char **argv);
 
 #define COMMAND(name) { #name, interface_##name }
 
