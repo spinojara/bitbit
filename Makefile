@@ -149,15 +149,13 @@ dep/%.d: src/%.c Makefile
 
 install: all
 	mkdir -p $(DESTDIR)$(BINDIR)
-	cp -f bitbit epdbit pgnbit $(DESTDIR)$(BINDIR)
-	chmod 755 $(DESTDIR)$(BINDIR)/{bitbit,epdbit,pgnbit}
 	mkdir -p $(DESTDIR)$(MAN6DIR)
-	cp -f man/{bitbit.6,epdbit.6,pgnbit.6} $(DESTDIR)$(MAN6DIR)
-	chmod 644 $(DESTDIR)$(MAN6DIR)/{bitbit.6,epdbit.6,pgnbit.6}
+	install -m 0755 {bitbit,epdbit,pgnbit} $(DESTDIR)$(BINDIR)
+	install -m 0644 man/{bitbit,epdbit,pgnbit}.6 $(DESTDIR)$(MAN6DIR)
 
 uninstall:
-	rm -f $(DESTDIR)$(BINDIR)/bitbit
-	rm -f $(DESTDIR)$(MAN6DIR)/bitbit.6
+	rm -f $(DESTDIR)$(BINDIR)/{bitbit,epdbit,pgnbit}
+	rm -f $(DESTDIR)$(MAN6DIR)/{bitbit,epdbit,pgnbit}.6
 
 clean:
 	rm -rf obj dep
