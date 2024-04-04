@@ -21,12 +21,13 @@
 
 #include "position.h"
 
+#define PLY_MAX 256
 #define VALUE_NONE 0x7FFF
 #define VALUE_INFINITE 0x7FFE
 #define VALUE_MATE 0x7F00
 #define VALUE_WIN 0x2000
 #define VALUE_MAX (VALUE_WIN / 2)
-#define VALUE_MATE_IN_MAX_PLY (VALUE_MATE - 128)
+#define VALUE_MATE_IN_MAX_PLY (VALUE_MATE - PLY_MAX)
 
 enum { mg, eg };
 
@@ -79,5 +80,11 @@ static inline int32_t score_eg(score_t eval) {
 int32_t evaluate_classical(const struct position *pos);
 
 void evaluate_print(struct position *pos);
+
+static inline int normal_eval(int32_t eval) {
+	return (-VALUE_MAX <= eval && eval <= VALUE_MAX) ||
+		eval <= -VALUE_MATE_IN_MAX_PLY ||
+		eval >= VALUE_MATE_IN_MAX_PLY;
+}
 
 #endif
