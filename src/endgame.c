@@ -87,7 +87,7 @@ void endgame_store(const char *str, int32_t (*evaluate)(const struct position *p
 			ptr[i] = tolower(ptr[i]);
 
 		char pieces[512];
-		sprintf(pieces, "%s%ld/8/8/8/8/8/8/%s%ld", strong, 8 - strlen(strong), weak, 8 - strlen(weak));
+		sprintf(pieces, "%s%zu/8/8/8/8/8/8/%s%zu", strong, 8 - strlen(strong), weak, 8 - strlen(weak));
 
 		char *fen[] = { pieces, "w", "-", "-", "0", "1", };
 		pos_from_fen(&pos, 6, fen);
@@ -156,7 +156,7 @@ void endgame_test(void) {
 
 outer:;
 		if (index % (max_index / 100) == 0)
-			printf("%ld%%\r", 100 * index / max_index);
+			printf("%zu%%\r", 100 * index / max_index);
 	}
 	printf("Endgame table works correctly.\n");
 }
