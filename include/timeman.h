@@ -14,8 +14,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef TIME_MAN_H
-#define TIME_MAN_H
+#ifndef TIMEMAN_H
+#define TIMEMAN_H
 
 #include <stdint.h>
 #include <sys/time.h>
@@ -25,7 +25,7 @@
 #include "move.h"
 #include "position.h"
 
-typedef timepoint_t int64_t;
+typedef int64_t timepoint_t;
 
 struct timeinfo {
 	int stop_on_time;
@@ -56,7 +56,7 @@ int stop_searching(struct timeinfo *si, move_t best_move);
 static inline timepoint_t time_now(void) {
 	struct timeval t;
 	gettimeofday(&t, NULL);
-	return t.tv_sec * 1000000 + t.tv_usec;
+	return (timepoint_t)t.tv_sec * 1000000 + t.tv_usec;
 }
 
 static inline timepoint_t time_since(const struct timeinfo *ti) {
