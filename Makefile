@@ -21,13 +21,15 @@ MAKEFLAGS += -rR
 
 KERNEL    := $(shell uname -s)
 ARCH      := $(shell uname -m)
-ifneq ($(findstring x86, $(ARCH)), )
-	ARCH = -march=native -mtune=native
-else ifneq ($(findstring arm, $(ARCH)), )
-	ARCH = -march=native -mtune=native
-else ifneq ($(findstring ppc64, $(ARCH)), )
+ifneq ($(findstring ppc64, $(ARCH)), )
 	ARCH = -mtune=native
+else
+	ARCH = -march=native
 endif
+
+MKDIR_P    = mkdir -p
+RM         = rm
+INSTALL    = install
 
 CC         = cc
 CSTANDARD  = -std=c11
@@ -50,13 +52,13 @@ LDFLAGS    = $(CFLAGS)
 LDLIBS     = -lm
 
 ifeq ($(SIMD), avx2)
-	CFLAGS  += -DAVX2 -mavx2
+	CFLAGS += -DAVX2 -mavx2
 endif
 ifeq ($(SIMD), sse4)
-	CFLAGS  += -DSSE4 -msse4
+	CFLAGS += -DSSE4 -msse4
 endif
 ifeq ($(SIMD), sse2)
-	CFLAGS  += -DSSE2 -msse2
+	CFLAGS += -DSSE2 -msse2
 endif
 
 TT        ?= 64
@@ -121,13 +123,13 @@ $(BIN): $$(OBJ_$$@)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 obj/%.o: src/%.c dep/%.d
-	@mkdir -p obj
+	@$(MKDIR_P) obj
 	$(CC) $(CFLAGS) -c $< -o $@
 obj/pic-%.o: src/%.c dep/%.d
-	@mkdir -p obj
+	@$(MKDIR_P) obj
 	$(CC) $(CFLAGS) -fPIC -c $< -o $@
 obj/texel-%.o: src/%.c dep/%.d
-	@mkdir -p obj
+	@$(MKDIR_P) obj
 	$(CC) $(CFLAGS) -DTRACE -c $< -o $@
 
 src/nnueweights.c: weightbit Makefile
@@ -141,25 +143,25 @@ obj/init.o:     CFLAGS += -DVERSION=$(VERSION)
 obj/interface.o obj/option.o: CFLAGS += -DTT=$(TT)
 
 dep/nnueweights.d:
-	@mkdir -p dep
+	@$(MKDIR_P) dep
 	@touch dep/nnueweights.d
 dep/%.d: src/%.c Makefile
-	@mkdir -p dep
+	@$(MKDIR_P) dep
 	@$(CC) -MM -MT "$@ $(<:src/%.c=obj/%.o)" $(CFLAGS) $< -o $@
 
 install: all
-	mkdir -p $(DESTDIR)$(BINDIR)
-	mkdir -p $(DESTDIR)$(MAN6DIR)
-	install -m 0755 {bitbit,epdbit,pgnbit} $(DESTDIR)$(BINDIR)
-	install -m 0644 man/{bitbit,epdbit,pgnbit}.6 $(DESTDIR)$(MAN6DIR)
+	$(MKDIR_P) $(DESTDIR)$(BINDIR)
+	$(MKDIR_P) $(DESTDIR)$(MAN6DIR)
+	$(INSTALL) -m 0755 {bitbit,epdbit,pgnbit} $(DESTDIR)$(BINDIR)
+	$(INSTALL) -m 0644 man/{bitbit,epdbit,pgnbit}.6 $(DESTDIR)$(MAN6DIR)
 
 uninstall:
-	rm -f $(DESTDIR)$(BINDIR)/{bitbit,epdbit,pgnbit}
-	rm -f $(DESTDIR)$(MAN6DIR)/{bitbit,epdbit,pgnbit}.6
+	$(RM) -f $(DESTDIR)$(BINDIR)/{bitbit,epdbit,pgnbit}
+	$(RM) -f $(DESTDIR)$(MAN6DIR)/{bitbit,epdbit,pgnbit}.6
 
 clean:
-	rm -rf obj dep
-	rm -f src/nnueweights.c $(BIN)
+	$(RM) -rf obj dep
+	$(RM) -f src/nnueweights.c $(BIN)
 
 -include $(DEP)
 .PRECIOUS: dep/%.d
