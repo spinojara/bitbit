@@ -35,6 +35,7 @@
 #include "endgame.h"
 #include "movegen.h"
 #include "movepicker.h"
+#include "tables.h"
 
 int skip_mates = 0;
 int shuffle = 0;
@@ -43,6 +44,7 @@ int skip_first = 0;
 int skip_endgames = 0;
 int skip_halfmove = 0;
 int skip_checks = 0;
+int skip_unlucky = 0;
 int verbose = 0;
 
 static const struct searchinfo gsi = { 0 };
@@ -54,6 +56,15 @@ int32_t evaluate_material(const struct position *pos) {
 	for (int piece = PAWN; piece < KING; piece++)
 		eval -= popcount(pos->piece[BLACK][piece]) * material_value[piece];
 	return pos->turn ? eval : -eval;
+}
+
+int32_t total_material(const struct position *pos) {
+	int32_t mat = 0;
+	for (int piece = PAWN; piece < KING; piece++)
+		mat += popcount(pos->piece[WHITE][piece]) * material_value[piece];
+	for (int piece = PAWN; piece < KING; piece++)
+		mat += popcount(pos->piece[BLACK][piece]) * material_value[piece];
+	return mat;
 }
 
 int32_t search_material(struct position *pos, int alpha, int beta) {
@@ -189,6 +200,16 @@ void write_fens(struct position *pos, int result, FILE *infile, FILE *outfile) {
 						undo_move(pos, &move);
 					}
 
+					if (!skip && skip_unlucky && perspective_result == 0) {
+						int32_t mat = total_material(pos);
+						int64_t eval1, eval2;
+						if (mat <= 2000 &&
+								abs((int32_t)(eval1 = evaluate_material(pos))) >= 100 &&
+								abs((int32_t)(eval2 = evaluate_classical(pos))) >= 50 &&
+								eval1 * eval2 > 0) {
+							skip = 1;
+						}
+					}
 
 					if (skip)
 						perspective_result = VALUE_NONE;
@@ -230,12 +251,13 @@ int main(int argc, char **argv) {
 		{ "skip-endgames", no_argument,       NULL, 'e' },
 		{ "skip-halfmove", no_argument,       NULL, 'h' },
 		{ "skip-first",    required_argument, NULL, 'f' },
+		{ "skip-unlucky",  no_argument,       NULL, 'u' },
 		{ NULL,            0,                 NULL,  0  },
 	};
 	char *endptr;
 	int c, option_index = 0;
 	int error = 0;
-	while ((c = getopt_long(argc, argv, "vmsqcehf:", opts, &option_index)) != -1) {
+	while ((c = getopt_long(argc, argv, "vmsqcehf:u", opts, &option_index)) != -1) {
 		switch (c) {
 		case 'v':
 			verbose = 1;
@@ -263,6 +285,9 @@ int main(int argc, char **argv) {
 			if (*endptr != '\0')
 				return 2;
 			break;
+		case 'u':
+			skip_unlucky = 1;
+			break;
 		default:
 			error = 1;
 			break;
@@ -280,12 +305,12 @@ int main(int argc, char **argv) {
 	FILE *infile = fopen(inpath, "r");
 	if (!infile) {
 		fprintf(stderr, "failed to open file \"%s\"\n", inpath);
-		exit(2);
+		return 2;
 	}
-	FILE *outfile = fopen(outpath, "r");
+	FILE *outfile = fopen(outpath, "w");
 	if (!outfile) {
 		fprintf(stderr, "failed to open file \"%s\"\n", outpath);
-		exit(2);
+		return 2;
 	}
 
 	option_nnue = 0;
@@ -297,6 +322,7 @@ int main(int argc, char **argv) {
 	magicbitboard_init();
 	attackgen_init();
 	bitboard_init();
+	tables_init();
 	moveorder_init();
 	position_init();
 	endgame_init();
@@ -326,7 +352,7 @@ int main(int argc, char **argv) {
 	}
 
 	struct position pos;
-	for (count = 0; count < total; count++) {
+	for (count = 1; count <= total; count++) {
 		fseek(infile, offset[count], SEEK_SET);
 		int result = parse_result(infile);
 		if (verbose)
