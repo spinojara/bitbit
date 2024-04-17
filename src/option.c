@@ -24,7 +24,7 @@
 #include "transposition.h"
 #include "interface.h"
 
-#define OPTION_NNUE          0
+#define OPTION_NNUE          1
 #define OPTION_TRANSPOSITION 1
 #define OPTION_HISTORY       1
 #define OPTION_ENDGAME       1
