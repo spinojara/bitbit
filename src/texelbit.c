@@ -14,12 +14,14 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#define _GNU_SOURCE
 #include "texelbit.h"
 
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <getopt.h>
 
 #include "util.h"
 #include "evaluate.h"
@@ -193,12 +195,12 @@ enum {
 	WEIGHTDECAY_NO,
 };
 
-const double K = 1.0;
-const double beta_1 = 0.9;
-const double beta_2 = 0.999;
-const double epsilon = 1e-8;
-const double alpha = 1e-3;
-const double weight_decay = 1e-4;
+double K = 1.0;
+double beta1 = 0.9;
+double beta2 = 0.999;
+double epsilon = 1e-8;
+double alpha = 1e-3;
+double weight_decay = 1e-4;
 size_t t = 0;
 
 struct parameter {
@@ -603,16 +605,16 @@ void update_value(score_t *ptr, double value[2], int type) {
 
 void parameter_step(double value[2], double m[2], double v[2], int type, int weight_decay_enabled) {
 	for (int i = 0; i <= type ; i++) {
-		double m_hat = m[i] / (1 - pow(beta_1, t));
-		double v_hat = v[i] / (1 - pow(beta_2, t));
+		double m_hat = m[i] / (1 - pow(beta1, t));
+		double v_hat = v[i] / (1 - pow(beta2, t));
 		value[i] -= alpha * (m_hat / (sqrt(v_hat) + epsilon) + (weight_decay_enabled == WEIGHTDECAY_YES) * weight_decay * value[i]);
 	}
 }
 
 void update_mv(double m[2], double v[2], double grad[2]) {
 	for (int i = 0; i < 2; i++) {
-		m[i] = beta_1 * m[i] + (1 - beta_1) * grad[i];
-		v[i] = beta_2 * v[i] + (1 - beta_2) * grad[i] * grad[i];
+		m[i] = beta1 * m[i] + (1 - beta1) * grad[i];
+		v[i] = beta2 * v[i] + (1 - beta2) * grad[i] * grad[i];
 	}
 }
 
@@ -1550,13 +1552,58 @@ size_t grad(FILE *f, struct position *pos) {
 int main(int argc, char **argv) {
 	struct position pos;
 
-	if (argc < 2) {
-		printf("provide a filename\n");
-		return 1;
+	static struct option opts[] = {
+		{ "K",       required_argument, NULL, 'K' },
+		{ "beta1",   required_argument, NULL, '1' },
+		{ "beta2",   required_argument, NULL, '2' },
+		{ "epsilon", required_argument, NULL, 'e' },
+		{ "alpha",   required_argument, NULL, 'a' },
+		{ "decay",   required_argument, NULL, 'd' },
+		{ NULL,      0,                 NULL,  0  },
+	};
+	char *endptr;
+	int c, option_index = 0;
+	int error = 0;
+	while ((c = getopt_long(argc, argv, "K:1:2:e:a:d:", opts, &option_index)) != -1) {
+		double *ptr = NULL;
+		switch (c) {
+		case 'K':
+			ptr = &K;
+			break;
+		case '1':
+			ptr = &beta1;
+			break;
+		case '2':
+			ptr = &beta2;
+			break;
+		case 'e':
+			ptr = &epsilon;
+			break;
+		case 'a':
+			ptr = &alpha;
+			break;
+		case 'd':
+			ptr = &weight_decay;
+			break;
+		default:
+			error = 1;
+		}
+		if (!error) {
+			*ptr = strtod(optarg, &endptr);
+			if (*endptr != '\0' || *ptr < 1.0e-11);
+				return 4;
+		}
 	}
-	FILE *f = fopen(argv[1], "rb");
+	if (error)
+		return 1;
+	if (optind >= argc) {
+		fprintf(stderr, "usage: %s infile\n", argv[0]);
+		return 3;
+	}
+	char *path = argv[optind];
+	FILE *f = fopen(path, "rb");
 	if (!f) {
-		printf("could not open %s\n", argv[1]);
+		fprintf(stderr, "failed to open file \"%s\"\n", path);
 		return 2;
 	}
 
