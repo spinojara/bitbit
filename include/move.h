@@ -33,14 +33,14 @@
  */
 typedef uint64_t move_t;
 
-static inline int move_from(const move_t *move) { return *move & 0x3F; }
-static inline int move_to(const move_t *move) { return (*move >> 6) & 0x3F; }
-static inline int move_flag(const move_t *move) { return (*move >> 12) & 0x3; }
-static inline int move_promote(const move_t *move) { return (*move >> 14) & 0x3; }
-static inline int move_capture(const move_t *move) { return (*move >> 16) & 0x7; }
-static inline int move_castle(const move_t *move) { return (*move >> 19) & 0xF; }
-static inline int move_en_passant(const move_t *move) { return (*move >> 24) & 0x3F; }
-static inline int move_halfmove(const move_t *move) { return (*move >> 30) & 0x7F; }
+static inline move_t move_from(const move_t *move) { return *move & 0x3F; }
+static inline move_t move_to(const move_t *move) { return (*move >> 6) & 0x3F; }
+static inline move_t move_flag(const move_t *move) { return (*move >> 12) & 0x3; }
+static inline move_t move_promote(const move_t *move) { return (*move >> 14) & 0x3; }
+static inline move_t move_capture(const move_t *move) { return (*move >> 16) & 0x7; }
+static inline move_t move_castle(const move_t *move) { return (*move >> 19) & 0xF; }
+static inline move_t move_en_passant(const move_t *move) { return (*move >> 24) & 0x3F; }
+static inline move_t move_halfmove(const move_t *move) { return (*move >> 30) & 0x7F; }
 static inline void move_set_captured(move_t *move, uint64_t i) { *move |= (i << 0x10); }
 static inline void move_set_castle(move_t *move, uint64_t i) { *move |= (i << 0x13); }
 static inline void move_set_en_passant(move_t *move, uint64_t i) { *move |= (i << 0x18); }

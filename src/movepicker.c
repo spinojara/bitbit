@@ -29,7 +29,7 @@ static inline int good_capture(struct position *pos, move_t *move, int threshold
 
 static inline int promotion(struct position *pos, move_t *move, int threshold) {
 	UNUSED(pos);
-	return move_flag(move) == MOVE_PROMOTION && move_promote(move) + 2 >= threshold;
+	return move_flag(move) == MOVE_PROMOTION && (int)move_promote(move) + 2 >= threshold;
 }
 
 int find_next(struct movepicker *mp, int (*filter)(struct position *, move_t *, int), int threshold) {
