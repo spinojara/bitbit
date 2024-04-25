@@ -216,6 +216,7 @@ void write_thread(FILE *f, struct threadinfo *threadinfo, int *curr_fens, int fe
 
 		if (*curr_fens + written_fens >= fens) {
 			atomic_store(&stop, 1);
+			printf("\n");
 			break;
 		}
 	}
@@ -309,10 +310,8 @@ void *worker(void *arg) {
 				}
 
 				atomic_fetch_add(&threadinfo->available, gen_fens);
-				if (atomic_load(&stop)) {
-					fprintf(stderr, "EXITED THREAD %d\n", threadn);
+				if (atomic_load(&stop))
 					break;
-				}
 			}
 			gen_fens = 0;
 
@@ -352,7 +351,7 @@ void *worker(void *arg) {
 		}
 
 	}
-	fprintf(stderr, "EXITED THREAD %d\n", threadn);
+	fprintf(stderr, "Exited thread %d\n", threadn);
 	return NULL;
 }
 
@@ -377,7 +376,7 @@ int main(int argc, char **argv) {
 	char *endptr;
 	int c, option_index = 0;
 	int error = 0;
-	while ((c = getopt_long(argc, argv, "m:M:n:N:d:e:l:j:t:z:", opts, &option_index))) {
+	while ((c = getopt_long(argc, argv, "m:M:n:N:d:e:l:j:t:z:", opts, &option_index)) != -1) {
 		switch (c) {
 		case 'm':
 			random_moves = strtol(optarg, &endptr, 10);
@@ -435,7 +434,7 @@ int main(int argc, char **argv) {
 	if (error)
 		return 1;
 
-	if (optind + 3 >= argc ||
+	if (optind + 2 >= argc ||
 			(depth = strtol(argv[optind], &endptr, 10)) <= 0 || *endptr != '\0' ||
 			(fens = strtol(argv[optind + 1], &endptr, 10)) <= 0 || *endptr != '\0') {
 		fprintf(stderr, "usage: %s depth fens file\n", argv[0]);
