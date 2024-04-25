@@ -66,7 +66,7 @@ NNUE      ?= etc/current.nnue
 
 ifneq ($(SYZYGY), )
 	LDLIBS  += -lfathom
-	DSYZYGY := -DSYZYGY=$(SYZYGY)
+	DSYZYGY := -DSYZYGY
 endif
 
 SRC_BASE      = bitboard.c magicbitboard.c attackgen.c move.c \

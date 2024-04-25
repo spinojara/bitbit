@@ -14,6 +14,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#define _GNU_SOURCE
 #define _DEFAULT_SOURCE
 #include <stdio.h>
 #include <stdint.h>
@@ -25,6 +26,7 @@
 #include <stdatomic.h>
 #include <time.h>
 #include <math.h>
+#include <getopt.h>
 #ifdef SYZYGY
 #include <tbprobe.h>
 #endif
@@ -55,14 +57,16 @@
 
 atomic_uint_least64_t *hash_table;
 
-size_t tt_GiB = 12;
+ssize_t tt_MiB = 12 * 1024;
 
-int random_move_max_ply = 25;
+int random_move_ply = 25;
 int random_moves = 7;
-int write_min_ply = 16;
-int write_max_ply = 400;
-int adj_draw_ply = 80;
+int min_ply = 16;
+int max_ply = 400;
+int draw_ply = 80;
+int draw_eval = 10;
 int eval_limit = 3000;
+char *syzygy = NULL;
 
 const int report_dot_every = 1000;
 const int dots_per_clear = 20;
@@ -122,7 +126,7 @@ static inline int position_already_written(struct position *pos) {
 }
 
 int probable_long_draw(struct history *h, int32_t eval, int *drawn_score_count) {
-	if (h->ply >= adj_draw_ply && abs(eval) <= 0)
+	if (h->ply >= draw_ply && abs(eval) <= draw_eval)
 		++*drawn_score_count;
 	else
 		*drawn_score_count = 0;
@@ -134,10 +138,10 @@ int probable_long_draw(struct history *h, int32_t eval, int *drawn_score_count) 
 }
 
 void random_move_flags(int *random_move, uint64_t *seed) {
-	for (int i = 0; i < random_move_max_ply; i++)
+	for (int i = 0; i < random_move_ply; i++)
 		random_move[i] = (i < random_moves);
 
-	for (int i = random_move_max_ply - 1; i > 0; i--) {
+	for (int i = random_move_ply - 1; i > 0; i--) {
 		int j = xorshift64(seed) % (i + 1);
 		int t = random_move[i];
 		random_move[i] = random_move[j];
@@ -236,7 +240,7 @@ void *worker(void *arg) {
 	startkey(&pos);
 	history_reset(&pos, &h);
 	move_t moves[MOVES_MAX];
-	int *random_move = malloc(random_move_max_ply * sizeof(*random_move));
+	int *random_move = malloc(random_move_ply * sizeof(*random_move));
 	random_move_flags(random_move, &seed);
 	move_t move;
 	int16_t eval;
@@ -254,7 +258,7 @@ void *worker(void *arg) {
 			move_flag(&move) || position_already_written(&pos) || !bernoulli(exp(-pos.halfmove / 8.0), &seed);
 
 		int stop_game = !move || (eval != VALUE_NONE && abs(eval) > eval_limit) ||
-				pos.halfmove >= 100 || h.ply >= write_max_ply ||
+				pos.halfmove >= 100 || h.ply >= max_ply ||
 				is_repetition(&pos, &h, 0, 2) || probable_long_draw(&h, eval, &drawn_score_count) ||
 				endgame_probe(&pos);
 
@@ -263,20 +267,20 @@ void *worker(void *arg) {
 		else if (popcount(all_pieces(&pos)) <= 2)
 			eval = 0;
 #ifdef SYZYGY
-		else if (popcount(all_pieces(&pos)) <= TB_LARGEST) {
-			uint64_t _white = pos.piece[white][all];
-			uint64_t _black = pos.piece[black][all];
-			uint64_t _kings = pos.piece[white][king] | pos.piece[black][king];
-			uint64_t _queens = pos.piece[white][queen] | pos.piece[black][queen];
-			uint64_t _rooks = pos.piece[white][rook] | pos.piece[black][rook];
-			uint64_t _bishops = pos.piece[white][bishop] | pos.piece[black][bishop];
-			uint64_t _knights = pos.piece[white][knight] | pos.piece[black][knight];
-			uint64_t _pawns = pos.piece[white][pawn] | pos.piece[black][pawn];
-			unsigned _rule50 = 0;
-			unsigned _castling = 0;
-			unsigned _ep = 0;
-			int _turn = pos.turn;
-			unsigned ret = tb_probe_wdl(_white, _black, _kings, _queens, _rooks, _bishops, _knights, _pawns, _rule50, _castling, _ep, _turn);
+		else if (syzygy && popcount(all_pieces(&pos)) <= TB_LARGEST) {
+			uint64_t white = pos.piece[WHITE][ALL];
+			uint64_t black = pos.piece[BLACK][ALL];
+			uint64_t kings = pos.piece[WHITE][KING] | pos.piece[BLACK][KING];
+			uint64_t queens = pos.piece[WHITE][QUEEN] | pos.piece[BLACK][QUEEN];
+			uint64_t rooks = pos.piece[WHITE][ROOK] | pos.piece[BLACK][ROOK];
+			uint64_t bishops = pos.piece[WHITE][BISHOP] | pos.piece[BLACK][BISHOP];
+			uint64_t knights = pos.piece[WHITE][KNIGHT] | pos.piece[BLACK][KNIGHT];
+			uint64_t pawns = pos.piece[WHITE][PAWN] | pos.piece[BLACK][PAWN];
+			unsigned rule50 = 0;
+			unsigned castling = 0;
+			unsigned ep = 0;
+			int turn = pos.turn;
+			unsigned ret = tb_probe_wdl(white, black, kings, queens, rooks, bishops, knights, pawns, rule50, castling, ep, turn);
 			if (ret == TB_DRAW) {
 				eval = 0;
 			}
@@ -287,14 +291,14 @@ void *worker(void *arg) {
 		}
 #endif
 
-		if (!stop_game && h.ply < random_move_max_ply && random_move[h.ply]) {
+		if (!stop_game && h.ply < random_move_ply && random_move[h.ply]) {
 			movegen_legal(&pos, moves, MOVETYPE_ALL);
 			move = moves[xorshift64(&seed) % move_count(moves)];
 		}
 
 		if (stop_game) {
 			eval = VALUE_NONE;
-			if (h.ply >= write_min_ply) {
+			if (h.ply >= min_ply) {
 				if (!write(fd, &eval, 2)) {
 					fprintf(stderr, "WRITE ERROR ON THREAD %d\n", threadn);
 					exit(1);
@@ -323,7 +327,7 @@ void *worker(void *arg) {
 			history_next(&pos, &h, move);
 		}
 
-		if (h.ply == write_min_ply) {
+		if (h.ply == min_ply) {
 			move = 0;
 			if (!write(fd, &move, 2)) {
 				fprintf(stderr, "WRITE ERROR ON THREAD %d\n", threadn);
@@ -335,7 +339,7 @@ void *worker(void *arg) {
 				exit(1);
 			}
 		}
-		if (h.ply > write_min_ply) {
+		if (h.ply > min_ply) {
 			if (!write(fd, &eval, 2)) {
 				fprintf(stderr, "WRITE ERROR ON THREAD %d\n", threadn);
 				exit(1);
@@ -354,72 +358,90 @@ void *worker(void *arg) {
 
 int main(int argc, char **argv) {
 	int threads = 1;
-	int fens = 500000;
-	int depth = 5;
-	for (int i = 1; i < argc; i++) {
-		if (!strcmp(argv[i], "--tt")) {
-			i++;
-			if (!(i < argc))
-				break;
-			tt_GiB = strint(argv[i]);
-		}
-		else if (!strcmp(argv[i], "--random-move-max-ply")) {
-			i++;
-			if (!(i < argc))
-				break;
-			random_move_max_ply = strint(argv[i]);
-		}
-		else if (!strcmp(argv[i], "--random-moves")) {
-			i++;
-			if (!(i < argc))
-				break;
-			random_moves = strint(argv[i]);
-		}
-		else if (!strcmp(argv[i], "--write-min-ply")) {
-			i++;
-			if (!(i < argc))
-				break;
-			write_min_ply = strint(argv[i]);
-		}
-		else if (!strcmp(argv[i], "--write-max-ply")) {
-			i++;
-			if (!(i < argc))
-				break;
-			write_max_ply = strint(argv[i]);
-		}
-		else if (!strcmp(argv[i], "--adj-draw-ply")) {
-			i++;
-			if (!(i < argc))
-				break;
-			adj_draw_ply = strint(argv[i]);
-		}
-		else if (!strcmp(argv[i], "--eval-limit")) {
-			i++;
-			if (!(i < argc))
-				break;
-			eval_limit = strint(argv[i]);
-		}
-		else if (!strcmp(argv[i], "--threads")) {
-			i++;
-			if (!(i < argc))
-				break;
-			threads = strint(argv[i]);
-		}
-		else if (!strcmp(argv[i], "--depth")) {
-			i++;
-			if (!(i < argc))
-				break;
-			depth = strint(argv[i]);
-		}
-		else {
-			fens = strint(argv[i]);
+	int fens = 0;
+	int depth = 0;
+	char *path;
+	static struct option opts[] = {
+		{ "random-moves",        required_argument, NULL, 'm' },
+		{ "random-move-ply",     required_argument, NULL, 'M' },
+		{ "min-ply",             required_argument, NULL, 'n' },
+		{ "max-ply",             required_argument, NULL, 'N' },
+		{ "draw-ply",            required_argument, NULL, 'd' },
+		{ "draw-eval",           required_argument, NULL, 'e' },
+		{ "eval-limit",          required_argument, NULL, 'l' },
+		{ "jobs",                required_argument, NULL, 'j' },
+		{ "tt",                  required_argument, NULL, 't' },
+		{ "syzygy",              required_argument, NULL, 'z' },
+	};
+	
+	char *endptr;
+	int c, option_index = 0;
+	int error = 0;
+	while ((c = getopt_long(argc, argv, "m:M:n:N:d:e:l:j:t:z:", opts, &option_index))) {
+		switch (c) {
+		case 'm':
+			random_moves = strtol(optarg, &endptr, 10);
+			if (*endptr != '\0')
+				error = 1;
+			break;
+		case 'M':
+			random_move_ply = strtol(optarg, &endptr, 10);
+			if (*endptr != '\0')
+				error = 1;
+			break;
+		case 'n':
+			min_ply = strtol(optarg, &endptr, 10);
+			if (*endptr != '\0')
+				error = 1;
+			break;
+		case 'N':
+			max_ply = strtol(optarg, &endptr, 10);
+			if (*endptr != '\0')
+				error = 1;
+			break;
+		case 'd':
+			draw_ply = strtol(optarg, &endptr, 10);
+			if (*endptr != '\0')
+				error = 1;
+			break;
+		case 'e':
+			draw_eval = strtol(optarg, &endptr, 10);
+			if (*endptr != '\0')
+				error = 1;
+			break;
+		case 'l':
+			eval_limit = strtol(optarg, &endptr, 10);
+			if (*endptr != '\0')
+				error = 1;
+			break;
+		case 'j':
+			threads = strtol(optarg, &endptr, 10);
+			if (*endptr != '\0')
+				error = 1;
+			break;
+		case 't':
+			tt_MiB = strtol(optarg, &endptr, 10);
+			if (*endptr != '\0')
+				error = 1;
+			break;
+		case 'z':
+			syzygy = optarg;
+			break;
+		default:
+			error = 1;
+			break;
 		}
 	}
+	if (error)
+		return 1;
 
-	if (threads <= 0 || depth <= 0 || fens <= 0) {
-		fprintf(stderr, "error: threads, depth or fens are negative\n");
-		exit(1);
+	if (optind + 3 >= argc ||
+			(depth = strtol(argv[optind], &endptr, 10)) <= 0 || *endptr != '\0' ||
+			(fens = strtol(argv[optind + 1], &endptr, 10)) <= 0 || *endptr != '\0') {
+		fprintf(stderr, "usage: %s depth fens file\n", argv[0]);
+		return 1;
 	}
+	path = argv[optind + 2];
 
 	magicbitboard_init();
 	attackgen_init();
@@ -432,11 +454,20 @@ int main(int argc, char **argv) {
 	endgame_init();
 
 #ifdef SYZYGY
-	if (!tb_init(XSTR(SYZYGY))) {
-		printf("Init for tablebase failed for path \"%s\".\n", XSTR(SYZYGY));
-		exit(1);
+	if (syzygy) {
+		if (!tb_init(syzygy)) {
+			fprintf(stderr, "error: init for tablebases failed for path \"%s\".\n", syzygy);
+			return 1;
+		}
+		if (TB_LARGEST == 0) {
+			fprintf(stderr, "error: no tablebases found for path \"%s\".\n", syzygy);
+			return 2;
+		}
+		printf("Tablebases found for up to %d pieces.\n", TB_LARGEST);
 	}
-	printf("Tablebases found for up to %d pieces.\n", TB_LARGEST);
+	else {
+		printf("Running without tablebases.\n");
+	}
 #endif
 
 	hash_table = calloc(HASH_SIZE, sizeof(*hash_table));
@@ -447,7 +478,7 @@ int main(int argc, char **argv) {
 	option_endgame       = 1;
 	option_damp          = 1;
 
-	if (!tt_GiB)
+	if (tt_MiB < 0)
 		option_transposition = 0;
 
 	uint64_t seed = time(NULL);
@@ -463,13 +494,17 @@ int main(int argc, char **argv) {
 		threadinfo[i].depth = depth;
 		threadinfo[i].seed = seed + i;
 		threadinfo[i].threadn = i;
-		transposition_alloc(&threadinfo[i].tt, tt_GiB * 1024 * 1024 * 1024 / threads);
+		transposition_alloc(&threadinfo[i].tt, tt_MiB * 1024 * 1024 / threads);
 		pthread_create(&thread[i], NULL, worker, &threadinfo[i]);
 	}
 
 	start = time(NULL);
 
-	FILE *f = fopen("nnue.bin", "wb");
+	FILE *f = fopen(path, "wb");
+	if (!f) {
+		fprintf(stderr, "error: failed to open file \"%s\"\n", path);
+		return 3;
+	}
 
 	last_time = time_now();
 	int curr_fens = 0;
@@ -491,7 +526,8 @@ int main(int argc, char **argv) {
 	pthread_mutex_destroy(&lock);
 
 #ifdef SYZYGY
-	tb_free();
+	if (syzygy)
+		tb_free();
 #endif
 	free(hash_table);
 }
