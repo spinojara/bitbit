@@ -24,17 +24,11 @@
 #include "util.h"
 #include "position.h"
 
-alignas(64) uint64_t bishop_attacks_lookup[64 * 512];
-alignas(64) uint64_t rook_attacks_lookup[64 * 4096];
+uint64_t bishop_attacks_lookup[5248];
+uint64_t rook_attacks_lookup[102400];
 
-uint64_t bishop_magic[64];
-uint64_t rook_magic[64];
-
-uint64_t bishop_mask[64];
-uint64_t rook_mask[64];
-
-uint64_t bishop_full_mask[64];
-uint64_t rook_full_mask[64];
+struct magic bishop_magic[64];
+struct magic rook_magic[64];
 
 uint64_t bishop_attacks_calc(int square, uint64_t b) {
 	uint64_t attacks = 0;
@@ -209,122 +203,77 @@ uint64_t block_mask(int i, uint64_t attack_mask) {
 	int j = 0;
 
 	while (attack_mask) {
-		if (i & bitboard(j))
+		if (i & bitboard(j++))
 			occ |= bitboard(ctz(attack_mask));
 
 		attack_mask = clear_ls1b(attack_mask);
-		j++;
 	}
 
 	return occ;
 }
 
-uint64_t bishop_magic_calc(int square) {
-	int i, j, k, flag;
-	uint64_t occ[512];
-	uint64_t attacks[512];
-	uint64_t used_attacks[512];
-	uint64_t attack_mask = bishop_mask_calc(square);
-
-	for (i = 0; i < 512; i++) {
-		occ[i] = block_mask(i, attack_mask);
-		attacks[i] = bishop_attacks_calc(square, occ[i]);
-	}
-
-	for (i = 0; i < 100000000; i++) {
-		uint64_t magic_number = gxorshift64() & gxorshift64() & gxorshift64();
-		if (popcount((attack_mask * magic_number) & 0xFF00000000000000) < 6)
-			continue;
-
-		memset(used_attacks, 0, sizeof(used_attacks));
-		
-		for (j = 0, flag = 0; !flag && j < 512; j++) {
-			k = (occ[j] * magic_number) >> (64 - 9);
-
-			if (!used_attacks[k])
-				used_attacks[k] = attacks[j];
-			else if (used_attacks[k] != attacks[j])
-				flag = 1;
-		}
-
-		if (!flag)
-			return magic_number;
-	}
-
-	return 0;
-}
-
-uint64_t rook_magic_calc(int square) {
-	int i, j, k, flag;
+void magic_calc(int square, int piece) {
+	struct magic *magic = piece == ROOK ? &rook_magic[square] : &bishop_magic[square];
 	uint64_t occ[4096];
 	uint64_t attacks[4096];
-	uint64_t used_attacks[4096];
-	uint64_t attack_mask = rook_mask_calc(square);
+	int epochs[4096] = { 0 };
 
-	for (i = 0; i < 4096; i++) {
-		occ[i] = block_mask(i, attack_mask);
-		attacks[i] = rook_attacks_calc(square, occ[i]);
+	magic->mask = piece == ROOK ? rook_mask_calc(square) : bishop_mask_calc(square);
+	magic->shift = 64 - popcount(magic->mask);
+
+	uint64_t seeds[2] = { 5273, 23293 };
+
+	uint64_t seed = seeds[piece == ROOK];
+
+	if (square == a1)
+		magic->attacks = piece == ROOK ? rook_attacks_lookup : bishop_attacks_lookup;
+
+	/* <https://www.chessprogramming.org/Traversing_Subsets_of_a_Set> */
+	uint64_t b = 0;
+	int size = 0;
+	do {
+		occ[size] = b;
+		attacks[size] = piece == ROOK ? rook_attacks_calc(square, b) : bishop_attacks_calc(square, b);
+
+#ifdef PEXT
+		magic->attacks[_pext_u64(b, magic->mask)] = attacks[size];
+#endif
+
+		b = (b - magic->mask) & magic->mask;
+		size++;
 	}
+	while (b);
 
-	for (i = 0; i < 100000000; i++) {
-		uint64_t magic_number = gxorshift64() & gxorshift64() & gxorshift64();
-		if (popcount((attack_mask * magic_number) & 0xFF00000000000000) < 6)
+	if (square < h8)
+		(magic + 1)->attacks = magic->attacks + size;
+
+#ifdef PEXT
+	return;
+#endif
+
+	int epoch, j = 0;
+	for (epoch = 0; j != size; epoch++) {
+		magic->magic = xorshift64(&seed) & xorshift64(&seed) & xorshift64(&seed);
+
+		if (popcount((magic->mask * magic->magic) >> 56) < 6)
 			continue;
 
-		memset(used_attacks, 0, sizeof(used_attacks));
-		
-		for (j = 0, flag = 0; !flag && j < 4096; j++) {
-			k = (occ[j] * magic_number) >> (64 - 12);
+		for (j = 0; j < size; j++) {
+			int k = (occ[j] * magic->magic) >> magic->shift;
 
-			if (!used_attacks[k])
-				used_attacks[k] = attacks[j];
-			else if (used_attacks[k] != attacks[j])
-				flag = 1;
+			if (epochs[k] < epoch) {
+				epochs[k] = epoch;
+				magic->attacks[k] = attacks[j];
+			}
+			else if (magic->attacks[k] != attacks[j])
+				break;
 		}
-
-		if (!flag)
-			return magic_number;
 	}
-
-	return 0;
 }
 
-int magicbitboard_init(void) {
-	int square, i;
-	uint64_t b;
-	char str[3];
-
-	for (square = 0; square < 64; square++) {
-		bishop_magic[square] = bishop_magic_calc(square);
-		if (!bishop_magic[square]) {
-			printf("fatal error: no bishop magic found for %s\n", algebraic(str, square));
-			return 1;
-		}
+void magicbitboard_init(void) {
+	for (int square = 0; square < 64; square++) {
+		magic_calc(square, BISHOP);
+		magic_calc(square, ROOK);
 	}
-	for (square = 0; square < 64; square++) {
-		rook_magic[square] = rook_magic_calc(square);
-		if (!rook_magic[square]) {
-			printf("fatal error: no rook magic found for %s\n", algebraic(str, square));
-			return 1;
-		}
-	}
-	for (i = 0; i < 64; i++) {
-		bishop_mask[i] = bishop_mask_calc(i);
-		rook_mask[i] = rook_mask_calc(i);
-		bishop_full_mask[i] = bishop_full_mask_calc(i);
-		rook_full_mask[i] = rook_full_mask_calc(i);
-	}
-	for (square = 0; square < 64; square++) {
-		for (i = 0; i < 512; i++) {
-			b = block_mask(i, bishop_mask[square]);
-			bishop_attacks_lookup[bishop_index(square, b)] = bishop_attacks_calc(square, b);
-		}
-	}
-	for (square = 0; square < 64; square++) {
-		for (i = 0; i < 4096; i++) {
-			b = block_mask(i, rook_mask[square]);
-			rook_attacks_lookup[rook_index(square, b)] = rook_attacks_calc(square, b);
-		}
-	}
-	return 0;
 }

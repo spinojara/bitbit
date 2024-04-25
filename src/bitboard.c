@@ -72,10 +72,10 @@ uint64_t line_calc(int source, int target) {
 	if (source == target)
 		return 0;
 	if (file_of(source) == file_of(target) || rank_of(source) == rank_of(target)) {
-		return rook_full_mask[source] & rook_full_mask[target];
+		return rook_full_mask_calc(source) & rook_full_mask_calc(target);
 	}
 	else {
-		return bishop_full_mask[source] & bishop_full_mask[target];
+		return bishop_full_mask_calc(source) & bishop_full_mask_calc(target);
 	}
 }
 

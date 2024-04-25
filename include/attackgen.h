@@ -50,15 +50,15 @@ static inline uint64_t knight_attacks(int square, uint64_t own) {
 }
 
 static inline uint64_t bishop_attacks(int square, uint64_t own, uint64_t all) {
-	return bishop_attacks_lookup[bishop_index(square, all)] & ~own;
+	return bishop_attacks_pre(square, all) & ~own;
 }
 
 static inline uint64_t rook_attacks(int square, uint64_t own, uint64_t all) {
-	return rook_attacks_lookup[rook_index(square, all)] & ~own;
+	return rook_attacks_pre(square, all) & ~own;
 }
 
 static inline uint64_t queen_attacks(int square, uint64_t own, uint64_t all) {
-	return (bishop_attacks_lookup[bishop_index(square, all)] | rook_attacks_lookup[rook_index(square, all)]) & ~own;
+	return (bishop_attacks_pre(square, all) | rook_attacks_pre(square, all)) & ~own;
 }
 
 static inline uint64_t king_attacks(int square, uint64_t own) {

@@ -19,26 +19,41 @@
 
 #include <stdint.h>
 
-int magicbitboard_init(void);
+#ifdef PEXT
+#include <immintrin.h>
+#endif
 
-extern uint64_t bishop_attacks_lookup[64 * 512];
-extern uint64_t rook_attacks_lookup[64 * 4096];
+void magicbitboard_init(void);
 
-extern uint64_t bishop_magic[64];
-extern uint64_t rook_magic[64];
+struct magic {
+	uint64_t *attacks;
+	uint64_t mask;
+	uint64_t magic;
+	unsigned shift;
+};
 
-extern uint64_t bishop_mask[64];
-extern uint64_t rook_mask[64];
+extern struct magic bishop_magic[64];
+extern struct magic rook_magic[64];
 
-extern uint64_t bishop_full_mask[64];
-extern uint64_t rook_full_mask[64];
-
-static inline int bishop_index(int square, uint64_t b) {
-	return (((b & bishop_mask[square]) * bishop_magic[square]) >> (64 - 9)) + 512 * square;
+static inline uint64_t magic_index(const struct magic *magic, uint64_t b) {
+#ifdef PEXT
+	return _pext_u64(b, magic->mask);
+#else
+	return ((b & magic->mask) * magic->magic) >> magic->shift;
+#endif
 }
 
-static inline int rook_index(int square, uint64_t b) {
-	return (((b & rook_mask[square]) * rook_magic[square]) >> (64 - 12)) + 4096 * square;
+static inline uint64_t bishop_attacks_pre(int square, uint64_t b) {
+	const struct magic *magic = &bishop_magic[square];
+	return magic->attacks[magic_index(magic, b)];
 }
+
+static inline uint64_t rook_attacks_pre(int square, uint64_t b) {
+	const struct magic *magic = &rook_magic[square];
+	return magic->attacks[magic_index(magic, b)];
+}
+
+uint64_t bishop_full_mask_calc(int square);
+uint64_t rook_full_mask_calc(int square);
 
 #endif

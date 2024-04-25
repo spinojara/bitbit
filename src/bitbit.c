@@ -34,9 +34,7 @@ int main(int argc, char **argv) {
 	if (init(argc, argv))
 		return 0;
 	interrupt_init();
-	/* No magic found. */
-	if ((ret = magicbitboard_init()))
-		return ret;
+	magicbitboard_init();
 	attackgen_init();
 	bitboard_init();
 	tables_init();
