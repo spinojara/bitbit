@@ -19,12 +19,24 @@ VERSION   := $(MAJOR).$(MINOR)
 
 MAKEFLAGS += -rR
 
-KERNEL    := $(shell uname -s)
-ARCH      := $(shell uname -m)
+ifeq (Windows_NT, $(OS))
+	KERNEL := Windows_NT
+	ARCH   := x86_64
+else
+	KERNEL    := $(shell uname -s)
+	ARCH      := $(shell uname -m)
+endif
+
 ifneq ($(findstring ppc64, $(ARCH)), )
 	ARCH = -mtune=native
 else
 	ARCH = -march=native
+endif
+
+ifeq (Windows_NT, $(KERNEL))
+	LTO =
+else
+	LTO = -flto=auto
 endif
 
 MKDIR_P    = mkdir -p
@@ -34,7 +46,7 @@ INSTALL    = install
 CC         = cc
 CSTANDARD  = -std=c11
 CWARNINGS  = -Wall -Wextra -Wshadow -pedantic -Wno-unused-result -Wvla
-COPTIMIZE  = -O3 $(ARCH) -flto=auto
+COPTIMIZE  = -O3 $(ARCH) $(LTO)
 
 ifeq ($(DEBUG), 1)
 	CDEBUG    = -g3 -ggdb
