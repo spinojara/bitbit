@@ -343,9 +343,9 @@ int interface_ucinewgame(int argc, char **argv) {
 	return DONE;
 }
 
-#define ARGC_MAX (BUFSIZ)
+#define ARGC_MAX 16384
 int parse(int *argc, char ***argv) {
-	char line[BUFSIZ];
+	char line[ARGC_MAX];
 	interrupt = 0;
 	int ret = -1;
 	int argc_t = 0;
