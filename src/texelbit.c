@@ -1590,7 +1590,7 @@ int main(int argc, char **argv) {
 		}
 		if (!error) {
 			*ptr = strtod(optarg, &endptr);
-			if (*endptr != '\0' || *ptr < 1.0e-11);
+			if (*endptr != '\0' || *ptr < 1.0e-11)
 				return 4;
 		}
 	}
