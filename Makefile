@@ -30,7 +30,7 @@ endif
 ifneq ($(findstring ppc64, $(ARCH)), )
 	ARCH = -mtune=native
 else
-	ARCH = -march=native
+	ARCH = -march=native -mtune=native
 endif
 
 ifeq (Windows_NT, $(KERNEL))
