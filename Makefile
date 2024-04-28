@@ -93,6 +93,7 @@ SRC_ALL       = $(SRC_BASE) $(SRC) $(SRC_BIBIT) $(SRC_GENBIT) \
 	        $(SRC_TEXELBIT) $(SRC_BASEBIT) $(SRC_BATCHBIT) \
 	        $(SRC_VISBIT) $(SRC_WNNUEBIT)
 SRC_BITBIT    = bitbit.c $(SRC)
+SRC_WEIGHTBIT = weightbit.c util.c
 SRC_GENBIT    = genbit.c $(SRC)
 SRC_EPDBIT    = epdbit.c $(SRC)
 SRC_HISTBIT   = histbit.c $(SRC)
@@ -102,20 +103,19 @@ SRC_TEXELBIT  = texelbit.c $(subst evaluate,texel-evaluate,\
 SRC_BASEBIT   = basebit.c $(SRC_BASE)
 SRC_BATCHBIT  = $(addprefix pic-,batchbit.c $(SRC_BASE))
 SRC_VISBIT    = pic-visbit.c pic-util.c
-SRC_WEIGHTBIT = weightbit.c util.c
 
 DEP = $(sort $(patsubst %.c,dep/%.d,$(SRC_ALL)))
 
-OBJ_bitbit         = $(patsubst %.c,obj/%.o,$(SRC_BITBIT))
-OBJ_genbit         = $(patsubst %.c,obj/%.o,$(SRC_GENBIT))
-OBJ_epdbit         = $(patsubst %.c,obj/%.o,$(SRC_EPDBIT))
-OBJ_weightbit      = $(patsubst %.c,obj/%.o,$(SRC_WEIGHTBIT))
-OBJ_histbit        = $(patsubst %.c,obj/%.o,$(SRC_HISTBIT))
-OBJ_pgnbit         = $(patsubst %.c,obj/%.o,$(SRC_PGNBIT))
-OBJ_texelbit       = $(patsubst %.c,obj/%.o,$(SRC_TEXELBIT))
-OBJ_basebit        = $(patsubst %.c,obj/%.o,$(SRC_BASEBIT))
-OBJ_libbatchbit.so = $(patsubst %.c,obj/%.o,$(SRC_BATCHBIT))
-OBJ_libvisbit.so   = $(patsubst %.c,obj/%.o,$(SRC_VISBIT))
+OBJ_BITBIT    = $(patsubst %.c,obj/%.o,$(SRC_BITBIT))
+OBJ_WEIGHTBIT = $(patsubst %.c,obj/%.o,$(SRC_WEIGHTBIT))
+OBJ_GENBIT    = $(patsubst %.c,obj/%.o,$(SRC_GENBIT))
+OBJ_EPDBIT    = $(patsubst %.c,obj/%.o,$(SRC_EPDBIT))
+OBJ_HISTBIT   = $(patsubst %.c,obj/%.o,$(SRC_HISTBIT))
+OBJ_PGNBIT    = $(patsubst %.c,obj/%.o,$(SRC_PGNBIT))
+OBJ_TEXELBIT  = $(patsubst %.c,obj/%.o,$(SRC_TEXELBIT))
+OBJ_BASEBIT   = $(patsubst %.c,obj/%.o,$(SRC_BASEBIT))
+OBJ_BATCHBIT  = $(patsubst %.c,obj/%.o,$(SRC_BATCHBIT))
+OBJ_VISBIT    = $(patsubst %.c,obj/%.o,$(SRC_VISBIT))
 
 BIN = bitbit weightbit genbit epdbit histbit pgnbit \
       texelbit basebit libbatchbit.so libvisbit.so
@@ -130,8 +130,25 @@ all: bitbit
 
 everything: $(BIN)
 
-.SECONDEXPANSION:
-$(BIN): $$(OBJ_$$@)
+bitbit: $(OBJ_BITBIT)
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+weightbit: $(OBJ_WEIGHTBIT)
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+genbit: $(OBJ_GENBIT)
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+epdbit: $(OBJ_EPDBIT)
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+histbit: $(OBJ_HISTBIT)
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+pgnbit: $(OBJ_PGNBIT)
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+texelbit: $(OBJ_TEXELBIT)
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+basebit: $(OBJ_BASEBIT)
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+libbatchbit.so: $(OBJ_BATCHBIT)
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+libvisbit.so: $(OBJ_VISBIT)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 obj/%.o: src/%.c dep/%.d
