@@ -14,7 +14,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 MAJOR      = 1
-MINOR      = 0
+MINOR      = 1
 VERSION   := $(MAJOR).$(MINOR)
 
 MAKEFLAGS += -rR
