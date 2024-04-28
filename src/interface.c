@@ -39,6 +39,9 @@
 #include "history.h"
 #include "option.h"
 
+#define LINESIZE 16384
+#define ARGSIZE 4096
+
 struct command {
 	char *name;
 	int (*ptr)(int argc, char **argv);
@@ -343,67 +346,98 @@ int interface_ucinewgame(int argc, char **argv) {
 	return DONE;
 }
 
-#define ARGC_MAX 16384
-int parse(int *argc, char ***argv) {
-	char line[ARGC_MAX];
+int next_char(int argc, char **argv) {
+	static int argindex = 1;
+	static size_t charindex = 0;
+
+	int c = argindex < argc ? argv[argindex][charindex++] : getchar();
+
+	switch (c) {
+	case '\r':
+	case '\n':
+	case ',':
+		return '\0';
+	case '\0':
+		if (argindex < argc) {
+			argindex++;
+			charindex = 0;
+		}
+		return argindex == argc ? '\0' : ' ';
+	case ' ':
+		return ' ';
+	default:
+		return c;
+	}
+}
+
+void parse_line(int *argc, char *argv[ARGSIZE], int margc, char **margv, char *line) {
+	*argc = 0;
+	int next = 1;
+
+	int i;
+	int c = 1;
+	for (i = 0; i < LINESIZE && c && c != EOF; ) {
+		c = next_char(margc, margv);
+		switch (c) {
+		case ' ':
+			if (!next) {
+				line[i++] = '\0';
+				next = 1;
+			}
+			break;
+		case EOF:
+			interrupt = 1;
+			/* fallthrough */
+		case '\0':
+			line[i++] = '\0';
+			break;
+		default:
+			if (next) {
+				if (*argc == ARGSIZE)
+					goto error;
+				argv[(*argc)++] = &line[i];
+				next = 0;
+			}
+			line[i++] = c;
+			break;
+		}
+	}
+	if (i == LINESIZE)
+		goto error;
+	return;
+error:
+	fprintf(stderr, "error: too many arguments\n");
+	exit(2);
+}
+
+int parse(int margc, char **margv) {
+	char line[LINESIZE];
 	interrupt = 0;
 	int ret = -1;
-	int argc_t = 0;
-	char *argv_t[ARGC_MAX];
+	int argc;
+	char *argv[ARGSIZE];
 
-	if (*argc) {
-		for (argc_t = 0; argc_t < *argc && argc_t < ARGC_MAX; argc_t++) {
-			if ((*argv)[argc_t][0] == ',')
-				break;
-			argv_t[argc_t] = (*argv)[argc_t];
-		}
-		int comma = argc_t < *argc ? (*argv)[argc_t][0] == ',' : 0;
-		*argc -= argc_t + comma;
-		*argv += argc_t + comma;
-	}
-	else {
-		if (fgets(line, sizeof(line), stdin)) {
-			char *c = line;
-			switch (line[0]) {
-			case '\0':
-			case '\n':
-			case ' ':
-				break;
-			default:
-				argv_t[argc_t++] = line;
-			}
-			for (; *c; c++) {
-				if (*c == ' ') {
-					*c = '\0';
-					if (argc_t >= ARGC_MAX)
-						break;
-					argv_t[argc_t++] = c + 1;
-				}
-				if (*c == '\n')
-					*c = '\0';
-			}
-		}
-	}
+	parse_line(&argc, argv, margc, margv, line);
 
 	if (interrupt)
 		ret = EXIT_LOOP;
-	else if (argc_t) {
+	else if (argc) {
 		const struct command *f = NULL;
 		for (size_t k = 0; k < SIZE(commands); k++)
-			if (strcmp(commands[k].name, argv_t[0]) == 0)
+			if (strcmp(commands[k].name, argv[0]) == 0)
 				f = &commands[k];
 		if (f)
-			ret = f->ptr(argc_t, argv_t);
+			ret = f->ptr(argc, argv);
 
 		switch(ret) {
 		case -1:
-			printf("error: %s: command not found\n", argv_t[0]);
+			fprintf(stderr, "error: %s: command not found\n", argv[0]);
 			break;
 		case ERR_MISS_ARG:
-			printf("error: %s: missing argument\n", argv_t[0]);
+			fprintf(stderr, "error: %s: missing argument\n", argv[0]);
 			break;
 		case ERR_BAD_ARG:
-			printf("error: %s: bad argument\n", argv_t[0]);
+			fprintf(stderr, "error: %s: bad argument\n", argv[0]);
 			break;
 		}
 	}
@@ -411,10 +445,7 @@ int parse(int *argc, char ***argv) {
 	return ret;
 }
 
-void interface_init(int *argc, char ***argv) {
-	/* Remove argv[0]. */
-	--*argc;
-	++*argv;
+void interface_init(void) {
 	startpos(&pos);
 	startkey(&pos);
 	if (transposition_alloc(&tt, TT * 1024 * 1024)) {
@@ -429,8 +460,8 @@ void interface_term(void) {
 }
 
 int interface(int argc, char **argv) {
-	interface_init(&argc, &argv);
-	while (parse(&argc, &argv) != EXIT_LOOP);
+	interface_init();
+	while (parse(argc, argv) != EXIT_LOOP);
 	interface_term();
 	return 0;
 }
