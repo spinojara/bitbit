@@ -455,11 +455,11 @@ int main(int argc, char **argv) {
 #ifdef SYZYGY
 	if (syzygy) {
 		if (!tb_init(syzygy)) {
-			fprintf(stderr, "error: init for tablebases failed for path \"%s\".\n", syzygy);
+			fprintf(stderr, "error: init for tablebases failed for path '%s'.\n", syzygy);
 			return 1;
 		}
 		if (TB_LARGEST == 0) {
-			fprintf(stderr, "error: no tablebases found for path \"%s\".\n", syzygy);
+			fprintf(stderr, "error: no tablebases found for path '%s'.\n", syzygy);
 			return 2;
 		}
 		printf("Tablebases found for up to %d pieces.\n", TB_LARGEST);
@@ -501,7 +501,7 @@ int main(int argc, char **argv) {
 
 	FILE *f = fopen(path, "wb");
 	if (!f) {
-		fprintf(stderr, "error: failed to open file \"%s\"\n", path);
+		fprintf(stderr, "error: failed to open file '%s'\n", path);
 		return 3;
 	}
 

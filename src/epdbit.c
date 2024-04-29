@@ -304,7 +304,7 @@ int main(int argc, char **argv) {
 
 	FILE *file = fopen(path, "w");
 	if (!file) {
-		fprintf(stderr, "error: failed to open file \"%s\"\n", path);
+		fprintf(stderr, "error: failed to open file '%s'\n", path);
 		return 1;
 	}
 
