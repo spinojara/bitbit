@@ -164,11 +164,11 @@ obj/texel-%.o: src/%.c dep/%.d
 src/nnueweights.c: weightbit Makefile
 	./weightbit $(NNUE)
 
-genbit:       LDLIBS += -pthread
-%.so:           LDFLAGS += -shared
+genbit:                       LDLIBS += -pthread
+%.so:                         LDFLAGS += -shared
 
-obj/genbit.o: CFLAGS += $(DSYZYGY) -pthread
-obj/init.o:     CFLAGS += -DVERSION=$(VERSION)
+obj/genbit.o:                 CFLAGS += $(DSYZYGY) -pthread
+obj/init.o obj/interface.o:   CFLAGS += -DVERSION=$(VERSION)
 obj/interface.o obj/option.o: CFLAGS += -DTT=$(TT)
 
 dep/nnueweights.d:

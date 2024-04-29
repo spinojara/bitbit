@@ -309,7 +309,7 @@ int interface_isready(int argc, char **argv) {
 int interface_uci(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
-	printf("id name bitbit\n");
+	printf("id name bitbit " XSTR(VERSION) "\n");
 	printf("id author Isak Ellmer\n");
 	print_options();
 	printf("uciok\n");
