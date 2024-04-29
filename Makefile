@@ -73,7 +73,7 @@ ifeq ($(SIMD), sse2)
 	CFLAGS += -DSSE2 -msse2
 endif
 
-TT        ?= 64
+TT        ?= 256
 NNUE      ?= etc/current.nnue
 
 ifneq ($(SYZYGY), )
