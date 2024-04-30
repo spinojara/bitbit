@@ -66,12 +66,6 @@ LDLIBS     = -lm
 ifeq ($(SIMD), avx2)
 	CFLAGS += -DAVX2 -mavx2
 endif
-ifeq ($(SIMD), sse4)
-	CFLAGS += -DSSE4 -msse4
-endif
-ifeq ($(SIMD), sse2)
-	CFLAGS += -DSSE2 -msse2
-endif
 
 TT        ?= 256
 NNUE      ?= etc/current.nnue

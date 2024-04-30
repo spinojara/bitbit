@@ -8,14 +8,13 @@ Run
 
 	make
 
-in the root directory. Make can be run with the following command
+in the root directory. Make can be run with the following additional variables
 
-	make TT={n} SIMD={str} NNUE={file}
+	make TT={n} SIMD={simd} NNUE={file}
 
 to specify a transposition table size, available SIMD instructions and an NNUE
 filename respectively. TT={n} gives a transposition table of n MiB. The default
-value of n is 256. Available targets for SIMD={str} are sse2, sse4 and avx2 in
-increasing order of performance.
+value of n is 256. The only available target for SIMD={simd} is avx2.
 
 Training data
 -------------
