@@ -185,10 +185,12 @@ int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, s
 	if ((si->nodes & (0x1000 - 1)) == 0 && check_time(si->ti))
 		si->interrupt = 1;
 
+	if (si->sel_depth < ply)
+		si->sel_depth = ply;
+
 	const int pv_node = (beta != alpha + 1);
 
-	if (si->history)
-		si->history->zobrist_key[si->history->ply + ply] = pos->zobrist_key;
+	history_store(pos, si->history, ply);
 
 	struct pstate pstate;
 	/* Skip generation of pstate if it was already generated during
@@ -204,7 +206,13 @@ int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, s
 	if (ply >= PLY_MAX)
 		return pstate.checkers ? 0 : eval;
 
-	if (pos->halfmove >= 100 || (option_history && is_repetition(pos, si->history, ply, 1 + pv_node)))
+	if (alpha < 0 && upcoming_repetition(pos, si->history, ply)) {
+		alpha = draw(si);
+		if (alpha >= beta)
+			return alpha;
+	}
+
+	if (pos->halfmove >= 100 || repetition(pos, si->history, ply, 1 + pv_node))
 		return draw(si);
 
 	struct transposition *e = transposition_probe(si->tt, pos);
@@ -276,8 +284,10 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	if ((si->nodes & (0x1000 - 1)) == 0 && check_time(si->ti))
 		si->interrupt = 1;
 
-	if (si->history)
-		si->history->zobrist_key[si->history->ply + ply] = pos->zobrist_key;
+	if (si->sel_depth < ply)
+		si->sel_depth = ply;
+
+	history_store(pos, si->history, ply);
 
 	int32_t eval = VALUE_NONE, best_eval = -VALUE_INFINITE;
 	depth = max(0, min(depth, PLY_MAX - 1));
@@ -291,7 +301,12 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 
 	if (!root_node) {
 		/* Draws. */
-		if (pos->halfmove >= 100 || (option_history && is_repetition(pos, si->history, ply, 1 + pv_node)))
+		if (alpha < 0 && upcoming_repetition(pos, si->history, ply)) {
+			alpha = draw(si);
+			if (alpha >= beta)
+				return alpha;
+		}
+		if (pos->halfmove >= 100 || repetition(pos, si->history, ply, 1 + pv_node))
 			return draw(si);
 
 		/* Mate distance pruning. */
@@ -353,8 +368,7 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 		do_null_zobrist_key(pos, 0);
 		do_null_move(pos, 0);
 		ss->move = 0;
-		if (option_history)
-			si->history->zobrist_key[si->history->ply + ply] = pos->zobrist_key;
+		history_store(pos, si->history, ply);
 		eval = -negamax(pos, new_depth, ply + 1, -beta, -beta + 1, !cut_node, si, ss + 1);
 		do_null_zobrist_key(pos, ep);
 		do_null_move(pos, ep);
@@ -643,8 +657,7 @@ int32_t search(struct position *pos, int depth, int verbose, struct timeinfo *ti
 	move_t best_move = 0;
 	for (int d = iterative ? 1 : depth; d <= depth; d++) {
 		si.root_depth = d;
-		if (verbose && history)
-			reset_seldepth(si.history);
+		si.sel_depth = 1;
 
 		/* Minimum seems to be around d <= 5. */
 		if (d <= 5 || !iterative)
@@ -664,7 +677,7 @@ int32_t search(struct position *pos, int depth, int verbose, struct timeinfo *ti
 		if (verbose) {
 			printf("info depth %d ", d);
 			if (history)
-				printf("seldepth %d ", seldepth(si.history));
+				printf("seldepth %d ", si.sel_depth);
 			printf("score ");
 			if (eval >= VALUE_MATE_IN_MAX_PLY)
 				printf("mate %d", (VALUE_MATE - eval + 1) / 2);

@@ -44,7 +44,7 @@ struct searchinfo {
 	struct transpositiontable *tt;
 	struct history *history;
 
-	int root_depth;
+	int root_depth, sel_depth;
 
 	int interrupt;
 

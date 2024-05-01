@@ -451,6 +451,7 @@ int main(int argc, char **argv) {
 	position_init();
 	transposition_init();
 	endgame_init();
+	history_init();
 
 #ifdef SYZYGY
 	if (syzygy) {

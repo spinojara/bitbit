@@ -26,6 +26,7 @@
 #include "interrupt.h"
 #include "tables.h"
 #include "endgame.h"
+#include "history.h"
 #include "nnue.h"
 
 int main(int argc, char **argv) {
@@ -43,6 +44,7 @@ int main(int argc, char **argv) {
 	position_init();
 	transposition_init();
 	endgame_init();
+	history_init();
 	nnue_init();
 	ret = interface(argc, argv);
 	return ret;

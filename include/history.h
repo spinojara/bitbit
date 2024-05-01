@@ -23,7 +23,6 @@
 
 struct history {
 	move_t move[POSITIONS_MAX];
-	int irreversible[POSITIONS_MAX];
 	uint64_t zobrist_key[POSITIONS_MAX];
 	struct position start;
 	int ply;
@@ -35,8 +34,12 @@ void history_next(struct position *pos, struct history *h, move_t move);
 
 void history_previous(struct position *pos, struct history *h);
 
-int seldepth(const struct history *h);
+void history_store(const struct position *pos, struct history *h, int ply);
 
-void reset_seldepth(struct history *h);
+int repetition(const struct position *pos, const struct history *h, int ply, int n);
+
+int upcoming_repetition(const struct position *pos, const struct history *h, int ply);
+
+void history_init(void);
 
 #endif

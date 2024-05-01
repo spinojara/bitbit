@@ -61,8 +61,12 @@ int transposition_occupancy(struct transpositiontable *tt, int bound) {
 }
 
 void transposition_init(void) {
+	/* Need a seed where the cuckoo history can be initialized.
+	 * Most seeds work, some do not.
+	 */
+	uint64_t seed = 123;
 	for (int i = 0; i < 12 * 64 + 1 + 16 + 8; i++)
-		zobrist_keys[i] = gxorshift64();
+		zobrist_keys[i] = xorshift64(&seed);
 	struct position pos;
 	startpos(&pos);
 	refresh_zobrist_key(&pos);
