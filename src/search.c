@@ -170,7 +170,7 @@ static inline int32_t evaluate(const struct position *pos) {
 
 	/* Damp when shuffling pieces. */
 	if (option_damp)
-		evaluation = evaluation * (200 - pos->halfmove) / 200;
+		evaluation = evaluation * (200 - (int)pos->halfmove) / 200;
 	
 	evaluation = clamp(evaluation, -VALUE_MAX, VALUE_MAX);
 

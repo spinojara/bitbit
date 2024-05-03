@@ -36,6 +36,7 @@
 #include "movegen.h"
 #include "movepicker.h"
 #include "tables.h"
+#include "io.h"
 
 int skip_mates = 0;
 int shuffle = 0;
@@ -150,7 +151,6 @@ void write_fens(struct position *pos, int result, FILE *infile, FILE *outfile) {
 	int moves = 0;
 	int flag = 0;
 	int16_t perspective_result;
-	const uint16_t zero = 0;
 
 	while ((ptr[0] = fgets(line, sizeof(line), infile))) {
 		if (*ptr[0] == '\n' || *ptr[0] == '[') {
@@ -216,12 +216,12 @@ void write_fens(struct position *pos, int result, FILE *infile, FILE *outfile) {
 					
 					/* This is the first written move. */
 					if (moves == skip_first) {
-						fwrite(&zero, 2, 1, outfile);
-						fwrite(pos, sizeof(struct partialposition), 1, outfile);
+						write_move(outfile, 0);
+						write_position(outfile, pos);
 					}
 
-					fwrite(&perspective_result, 2, 1, outfile);
-					fwrite(&move, 2, 1, outfile);
+					write_eval(outfile, perspective_result);
+					write_move(outfile, move);
 				}
 				do_move(pos, &move);
 				moves++;
@@ -233,10 +233,8 @@ void write_fens(struct position *pos, int result, FILE *infile, FILE *outfile) {
 early_exit:
 
 	/* If at least one move has been written. */
-	if (moves > skip_first) {
-		perspective_result = VALUE_NONE;
-		fwrite(&perspective_result, 2, 1, outfile);
-	}
+	if (moves > skip_first)
+		write_eval(outfile, VALUE_NONE);
 }
 
 int main(int argc, char **argv) {

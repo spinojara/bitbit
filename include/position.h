@@ -32,8 +32,8 @@ struct position {
 	/* KQkq. */
 	unsigned castle;
 
-	int halfmove;
-	int fullmove;
+	unsigned halfmove;
+	unsigned fullmove;
 
 	int mailbox[64];
 
@@ -54,20 +54,6 @@ struct pstate {
 	uint64_t checkray;
 	uint64_t pinned;
 	uint64_t check_threats[7];
-};
-
-struct partialposition {
-	uint64_t piece[2][7];
-
-	int turn;
-	int en_passant;
-	/* KQkq. */
-	unsigned castle;
-
-	int halfmove;
-	int fullmove;
-
-	int mailbox[64];
 };
 
 enum square {
@@ -147,6 +133,8 @@ char *algebraic(char *str, int square);
 char *castle_string(char *str, int castle);
 
 void startpos(struct position *pos);
+
+void pos_from_fen2(struct position *pos, const char *str);
 void pos_from_fen(struct position *pos, int argc, char **argv);
 
 void mirror_position(struct position *pos);
@@ -155,9 +143,12 @@ void random_pos(struct position *pos, int n);
 
 char *pos_to_fen(char *fen, const struct position *pos);
 
+int fen_is_ok2(const char *str);
 int fen_is_ok(int argc, char **argv);
 
 void print_position(const struct position *pos);
+
+void print_fen(const struct position *pos);
 
 int pos_are_equal(const struct position *pos1, const struct position *pos2);
 
@@ -167,8 +158,6 @@ void print_history_pgn(const struct history *history);
 void print_history_algebraic(const struct history *history, FILE *file);
 
 int has_sliding_piece(const struct position *pos);
-
-int is_repetition(const struct position *pos, const struct history *h, int ply, int count);
 
 void position_init(void);
 

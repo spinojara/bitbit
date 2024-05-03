@@ -27,6 +27,7 @@
 #include "option.h"
 #include "endgame.h"
 #include "kpk.h"
+#include "io.h"
 
 void store_information(struct position *pos, uint64_t piece_square[7][64]) {
 	for (int color = 0; color < 2; color++) {
@@ -76,7 +77,7 @@ int main(int argc, char **argv) {
 	uint64_t piece_square[7][64] = { 0 };
 
 	move_t move;
-	int16_t eval;
+	int32_t eval = 0;
 	size_t total = 0;
 	size_t count = 0;
 	size_t games = 0;
@@ -84,7 +85,6 @@ int main(int argc, char **argv) {
 	size_t a = 0;
 	size_t c = 0;
 	char startfen[128] = { 0 };
-	char fen[128];
 	char movestr[16];
 	int print_flag = 0;
 	while (1) {
@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
 		if (count % 20000 == 0)
 			printf("collecting data: %lu\r", count);
 		move = 0;
-		fread(&move, 2, 1, f);
+		read_move(f, &move);
 		if (move) {
 			if (print_flag)
 				printf("%s\n", move_str_pgn(movestr, &pos, &move));
@@ -100,13 +100,13 @@ int main(int argc, char **argv) {
 			do_move(&pos, &move);
 		}
 		else {
-			fread(&pos, sizeof(struct partialposition), 1, f);
+			read_position(f, &pos);
 			if (!feof(f))
 				games++;
 			pos_to_fen(startfen, &pos);
 		}
 		
-		fread(&eval, 2, 1, f);
+		read_eval(f, &eval);
 		if (feof(f))
 			break;
 
@@ -128,7 +128,7 @@ int main(int argc, char **argv) {
 				(material[WHITE] == 0 && material[BLACK] == 4)) {
 			int bitbase = bitbase_KPK_probe(&pos, pos.turn);
 			print_position(&pos);
-			printf("%s\n", pos_to_fen(fen, &pos));
+			print_fen(&pos);
 			printf("start: %s\n", startfen);
 			printf("bitbase: %d\n", bitbase);
 			printf("eval: %d\n", eval);
@@ -139,7 +139,7 @@ int main(int argc, char **argv) {
 		
 		if (material_delta >= 3 && eval == 0 && pos.halfmove <= 0) {
 			print_position(&pos);
-			printf("%s\n", pos_to_fen(fen, &pos));
+			print_fen(&pos);
 			printf("start: %s\n", startfen);
 			printf("%d\n", (2 * pos.turn - 1) * evaluate_classical(&pos));
 			printf("%d\n", pos.turn ? eval : -eval);

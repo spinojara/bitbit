@@ -175,14 +175,10 @@ int interface_position(int argc, char **argv) {
 			break;
 	if (argc < 2) {
 		print_position(&pos);
-		char t[128];
-		printf("turn: %c\n", "bw"[pos.turn]);
-		printf("castling: %s\n", castle_string(t, pos.castle));
-		printf("en passant: %s\n", pos.en_passant ? algebraic(t, pos.en_passant) : "-");
-		printf("halfmove: %i\n", pos.halfmove);
-		printf("fullmove: %i\n", pos.fullmove);
-		printf("zobrist key: 0x%" PRIX64 "\n", pos.zobrist_key);
-		printf("fen: %s\n", pos_to_fen(t, &pos));
+		printf("current: ");
+		print_fen(&pos);
+		printf("start:   ");
+		print_fen(&history.start);
 		print_history_pgn(&history);
 	}
 	else if (strcmp(argv[1], "startpos") == 0) {

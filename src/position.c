@@ -54,6 +54,11 @@ void print_position(const struct position *pos) {
 	printf("\n\n");
 }
 
+void print_fen(const struct position *pos) {
+	char fen[128];
+	printf("%s\n", pos_to_fen(fen, pos));
+}
+
 void pstate_init(const struct position *pos, struct pstate *pstate) {
 	const int us = pos->turn;
 	const int them = other_color(us);
@@ -222,6 +227,23 @@ void startpos(struct position *pos) {
 	*pos = start;
 }
 
+void pos_from_fen2(struct position *pos, const char *str) {
+	char fen[128] = { 0 };
+	snprintf(fen, 127, "%s", str);
+	
+	int argc;
+	char *argv[6] = { fen };
+
+	for (argc = 1; argc < 6; argc++) {
+		char *c = strchr(argv[argc - 1], ' ');
+		if (!c)
+			break;
+		*c = '\0';
+		argv[argc] = &c[1];
+	}
+	pos_from_fen(pos, argc, argv);
+}
+
 /* Assumes that fen is ok. */
 void pos_from_fen(struct position *pos, int argc, char **argv) {
 	int t = 0;
@@ -326,6 +348,23 @@ void mirror_position(struct position *pos) {
 	}
 
 	pos->castle = ((pos->castle & 0x3) << 2) | ((pos->castle & 0xC) >> 2);
+}
+
+int fen_is_ok2(const char *str) {
+	char fen[128] = { 0 };
+	snprintf(fen, 127, "%s", str);
+	
+	int argc;
+	char *argv[6] = { fen };
+
+	for (argc = 1; argc < 6; argc++) {
+		char *c = strchr(argv[argc - 1], ' ');
+		if (!c)
+			break;
+		*c = '\0';
+		argv[argc] = &c[1];
+	}
+	return fen_is_ok(argc, argv);
 }
 
 int fen_is_ok(int argc, char **argv) {
@@ -584,11 +623,11 @@ int pos_are_equal(const struct position *pos1, const struct position *pos2) {
 }
 
 void print_history_pgn(const struct history *h) {
-	if (!h)
+	if (!h || !h->ply)
 		return;
 
 	struct position pos = h->start;
-	move_t move[POSITIONS_MAX];
+	move_t move[SIZE(h->move)];
 	memcpy(move, h->move, sizeof(move));
 
 	char str[8];
@@ -599,31 +638,19 @@ void print_history_pgn(const struct history *h) {
 		else if (!i && !pos.turn) {
 			printf("%i. ... ", pos.fullmove);
 		}
-		printf("%s ", move_str_pgn(str, &pos, move + i));
+		printf("%s ", move_str_pgn(str, &pos, &move[i]));
 		if (!pos.turn)
 			printf("\n");
-		do_move(&pos, move + i);
+		do_move(&pos, &move[i]);
 	}
-	if (h->ply)
+	if (!pos.turn)
 		printf("\n");
 }
 
 int has_sliding_piece(const struct position *pos) {
-	return pos->piece[pos->turn][QUEEN] || pos->piece[pos->turn][ROOK] || pos->piece[pos->turn][QUEEN];
-}
-
-/* Check for irreversible moves. */
-int is_repetition(const struct position *pos, const struct history *h, int ply, int count) {
-	for (int i = ply + h->ply - 2, c = 0; i >= 0; i -= 2) {
-		if (pos->zobrist_key == h->zobrist_key[i])
-			c++;
-		if (c == count)
-			return 1;
-	}
-	return 0;
+	return pos->piece[pos->turn][QUEEN] || pos->piece[pos->turn][ROOK] || pos->piece[pos->turn][BISHOP];
 }
 
 void position_init(void) {
-	char *fen[] = { "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR", "w", "KQkq", "-", "0", "1", };
-	pos_from_fen(&start, SIZE(fen), fen);
+	pos_from_fen2(&start, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 }

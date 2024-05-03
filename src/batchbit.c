@@ -29,6 +29,7 @@
 #include "move.h"
 #include "nnue.h"
 #include "evaluate.h"
+#include "io.h"
 
 uint64_t seed;
 
@@ -65,14 +66,14 @@ struct batch *next_batch(void *ptr) {
 
 	while (batch->actual_size < data->requested_size) {
 		move_t move = 0;
-		fread(&move, 2, 1, data->f);
+		read_move(data->f, &move);
 		if (move)
 			do_move(data->pos, &move);
 		else
-			fread(data->pos, sizeof(struct partialposition), 1, data->f);
+			read_position(data->f, data->pos);
 
-		int16_t eval = VALUE_NONE;
-		fread(&eval, 2, 1, data->f);
+		int32_t eval = VALUE_NONE;
+		read_eval(data->f, &eval);
 		if (feof(data->f))
 			break;
 

@@ -47,6 +47,7 @@
 #include "history.h"
 #include "timeman.h"
 #include "endgame.h"
+#include "io.h"
 
 /* <x * 1024 * 1024> gives a <8 * x> MiB hash table.
  * In particular x = 128 gives a 1024 MiB hash table.
@@ -171,7 +172,7 @@ void write_thread(FILE *f, struct threadinfo *threadinfo, int *curr_fens, int fe
 	int gen_fens = 0;
 	int written_fens = 0;
 
-	struct partialposition pos;
+	struct position pos;
 
 	while (1) {
 		if (!read(fd, &move, 2)) {
@@ -181,20 +182,16 @@ void write_thread(FILE *f, struct threadinfo *threadinfo, int *curr_fens, int fe
 		if (move == synchronize_threads) {
 			break;
 		}
-		if (!fwrite(&move, 2, 1, f)) {
+		if (!write_move(f, move)) {
 			fprintf(stderr, "MAIN THREAD WRITE ERROR\n");
 			exit(1);
 		}
-		if (move_from(&move) == h8 && move_to(&move) == h8) {
-			fprintf(stderr, "MAIN THREAD GOT BAD MOVE ERROR\n");
-			exit(1);
-		}
 		if (!move) {
-			if (!read(fd, &pos, sizeof(pos))) {
+			if (!read(fd, &pos, offsetof(struct position, accumulation))) {
 				fprintf(stderr, "MAIN THREAD READ ERROR\n");
 				exit(1);
 			}
-			if (!fwrite(&pos, sizeof(pos), 1, f)) {
+			if (!write_position(f, &pos)) {
 				fprintf(stderr, "MAIN THREAD WRITE ERROR\n");
 				exit(1);
 			}
@@ -203,7 +200,7 @@ void write_thread(FILE *f, struct threadinfo *threadinfo, int *curr_fens, int fe
 			fprintf(stderr, "MAIN THREAD READ ERROR\n");
 			exit(1);
 		}
-		if (!fwrite(&eval, 2, 1, f)) {
+		if (!write_eval(f, eval)) {
 			fprintf(stderr, "MAIN THREAD WRITE ERROR\n");
 			exit(1);
 		}
@@ -260,7 +257,7 @@ void *worker(void *arg) {
 
 		int stop_game = !move || (eval != VALUE_NONE && abs(eval) > eval_limit) ||
 				pos.halfmove >= 100 || h.ply >= max_ply ||
-				is_repetition(&pos, &h, 0, 2) || probable_long_draw(&h, eval, &drawn_score_count) ||
+				repetition(&pos, &h, 0, 2) || probable_long_draw(&h, eval, &drawn_score_count) ||
 				endgame_probe(&pos);
 
 		if (skip)
@@ -333,7 +330,7 @@ void *worker(void *arg) {
 				exit(1);
 			}
 			gen_fens++;
-			if (!write(fd, &pos, sizeof(struct partialposition))) {
+			if (!write(fd, &pos, offsetof(struct position, accumulation))) {
 				fprintf(stderr, "WRITE ERROR ON THREAD %d\n", threadn);
 				exit(1);
 			}

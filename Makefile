@@ -81,13 +81,13 @@ SRC           = $(SRC_BASE) perft.c search.c evaluate.c tables.c \
 	        interface.c transposition.c init.c timeman.c \
 	        interrupt.c pawn.c history.c movepicker.c \
 	        moveorder.c option.c endgame.c nnue.c kpk.c \
-	        kpkp.c krkp.c nnueweights.c
+	        kpkp.c krkp.c nnueweights.c io.c
 SRC_ALL       = $(SRC_BASE) $(SRC) $(SRC_BIBIT) $(SRC_GENBIT) \
 	        $(SRC_EPDBIT) $(SRC_HISTBIT) $(SRC_PGNBIT) \
 	        $(SRC_TEXELBIT) $(SRC_BASEBIT) $(SRC_BATCHBIT) \
 	        $(SRC_VISBIT) $(SRC_WNNUEBIT)
 SRC_BITBIT    = bitbit.c $(SRC)
-SRC_WEIGHTBIT = weightbit.c util.c
+SRC_WEIGHTBIT = weightbit.c util.c io.c
 SRC_GENBIT    = genbit.c $(SRC)
 SRC_EPDBIT    = epdbit.c $(SRC)
 SRC_HISTBIT   = histbit.c $(SRC)

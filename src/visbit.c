@@ -19,24 +19,27 @@
 #include <stdlib.h>
 
 #include "nnue.h"
-#include "util.h"
+#include "io.h"
 
 typedef int16_t ft_bias_t;
 typedef int16_t ft_weight_t;
 
 static ft_weight_t ft_weights[(K_HALF_DIMENSIONS + 1) * FT_IN_DIMS];
 
-void read_ft_weights(char *filename) {
+int read_ft_weights(char *filename) {
 	FILE *f = fopen(filename, "rb");
 	if (!f) {
 		printf("could not open file\n");
 		exit(1);
 	}
 	for (int i = 0; i < K_HALF_DIMENSIONS + 1; i++)
-		read_le_uint(f, sizeof(ft_bias_t));
+		if (read_uintx(f, NULL, sizeof(ft_bias_t)))
+			return 1;
 	for (int i = 0; i < (K_HALF_DIMENSIONS + 1) * FT_IN_DIMS; i++)
-		ft_weights[i] = (ft_weight_t)read_le_uint(f, sizeof(*ft_weights));
+		if (read_uintx(f, &ft_weights[i], sizeof(*ft_weights)))
+			return 1;
 	fclose(f);
+	return 0;
 }
 
 void image_ft(int32_t *image) {

@@ -37,6 +37,7 @@
 #include "pawn.h"
 #include "option.h"
 #include "endgame.h"
+#include "io.h"
 
 struct trace trace;
 
@@ -682,7 +683,6 @@ double grad_calc(struct position *pos, double result) {
 			if (gradmg || gradeg || gradmgtest || gradegtest) {
 				print_position(pos, 0);
 				char fen[128];
-				printf("%s\n", pos_to_fen(fen, pos));
 				printf("factor: %e\n", factor);
 				printf("gradmg: %e\n", gradmg);
 				printf("gradeg: %e\n", gradeg);
@@ -1096,7 +1096,6 @@ double grad_calc(struct position *pos, double result) {
 		if (grad) {
 			char fen[128];
 			print_position(pos, 0);
-			printf("%s\n", pos_to_fen(fen, pos));
 			printf("gradmg: %e\n", gradmg);
 			printf("gradeg: %e\n", gradeg);
 			printf("phase: %f\n", (double)trace.p / 256);
@@ -1165,7 +1164,6 @@ double grad_calc(struct position *pos, double result) {
 			if (grad) {
 				char fen[128];
 				print_position(pos, 0);
-				printf("%s\n", pos_to_fen(fen, pos));
 				printf("index: %ld\n", i);
 				printf("grad: %e\n", grad);
 				printf("result: %f\n", result);
@@ -1349,7 +1347,6 @@ double grad_calc(struct position *pos, double result) {
 			printf("factor: %f\n", factor);
 			print_position(pos, 0);
 			char fen[128];
-			printf("%s\n", pos_to_fen(fen, pos));
 			printf("eval: %d\n", eval);
 			printf("sigmoid(eval): %f\n", sigmoid(eval));
 			printf("result: %f\n", result);
@@ -1500,7 +1497,6 @@ double grad_calc(struct position *pos, double result) {
 			if (grad) {
 				char fen[128];
 				print_position(pos, 0);
-				printf("%s\n", pos_to_fen(fen, pos));
 				printf("grad: %e\n", grad);
 				printf("result: %f\n", result);
 				printf("sigmoid: %f\n", sigmoid(eval));
@@ -1517,14 +1513,14 @@ size_t grad(FILE *f, struct position *pos) {
 	size_t actual_size = 0;
 	while (actual_size < BATCH_SIZE) {
 		move_t move = 0;
-		fread(&move, 2, 1, f);
+		read_move(f, &move);
 		if (move)
 			do_move(pos, &move);
 		else
-			fread(pos, sizeof(struct partialposition), 1, f);
+			read_position(f, pos);
 
-		int16_t eval;
-		fread(&eval, 2, 1, f);
+		int32_t eval = 0;
+		read_eval(f, &eval);
 		if (feof(f))
 			break;
 

@@ -87,7 +87,7 @@ void endgame_store(const char *str, int32_t (*evaluate)(const struct position *p
 		for (size_t i = 0; i < strlen(ptr); i++)
 			ptr[i] = tolower(ptr[i]);
 
-		char pieces[512];
+		char pieces[128];
 		sprintf(pieces, "%s%" PRIu64 "/8/8/8/8/8/8/%s%" PRIu64, strong, 8 - strlen(strong), weak, 8 - strlen(weak));
 
 		char *fen[] = { pieces, "w", "-", "-", "0", "1", };

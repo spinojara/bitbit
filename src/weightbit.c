@@ -18,6 +18,7 @@
 
 #include "nnue.h"
 #include "util.h"
+#include "io.h"
 
 alignas(64) static ft_weight_t ft_weights[(K_HALF_DIMENSIONS + 1) * FT_IN_DIMS];
 alignas(64) static ft_bias_t ft_biases[K_HALF_DIMENSIONS + 1];
@@ -34,12 +35,14 @@ alignas(64) static bias_t output_biases[1];
 void read_hidden_weights(weight_t *w, int dims, FILE *f) {
 	for (int i = 0; i < 32; i++)
 		for (int j = 0; j < dims; j++)
-			w[j * 32 + i] = (weight_t)read_le_uint(f, sizeof(*w));
+			if (read_uintx(f, &w[j * 32 + i], sizeof(*w)))
+				exit(1);
 }
 
 void read_output_weights(weight_t *w, FILE *f) {
 	for (int i = 0; i < 32; i++)
-		w[i] = (weight_t)read_le_uint(f, sizeof(*w));
+		if (read_uintx(f, &w[i], sizeof(*w)))
+			exit(1);
 }
 
 void print_ft_weights(FILE *f, ft_weight_t weights[], size_t size) {
@@ -110,19 +113,24 @@ int main(int argc, char **argv) {
 	
 	int i;
 	for (i = 0; i < K_HALF_DIMENSIONS + 1; i++)
-		ft_biases[i] = (ft_bias_t)read_le_uint(f, sizeof(*ft_biases));
+		if (read_uintx(f, &ft_biases[i], sizeof(*ft_biases)))
+			exit(1);
 	for (i = 0; i < (K_HALF_DIMENSIONS + 1) * FT_IN_DIMS; i++)
-		ft_weights[i] = (ft_weight_t)read_le_uint(f, sizeof(*ft_weights));
+		if (read_uintx(f, &ft_weights[i], sizeof(*ft_weights)))
+			exit(1);
 
 	for (i = 0; i < 32; i++)
-		hidden1_biases[i] = (bias_t)read_le_uint(f, sizeof(*hidden1_biases));
+		if (read_uintx(f, &hidden1_biases[i], sizeof(*hidden1_biases)))
+			exit(1);
 	read_hidden_weights(hidden1_weights, FT_OUT_DIMS, f);
 
 	for (i = 0; i < 32; i++)
-		hidden2_biases[i] = (bias_t)read_le_uint(f, sizeof(*hidden2_biases));
+		if (read_uintx(f, &hidden2_biases[i], sizeof(*hidden2_biases)))
+			exit(1);
 	read_hidden_weights(hidden2_weights, 32, f);
 
-	output_biases[0] = (bias_t)read_le_uint(f, sizeof(*output_biases));
+	if (read_uintx(f, output_biases, sizeof(*output_biases)))
+		exit(1);
 	read_output_weights(output_weights, f);
 
 	FILE *g = fopen("src/nnueweights.c", "w");

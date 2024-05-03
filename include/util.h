@@ -50,14 +50,4 @@ int find_char(const char *s, char c);
 /* Returns 0 if s is not a non negative integer. */
 int strint(const char *s);
 
-int variance(int32_t *arr, int len);
-
-void printdigits(int d);
-
-void printbinary(uint64_t d, int l);
-
-uint32_t read_le_uint(FILE *f, int bytes);
-
-void write_le_uint(FILE *f, uint32_t t, int bytes);
-
 #endif
