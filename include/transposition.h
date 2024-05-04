@@ -153,7 +153,9 @@ int transposition_alloc(struct transpositiontable *tt, size_t bytes);
 
 void transposition_free(struct transpositiontable *tt);
 
-int transposition_occupancy(struct transpositiontable *tt, int node_type);
+int transposition_occupancy(const struct transpositiontable *tt, int bound);
+
+int hashfull(const struct transpositiontable *tt);
 
 void transposition_init(void);
 

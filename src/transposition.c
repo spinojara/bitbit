@@ -49,7 +49,7 @@ int transposition_alloc(struct transpositiontable *tt, size_t bytes) {
 	return 0;
 }
 
-int transposition_occupancy(struct transpositiontable *tt, int bound) {
+int transposition_occupancy(const struct transpositiontable *tt, int bound) {
 	uint64_t occupied = 0;
 	for (size_t i = 0; i < tt->size; i++) {
 		struct transposition *e = &tt->table[i];
@@ -58,6 +58,19 @@ int transposition_occupancy(struct transpositiontable *tt, int bound) {
 			occupied++;
 	}
 	return 1000 * occupied / tt->size;
+}
+
+int hashfull(const struct transpositiontable *tt) {
+	if (!tt || tt->size < 1000)
+		return -1;
+	int count = 0;
+	for (int i = 0; i < 1000; i++) {
+		struct transposition *e = &tt->table[i];
+		if (e->zobrist_key)
+			count++;
+	}
+
+	return count;
 }
 
 void transposition_init(void) {
