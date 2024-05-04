@@ -18,7 +18,7 @@
 #define TIMEMAN_H
 
 #include <stdint.h>
-#include <sys/time.h>
+#include <time.h>
 #include <stddef.h>
 #include <stdatomic.h>
 
@@ -28,7 +28,11 @@
 
 extern volatile atomic_int uciponder;
 
+/* timepoint_t is given in nanoseconds. */
 typedef int64_t timepoint_t;
+
+#define TPPERSEC 1000000000l
+#define TPPERMS     1000000l
 
 struct timeinfo {
 	int stop_on_time;
@@ -56,11 +60,7 @@ void time_init(struct position *pos, struct timeinfo *ti);
 
 int stop_searching(struct timeinfo *si, move_t best_move);
 
-static inline timepoint_t time_now(void) {
-	struct timeval t;
-	gettimeofday(&t, NULL);
-	return (timepoint_t)t.tv_sec * 1000000 + t.tv_usec;
-}
+timepoint_t time_now(void);
 
 static inline timepoint_t time_since(const struct timeinfo *ti) {
 	return time_now() - ti->start;

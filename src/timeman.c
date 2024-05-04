@@ -14,13 +14,21 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#define _POSIX_C_SOURCE 199309L
 #include "timeman.h"
 
+#include <time.h>
 #include <stdint.h>
 #include <stdio.h>
 
 #include "util.h"
 #include "option.h"
+
+#ifdef CLOCK_MONOTONIC_RAW
+#define CLOCK CLOCK_MONOTONIC_RAW
+#else
+#define CLOCK CLOCK_MONOTONIC
+#endif
 
 void time_init(struct position *pos, struct timeinfo *ti) {
 	if (!ti)
@@ -28,7 +36,8 @@ void time_init(struct position *pos, struct timeinfo *ti) {
 
 	ti->start = time_now();
 
-	ti->stop_on_time = ti->movetime || ti->etime[0] || ti->etime[1] || ti->einc[0] || ti->einc[1];
+	if (!ti->stop_on_time)
+		ti->stop_on_time = ti->movetime || ti->etime[0] || ti->etime[1] || ti->einc[0] || ti->einc[1];
 	if (!ti->stop_on_time)
 		return;
 
@@ -74,4 +83,10 @@ int stop_searching(struct timeinfo *ti, move_t best_move) {
 	timepoint_t t;
 	return ti->stop_on_time && ((t = time_since(ti)) >= ti->maximal ||
 		t * margin >= ti->optimal * instability);
+}
+
+timepoint_t time_now(void) {
+	struct timespec tp;
+	clock_gettime(CLOCK, &tp);
+	return (timepoint_t)tp.tv_sec * TPPERSEC + (timepoint_t)tp.tv_nsec;
 }

@@ -263,16 +263,26 @@ int interface_go(int argc, char **argv) {
 		if (i < argc - 1) {
 			if (strcmp(argv[i], "depth") == 0)
 				depth = strint(argv[i + 1]);
-			else if (strcmp(argv[i], "wtime") == 0)
-				ti.etime[WHITE] = 1000 * strint(argv[i + 1]);
-			else if (strcmp(argv[i], "btime") == 0)
-				ti.etime[BLACK] = 1000 * strint(argv[i + 1]);
-			else if (strcmp(argv[i], "winc") == 0)
-				ti.einc[WHITE] = 1000 * strint(argv[i + 1]);
-			else if (strcmp(argv[i], "binc") == 0)
-				ti.einc[BLACK] = 1000 * strint(argv[i + 1]);
-			else if (strcmp(argv[i], "movetime") == 0)
-				ti.movetime = 1000 * strint(argv[i + 1]);
+			else if (strcmp(argv[i], "wtime") == 0) {
+				ti.etime[WHITE] = strint(argv[i + 1]) * TPPERMS;
+				ti.stop_on_time = 1;
+			}
+			else if (strcmp(argv[i], "btime") == 0) {
+				ti.etime[BLACK] = strint(argv[i + 1]) * TPPERMS;
+				ti.stop_on_time = 1;
+			}
+			else if (strcmp(argv[i], "winc") == 0) {
+				ti.einc[WHITE] = strint(argv[i + 1]) * TPPERMS;
+				ti.stop_on_time = 1;
+			}
+			else if (strcmp(argv[i], "binc") == 0) {
+				ti.einc[BLACK] = strint(argv[i + 1]) * TPPERMS;
+				ti.stop_on_time = 1;
+			}
+			else if (strcmp(argv[i], "movetime") == 0) {
+				ti.movetime = strint(argv[i + 1]) * TPPERMS;
+				ti.stop_on_time = 1;
+			}
 			else if (strcmp(argv[i], "movestogo") == 0)
 				ti.movestogo = strint(argv[i + 1]);
 		}
