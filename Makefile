@@ -122,7 +122,7 @@ all: bitbit
 
 everything: $(BIN)
 
-bitbit: LDLIBS += -lpthread
+bitbit genbit: LDLIBS += -lpthread
 bitbit: $(OBJ_BITBIT)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 weightbit: $(OBJ_WEIGHTBIT)
@@ -159,10 +159,10 @@ src/nnueweights.c: weightbit Makefile
 
 %.so:                         LDFLAGS += -shared
 
-obj/genbit.o:                 CFLAGS += $(DSYZYGY)
+obj/thread.o:                 CFLAGS += -pthread
+obj/genbit.o:                 CFLAGS += $(DSYZYGY) -pthread
 obj/init.o obj/interface.o:   CFLAGS += -DVERSION=$(VERSION)
 obj/interface.o obj/option.o: CFLAGS += -DTT=$(TT)
-obj/thread.o:                 CFLAGS += -pthread
 
 dep/nnueweights.d:
 	@$(MKDIR_P) dep
