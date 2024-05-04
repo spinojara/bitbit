@@ -14,12 +14,21 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef INTERRUPT_H
-#define INTERRUPT_H
+#ifndef THREAD_H
+#define THREAD_H
 
-void interrupt_init(void);
-void interrupt_term(void);
+#include "position.h"
+#include "transposition.h"
+#include "history.h"
 
-extern volatile int interrupt;
+void search_stop(void);
+
+void search_ponderhit(void);
+
+void search_start(struct position *pos, int depth, struct timeinfo *ti, struct transpositiontable *tt, struct history *history);
+
+void thread_init(void);
+
+void thread_term(void);
 
 #endif

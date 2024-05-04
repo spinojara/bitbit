@@ -29,18 +29,21 @@
 #define OPTION_HISTORY       1
 #define OPTION_ENDGAME       1
 #define OPTION_DAMP          1
+#define OPTION_PONDER        0
 
 int option_nnue          = OPTION_NNUE;
 int option_transposition = OPTION_TRANSPOSITION;
 int option_history       = OPTION_HISTORY;
 int option_endgame       = OPTION_ENDGAME;
 int option_damp          = OPTION_DAMP;
+int option_ponder        = OPTION_PONDER;
 
 void print_options(void) {
-	printf("option name clear hash type button\n");
-	printf("option name nnue type check default %s\n", OPTION_NNUE ? "true" : "false");
-	printf("option name hash type spin default %u min 0 max %u\n", TT, INT_MAX);
-	printf("option name usehash type check default %s\n", OPTION_TRANSPOSITION ? "true" : "false");
+	printf("option name Clear Hash type button\n");
+	printf("option name NNUE type check default %s\n", OPTION_NNUE ? "true" : "false");
+	printf("option name Hash type spin default %u min 0 max %u\n", TT, INT_MAX);
+	printf("option name Usehash type check default %s\n", OPTION_TRANSPOSITION ? "true" : "false");
+	printf("option name Ponder type check default %s\n", OPTION_PONDER ? "true" : "false");
 }
 
 void setoption(int argc, char **argv, struct transpositiontable *tt) {
@@ -58,4 +61,6 @@ void setoption(int argc, char **argv, struct transpositiontable *tt) {
 		option_nnue = set;
 	else if (!strcasecmp(argv[2], "usehash"))
 		option_transposition = set && (tt->size > 0);
+	else if (!strcasecmp(argv[2], "ponder"))
+		option_ponder = set;
 }

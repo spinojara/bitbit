@@ -48,15 +48,14 @@ CSTANDARD  = -std=c11
 CWARNINGS  = -Wall -Wextra -Wshadow -pedantic -Wno-unused-result -Wvla
 COPTIMIZE  = -O3 $(ARCH) $(LTO)
 
-ifeq ($(DEBUG), 1)
-	CDEBUG    = -g3 -ggdb
-else ifeq ($(DEBUG), 2)
-	CDEBUG    = -g3 -ggdb -fsanitize=address,undefined
-else ifeq ($(DEBUG), 3)
-	CDEBUG    = -g3 -ggdb -fsanitize=address,undefined
-	COPTIMIZE =
-else
-	CDEBUG    = -DNDEBUG
+ifeq ($(DEBUG), yes)
+	CDEBUG = -g3 -ggdb
+else ifeq ($(DEBUG), thread)
+	CDEBUG = -g3 -ggdb -fsanitize=thread,undefined
+else ifeq ($(DEBUG), address)
+	CDEBUG = -g3 -ggdb -fsanitize=address,undefined
+else ifeq ($(DEBUG), )
+	CDEBUG = -DNDEBUG
 endif
 
 CFLAGS     = $(CSTANDARD) $(CWARNINGS) $(COPTIMIZE) $(CDEBUG) -Iinclude
@@ -78,15 +77,14 @@ endif
 SRC_BASE      = bitboard.c magicbitboard.c attackgen.c move.c \
 	        util.c position.c movegen.c
 SRC           = $(SRC_BASE) perft.c search.c evaluate.c tables.c \
-	        interface.c transposition.c init.c timeman.c \
-	        interrupt.c pawn.c history.c movepicker.c \
-	        moveorder.c option.c endgame.c nnue.c kpk.c \
-	        kpkp.c krkp.c nnueweights.c io.c
+	        transposition.c init.c timeman.c pawn.c history.c \
+		movepicker.c moveorder.c option.c endgame.c nnue.c \
+		kpk.c kpkp.c krkp.c nnueweights.c io.c
 SRC_ALL       = $(SRC_BASE) $(SRC) $(SRC_BIBIT) $(SRC_GENBIT) \
 	        $(SRC_EPDBIT) $(SRC_HISTBIT) $(SRC_PGNBIT) \
 	        $(SRC_TEXELBIT) $(SRC_BASEBIT) $(SRC_BATCHBIT) \
 	        $(SRC_VISBIT) $(SRC_WNNUEBIT)
-SRC_BITBIT    = bitbit.c $(SRC)
+SRC_BITBIT    = bitbit.c interface.c thread.c $(SRC)
 SRC_WEIGHTBIT = weightbit.c util.c io.c
 SRC_GENBIT    = genbit.c $(SRC)
 SRC_EPDBIT    = epdbit.c $(SRC)
@@ -124,6 +122,7 @@ all: bitbit
 
 everything: $(BIN)
 
+bitbit: LDLIBS += -lpthread
 bitbit: $(OBJ_BITBIT)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 weightbit: $(OBJ_WEIGHTBIT)
@@ -158,12 +157,12 @@ obj/texel-%.o: src/%.c dep/%.d
 src/nnueweights.c: weightbit Makefile
 	./weightbit $(NNUE)
 
-genbit:                       LDLIBS += -pthread
 %.so:                         LDFLAGS += -shared
 
-obj/genbit.o:                 CFLAGS += $(DSYZYGY) -pthread
+obj/genbit.o:                 CFLAGS += $(DSYZYGY)
 obj/init.o obj/interface.o:   CFLAGS += -DVERSION=$(VERSION)
 obj/interface.o obj/option.o: CFLAGS += -DTT=$(TT)
+obj/thread.o:                 CFLAGS += -pthread
 
 dep/nnueweights.d:
 	@$(MKDIR_P) dep

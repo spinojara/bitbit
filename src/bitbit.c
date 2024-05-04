@@ -23,7 +23,6 @@
 #include "transposition.h"
 #include "moveorder.h"
 #include "interface.h"
-#include "interrupt.h"
 #include "tables.h"
 #include "endgame.h"
 #include "history.h"
@@ -34,7 +33,6 @@ int main(int argc, char **argv) {
 	/* --version */
 	if (init(argc, argv))
 		return 0;
-	interrupt_init();
 	magicbitboard_init();
 	attackgen_init();
 	bitboard_init();

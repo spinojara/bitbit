@@ -492,7 +492,7 @@ int main(int argc, char **argv) {
 		threadinfo[i].seed = seed + i;
 		threadinfo[i].threadn = i;
 		transposition_alloc(&threadinfo[i].tt, tt_MiB * 1024 * 1024 / threads);
-		pthread_create(&thread[i], NULL, worker, &threadinfo[i]);
+		pthread_create(&thread[i], NULL, &worker, &threadinfo[i]);
 	}
 
 	start = time(NULL);

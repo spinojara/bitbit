@@ -24,6 +24,7 @@ extern int option_transposition;
 extern int option_history;
 extern int option_endgame;
 extern int option_damp;
+extern int option_ponder;
 
 void print_options(void);
 

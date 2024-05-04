@@ -25,7 +25,6 @@
 #include "evaluate.h"
 #include "move.h"
 #include "search.h"
-#include "interrupt.h"
 #include "util.h"
 
 extern int option_transposition;
@@ -90,7 +89,7 @@ static inline void transposition_set(struct transposition *e, const struct posit
 }
 
 static inline void transposition_store(struct transpositiontable *tt, const struct position *pos, int32_t evaluation, int depth, int bound, move_t move) {
-	if (interrupt || !option_transposition)
+	if (!option_transposition)
 		return;
 	struct transposition *e = transposition_get(tt, pos);
 	if (e->zobrist_key != pos->zobrist_key ||

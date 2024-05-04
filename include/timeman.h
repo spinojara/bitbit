@@ -20,10 +20,13 @@
 #include <stdint.h>
 #include <sys/time.h>
 #include <stddef.h>
+#include <stdatomic.h>
 
 #include "search.h"
 #include "move.h"
 #include "position.h"
+
+extern volatile atomic_int uciponder;
 
 typedef int64_t timepoint_t;
 
@@ -64,7 +67,7 @@ static inline timepoint_t time_since(const struct timeinfo *ti) {
 }
 
 static inline int check_time(const struct timeinfo *ti) {
-	if (!ti)
+	if (atomic_load_explicit(&uciponder, memory_order_relaxed) || !ti)
 		return 0;
 	if (ti->stop_on_time && time_since(ti) >= ti->maximal)
 		return 1;

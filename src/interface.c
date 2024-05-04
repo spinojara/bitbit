@@ -24,6 +24,7 @@
 #include <string.h>
 #include <strings.h>
 #include <signal.h>
+#include <stdatomic.h>
 
 #include "bitboard.h"
 #include "util.h"
@@ -35,9 +36,9 @@
 #include "evaluate.h"
 #include "transposition.h"
 #include "version.h"
-#include "interrupt.h"
 #include "history.h"
 #include "option.h"
+#include "thread.h"
 
 #define LINESIZE 16384
 #define ARGSIZE 4096
@@ -50,6 +51,8 @@ struct command {
 int interface_version(int argc, char **argv);
 int interface_help(int argc, char **argv);
 int interface_quit(int argc, char **argv);
+int interface_ponderhit(int argc, char **argv);
+int interface_stop(int argc, char **argv);
 int interface_clear(int argc, char **argv);
 int interface_move(int argc, char **argv);
 int interface_undo(int argc, char **argv);
@@ -78,6 +81,8 @@ static const struct command commands[] = {
 	COMMAND(position),
 	COMMAND(clear),
 	COMMAND(quit),
+	COMMAND(stop),
+	COMMAND(ponderhit),
 	COMMAND(eval),
 	COMMAND(go),
 	COMMAND(version),
@@ -155,8 +160,6 @@ int interface_perft(int argc, char **argv) {
 	clock_t t = clock();
 	uint64_t p = perft(&pos, strint(argv[1]), 1);
 	t = clock() - t;
-	if (interrupt)
-		return DONE;
 	printf("nodes: %" PRIu64 "\n", p);
 	printf("time: %.2f\n", (double)t / CLOCKS_PER_SEC);
 	if (t != 0)
@@ -226,16 +229,22 @@ int interface_clear(int argc, char **argv) {
 int interface_stop(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
-	interrupt = 1;
-	return EXIT_LOOP;
+	search_stop();
+	return DONE;
 }
 
 int interface_quit(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
-
 	interface_stop(argc, argv);
 	return EXIT_LOOP;
+}
+
+int interface_ponderhit(int argc, char **argv) {
+	UNUSED(argc);
+	UNUSED(argv);
+	search_ponderhit();
+	return DONE;
 }
 
 int interface_eval(int argc, char **argv) {
@@ -250,22 +259,29 @@ int interface_go(int argc, char **argv) {
 	UNUSED(argv);
 	int depth = 255;
 	struct timeinfo ti = { 0 };
-	for (int i = 1; i < argc - 1; i++) {
-		if (strcmp(argv[i], "depth") == 0)
-			depth = strint(argv[i + 1]);
-		if (strcmp(argv[i], "wtime") == 0)
-			ti.etime[WHITE] = 1000 * strint(argv[i + 1]);
-		if (strcmp(argv[i], "btime") == 0)
-			ti.etime[BLACK] = 1000 * strint(argv[i + 1]);
-		if (strcmp(argv[i], "winc") == 0)
-			ti.einc[WHITE] = 1000 * strint(argv[i + 1]);
-		if (strcmp(argv[i], "binc") == 0)
-			ti.einc[BLACK] = 1000 * strint(argv[i + 1]);
-		if (strcmp(argv[i], "movetime") == 0)
-			ti.movetime = 1000 * strint(argv[i + 1]);
+	for (int i = 1; i < argc; i++) {
+		if (i < argc - 1) {
+			if (strcmp(argv[i], "depth") == 0)
+				depth = strint(argv[i + 1]);
+			else if (strcmp(argv[i], "wtime") == 0)
+				ti.etime[WHITE] = 1000 * strint(argv[i + 1]);
+			else if (strcmp(argv[i], "btime") == 0)
+				ti.etime[BLACK] = 1000 * strint(argv[i + 1]);
+			else if (strcmp(argv[i], "winc") == 0)
+				ti.einc[WHITE] = 1000 * strint(argv[i + 1]);
+			else if (strcmp(argv[i], "binc") == 0)
+				ti.einc[BLACK] = 1000 * strint(argv[i + 1]);
+			else if (strcmp(argv[i], "movetime") == 0)
+				ti.movetime = 1000 * strint(argv[i + 1]);
+			else if (strcmp(argv[i], "movestogo") == 0)
+				ti.movestogo = strint(argv[i + 1]);
+		}
+		if (strcmp(argv[i], "ponder") == 0)
+			uciponder = 1;
 	}
 
-	search(&pos, depth, 1, &ti, NULL, &tt, &history, 1);
+	ucigo = 1;
+	search_start(&pos, depth, &ti, &tt, &history);
 	return DONE;
 }
 
@@ -281,7 +297,6 @@ int interface_version(int argc, char **argv) {
 	printf("simd: %s\n", simd);
 	printf("transposition table size: %" PRIu64 " B (%" PRIu64 " MiB)\n", tt.size * sizeof(*tt.table), tt.size * sizeof(*tt.table) / (1024 * 1024));
 	printf("transposition entry size: %" PRIu64 " B\n", sizeof(struct transposition));
-
 	return DONE;
 }
 
@@ -309,7 +324,6 @@ int interface_uci(int argc, char **argv) {
 	printf("id author Isak Ellmer\n");
 	print_options();
 	printf("uciok\n");
-	interrupt_term();
 	return DONE;
 }
 
@@ -382,7 +396,6 @@ void parse_line(int *argc, char *argv[ARGSIZE], int margc, char **margv, char *l
 			}
 			break;
 		case EOF:
-			interrupt = 1;
 			/* fallthrough */
 		case '\0':
 			line[i++] = '\0';
@@ -406,18 +419,33 @@ error:
 	exit(2);
 }
 
+int is_allowed(const char *arg) {
+	if (!atomic_load_explicit(&uciponder, memory_order_relaxed) && !strcmp(arg, "ponderhit"))
+		return 0;
+
+	if (!atomic_load_explicit(&ucigo, memory_order_relaxed))
+		return 1;
+
+	if (!strcmp(arg, "stop") || !strcmp(arg, "ponderhit"))
+		return 1;
+
+	return 0;
+}
+
 int parse(int margc, char **margv) {
 	char line[LINESIZE];
-	interrupt = 0;
 	int ret = -1;
 	int argc;
 	char *argv[ARGSIZE];
 
 	parse_line(&argc, argv, margc, margv, line);
 
-	if (interrupt)
-		ret = EXIT_LOOP;
-	else if (argc) {
+	if (argc && !is_allowed(argv[0])) {
+		fprintf(stderr, "error: %s: illegal command\n", argv[0]);
+		return DONE;
+	}
+
+	if (argc) {
 		const struct command *f = NULL;
 		for (size_t k = 0; k < SIZE(commands); k++)
 			if (strcmp(commands[k].name, argv[0]) == 0)
@@ -449,9 +477,11 @@ void interface_init(void) {
 		exit(1);
 	}
 	history_reset(&pos, &history);
+	thread_init();
 }
 
 void interface_term(void) {
+	thread_term();
 	transposition_free(&tt);
 }
 

@@ -22,6 +22,7 @@
 #include <math.h>
 #include <assert.h>
 #include <inttypes.h>
+#include <stdatomic.h>
 
 #include "bitboard.h"
 #include "movegen.h"
@@ -32,12 +33,15 @@
 #include "position.h"
 #include "attackgen.h"
 #include "timeman.h"
-#include "interrupt.h"
 #include "evaluate.h"
 #include "history.h"
 #include "movepicker.h"
 #include "option.h"
 #include "endgame.h"
+
+volatile atomic_int ucistop;
+volatile atomic_int ucigo;
+volatile atomic_int uciponder;
 
 static int reductions[PLY_MAX] = { 0 };
 
@@ -71,8 +75,6 @@ void print_pv(struct position *pos, move_t *pv_move, int ply) {
 }
 
 static inline void store_killer_move(const move_t *move, int ply, move_t killers[][2]) {
-	if (interrupt)
-		return;
 	assert(0 <= ply && ply < PLY_MAX);
 	assert(*move);
 	if (move_compare(*move, killers[ply][0]) || move_compare(*move, killers[ply][1]))
@@ -136,8 +138,6 @@ static inline void update_history(struct searchinfo *si, const struct position *
 }
 
 static inline void store_pv_move(const move_t *move, int ply, move_t pv[PLY_MAX][PLY_MAX]) {
-	if (interrupt)
-		return;
 	assert(*move);
 	pv[ply][ply] = *move;
 	memcpy(pv[ply] + ply + 1, pv[ply + 1] + ply + 1, sizeof(**pv) * (PLY_MAX - (ply + 1)));
@@ -178,7 +178,7 @@ static inline int32_t evaluate(const struct position *pos) {
 }
 
 int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, struct searchinfo *si, const struct pstate *pstateptr, struct searchstack *ss) {
-	if (interrupt || si->interrupt)
+	if (si->interrupt)
 		return 0;
 	if (ply >= PLY_MAX)
 		return evaluate(pos);
@@ -258,6 +258,10 @@ int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, s
 		undo_endgame_key(pos, &move);
 		undo_move(pos, &move);
 		undo_accumulator(pos, &move);
+
+		if (si->interrupt)
+			return 0;
+
 		if (eval > best_eval) {
 			best_move = move;
 			best_eval = eval;
@@ -277,11 +281,11 @@ int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, s
 }
 
 int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t beta, int cut_node, struct searchinfo *si, struct searchstack *ss) {
-	if (interrupt || si->interrupt)
+	if (si->interrupt)
 		return 0;
 	if (ply >= PLY_MAX)
 		return evaluate(pos);
-	if ((si->nodes & (0x1000 - 1)) == 0 && check_time(si->ti))
+	if (((si->nodes & (0x1000 - 1)) == 0 && check_time(si->ti)) || atomic_load_explicit(&ucistop, memory_order_relaxed))
 		si->interrupt = 1;
 
 	if (si->sel_depth < ply)
@@ -554,7 +558,7 @@ skip_pruning:;
 		undo_move(pos, &move);
 		undo_accumulator(pos, &move);
 
-		if (interrupt || si->interrupt)
+		if (si->interrupt)
 			return 0;
 
 		assert(eval != VALUE_NONE);
@@ -607,7 +611,7 @@ int32_t aspiration_window(struct position *pos, int depth, int32_t last, struct 
 	int32_t alpha = max(last - delta, -VALUE_MATE);
 	int32_t beta = min(last + delta, VALUE_MATE);
 
-	while (!si->interrupt || interrupt) {
+	while (!si->interrupt) {
 		evaluation = negamax(pos, depth, 0, alpha, beta, 0, si, ss);
 
 		if (evaluation <= alpha) {
@@ -651,10 +655,11 @@ int32_t search(struct position *pos, int depth, int verbose, struct timeinfo *ti
 		eval = evaluate(pos);
 		if (verbose)
 			printf("info depth 0 score cp %d\n", eval);
+		ucigo = 0;
 		return eval;
 	}
 
-	move_t best_move = 0;
+	move_t best_move = 0, ponder_move = 0;
 	for (int d = iterative ? 1 : depth; d <= depth; d++) {
 		si.root_depth = d;
 		si.sel_depth = 1;
@@ -669,8 +674,9 @@ int32_t search(struct position *pos, int depth, int verbose, struct timeinfo *ti
 		 * Use move even from a partial and interrupted search.
 		 */
 		best_move = si.pv[0][0];
+		ponder_move = si.pv[0][1];
 
-		if (interrupt || si.interrupt)
+		if (si.interrupt)
 			break;
 
 		timepoint_t tp = time_since(si.ti);
@@ -695,9 +701,23 @@ int32_t search(struct position *pos, int depth, int verbose, struct timeinfo *ti
 			break;
 	}
 
-	if (verbose && !interrupt)
-		printf("bestmove %s\n", move_str_algebraic(str, &best_move));
-	if (move && !interrupt)
+	/* We are not allowed to exit the search before either a ponderhit
+	 * or stop command. Both of these commands will set uciponder to 0.
+	 */
+	while (atomic_load_explicit(&uciponder, memory_order_relaxed));
+
+	if (verbose) {
+		printf("bestmove %s", move_str_algebraic(str, &best_move));
+		do_move(pos, &best_move);
+		struct pstate pstate;
+		pstate_init(pos, &pstate);
+		if (pseudo_legal(pos, &pstate, &ponder_move) && legal(pos, &pstate, &ponder_move))
+			printf(" ponder %s\n", move_str_algebraic(str, &ponder_move));
+		else
+			putchar('\n');
+		undo_move(pos, &best_move);
+	}
+	if (move)
 		*move = best_move;
 
 	return eval;

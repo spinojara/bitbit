@@ -23,10 +23,9 @@
 #include "move.h"
 #include "movegen.h"
 #include "interface.h"
-#include "interrupt.h"
 
 uint64_t perft(struct position *pos, int depth, int verbose) {
-	if (depth <= 0 || interrupt)
+	if (depth <= 0)
 		return 0;
 
 	move_t moves[MOVES_MAX];
@@ -48,7 +47,7 @@ uint64_t perft(struct position *pos, int depth, int verbose) {
 			undo_move(pos, move);
 			nodes += count;
 		}
-		if (verbose && !interrupt) {
+		if (verbose) {
 			print_move(move);
 			printf(": %" PRIu64 "\n", count);
 		}

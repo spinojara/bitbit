@@ -20,6 +20,7 @@
 #include <stdio.h>
 
 #include "util.h"
+#include "option.h"
 
 void time_init(struct position *pos, struct timeinfo *ti) {
 	if (!ti)
@@ -48,10 +49,16 @@ void time_init(struct position *pos, struct timeinfo *ti) {
 
 	ti->optimal = time_left / ti->movestogo;
 	ti->maximal = 0.8 * ti->etime[ti->us];
+
+	if (option_ponder) {
+		int them = other_color(ti->us);
+		time_left = ti->etime[them] + ti->movestogo * ti->einc[them];
+		ti->optimal += min(ti->optimal / 4, time_left / (2 * ti->movestogo));
+	}
 }
 
 int stop_searching(struct timeinfo *ti, move_t best_move) {
-	if (!ti)
+	if (atomic_load_explicit(&uciponder, memory_order_relaxed) || !ti)
 		return 0;
 
 	if (!move_compare(ti->best_move, best_move))
@@ -64,6 +71,7 @@ int stop_searching(struct timeinfo *ti, move_t best_move) {
 	double margin = 1.2;
 	double instability = 0.8 + 2.0 * ti->best_move_changes;
 
-	return ti->stop_on_time && (time_since(ti) >= ti->maximal ||
-		time_since(ti) * margin >= ti->optimal * instability);
+	timepoint_t t;
+	return ti->stop_on_time && ((t = time_since(ti)) >= ti->maximal ||
+		t * margin >= ti->optimal * instability);
 }

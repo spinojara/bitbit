@@ -17,11 +17,17 @@
 #ifndef SEARCH_H
 #define SEARCH_H
 
+#include <stdatomic.h>
+
 #include "position.h"
 #include "move.h"
 #include "interface.h"
 #include "transposition.h"
 #include "evaluate.h"
+
+extern volatile atomic_int ucistop;
+extern volatile atomic_int ucigo;
+extern volatile atomic_int uciponder;
 
 typedef int64_t timepoint_t;
 
