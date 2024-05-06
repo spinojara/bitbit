@@ -74,6 +74,43 @@ void print_pv(struct position *pos, move_t *pv_move, int ply) {
 	undo_move(pos, pv_move);
 }
 
+void print_info(struct position *pos, struct searchinfo *si, int depth, int32_t eval, int bound) {
+	timepoint_t tp = time_since(si->ti);
+	printf("info depth %d seldepth %d ", depth, si->sel_depth);
+	printf("score ");
+	if (eval >= VALUE_MATE_IN_MAX_PLY)
+		printf("mate %d", (VALUE_MATE - eval + 1) / 2);
+	else if (eval <= -VALUE_MATE_IN_MAX_PLY)
+		printf("mate %d", (-VALUE_MATE - eval) / 2);
+	else
+		printf("cp %d", eval);
+	if (bound == BOUND_LOWER)
+		printf(" lowerbound");
+	else if (bound == BOUND_UPPER)
+		printf(" upperbound");
+	printf(" nodes %" PRIu64 " time %" PRId64 " ", si->nodes, tp / TPPERMS);
+	if (tp > 0)
+		printf("nps %" PRIu64 " ", (uint64_t)((double)TPPERSEC * si->nodes / tp));
+	if (tp >= TPPERSEC)
+		printf("hashfull %d ", hashfull(si->tt));
+	printf("pv");
+	print_pv(pos, si->pv[0], 0);
+	printf("\n");
+}
+
+void print_bestmove(struct position *pos, move_t best_move, move_t ponder_move) {
+	char str[6];
+	printf("bestmove %s", move_str_algebraic(str, &best_move));
+	do_move(pos, &best_move);
+	struct pstate pstate;
+	pstate_init(pos, &pstate);
+	if (pseudo_legal(pos, &pstate, &ponder_move) && legal(pos, &pstate, &ponder_move))
+		printf(" ponder %s\n", move_str_algebraic(str, &ponder_move));
+	else
+		putchar('\n');
+	undo_move(pos, &best_move);
+}
+
 static inline void store_killer_move(const move_t *move, int ply, move_t killers[][2]) {
 	assert(0 <= ply && ply < PLY_MAX);
 	assert(*move);
@@ -182,7 +219,7 @@ int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, s
 		return 0;
 	if (ply >= PLY_MAX)
 		return evaluate(pos);
-	if ((si->nodes & (0x1000 - 1)) == 0 && check_time(si->ti))
+	if ((check_time(si) || atomic_load_explicit(&ucistop, memory_order_relaxed)) && si->done_depth)
 		si->interrupt = 1;
 
 	if (si->sel_depth < ply)
@@ -285,7 +322,7 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 		return 0;
 	if (ply >= PLY_MAX)
 		return evaluate(pos);
-	if (((si->nodes & (0x1000 - 1)) == 0 && check_time(si->ti)) || atomic_load_explicit(&ucistop, memory_order_relaxed))
+	if ((check_time(si) || atomic_load_explicit(&ucistop, memory_order_relaxed)) && si->done_depth)
 		si->interrupt = 1;
 
 	if (si->sel_depth < ply)
@@ -605,34 +642,46 @@ skip_pruning:;
 	return best_eval;
 }
 
-int32_t aspiration_window(struct position *pos, int depth, int32_t last, struct searchinfo *si, struct searchstack *ss) {
-	int32_t evaluation = VALUE_NONE;
+int32_t aspiration_window(struct position *pos, int depth, int verbose, int32_t last, struct searchinfo *si, struct searchstack *ss) {
+	int32_t eval = VALUE_NONE;
 	int32_t delta = 25 + last * last / 16384;
 	int32_t alpha = max(last - delta, -VALUE_MATE);
 	int32_t beta = min(last + delta, VALUE_MATE);
 
-	while (!si->interrupt) {
-		evaluation = negamax(pos, depth, 0, alpha, beta, 0, si, ss);
+	while (1) {
+		eval = negamax(pos, depth, 0, alpha, beta, 0, si, ss);
+		if (si->interrupt)
+			break;
 
-		if (evaluation <= alpha) {
+		int bound = 0;
+		if (eval <= alpha) {
+			eval = alpha;
+			bound = BOUND_UPPER;
 			alpha = max(alpha - delta, -VALUE_MATE);
 			beta = (alpha + 3 * beta) / 4;
 		}
-		else if (evaluation >= beta) {
+		else if (eval >= beta) {
+			eval = beta;
+			bound = BOUND_LOWER;
 			beta = min(beta + delta, VALUE_MATE);
 		}
 		else {
-			return evaluation;
+			return eval;
 		}
+
+		if (verbose)
+			print_info(pos, si, depth, eval, bound);
 
 		delta += delta / 3;
 	}
-	return evaluation;
+	return eval;
 }
 
-int32_t search(struct position *pos, int depth, int verbose, struct timeinfo *ti, move_t *move, struct transpositiontable *tt, struct history *history, int iterative) {
+int32_t search(struct position *pos, int depth, int verbose, struct timeinfo *ti, move_t move[2], struct transpositiontable *tt, struct history *history, int iterative) {
 	assert(option_history == (history != NULL));
-	depth = min(depth, PLY_MAX);
+	if (depth <= 0)
+		depth = PLY_MAX;
+	depth = min(depth, PLY_MAX / 2);
 
 	struct searchinfo si = { 0 };
 	si.ti = ti;
@@ -643,21 +692,12 @@ int32_t search(struct position *pos, int depth, int verbose, struct timeinfo *ti
 
 	time_init(pos, si.ti);
 
-	char str[8];
 	int32_t eval = VALUE_NONE;
 
 	refresh_accumulator(pos, 0);
 	refresh_accumulator(pos, 1);
 	refresh_endgame_key(pos);
 	refresh_zobrist_key(pos);
-
-	if (depth == 0) {
-		eval = evaluate(pos);
-		if (verbose)
-			printf("info depth 0 score cp %d\n", eval);
-		ucigo = 0;
-		return eval;
-	}
 
 	move_t best_move = 0, ponder_move = 0;
 	for (int d = iterative ? 1 : depth; d <= depth; d++) {
@@ -668,7 +708,7 @@ int32_t search(struct position *pos, int depth, int verbose, struct timeinfo *ti
 		if (d <= 5 || !iterative)
 			eval = negamax(pos, d, 0, -VALUE_MATE, VALUE_MATE, 0, &si, ss + 1);
 		else
-			eval = aspiration_window(pos, d, eval, &si, ss + 1);
+			eval = aspiration_window(pos, d, verbose, eval, &si, ss + 1);
 
 		/* 16 elo.
 		 * Use move even from a partial and interrupted search.
@@ -679,27 +719,11 @@ int32_t search(struct position *pos, int depth, int verbose, struct timeinfo *ti
 		if (si.interrupt)
 			break;
 
-		timepoint_t tp = time_since(si.ti);
-		if (verbose) {
-			printf("info depth %d ", d);
-			if (history)
-				printf("seldepth %d ", si.sel_depth);
-			printf("score ");
-			if (eval >= VALUE_MATE_IN_MAX_PLY)
-				printf("mate %d", (VALUE_MATE - eval + 1) / 2);
-			else if (eval <= -VALUE_MATE_IN_MAX_PLY)
-				printf("mate %d", (-VALUE_MATE - eval) / 2);
-			else
-				printf("cp %d", eval);
-			printf(" nodes %" PRIu64 " time %" PRId64 " ", si.nodes, tp / TPPERMS);
-			if (tp > 0)
-				printf("nps %" PRIu64 " ", (uint64_t)((double)TPPERSEC * si.nodes / tp));
-			if (tp >= TPPERSEC)
-				printf("hashfull %d ", hashfull(tt));
-			printf("pv");
-			print_pv(pos, si.pv[0], 0);
-			printf("\n");
-		}
+		si.done_depth = d;
+
+		if (verbose)
+			print_info(pos, &si, d, eval, 0);
+
 		if (stop_searching(si.ti, best_move))
 			break;
 	}
@@ -709,19 +733,10 @@ int32_t search(struct position *pos, int depth, int verbose, struct timeinfo *ti
 	 */
 	while (atomic_load_explicit(&uciponder, memory_order_relaxed));
 
-	if (verbose) {
-		printf("bestmove %s", move_str_algebraic(str, &best_move));
-		do_move(pos, &best_move);
-		struct pstate pstate;
-		pstate_init(pos, &pstate);
-		if (pseudo_legal(pos, &pstate, &ponder_move) && legal(pos, &pstate, &ponder_move))
-			printf(" ponder %s\n", move_str_algebraic(str, &ponder_move));
-		else
-			putchar('\n');
-		undo_move(pos, &best_move);
+	if (move) {
+		move[0] = best_move;
+		move[1] = ponder_move;
 	}
-	if (move)
-		*move = best_move;
 
 	return eval;
 }

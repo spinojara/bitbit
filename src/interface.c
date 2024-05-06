@@ -257,7 +257,7 @@ int interface_eval(int argc, char **argv) {
 int interface_go(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
-	int depth = 255;
+	int depth = -1;
 	struct timeinfo ti = { 0 };
 	for (int i = 1; i < argc; i++) {
 		if (i < argc - 1) {
@@ -429,19 +429,6 @@ error:
 	exit(2);
 }
 
-int is_allowed(const char *arg) {
-	if (!atomic_load_explicit(&uciponder, memory_order_relaxed) && !strcmp(arg, "ponderhit"))
-		return 0;
-
-	if (!atomic_load_explicit(&ucigo, memory_order_relaxed))
-		return 1;
-
-	if (!strcmp(arg, "stop") || !strcmp(arg, "ponderhit"))
-		return 1;
-
-	return 0;
-}
-
 int parse(int margc, char **margv) {
 	char line[LINESIZE];
 	int ret = -1;
@@ -450,10 +437,8 @@ int parse(int margc, char **margv) {
 
 	parse_line(&argc, argv, margc, margv, line);
 
-	if (argc && !is_allowed(argv[0])) {
-		fprintf(stderr, "error: %s: illegal command\n", argv[0]);
+	if (argc && !is_allowed(argv[0]))
 		return DONE;
-	}
 
 	if (argc) {
 		const struct command *f = NULL;

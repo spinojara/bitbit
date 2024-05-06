@@ -16,6 +16,8 @@
 
 #include "thread.h"
 
+#include <string.h>
+
 #include <pthread.h>
 
 #include "search.h"
@@ -30,6 +32,27 @@ struct threadinfo {
 	struct transpositiontable *tt;
 	struct history *history;
 };
+
+int is_allowed(const char *arg) {
+	pthread_mutex_lock(&uci);
+	if (!atomic_load_explicit(&uciponder, memory_order_relaxed) && !strcmp(arg, "ponderhit")) {
+		pthread_mutex_unlock(&uci);
+		return 0;
+	}
+
+	if (!atomic_load_explicit(&ucigo, memory_order_relaxed)) {
+		pthread_mutex_unlock(&uci);
+		return 1;
+	}
+
+	if (!strcmp(arg, "stop") || !strcmp(arg, "ponderhit")) {
+		pthread_mutex_unlock(&uci);
+		return 1;
+	}
+
+	pthread_mutex_unlock(&uci);
+	return 0;
+}
 
 void search_stop(void) {
 	pthread_mutex_lock(&uci);
@@ -54,11 +77,13 @@ void *search_thread(void *arg) {
 	struct transpositiontable *tt = tdi->tt;
 	struct history *history = tdi->history;
 	free(arg);
-	search(pos, depth, 1, &ti, NULL, tt, history, 1);
+	move_t move[2];
+	search(pos, depth, 1, &ti, move, tt, history, 1);
 	pthread_mutex_lock(&uci);
 	ucistop = 0;
 	ucigo = 0;
 	uciponder = 0;
+	print_bestmove(pos, move[0], move[1]);
 	pthread_mutex_unlock(&uci);
 	return NULL;
 }

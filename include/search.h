@@ -50,14 +50,16 @@ struct searchinfo {
 	struct transpositiontable *tt;
 	struct history *history;
 
-	int root_depth, sel_depth;
+	int root_depth, sel_depth, done_depth;
 
 	int interrupt;
 
 	struct timeinfo *ti;
 };
 
-int32_t search(struct position *pos, int depth, int verbose, struct timeinfo *ti, move_t *move, struct transpositiontable *tt, struct history *history, int iterative);
+int32_t search(struct position *pos, int depth, int verbose, struct timeinfo *ti, move_t move[2], struct transpositiontable *tt, struct history *history, int iterative);
+
+void print_bestmove(struct position *pos, move_t best_move, move_t ponder_move);
 
 void search_init(void);
 

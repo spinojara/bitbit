@@ -67,7 +67,7 @@ void time_init(struct position *pos, struct timeinfo *ti) {
 }
 
 int stop_searching(struct timeinfo *ti, move_t best_move) {
-	if (atomic_load_explicit(&uciponder, memory_order_relaxed) || !ti)
+	if (!ti || !ti->stop_on_time || atomic_load_explicit(&uciponder, memory_order_relaxed))
 		return 0;
 
 	if (!move_compare(ti->best_move, best_move))
@@ -81,8 +81,8 @@ int stop_searching(struct timeinfo *ti, move_t best_move) {
 	double instability = 0.8 + 2.0 * ti->best_move_changes;
 
 	timepoint_t t;
-	return ti->stop_on_time && ((t = time_since(ti)) >= ti->maximal ||
-		t * margin >= ti->optimal * instability);
+	return (t = time_since(ti)) >= ti->maximal ||
+		t * margin >= ti->optimal * instability;
 }
 
 timepoint_t time_now(void) {

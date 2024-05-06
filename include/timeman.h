@@ -66,12 +66,15 @@ static inline timepoint_t time_since(const struct timeinfo *ti) {
 	return time_now() - ti->start;
 }
 
-static inline int check_time(const struct timeinfo *ti) {
-	if (atomic_load_explicit(&uciponder, memory_order_relaxed) || !ti)
-		return 0;
-	if (ti->stop_on_time && time_since(ti) >= ti->maximal)
-		return 1;
-	return 0;
+/* We should check at least a couple of times per millisecond.
+ * We are usually above 1 million nps. Checking every 256 nodes
+ * means we check every 256 / 1000000 = 0.000512 s = 0.256 ms.
+ * 0x100 = 256.
+ */
+static inline int check_time(const struct searchinfo *si) {
+	return !(si->nodes & (0x100 - 1)) && si->ti &&
+		time_since(si->ti) >= si->ti->maximal && si->ti->stop_on_time &&
+		!atomic_load_explicit(&uciponder, memory_order_relaxed);
 }
 
 #endif

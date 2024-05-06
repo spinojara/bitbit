@@ -240,22 +240,22 @@ void *worker(void *arg) {
 	move_t moves[MOVES_MAX];
 	int *random_move = malloc(random_move_ply * sizeof(*random_move));
 	random_move_flags(random_move, &seed);
-	move_t move;
+	move_t move[2];
 	int16_t eval;
 
 	unsigned int gen_fens = 0;
 	int drawn_score_count = 0;
 	while (1) {
-		move = 0;
+		move[0] = 0;
 		/* Maybe randomly vary depth. */
 		int depth_now = depth;
-		eval = search(&pos, depth_now, 0, NULL, &move, tt, &h, 0);
+		eval = search(&pos, depth_now, 0, NULL, move, tt, &h, 0);
 
 		/* Check for fens that we dont want to write. */
-		int skip = is_capture(&pos, &move) || generate_checkers(&pos, pos.turn) ||
-			move_flag(&move) || position_already_written(&pos) || !bernoulli(exp(-pos.halfmove / 8.0), &seed);
+		int skip = is_capture(&pos, move) || generate_checkers(&pos, pos.turn) ||
+			move_flag(move) || position_already_written(&pos) || !bernoulli(exp(-pos.halfmove / 8.0), &seed);
 
-		int stop_game = !move || (eval != VALUE_NONE && abs(eval) > eval_limit) ||
+		int stop_game = !move[0] || (eval != VALUE_NONE && abs(eval) > eval_limit) ||
 				pos.halfmove >= 100 || h.ply >= max_ply ||
 				repetition(&pos, &h, 0, 2) || probable_long_draw(&h, eval, &drawn_score_count) ||
 				endgame_probe(&pos);
@@ -291,7 +291,7 @@ void *worker(void *arg) {
 
 		if (!stop_game && h.ply < random_move_ply && random_move[h.ply]) {
 			movegen_legal(&pos, moves, MOVETYPE_ALL);
-			move = moves[xorshift64(&seed) % move_count(moves)];
+			move[0] = moves[xorshift64(&seed) % move_count(moves)];
 		}
 
 		if (stop_game) {
@@ -320,12 +320,12 @@ void *worker(void *arg) {
 			continue;
 		}
 		else {
-			history_next(&pos, &h, move);
+			history_next(&pos, &h, move[0]);
 		}
 
 		if (h.ply == min_ply) {
-			move = 0;
-			if (!write(fd, &move, 2)) {
+			move[0] = 0;
+			if (!write(fd, move, 2)) {
 				fprintf(stderr, "WRITE ERROR ON THREAD %d\n", threadn);
 				exit(1);
 			}
@@ -341,7 +341,7 @@ void *worker(void *arg) {
 				exit(1);
 			}
 			gen_fens++;
-			if (!write(fd, &move, 2)) {
+			if (!write(fd, move, 2)) {
 				fprintf(stderr, "WRITE ERROR ON THREAD %d\n", threadn);
 				exit(1);
 			}
