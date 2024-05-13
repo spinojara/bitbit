@@ -1,12 +1,8 @@
 - Add checks for malloc.
 - Aspiration window should probably return VALUE_NONE if interrupted.
-- Use offsetof instead of partialposition.
 - Try pgo (profile guided optimization).
 - Profile code using gcov, operf and gprof.
-- Create unit tests for important, and error prone, parts.
 - Add colored weakness detection to classical evaluation.
-- Make transposition table partly associative.
-- Improve time management.
 
 VERY IMPORTANT
 - Verify that the new transposition table works correctly.
