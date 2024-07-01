@@ -37,6 +37,8 @@ uint64_t gxorshift64(void);
 uint64_t xorshift64(uint64_t *seed);
 int gbernoulli(double p);
 int bernoulli(double p, uint64_t *seed);
+double guniform(void);
+double uniform(uint64_t *seed);
 
 static inline int max(int a, int b) { return a < b ? b : a; }
 static inline int min(int a, int b) { return a < b ? a : b; }

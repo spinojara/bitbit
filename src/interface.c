@@ -350,6 +350,10 @@ int interface_setoption(int argc, char **argv) {
 		if (!MiB)
 			option_transposition = 0;
 	}
+	else if (argc >= 5 && !strcasecmp(argv[2], "elo")) {
+		unsigned elo = strint(argv[4]);
+		option_elo = elo;
+	}
 	else {
 		setoption(argc, argv, &tt);
 	}

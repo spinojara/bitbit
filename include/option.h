@@ -25,6 +25,7 @@ extern int option_history;
 extern int option_endgame;
 extern int option_damp;
 extern int option_ponder;
+extern int option_elo;
 
 void print_options(void);
 

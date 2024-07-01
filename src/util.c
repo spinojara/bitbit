@@ -42,6 +42,13 @@ int bernoulli(double p, uint64_t *seed) {
 	const uint64_t max = (uint64_t)1 << 32;
 	return (double)(xorshift64(seed) % max) / max < p;
 }
+double guniform(void) {
+	return uniform(&gseed);
+}
+double uniform(uint64_t *seed) {
+	const uint64_t max = (uint64_t)1 << 32;
+	return (double)(xorshift64(seed) % (max + 1)) / max;
+}
 
 int find_char(const char *s, char c) {
 	for (int i = 0; s[i]; i++)
