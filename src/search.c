@@ -120,6 +120,9 @@ static inline void store_killer_move(const move_t *move, int ply, move_t killers
 	killers[ply][0] = *move;
 }
 
+/* This option was configured for bitbit 1.2 when
+ * bitbit was currently sitting at 3093 Elo ccrl.
+ */
 static inline int elo_skip(int32_t ply) {
 	if (!option_elo)
 		return 0;
