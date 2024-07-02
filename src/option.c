@@ -30,7 +30,7 @@
 #define OPTION_ENDGAME       1
 #define OPTION_DAMP          1
 #define OPTION_PONDER        0
-#define OPTION_ELO           1
+#define OPTION_ELO           0
 
 int option_nnue          = OPTION_NNUE;
 int option_transposition = OPTION_TRANSPOSITION;

@@ -123,7 +123,8 @@ static inline void store_killer_move(const move_t *move, int ply, move_t killers
 static inline int elo_skip(int32_t ply) {
 	if (!option_elo)
 		return 0;
-	return guniform() > exp(-0.001 * ply) + eps;
+	const double k = (3073 - option_elo) / 19748.0;
+	return guniform() > exp(-k * ply) + eps;
 }
 
 /* Suppose that h_0 is the original value of history.
