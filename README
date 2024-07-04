@@ -6,11 +6,11 @@ Building bitbit
 ---------------
 Run
 
-	make
+	$ make
 
 in the root directory. Make can be run with the following additional variables
 
-	make TT={n} SIMD={simd} NNUE={file}
+	$ make TT={n} SIMD={simd} NNUE={file}
 
 to specify a transposition table size, available SIMD instructions and an NNUE
 filename respectively. TT={n} gives a transposition table of n MiB. The default
