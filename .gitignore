@@ -1,18 +1,14 @@
-# ignore everything
 /*
+**/.*
 
-# include
 !.gitignore
 !README
 !TODO
-!LICENSE
+!COPYING
 !Makefile
 
 !src
 src/nnueweights.c
-src/.*
 !include
-include/.*
-!doc/src
 !etc
 !man
