@@ -383,6 +383,8 @@ int fen_is_ok(int argc, char **argv) {
 	int counter_mem = counter + 16;
 	int current_line = 0;
 
+	int king1 = 0, king2 = 0;
+
 	int mailbox[64];
 	for (i = 0; i < 64; i++)
 		mailbox[i] = 0;
@@ -391,7 +393,11 @@ int fen_is_ok(int argc, char **argv) {
 			return 0;
 		switch (argv[0][i]) {
 		case 'K':
+			king1++;
+			/* fallthrough */
 		case 'k':
+			king2++;
+			/* fallthrough */
 		case 'P':
 		case 'N':
 		case 'B':
@@ -424,7 +430,7 @@ int fen_is_ok(int argc, char **argv) {
 		}
 	}
 
-	if (strlen(argv[1]) != 1 || (argv[1][0] != 'w' && argv[1][0] != 'b'))
+	if (strlen(argv[1]) != 1 || (argv[1][0] != 'w' && argv[1][0] != 'b') || king1 != 1 || king2 != 2)
 		return 0;
 
 	for (i = 0; i < strlen(argv[2]); i++) {
