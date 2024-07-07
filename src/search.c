@@ -59,7 +59,11 @@ static int reductions[PLY_MAX] = { 0 };
 static inline int late_move_reduction(int index, int depth) {
 	assert(0 <= depth && depth < PLY_MAX);
 	int r = reductions[index] * reductions[depth];
+#if 1
 	return (r >> 10) + 1;
+#else
+	return ((r + 512) >> 10) + 1;
+#endif
 }
 
 void print_pv(struct position *pos, move_t *pv_move, int ply) {
@@ -88,7 +92,7 @@ void print_info(struct position *pos, struct searchinfo *si, int depth, int32_t 
 		printf(" lowerbound");
 	else if (bound == BOUND_UPPER)
 		printf(" upperbound");
-	printf(" nodes %" PRIu64 " time %" PRId64 " ", si->nodes, tp / TPPERMS);
+	printf(" nodes %" PRIu64 " time %" PRId64 " ", si->nodes, tp / TPPERMS + 1);
 	if (tp > 0)
 		printf("nps %" PRIu64 " ", (uint64_t)((double)TPPERSEC * si->nodes / tp));
 	if (tp >= TPPERSEC)
@@ -338,6 +342,12 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	if (si->sel_depth < ply)
 		si->sel_depth = ply;
 
+	struct pstate pstate;
+	pstate_init(pos, &pstate);
+	
+	if (depth <= 0 && !pstate.checkers)
+		return quiescence(pos, ply, alpha, beta, si, &pstate, ss);
+
 	history_store(pos, si->history, ply);
 
 	int32_t eval = VALUE_NONE, best_eval = -VALUE_INFINITE;
@@ -346,7 +356,7 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	assert(0 <= depth && depth < PLY_MAX);
 
 	const int root_node = (ply == 0);
-	const int pv_node = (beta != alpha + 1);
+	const int pv_node = (beta != alpha + 1) || root_node;
 
 	assert(!(pv_node && cut_node));
 
@@ -379,17 +389,11 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	if (!pv_node && tthit && normal_eval(tteval) && ttdepth >= depth && ttbound & (tteval >= beta ? BOUND_LOWER : BOUND_UPPER))
 		return tteval;
 
-	struct pstate pstate;
-	pstate_init(pos, &pstate);
-	
 	move_t ttmove = pseudo_legal(pos, &pstate, &ttmove_unsafe) ? ttmove_unsafe : 0;
 	int ttcapture = ttmove ? is_capture(pos, &ttmove) : 0;
 
 	if (pstate.checkers)
 		goto skip_pruning;
-
-	if (depth == 0)
-		return quiescence(pos, ply, alpha, beta, si, &pstate, ss);
 
 #if 1
 	int32_t estimated_eval = ss->static_eval = evaluate(pos);
@@ -407,8 +411,13 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 #endif
 #if 1
 	/* Futility pruning (60+-8 Elo). */
+#if 1
 	if (!pv_node && depth <= 6 && estimated_eval - 200 * depth > beta)
 		return estimated_eval;
+#else
+	if (!pv_node && depth <= 12 && estimated_eval - (100 - 40 * (cut_node && !tthit)) * depth + 70 > beta)
+		return beta;
+#endif
 #endif
 #if 1
 	/* Null move pruning (43+-6 Elo). */
@@ -451,11 +460,18 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	}
 #endif
 #if 0
-	if (pv_node && depth >= 3 && !ttmove)
-        	depth -= 2;
+	if (pv_node && !ttmove)
+		depth = max(depth - 3 + (tthit && ttdepth >= depth), 0);
+#endif
 
+#if 0
+	if (!root_node && depth <= 0)
+		return quiescence(pos, ply, alpha, beta, si, &pstate, ss);
+#endif
+
+#if 0
 	if (cut_node && depth >= 8 && !ttmove)
-        	depth--;
+		depth -= 2;
 #endif
 
 skip_pruning:;
@@ -480,14 +496,19 @@ skip_pruning:;
 
 		move_index++;
 
+		int r = late_move_reduction(move_index, depth);
+
+#if 1
 		if (!root_node) {
 			/* Late move pruning (85+-5 Elo). */
 			if (move_index >= 4 + depth * depth)
 				mp.prune = 1;
 		}
+#endif
 
 		/* Extensions. */
 		int extensions = 0;
+#if 1
 		if (ply < 2 * si->root_depth) {
 #if 1
 			if (!root_node && depth >= 5 && move_compare(ttmove, move) && !excluded_move && ttbound & BOUND_LOWER && ttdepth >= depth - 3) {
@@ -538,6 +559,7 @@ skip_pruning:;
 			}
 #endif
 		}
+#endif
 
 		do_zobrist_key(pos, &move);
 		do_endgame_key(pos, &move);
@@ -552,17 +574,27 @@ skip_pruning:;
 
 		/* Late move reductions. */
 		int full_depth_search = 0;
+#if 1
 		if (new_depth >= 2 && !pstate.checkers && move_index >= (1 + pv_node) && (!move_capture(&move) || cut_node)) {
-			int r = late_move_reduction(move_index, depth);
+#else
+		if (depth >= 2 && !pstate.checkers && move_index >= (1 + pv_node) && (!move_capture(&move) || cut_node)) {
+#endif
 
+
+#if 1
 			if (pv_node)
 				r -= 1;
 			if (!move_capture(&move) && ttcapture)
 				r += 1;
 			if (cut_node && !move_compare(move, si->killers[ply][0]) && !move_compare(move, si->killers[ply][1]))
 				r += 1;
+#endif
 
+#if 1
 			int lmr_depth = clamp(new_depth - r, 1, new_depth);
+#else
+			int lmr_depth = new_depth;
+#endif
 			/* Since this is a child of either a pv, all, or cut node and it is not the first
 			 * child it is an expected cut node. Instead of searching in [-beta, -alpha], we
 			 * expect there to be a cut and it should suffice to search in [-alpha - 1, -alpha].
