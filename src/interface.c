@@ -60,7 +60,6 @@ int interface_flip(int argc, char **argv);
 int interface_mirror(int argc, char **argv);
 int interface_perft(int argc, char **argv);
 int interface_position(int argc, char **argv);
-int interface_stop(int argc, char **argv);
 int interface_eval(int argc, char **argv);
 int interface_go(int argc, char **argv);
 int interface_tt(int argc, char **argv);
@@ -410,7 +409,6 @@ void parse_line(int *argc, char *argv[ARGSIZE], int margc, char **margv, char *l
 			}
 			break;
 		case EOF:
-			/* fallthrough */
 		case '\0':
 			line[i++] = '\0';
 			break;
