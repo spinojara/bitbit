@@ -19,6 +19,7 @@
 
 #include <math.h>
 #include <stdlib.h>
+#include <errno.h>
 #include <string.h>
 #include <time.h>
 #include <getopt.h>
@@ -1585,8 +1586,9 @@ int main(int argc, char **argv) {
 			error = 1;
 		}
 		if (!error) {
+			errno = 0;
 			*ptr = strtod(optarg, &endptr);
-			if (*endptr != '\0' || *ptr < 1.0e-11)
+			if (*endptr != '\0' || errno || *ptr < 1.0e-11)
 				return 4;
 		}
 	}
