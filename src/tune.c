@@ -41,8 +41,6 @@ int option_damp          = OPTION_DAMP;
 int option_ponder        = OPTION_PONDER;
 int option_elo           = OPTION_ELO;
 
-void print_options(void) {}
-
 enum {
 	TYPE_INT,
 	TYPE_DOUBLE,
@@ -66,7 +64,12 @@ int rdi(double f) {
 	return (int)(f < 0.0 ? f - 0.5 : f + 0.5);
 }
 
-/* setoption tune <name> value <value> */
+void print_options(void) {
+	for (size_t i = 0; i < SIZE(tunes); i++)
+		printf("option name %s type string\n", tunes[i].name);
+}
+
+/* setoption name <name> value <value> */
 void setoption(int argc, char **argv, struct transpositiontable *tt) {
 	UNUSED(tt);
 	if (argc < 5)
