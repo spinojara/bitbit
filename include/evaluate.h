@@ -21,7 +21,7 @@
 
 #include "position.h"
 
-#define PLY_MAX 256
+#define PLY_MAX 127
 #define VALUE_NONE 0x7FFF
 #define VALUE_INFINITE 0x7FFE
 #define VALUE_MATE 0x7F00

@@ -43,7 +43,7 @@ enum {
 struct transposition {
 	uint64_t zobrist_key;
 	int16_t eval;
-	uint8_t depth;
+	int8_t depth;
 	uint8_t bound;
 	uint16_t move;
 	uint8_t flags;
