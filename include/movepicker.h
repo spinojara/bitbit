@@ -34,15 +34,16 @@ enum {
 	STAGE_COUNTER_MOVE,
 	STAGE_GENQUIET,
 	STAGE_SORTQUIET,
-	STAGE_QUIET,
-	STAGE_BAD,
+	STAGE_GOODQUIET,
+	STAGE_BADNONQUIET,
+	STAGE_BADQUIET,
 	STAGE_DONE,
 };
 
 struct movepicker {
 	struct position *pos;
 	const struct pstate *pstate;
-	move_t moves[MOVES_MAX], *move, *bad, *end;
+	move_t moves[MOVES_MAX], *move, *badnonquiet, *end;
 	int64_t evals[MOVES_MAX], *eval;
 	int stage;
 	int quiescence;

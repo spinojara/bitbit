@@ -48,15 +48,15 @@ void sort_moves(struct movepicker *mp) {
 	if (!mp->move[0])
 		return;
 	for (int i = 1; mp->move[i]; i++) {
-		int64_t eval = mp->eval[i];
 		move_t move = mp->move[i];
+		int64_t eval = mp->eval[i];
 		int j;
 		for (j = i - 1; j >= 0 && mp->eval[j] < eval; j--) {
-			mp->eval[j + 1] = mp->eval[j];
 			mp->move[j + 1] = mp->move[j];
+			mp->eval[j + 1] = mp->eval[j];
 		}
-		mp->eval[j + 1] = eval;
 		mp->move[j + 1] = move;
+		mp->eval[j + 1] = eval;
 	}
 }
 
@@ -170,8 +170,8 @@ move_t next_move(struct movepicker *mp) {
 			return 0;
 		/* First put all the bad leftovers at the end. */
 		for (i = 0; mp->move[i]; i++)
-			mp->bad[-i] = mp->move[i];
-		mp->bad[-i] = 0;
+			mp->badnonquiet[-i] = mp->move[i];
+		mp->badnonquiet[-i] = 0;
 
 		mp->stage++;
 		mp->end = movegen(mp->pos, mp->pstate, mp->move, MOVETYPE_QUIET);
@@ -182,14 +182,20 @@ move_t next_move(struct movepicker *mp) {
 		sort_moves(mp);
 		mp->stage++;
 		/* fallthrough */
-	case STAGE_QUIET:
-		if (*mp->move && !mp->prune)
-			return *mp->move++;
+	case STAGE_GOODQUIET:
+		/* Change this constant. */
+		if (*mp->move && !mp->prune && *mp->eval > -8000)
+			return mp->eval++, *mp->move++;
 		mp->stage++;
 		/* fallthrough */
-	case STAGE_BAD:
-		if (*mp->bad)
-			return *mp->bad--;
+	case STAGE_BADNONQUIET:
+		if (*mp->badnonquiet)
+			return *mp->badnonquiet--;
+		mp->stage++;
+		/* fallthrough */
+	case STAGE_BADQUIET:
+		if (*mp->move && !mp->prune)
+			return *mp->move++;
 		mp->stage++;
 		/* fallthrough */
 	case STAGE_DONE:
@@ -207,8 +213,7 @@ void movepicker_init(struct movepicker *mp, int quiescence, struct position *pos
 	mp->move = mp->moves;
 	mp->move[0] = 0;
 	mp->eval = mp->evals;
-	mp->eval[0] = 0;
-	mp->bad = &mp->moves[MOVES_MAX - 1];
+	mp->badnonquiet = &mp->moves[MOVES_MAX - 1];
 
 	mp->pos = pos;
 	mp->pstate = pstate;
