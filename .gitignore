@@ -12,3 +12,4 @@ src/nnueweights.c
 !include
 !etc
 !man
+!doc
