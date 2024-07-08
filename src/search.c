@@ -327,7 +327,7 @@ int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, s
 		best_eval = -VALUE_MATE + ply;
 	assert(-VALUE_INFINITE < best_eval && best_eval < VALUE_INFINITE);
 	int bound = (best_eval >= beta) ? BOUND_LOWER : (pv_node && best_move) ? BOUND_EXACT : BOUND_UPPER;
-	transposition_store(si->tt, pos, adjust_score_mate_store(best_eval, ply), 0, bound, best_move);
+	transposition_store(si->tt, pos, adjust_score_mate_store(best_eval, ply), -1, bound, best_move);
 	return best_eval;
 }
 
@@ -353,11 +353,11 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	int32_t eval = VALUE_NONE, best_eval = -VALUE_INFINITE;
 	depth = max(0, min(depth, PLY_MAX - 1));
 
-	assert(0 <= depth && depth < PLY_MAX);
-
 	const int root_node = (ply == 0);
-	const int pv_node = (beta != alpha + 1) || root_node;
+	const int pv_node = (beta != alpha + 1);
 
+	/* root_node implies pv_node. */
+	assert(!root_node || pv_node);
 	assert(!(pv_node && cut_node));
 
 	if (!root_node) {
@@ -574,7 +574,7 @@ skip_pruning:;
 
 		/* Late move reductions. */
 		int full_depth_search = 0;
-#if 1
+#if 0
 		if (new_depth >= 2 && !pstate.checkers && move_index >= (1 + pv_node) && (!move_capture(&move) || cut_node)) {
 #else
 		if (depth >= 2 && !pstate.checkers && move_index >= (1 + pv_node) && (!move_capture(&move) || cut_node)) {
