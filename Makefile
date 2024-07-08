@@ -174,8 +174,12 @@ dep/%.d: src/%.c Makefile
 install: all
 	$(MKDIR_P) $(DESTDIR)$(BINDIR)
 	$(MKDIR_P) $(DESTDIR)$(MAN6DIR)
-	$(INSTALL) -m 0755 {bitbit,epdbit,pgnbit,texelbit} $(DESTDIR)$(BINDIR)
-	$(INSTALL) -m 0644 man/{bitbit,epdbit,pgnbit,texelbit}.6 $(DESTDIR)$(MAN6DIR)
+	$(INSTALL) -m 0755 bitbit $(DESTDIR)$(BINDIR)
+	$(INSTALL) -m 0644 man/bitbit.6 $(DESTDIR)$(MAN6DIR)
+
+install-everything: everything install
+	$(INSTALL) -m 0755 {epdbit,pgnbit,texelbit} $(DESTDIR)$(BINDIR)
+	$(INSTALL) -m 0644 man/{epdbit,pgnbit,texelbit}.6 $(DESTDIR)$(MAN6DIR)
 
 uninstall:
 	$(RM) -f $(DESTDIR)$(BINDIR)/{bitbit,epdbit,pgnbit,texelbit}
