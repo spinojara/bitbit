@@ -1,0 +1,11 @@
+Building releases
+=================
+Following is a table of binaries and their corresponding make invocation.
+
++--------------------------+----------------------------------------------------+
+| Binary                   | Command                                            |
++--------------------------+----------------------------------------------------+
+| bitbit-x.y-z-x86-64      | make CC=gcc ARCH=-march=x86-64-v2 TT=256           |
+|                          |                                                    |
+| bitbit-x.x-z-x86-64-avx2 | make CC=gcc ARCH=-march=x86-64-v3 TT=256 SIMD=avx2 |
++--------------------------+----------------------------------------------------+
