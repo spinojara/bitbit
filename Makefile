@@ -108,9 +108,10 @@ OBJ_TEXELBIT  = $(patsubst %.c,obj/%.o,$(SRC_TEXELBIT))
 OBJ_BASEBIT   = $(patsubst %.c,obj/%.o,$(SRC_BASEBIT))
 OBJ_BATCHBIT  = $(patsubst %.c,obj/%.o,$(SRC_BATCHBIT))
 OBJ_VISBIT    = $(patsubst %.c,obj/%.o,$(SRC_VISBIT))
+OBJ_TUNEBIT   = $(patsubst %.c,obj/%.o,$(subst option.c,tune.c,$(SRC_BITBIT)))
 
 BIN = bitbit weightbit genbit epdbit histbit pgnbit \
-      texelbit basebit libbatchbit.so libvisbit.so
+      texelbit basebit libbatchbit.so libvisbit.so tunebit
 
 PREFIX = /usr/local
 BINDIR = $(PREFIX)/bin
@@ -142,6 +143,8 @@ basebit: $(OBJ_BASEBIT)
 libbatchbit.so: $(OBJ_BATCHBIT)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 libvisbit.so: $(OBJ_VISBIT)
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+tunebit: $(OBJ_TUNEBIT)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 obj/%.o: src/%.c dep/%.d
