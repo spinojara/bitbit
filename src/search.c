@@ -43,6 +43,16 @@ volatile atomic_int ucistop;
 volatile atomic_int ucigo;
 volatile atomic_int uciponder;
 
+#ifdef TUNE
+#define CONST
+#else
+#define CONST const
+#endif
+
+CONST int razor1 = 100;
+CONST int razor2 = 150;
+CONST int futility = 200;
+
 static int reductions[PLY_MAX] = { 0 };
 
 /* We choose r(x,y)=Clog(x)log(y)+D because it is increasing and concave.
@@ -403,7 +413,7 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 
 #if 1
 	/* Razoring (37+-5 Elo). */
-	if (!pv_node && depth <= 8 && estimated_eval + 100 + 150 * depth * depth < alpha) {
+	if (!pv_node && depth <= 8 && estimated_eval + razor1 + razor2 * depth * depth < alpha) {
 		eval = quiescence(pos, ply, alpha - 1, alpha, si, &pstate, ss);
 		if (eval < alpha)
 			return eval;
@@ -412,7 +422,7 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 #if 1
 	/* Futility pruning (60+-8 Elo). */
 #if 1
-	if (!pv_node && depth <= 6 && estimated_eval - 200 * depth > beta)
+	if (!pv_node && depth <= 6 && estimated_eval - futility * depth > beta)
 		return estimated_eval;
 #else
 	if (!pv_node && depth <= 12 && estimated_eval - (100 - 40 * (cut_node && !tthit)) * depth + 70 > beta)

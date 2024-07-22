@@ -23,6 +23,9 @@
 #include "util.h"
 #include "transposition.h"
 #include "interface.h"
+#if TUNE
+#include "tune.h"
+#endif
 
 #define OPTION_NNUE          1
 #define OPTION_TRANSPOSITION 1
@@ -47,9 +50,15 @@ void print_options(void) {
 	printf("option name Usehash type check default %s\n", OPTION_TRANSPOSITION ? "true" : "false");
 	printf("option name Ponder type check default %s\n", OPTION_PONDER ? "true" : "false");
 	printf("option name Elo type spin default %d min 0 max %u\n", OPTION_ELO, INT_MAX);
+#if TUNE
+	print_tune();
+#endif
 }
 
 void setoption(int argc, char **argv, struct transpositiontable *tt) {
+#if TUNE
+	settune(argc, argv);
+#endif
 	if (argc < 3)
 		return;
 

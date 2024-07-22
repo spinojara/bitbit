@@ -108,7 +108,7 @@ OBJ_TEXELBIT  = $(patsubst %.c,obj/%.o,$(SRC_TEXELBIT))
 OBJ_BASEBIT   = $(patsubst %.c,obj/%.o,$(SRC_BASEBIT))
 OBJ_BATCHBIT  = $(patsubst %.c,obj/%.o,$(SRC_BATCHBIT))
 OBJ_VISBIT    = $(patsubst %.c,obj/%.o,$(SRC_VISBIT))
-OBJ_TUNEBIT   = $(patsubst %.c,obj/%.o,$(subst option.c,tune.c,$(SRC_BITBIT)))
+OBJ_TUNEBIT   = $(patsubst %.c,obj/%.o,$(subst search,tune-search,$(subst option,tune-option,$(SRC_BITBIT) tune.c)))
 
 BIN = bitbit weightbit genbit epdbit histbit pgnbit \
       texelbit basebit libbatchbit.so libvisbit.so tunebit
@@ -156,6 +156,9 @@ obj/pic-%.o: src/%.c dep/%.d
 obj/texel-%.o: src/%.c dep/%.d
 	@$(MKDIR_P) obj
 	$(CC) $(CFLAGS) -DTRACE -c $< -o $@
+obj/tune-%.o: src/%.c dep/%.d
+	@$(MKDIR_P) obj
+	$(CC) $(CFLAGS) -DTUNE -c $< -o $@
 
 src/nnueweights.c: weightbit Makefile
 	./weightbit $(NNUE)
@@ -165,7 +168,7 @@ src/nnueweights.c: weightbit Makefile
 obj/thread.o:                 CFLAGS += -pthread
 obj/genbit.o:                 CFLAGS += $(DSYZYGY) -pthread
 obj/init.o obj/interface.o:   CFLAGS += -DVERSION=$(VERSION)
-obj/interface.o obj/option.o: CFLAGS += -DTT=$(TT)
+obj/interface.o obj/option.o obj/tune-option.o: CFLAGS += -DTT=$(TT)
 
 dep/nnueweights.d:
 	@$(MKDIR_P) dep

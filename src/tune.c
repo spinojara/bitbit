@@ -22,24 +22,7 @@
 #include <strings.h>
 #include <string.h>
 
-#include "transposition.h"
 #include "util.h"
-
-#define OPTION_NNUE          1
-#define OPTION_TRANSPOSITION 1
-#define OPTION_HISTORY       1
-#define OPTION_ENDGAME       1
-#define OPTION_DAMP          1
-#define OPTION_PONDER        0
-#define OPTION_ELO           0
-
-int option_nnue          = OPTION_NNUE;
-int option_transposition = OPTION_TRANSPOSITION;
-int option_history       = OPTION_HISTORY;
-int option_endgame       = OPTION_ENDGAME;
-int option_damp          = OPTION_DAMP;
-int option_ponder        = OPTION_PONDER;
-int option_elo           = OPTION_ELO;
 
 enum {
 	TYPE_INT,
@@ -52,26 +35,29 @@ struct tune {
 	void *p;
 };
 
+#undef TUNE
 #define TUNE(x, y, z) { .name = x, .type = y, .p = z }
 
-int test_option;
+extern int razor1;
+extern int razor2;
+extern int futility;
 
 struct tune tunes[] = {
-	TUNE("test_option", TYPE_INT, &test_option),
+	TUNE("razor1", TYPE_INT, &razor1),
+	TUNE("razor2", TYPE_INT, &razor2),
+	TUNE("futility", TYPE_INT, &futility),
 };
 
 int rdi(double f) {
 	return (int)(f < 0.0 ? f - 0.5 : f + 0.5);
 }
 
-void print_options(void) {
+void print_tune(void) {
 	for (size_t i = 0; i < SIZE(tunes); i++)
-		printf("option name %s type string\n", tunes[i].name);
+		printf("option name %s type string default %lf\n", tunes[i].name, tunes[i].type == TYPE_INT ? *(int *)tunes[i].p : *(double *)tunes[i].p);
 }
 
-/* setoption name <name> value <value> */
-void setoption(int argc, char **argv, struct transpositiontable *tt) {
-	UNUSED(tt);
+void settune(int argc, char **argv) {
 	if (argc < 5)
 		return;
 
@@ -81,9 +67,9 @@ void setoption(int argc, char **argv, struct transpositiontable *tt) {
 
 	if (*endptr != '\0' || errno)
 		return;
-	
+
 	for (size_t i = 0; i < SIZE(tunes); i++) {
-		struct tune *tune = &tune[i];
+		struct tune *tune = &tunes[i];
 		if (strcasecmp(tune->name, argv[2]))
 			continue;
 
