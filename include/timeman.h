@@ -31,8 +31,8 @@ extern volatile atomic_int uciponder;
 /* timepoint_t is given in nanoseconds. */
 typedef int64_t timepoint_t;
 
-#define TPPERSEC 1000000000l
-#define TPPERMS     1000000l
+#define TPPERSEC 1000000000ll
+#define TPPERMS     1000000ll
 
 struct timeinfo {
 	int stop_on_time;
