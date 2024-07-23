@@ -81,7 +81,7 @@ struct batch *next_batch(void *ptr) {
 		if (skip)
 			continue;
 
-		batch->eval[batch->actual_size] = (float)FV_SCALE * eval / (127 * 64);
+		batch->eval[batch->actual_size] = ((float)(FV_SCALE * eval)) / (127 * 64);
 		int index, square;
 		const int king_square[] = { orient_horizontal(BLACK, ctz(data->pos->piece[BLACK][KING])), orient_horizontal(WHITE, ctz(data->pos->piece[WHITE][KING])) };
 		for (int piece = PAWN; piece < KING; piece++) {
@@ -125,8 +125,10 @@ void *batch_open(const char *s, size_t requested_size, double random_skip) {
 
 	startpos(data->pos);
 	data->f = fopen(s, "rb");
-	if (!data->f)
+	if (!data->f) {
 		printf("Failed to open data file.\n");
+		exit(1);
+	}
 	fseek(data->f, 0, SEEK_SET);
 	return data;
 }
