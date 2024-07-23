@@ -93,8 +93,8 @@ SRC_PGNBIT    = pgnbit.c $(SRC)
 SRC_TEXELBIT  = texelbit.c $(subst evaluate,texel-evaluate,\
 	        $(subst pawn,texel-pawn,$(SRC)))
 SRC_BASEBIT   = basebit.c $(SRC_BASE)
-SRC_BATCHBIT  = $(addprefix pic-,batchbit.c $(SRC_BASE))
-SRC_VISBIT    = pic-visbit.c pic-util.c
+SRC_BATCHBIT  = $(addprefix pic-,batchbit.c $(SRC_BASE) io.c)
+SRC_VISBIT    = pic-visbit.c pic-util.c pic-io.c
 
 DEP = $(sort $(patsubst %.c,dep/%.d,$(SRC_ALL)))
 
@@ -115,6 +115,7 @@ BIN = bitbit weightbit genbit epdbit histbit pgnbit \
 
 PREFIX = /usr/local
 BINDIR = $(PREFIX)/bin
+LIBDIR = $(PREFIX)/lib64
 MANPREFIX = $(PREFIX)/share
 MANDIR = $(MANPREFIX)/man
 MAN6DIR = $(MANDIR)/man6
@@ -185,6 +186,8 @@ install: all
 
 install-everything: everything install
 	$(INSTALL) -m 0755 {epdbit,pgnbit,texelbit} $(DESTDIR)$(BINDIR)
+	$(MKDIR_P) $(DESTDIR)$(LIBDIR)
+	$(INSTALL) -m 0755 lib{batchbit,visbit}.so $(DESTDIR)$(LIBDIR)
 	$(INSTALL) -m 0644 man/{epdbit,pgnbit,texelbit}.6 $(DESTDIR)$(MAN6DIR)
 
 uninstall:
