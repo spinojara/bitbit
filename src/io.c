@@ -166,15 +166,15 @@ int read_move(FILE *f, move_t *move) {
 }
 
 int write_eval(FILE *f, int32_t eval) {
-	return write_uintx(f, eval, 4);
+	return write_uintx(f, eval, 2);
 }
 
 int read_eval(FILE *f, int32_t *eval) {
 	union {
-		int32_t eval;
-		uint32_t ueval;
+		int16_t eval;
+		uint16_t ueval;
 	} t;
-	if (read_uintx(f, &t.ueval, 4))
+	if (read_uintx(f, &t.ueval, 2))
 		return 1;
 
 	*eval = t.eval;

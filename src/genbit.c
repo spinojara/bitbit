@@ -175,32 +175,32 @@ void write_thread(FILE *f, struct threadinfo *threadinfo, int *curr_fens, int fe
 	struct position pos;
 
 	while (1) {
-		if (!read(fd, &move, 2)) {
+		if (read(fd, &move, 2) != 2) {
 			fprintf(stderr, "MAIN THREAD READ ERROR\n");
 			exit(1);
 		}
 		if (move == synchronize_threads) {
 			break;
 		}
-		if (!write_move(f, move)) {
+		if (write_move(f, move)) {
 			fprintf(stderr, "MAIN THREAD WRITE ERROR\n");
 			exit(1);
 		}
 		if (!move) {
-			if (!read(fd, &pos, offsetof(struct position, accumulation))) {
+			if (read(fd, &pos, offsetof(struct position, accumulation)) != offsetof(struct position, accumulation)) {
 				fprintf(stderr, "MAIN THREAD READ ERROR\n");
 				exit(1);
 			}
-			if (!write_position(f, &pos)) {
+			if (write_position(f, &pos)) {
 				fprintf(stderr, "MAIN THREAD WRITE ERROR\n");
 				exit(1);
 			}
 		}
-		if (!read(fd, &eval, sizeof(eval))) {
+		if (read(fd, &eval, sizeof(eval)) != sizeof(eval)) {
 			fprintf(stderr, "MAIN THREAD READ ERROR\n");
 			exit(1);
 		}
-		if (!write_eval(f, eval)) {
+		if (write_eval(f, eval)) {
 			fprintf(stderr, "MAIN THREAD WRITE ERROR\n");
 			exit(1);
 		}
@@ -308,9 +308,9 @@ void *worker(void *arg) {
 				}
 
 				atomic_fetch_add(&threadinfo->available, gen_fens);
-				if (atomic_load(&stop))
-					break;
 			}
+			if (atomic_load(&stop))
+				break;
 			gen_fens = 0;
 
 			startpos(&pos);
@@ -464,7 +464,9 @@ int main(int argc, char **argv) {
 		printf("Tablebases found for up to %d pieces.\n", TB_LARGEST);
 	}
 	else {
+#endif
 		printf("Running without tablebases.\n");
+#ifdef SYZYGY
 	}
 #endif
 
