@@ -99,7 +99,8 @@ void report(int curr_fens, int fens) {
 		timepoint_t tp = time_now();
 		time_t total = fens * (time(NULL) - start) / curr_fens;
 		time_t done = start + total;
-		printf("\r%d%% %d fens at %ld fens/second. Eta is %s", 100 * curr_fens / fens, curr_fens, tp - last_time ? 1000000l * (curr_fens - last_fens) / (tp - last_time) : 0,
+		printf("\r%d%% %d fens at %lld fens/second. Eta is %s", 100 * curr_fens / fens, curr_fens,
+				tp - last_time ? TPPERSEC * (curr_fens - last_fens) / (tp - last_time) : 0,
 				ctime(&done));
 		fflush(stdout);
 		last_time = tp;
