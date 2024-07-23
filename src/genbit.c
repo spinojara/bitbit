@@ -279,13 +279,14 @@ void *worker(void *arg) {
 			unsigned ep = 0;
 			int turn = pos.turn;
 			unsigned ret = tb_probe_wdl(white, black, kings, queens, rooks, bishops, knights, pawns, rule50, castling, ep, turn);
-			if (ret == TB_DRAW) {
+			if (ret == TB_DRAW)
 				eval = 0;
-			}
+#if 0
 			else if (ret == TB_WIN)
 				eval = VALUE_WIN;
 			else if (ret == TB_LOSS)
 				eval = -VALUE_WIN;
+#endif
 		}
 #endif
 
