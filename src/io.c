@@ -116,6 +116,9 @@ int read_position(FILE *f, struct position *pos) {
 	pos->piece[WHITE][KING] = bitboard(buf[0]);
 	pos->piece[BLACK][KING] = bitboard(buf[1]);
 
+	pos->mailbox[buf[0]] = WHITE_KING;
+	pos->mailbox[buf[1]] = BLACK_KING;
+
 	for (int index = 2; index <= 62; ) {
 		int cpiece = buf[index++];
 		if (!cpiece)
