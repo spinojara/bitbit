@@ -79,7 +79,7 @@ const move_t synchronize_threads = M(a1, b4, 0, 0);
 
 struct threadinfo {
 	int threadn;
-	atomic_int available;
+	atomic_long available;
 	int depth;
 	uint64_t seed;
 	int fd[2];
@@ -92,15 +92,15 @@ pthread_mutex_t lock;
 atomic_int stop = 0;
 
 timepoint_t last_time;
-int last_fens = 0;
-int dot_last_fens = 0;
-void report(int curr_fens, int fens) {
+long last_fens = 0;
+long dot_last_fens = 0;
+void report(long curr_fens, long fens) {
 	if (curr_fens != last_fens && curr_fens % report_every == 0) {
 		timepoint_t tp = time_now();
 		time_t total = fens * (time(NULL) - start) / curr_fens;
 		time_t done = start + total;
-		printf("\r%d%% %d fens at %lld fens/second. Eta is %s", 100 * curr_fens / fens, curr_fens,
-				tp - last_time ? TPPERSEC * (curr_fens - last_fens) / (tp - last_time) : 0,
+		printf("\r%lld%% %ld fens at %ld fens/second. Eta is %s", 100ll * curr_fens / fens, curr_fens,
+				(long)(tp - last_time ? (double)TPPERSEC * (curr_fens - last_fens) / (tp - last_time) : 0),
 				ctime(&done));
 		fflush(stdout);
 		last_time = tp;
@@ -108,7 +108,7 @@ void report(int curr_fens, int fens) {
 	}
 }
 
-void report_dot(int curr_fens) {
+void report_dot(long curr_fens) {
 	if (curr_fens != dot_last_fens && curr_fens % report_dot_every == 0) {
 		if (curr_fens % (dots_per_clear * report_dot_every) == 0)
 			printf("\33[2K\r");
@@ -156,7 +156,7 @@ struct threadinfo *choose_thread(struct threadinfo *threadinfo, int threads) {
 	int ret;
 	int64_t most = -1;
 	for (ret = 0, thread = 0; thread < threads; thread++) {
-		int available = atomic_load(&threadinfo[thread].available);
+		long available = atomic_load(&threadinfo[thread].available);
 		assert(available >= 0);
 		if (available >= most) {
 			most = available;
@@ -166,12 +166,12 @@ struct threadinfo *choose_thread(struct threadinfo *threadinfo, int threads) {
 	return most > 0 ? &threadinfo[ret] : NULL;
 }
 
-void write_thread(FILE *f, struct threadinfo *threadinfo, int *curr_fens, int fens) {
+void write_thread(FILE *f, struct threadinfo *threadinfo, long *curr_fens, long fens) {
 	int fd = threadinfo->fd[0];
 	int16_t eval;
 	move_t move = 0;
-	int gen_fens = 0;
-	int written_fens = 0;
+	long gen_fens = 0;
+	long written_fens = 0;
 
 	struct position pos;
 
@@ -244,7 +244,7 @@ void *worker(void *arg) {
 	move_t move[2];
 	int16_t eval;
 
-	unsigned int gen_fens = 0;
+	unsigned long gen_fens = 0;
 	int drawn_score_count = 0;
 	while (1) {
 		move[0] = 0;
@@ -508,7 +508,7 @@ int main(int argc, char **argv) {
 	}
 
 	last_time = time_now();
-	int curr_fens = 0;
+	long curr_fens = 0;
 	while (curr_fens < fens) {
 		struct threadinfo *ti = choose_thread(threadinfo, threads);
 		if (ti)
