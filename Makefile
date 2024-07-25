@@ -185,14 +185,15 @@ install: all
 	$(INSTALL) -m 0644 man/bitbit.6 $(DESTDIR)$(MAN6DIR)
 
 install-everything: everything install
-	$(INSTALL) -m 0755 {epdbit,pgnbit,texelbit} $(DESTDIR)$(BINDIR)
+	$(INSTALL) -m 0755 {epd,pgn,texel}bit $(DESTDIR)$(BINDIR)
 	$(MKDIR_P) $(DESTDIR)$(LIBDIR)
-	$(INSTALL) -m 0755 lib{batchbit,visbit}.so $(DESTDIR)$(LIBDIR)
-	$(INSTALL) -m 0644 man/{epdbit,pgnbit,texelbit}.6 $(DESTDIR)$(MAN6DIR)
+	$(INSTALL) -m 0755 lib{batch,vis}bit.so $(DESTDIR)$(LIBDIR)
+	$(INSTALL) -m 0644 man/{epd,pgn,texel}bit.6 $(DESTDIR)$(MAN6DIR)
 
 uninstall:
-	$(RM) -f $(DESTDIR)$(BINDIR)/{bitbit,epdbit,pgnbit,texelbit}
-	$(RM) -f $(DESTDIR)$(MAN6DIR)/{bitbit,epdbit,pgnbit,texelbit}.6
+	$(RM) -f $(DESTDIR)$(BINDIR)/{bit,epd,pgn,texel}bit
+	$(RM) -f $(DESTDIR)$(MAN6DIR)/{bit,epd,pgn,texel}bit.6
+	$(RM) -f $(DESTDIR)$(LIBDIR)/lib{batch,vis}bit.so
 
 clean:
 	$(RM) -rf obj dep
