@@ -100,6 +100,7 @@ void bench(struct transpositiontable *tt) {
 	for (unsigned i = 0; i < SIZE(fens); i++) {
 		const char *fen = fens[i];
 		pos_from_fen2(&pos, fen);
+		transposition_clear(tt);
 		printf("position fen %s\n", fen);
 		printf("go depth %d\n", depth);
 		timepoint_t before = time_now();
