@@ -14,6 +14,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#ifndef BENCH_H
+#define BENCH_H
+
 #include "transposition.h"
 
 void bench(struct transpositiontable *tt);
+
+#endif
