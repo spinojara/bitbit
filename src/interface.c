@@ -39,6 +39,7 @@
 #include "history.h"
 #include "option.h"
 #include "thread.h"
+#include "bench.h"
 
 #define LINESIZE 16384
 #define ARGSIZE 4096
@@ -66,6 +67,7 @@ int interface_tt(int argc, char **argv);
 int interface_isready(int argc, char **argv);
 int interface_uci(int argc, char **argv);
 int interface_ucinewgame(int argc, char **argv);
+int interface_bench(int argc, char **argv);
 int interface_setoption(int argc, char **argv);
 
 #define COMMAND(name) { #name, interface_##name }
@@ -90,6 +92,7 @@ static const struct command commands[] = {
 	COMMAND(uci),
 	COMMAND(setoption),
 	COMMAND(ucinewgame),
+	COMMAND(bench),
 };
 
 struct position pos;
@@ -366,6 +369,13 @@ int interface_ucinewgame(int argc, char **argv) {
 	startkey(&pos);
 	history_reset(&pos, &history);
 	transposition_clear(&tt);
+	return DONE;
+}
+
+int interface_bench(int argc, char **argv) {
+	UNUSED(argc);
+	UNUSED(argv);
+	bench(&tt);
 	return DONE;
 }
 
