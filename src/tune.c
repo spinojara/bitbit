@@ -41,11 +41,19 @@ struct tune {
 extern int razor1;
 extern int razor2;
 extern int futility;
+extern double maximal;
+extern double margin;
+extern double instability1;
+extern double instability2;
 
 struct tune tunes[] = {
 	TUNE("razor1", TYPE_INT, &razor1),
 	TUNE("razor2", TYPE_INT, &razor2),
 	TUNE("futility", TYPE_INT, &futility),
+	TUNE("maximal", TYPE_DOUBLE, &maximal),
+	TUNE("margin", TYPE_DOUBLE, &margin),
+	TUNE("instability1", TYPE_DOUBLE, &instability1),
+	TUNE("instability2", TYPE_DOUBLE, &instability2),
 };
 
 int rdi(double f) {

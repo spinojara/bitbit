@@ -30,6 +30,17 @@
 #define CLOCK CLOCK_MONOTONIC
 #endif
 
+#ifdef TUNE
+#define CONST
+#else
+#define CONST const
+#endif
+
+CONST double maximal = 0.8;
+CONST double margin = 1.2;
+CONST double instability1 = 0.8;
+CONST double instability2 = 2.0;
+
 void time_init(struct position *pos, struct timeinfo *ti) {
 	if (!ti)
 		return;
@@ -57,7 +68,7 @@ void time_init(struct position *pos, struct timeinfo *ti) {
 	timepoint_t time_left = ti->etime[ti->us] + ti->movestogo * ti->einc[ti->us];
 
 	ti->optimal = time_left / ti->movestogo;
-	ti->maximal = 0.8 * ti->etime[ti->us];
+	ti->maximal = maximal * ti->etime[ti->us];
 
 	if (option_ponder) {
 		int them = other_color(ti->us);
@@ -77,8 +88,7 @@ int stop_searching(struct timeinfo *ti, move_t best_move) {
 
 	ti->best_move = best_move;
 
-	double margin = 1.2;
-	double instability = 0.8 + 2.0 * ti->best_move_changes;
+	double instability = instability1 + instability2 * ti->best_move_changes;
 
 	timepoint_t t;
 	return (t = time_since(ti)) >= ti->maximal ||

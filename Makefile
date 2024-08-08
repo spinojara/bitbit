@@ -84,7 +84,7 @@ SRC_ALL       = $(SRC_BASE) $(SRC) $(SRC_BIBIT) $(SRC_GENBIT) \
 	        $(SRC_EPDBIT) $(SRC_HISTBIT) $(SRC_PGNBIT) \
 	        $(SRC_TEXELBIT) $(SRC_BASEBIT) $(SRC_BATCHBIT) \
 	        $(SRC_VISBIT) $(SRC_WNNUEBIT)
-SRC_BITBIT    = bitbit.c interface.c thread.c $(SRC)
+SRC_BITBIT    = bitbit.c interface.c thread.c bench.c $(SRC)
 SRC_WEIGHTBIT = weightbit.c util.c io.c
 SRC_GENBIT    = genbit.c $(SRC)
 SRC_EPDBIT    = epdbit.c $(SRC)
@@ -108,7 +108,9 @@ OBJ_TEXELBIT  = $(patsubst %.c,obj/%.o,$(SRC_TEXELBIT))
 OBJ_BASEBIT   = $(patsubst %.c,obj/%.o,$(SRC_BASEBIT))
 OBJ_BATCHBIT  = $(patsubst %.c,obj/%.o,$(SRC_BATCHBIT))
 OBJ_VISBIT    = $(patsubst %.c,obj/%.o,$(SRC_VISBIT))
-OBJ_TUNEBIT   = $(patsubst %.c,obj/%.o,$(subst search,tune-search,$(subst option,tune-option,$(SRC_BITBIT) tune.c)))
+OBJ_TUNEBIT   = $(patsubst %.c,obj/%.o,$(subst search,tune-search,\
+		$(subst option,tune-option,$(subst timeman,tune-timeman,\
+		$(SRC_BITBIT) tune.c))))
 
 BIN = bitbit weightbit genbit epdbit histbit pgnbit \
       texelbit basebit libbatchbit.so libvisbit.so tunebit
