@@ -385,60 +385,60 @@ int next_char(int argc, char **argv) {
 
 	int c = argindex < argc ? argv[argindex][charindex++] : getchar();
 
-	switch (c) {
-	case '\r':
-	case '\n':
-	case ',':
-		return '\0';
-	case '\0':
+	if (c == '\0') {
 		if (argindex < argc) {
 			argindex++;
 			charindex = 0;
 		}
 		return argindex == argc ? '\0' : ' ';
-	case ' ':
-		return ' ';
-	default:
-		return c;
 	}
+	return c;
 }
 
 void parse_line(int *argc, char *argv[ARGSIZE], int margc, char **margv, char *line) {
 	*argc = 0;
 	int next = 1;
+	int escape = 0;
 
 	int i;
 	int c = 1;
-	for (i = 0; i < LINESIZE && c && c != EOF; ) {
+	for (i = 0; i < LINESIZE && c; ) {
 		c = next_char(margc, margv);
-		switch (c) {
-		case ' ':
-			if (!next) {
+		if (c == '\r')
+			continue;
+		if (c == '\0' || c == EOF || (!escape && (c == '\n' || c == ',' || c == ' '))) {
+			escape = 0;
+			if (c == ' ' && !next) {
 				line[i++] = '\0';
 				next = 1;
 			}
-			break;
-		case EOF:
-		case '\0':
-			line[i++] = '\0';
-			break;
-		default:
-			if (next) {
-				if (*argc == ARGSIZE)
-					goto error;
-				argv[(*argc)++] = &line[i];
-				next = 0;
+			else {
+				c = line[i++] = '\0';
 			}
-			line[i++] = c;
-			break;
+		}
+		else {
+			if (c == '\\' && !escape) {
+				escape = 1;
+			}
+			else if (c == '\n' && escape) {
+				escape = 0;
+			}
+			else {
+				escape = 0;
+				if (next) {
+					if (*argc == ARGSIZE)
+						break;
+					argv[(*argc)++] = &line[i];
+					next = 0;
+				}
+				line[i++] = c;
+			}
 		}
 	}
-	if (i == LINESIZE)
-		goto error;
-	return;
-error:
-	fprintf(stderr, "error: too many arguments\n");
-	exit(2);
+	if (i == LINESIZE || *argc == ARGSIZE) {
+		line[LINESIZE - 1] = '\0';
+		fprintf(stderr, "error: too many arguments\n");
+	}
 }
 
 int parse(int margc, char **margv) {
