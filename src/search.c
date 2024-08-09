@@ -105,8 +105,11 @@ void print_info(struct position *pos, struct searchinfo *si, int depth, int32_t 
 	printf(" nodes %" PRIu64 " time %" PRId64 " ", si->nodes, tp / TPPERMS + 1);
 	if (tp > 0)
 		printf("nps %" PRIu64 " ", (uint64_t)((double)TPPERSEC * si->nodes / tp));
-	if (tp >= TPPERSEC)
-		printf("hashfull %d ", hashfull(si->tt));
+	if (tp >= TPPERSEC && option_transposition) {
+		int hf = hashfull(si->tt);
+		if (hf >= 0)
+			printf("hashfull %d ", hf);
+	}
 	printf("pv");
 	print_pv(pos, si->pv[0], 0);
 	printf("\n");
