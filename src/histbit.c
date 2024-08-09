@@ -113,7 +113,11 @@ int main(int argc, char **argv) {
 		if (eval == VALUE_NONE)
 			continue;
 
-#if 1
+		if (gxorshift64() % 521 == 0) {
+			print_fen(&pos);
+		}
+
+#if 0
 		const int material_values[] = { 0, 1, 3, 3, 5, 9, 0 };
 		int material[2] = { 0 };
 		for (int color = 0; color < 2; color++) {

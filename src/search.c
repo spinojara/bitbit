@@ -222,7 +222,7 @@ static inline int32_t evaluate(const struct position *pos) {
 	/* NNUE. */
 	if (option_nnue) {
 		int32_t psqt = abs(pos->psqtaccumulation[WHITE] - pos->psqtaccumulation[BLACK]) / 2;
-		if (psqt > 350)
+		if (psqt > 350 && !option_pure_nnue)
 			classical = 1;
 		else
 			evaluation = evaluate_accumulator(pos);

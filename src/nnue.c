@@ -30,6 +30,7 @@
 #include "move.h"
 #include "position.h"
 #include "option.h"
+#include "io.h"
 
 #ifdef AVX2
 #include <immintrin.h>
@@ -82,19 +83,50 @@ struct data {
 	alignas(64) int8_t hidden2_out[32];
 };
 
-extern alignas(64) ft_weight_t ft_weights[K_HALF_DIMENSIONS * FT_IN_DIMS];
-extern alignas(64) ft_bias_t ft_biases[K_HALF_DIMENSIONS];
+extern alignas(64) ft_weight_t builtin_ft_weights[K_HALF_DIMENSIONS * FT_IN_DIMS];
+extern alignas(64) ft_bias_t builtin_ft_biases[K_HALF_DIMENSIONS];
 
-extern alignas(64) ft_weight_t psqt_weights[1 * FT_IN_DIMS];
+extern alignas(64) ft_weight_t builtin_psqt_weights[1 * FT_IN_DIMS];
 
-extern alignas(64) weight_t hidden1_weights[32 * FT_OUT_DIMS];
-extern alignas(64) bias_t hidden1_biases[32];
+extern alignas(64) weight_t builtin_hidden1_weights[32 * FT_OUT_DIMS];
+extern alignas(64) bias_t builtin_hidden1_biases[32];
 
-extern alignas(64) weight_t hidden2_weights[32 * 32];
-extern alignas(64) bias_t hidden2_biases[32];
+extern alignas(64) weight_t builtin_hidden2_weights[32 * 32];
+extern alignas(64) bias_t builtin_hidden2_biases[32];
 
-extern alignas(64) weight_t output_weights[1 * 32];
-extern alignas(64) bias_t output_biases[1];
+extern alignas(64) weight_t builtin_output_weights[1 * 32];
+extern alignas(64) bias_t builtin_output_biases[1];
+
+
+
+alignas(64) ft_weight_t file_ft_weights[K_HALF_DIMENSIONS * FT_IN_DIMS];
+alignas(64) ft_bias_t file_ft_biases[K_HALF_DIMENSIONS];
+
+alignas(64) ft_weight_t file_psqt_weights[1 * FT_IN_DIMS];
+
+alignas(64) weight_t file_hidden1_weights[32 * FT_OUT_DIMS];
+alignas(64) bias_t file_hidden1_biases[32];
+
+alignas(64) weight_t file_hidden2_weights[32 * 32];
+alignas(64) bias_t file_hidden2_biases[32];
+
+alignas(64) weight_t file_output_weights[1 * 32];
+alignas(64) bias_t file_output_biases[1];
+
+
+const ft_weight_t *ft_weights = builtin_ft_weights;
+const ft_bias_t *ft_biases = builtin_ft_biases;
+
+const ft_weight_t *psqt_weights = builtin_psqt_weights;
+
+const weight_t *hidden1_weights = builtin_hidden1_weights;
+const bias_t *hidden1_biases = builtin_hidden1_biases;
+
+const weight_t *hidden2_weights = builtin_hidden2_weights;
+const bias_t *hidden2_biases = builtin_hidden2_biases;
+
+const weight_t *output_weights = builtin_output_weights;
+const bias_t *output_biases = builtin_output_biases;
 
 static inline void transform(const struct position *pos, const int16_t accumulation[2][K_HALF_DIMENSIONS], int8_t *output) {
 #if defined(AVX2) || defined(SSE4)
@@ -558,7 +590,108 @@ void permute_weights(weight_t *weights) {
 }
 
 void nnue_init(void) {
-	permute_biases(hidden1_biases);
-	permute_biases(hidden2_biases);
-	permute_weights(hidden1_weights);
+	permute_biases(builtin_hidden1_biases);
+	permute_biases(builtin_hidden2_biases);
+	permute_weights(builtin_hidden1_weights);
+}
+
+int read_hidden_weights(weight_t *w, int dims, FILE *f) {
+	for (int i = 0; i < 32; i++)
+		for (int j = 0; j < dims; j++)
+			if (read_uintx(f, &w[j * 32 + i], sizeof(*w)))
+				return 1;
+	return 0;
+}
+
+int read_output_weights(weight_t *w, FILE *f) {
+	for (int i = 0; i < 32; i++)
+		if (read_uintx(f, &w[i], sizeof(*w)))
+			return 1;
+	return 0;
+}
+
+void file_nnue(const char *path) {
+	FILE *f = fopen(path, "rb");
+	if (!f) {
+		fprintf(stderr, "error: failed to open file %s\n", path);
+		goto error;
+	}
+	int i, j;
+	for (i = 0; i < K_HALF_DIMENSIONS; i++) {
+		if (read_uintx(f, &file_ft_biases[i], sizeof(*file_ft_biases)))
+			goto error;
+		assert(file_ft_biases[i] == builtin_ft_biases[i]);
+	}
+	read_uintx(f, NULL, sizeof(*file_ft_biases));
+	for (i = j = 0; i < (K_HALF_DIMENSIONS + 1) * FT_IN_DIMS; i++) {
+		if ((i + 1) % 257 == 0) {
+			if (read_uintx(f, &file_psqt_weights[j++], sizeof(*file_psqt_weights)))
+				goto error;
+		}
+		else {
+			if (read_uintx(f, &file_ft_weights[i - j], sizeof(*file_ft_weights)))
+				goto error;
+		}
+	}
+
+	for (i = 0; i < 32; i++)
+		if (read_uintx(f, &file_hidden1_biases[i], sizeof(*file_hidden1_biases)))
+			goto error;
+	if (read_hidden_weights(file_hidden1_weights, FT_OUT_DIMS, f))
+		goto error;
+
+	for (i = 0; i < 32; i++)
+		if (read_uintx(f, &file_hidden2_biases[i], sizeof(*file_hidden2_biases)))
+			goto error;
+	if (read_hidden_weights(file_hidden2_weights, 32, f))
+		goto error;
+
+	if (read_uintx(f, file_output_biases, sizeof(*file_output_biases)))
+		goto error;
+	if (read_output_weights(file_output_weights, f))
+		goto error;
+
+	permute_biases(file_hidden1_biases);
+	permute_biases(file_hidden2_biases);
+	permute_weights(file_hidden1_weights);
+	if (fclose(f))
+		goto error;
+
+	ft_weights = file_ft_weights;
+	ft_biases = file_ft_biases;
+
+	psqt_weights = file_psqt_weights;
+
+	hidden1_weights = file_hidden1_weights;
+	hidden1_biases = file_hidden1_biases;
+
+	hidden2_weights = file_hidden2_weights;
+	hidden2_biases = file_hidden2_biases;
+
+	output_weights = file_output_weights;
+	output_biases = file_output_biases;
+
+	return;
+error:
+	if (f) {
+		fclose(f);
+		fprintf(stderr, "error: failed to read file %s\n", path);
+	}
+	builtin_nnue();
+}
+
+void builtin_nnue(void) {
+	ft_weights = builtin_ft_weights;
+	ft_biases = builtin_ft_biases;
+
+	psqt_weights = builtin_psqt_weights;
+
+	hidden1_weights = builtin_hidden1_weights;
+	hidden1_biases = builtin_hidden1_biases;
+
+	hidden2_weights = builtin_hidden2_weights;
+	hidden2_biases = builtin_hidden2_biases;
+
+	output_weights = builtin_output_weights;
+	output_biases = builtin_output_biases;
 }

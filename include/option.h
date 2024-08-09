@@ -20,6 +20,7 @@
 #include "transposition.h"
 
 extern int option_nnue;
+extern int option_pure_nnue;
 extern int option_transposition;
 extern int option_history;
 extern int option_endgame;

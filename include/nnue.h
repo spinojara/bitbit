@@ -78,4 +78,8 @@ int32_t evaluate_accumulator(const struct position *pos);
 
 void nnue_init(void);
 
+void file_nnue(const char *path);
+
+void builtin_nnue(void);
+
 #endif

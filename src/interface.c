@@ -342,23 +342,7 @@ int interface_uci(int argc, char **argv) {
 int interface_setoption(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
-	if (argc >= 5 && !strcasecmp(argv[2], "hash")) {
-		size_t MiB = strint(argv[4]);
-		transposition_free(&tt);
-		if (transposition_alloc(&tt, MiB * 1024 * 1024)) {
-			fprintf(stderr, "error: failed to allocate transposition table\n");
-			exit(1);
-		}
-		if (!MiB)
-			option_transposition = 0;
-	}
-	else if (argc >= 5 && !strcasecmp(argv[2], "elo")) {
-		unsigned elo = strint(argv[4]);
-		option_elo = elo;
-	}
-	else {
-		setoption(argc, argv, &tt);
-	}
+	setoption(argc, argv, &tt);
 	return DONE;
 }
 
@@ -479,9 +463,14 @@ int parse(int margc, char **margv) {
 void interface_init(void) {
 	startpos(&pos);
 	startkey(&pos);
-	if (transposition_alloc(&tt, TT * 1024 * 1024)) {
+	if (TT <= 0) {
+		tt.size = 0;
+		option_transposition = 0;
+	}
+	else if (transposition_alloc(&tt, TT * 1024 * 1024)) {
 		fprintf(stderr, "error: failed to allocate transposition table\n");
-		exit(1);
+		tt.size = 0;
+		option_transposition = 0;
 	}
 	history_reset(&pos, &history);
 	thread_init();
