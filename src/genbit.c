@@ -67,7 +67,9 @@ int max_ply = 400;
 int draw_ply = 80;
 int draw_eval = 10;
 int eval_limit = 3000;
+#ifdef SYZYGY
 char *syzygy = NULL;
+#endif
 
 const int report_dot_every = 1000;
 const int dots_per_clear = 20;
@@ -369,7 +371,9 @@ int main(int argc, char **argv) {
 		{ "eval-limit",          required_argument, NULL, 'l' },
 		{ "jobs",                required_argument, NULL, 'j' },
 		{ "tt",                  required_argument, NULL, 't' },
+#ifdef SYZYGY
 		{ "syzygy",              required_argument, NULL, 'z' },
+#endif
 	};
 	
 	char *endptr;
@@ -422,9 +426,11 @@ int main(int argc, char **argv) {
 			if (*endptr != '\0')
 				error = 1;
 			break;
+#ifdef SYZYGY
 		case 'z':
 			syzygy = optarg;
 			break;
+#endif
 		default:
 			error = 1;
 			break;
