@@ -43,6 +43,8 @@ static inline move_t *movegen_pawn(const struct position *pos, const struct psta
 	if (type & MOVETYPE_NONQUIET) {
 		if (!(type & MOVETYPE_ESCAPE))
 			targets |= RANK_1 | RANK_8;
+		else
+			targets |= (RANK_1 | RANK_8) & pstate->checkray;
 
 		/* It is okay to add this square to targets already. This square
 		 * can only be reached by our pawns by capturing, not pushing.
