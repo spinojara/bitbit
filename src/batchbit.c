@@ -34,7 +34,7 @@
 uint64_t seed;
 
 struct batch {
-	size_t actual_size;
+	size_t size;
 	int ind_active;
 	int32_t *ind1;
 	int32_t *ind2;
@@ -59,12 +59,12 @@ static inline uint16_t make_index_virtual(int turn, int square, int piece) {
 struct batch *next_batch(void *ptr) {
 	struct data *data = ptr;
 	struct batch *batch = data->batch;
-	batch->actual_size = 0;
+	batch->size = 0;
 	batch->ind_active = 0;
 
 	size_t counter1 = 0, counter2 = 0;
 
-	while (batch->actual_size < data->requested_size) {
+	while (batch->size < data->requested_size) {
 		move_t move = 0;
 		read_move(data->f, &move);
 		if (move)
@@ -74,14 +74,17 @@ struct batch *next_batch(void *ptr) {
 
 		int32_t eval = VALUE_NONE;
 		read_eval(data->f, &eval);
-		if (feof(data->f))
-			break;
+		if (feof(data->f)) {
+			fseek(data->f, 0, SEEK_SET);
+			continue;
+		}
+
 
 		int skip = (eval == VALUE_NONE) || bernoulli(data->random_skip, &seed);
 		if (skip)
 			continue;
 
-		batch->eval[batch->actual_size] = ((float)(FV_SCALE * eval)) / (127 * 64);
+		batch->eval[batch->size] = ((float)(FV_SCALE * eval)) / (127 * 64);
 		int index, square;
 		const int king_square[] = { orient_horizontal(BLACK, ctz(data->pos->piece[BLACK][KING])), orient_horizontal(WHITE, ctz(data->pos->piece[WHITE][KING])) };
 		for (int piece = PAWN; piece < KING; piece++) {
@@ -91,22 +94,22 @@ struct batch *next_batch(void *ptr) {
 					batch->ind_active += 2;
 					square = ctz(b);
 					index = make_index(data->pos->turn, square, colored_piece(piece, turn), king_square[data->pos->turn]);
-					batch->ind1[counter1++] = batch->actual_size;
+					batch->ind1[counter1++] = batch->size;
 					batch->ind1[counter1++] = index;
 					index = make_index(other_color(data->pos->turn), square, colored_piece(piece, turn), king_square[other_color(data->pos->turn)]);
-					batch->ind2[counter2++] = batch->actual_size;
+					batch->ind2[counter2++] = batch->size;
 					batch->ind2[counter2++] = index;
 					index = make_index_virtual(data->pos->turn, square, colored_piece(piece, turn));
-					batch->ind1[counter1++] = batch->actual_size;
+					batch->ind1[counter1++] = batch->size;
 					batch->ind1[counter1++] = index;
 					index = make_index_virtual(other_color(data->pos->turn), square, colored_piece(piece, turn));
-					batch->ind2[counter2++] = batch->actual_size;
+					batch->ind2[counter2++] = batch->size;
 					batch->ind2[counter2++] = index;
 					b = clear_ls1b(b);
 				}
 			}
 		}
-		batch->actual_size++;
+		batch->size++;
 	}
 	return batch;
 }
