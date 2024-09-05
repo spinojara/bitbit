@@ -82,4 +82,6 @@ void file_nnue(const char *path);
 
 void builtin_nnue(void);
 
+void print_nnue_info(void);
+
 #endif

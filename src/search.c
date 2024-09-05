@@ -754,6 +754,9 @@ int32_t search(struct position *pos, int depth, int verbose, struct timeinfo *ti
 	refresh_endgame_key(pos);
 	refresh_zobrist_key(pos);
 
+	if (verbose)
+		print_nnue_info();
+
 	move_t best_move = 0, ponder_move = 0;
 	for (int d = iterative ? 1 : depth; d <= depth; d++) {
 		si.root_depth = d;

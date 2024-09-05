@@ -77,6 +77,9 @@ typedef __m128i vec_t;
 
 #endif
 
+char pathnnue[4096];
+int builtin;
+
 struct data {
 	alignas(64) int8_t ft_out[FT_OUT_DIMS];
 	alignas(64) int8_t hidden1_out[32];
@@ -114,19 +117,19 @@ alignas(64) weight_t file_output_weights[1 * 32];
 alignas(64) bias_t file_output_biases[1];
 
 
-const ft_weight_t *ft_weights = builtin_ft_weights;
-const ft_bias_t *ft_biases = builtin_ft_biases;
+const ft_weight_t *ft_weights;
+const ft_bias_t *ft_biases;
 
-const ft_weight_t *psqt_weights = builtin_psqt_weights;
+const ft_weight_t *psqt_weights;
 
-const weight_t *hidden1_weights = builtin_hidden1_weights;
-const bias_t *hidden1_biases = builtin_hidden1_biases;
+const weight_t *hidden1_weights;
+const bias_t *hidden1_biases;
 
-const weight_t *hidden2_weights = builtin_hidden2_weights;
-const bias_t *hidden2_biases = builtin_hidden2_biases;
+const weight_t *hidden2_weights;
+const bias_t *hidden2_biases;
 
-const weight_t *output_weights = builtin_output_weights;
-const bias_t *output_biases = builtin_output_biases;
+const weight_t *output_weights;
+const bias_t *output_biases;
 
 static inline void transform(const struct position *pos, const int16_t accumulation[2][K_HALF_DIMENSIONS], int8_t *output) {
 #if defined(AVX2) || defined(SSE4)
@@ -593,6 +596,7 @@ void nnue_init(void) {
 	permute_biases(builtin_hidden1_biases);
 	permute_biases(builtin_hidden2_biases);
 	permute_weights(builtin_hidden1_weights);
+	builtin_nnue();
 }
 
 int read_hidden_weights(weight_t *w, int dims, FILE *f) {
@@ -671,6 +675,9 @@ void file_nnue(const char *path) {
 	output_weights = file_output_weights;
 	output_biases = file_output_biases;
 
+	builtin = 0;
+	strncpy(pathnnue, path, sizeof(pathnnue));
+	pathnnue[sizeof(pathnnue) - 1] = '\0';
 	return;
 error:
 	if (f) {
@@ -678,6 +685,22 @@ error:
 		fprintf(stderr, "error: failed to read file %s\n", path);
 	}
 	builtin_nnue();
+}
+
+void print_nnue_info(void) {
+	printf("info string evaluation ");
+	if (option_nnue) {
+		if (option_pure_nnue)
+			printf("pure ");
+		printf("nnue ");
+		if (builtin)
+			printf("built in");
+		else
+			printf("file <%s>", pathnnue);
+	}
+	else
+		printf("classical");
+	printf("\n");
 }
 
 void builtin_nnue(void) {
@@ -694,4 +717,6 @@ void builtin_nnue(void) {
 
 	output_weights = builtin_output_weights;
 	output_biases = builtin_output_biases;
+
+	builtin = 1;
 }
