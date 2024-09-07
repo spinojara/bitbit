@@ -20,6 +20,7 @@
 #include <stdint.h>
 #include <time.h>
 #include <assert.h>
+#include <pthread.h>
 
 #include "position.h"
 #include "util.h"
@@ -41,9 +42,15 @@ struct batch {
 	float *eval;
 };
 
-struct data {
+struct dataloader {
 	size_t requested_size;
 	struct batch *batch;
+	struct batch *prepared;
+
+	int ready;
+	
+	pthread_cond_t cond;
+	pthread_mutex_t mutex;
 
 	struct position *pos;
 	
@@ -56,53 +63,55 @@ static inline uint16_t make_index_virtual(int turn, int square, int piece) {
 	return orient_horizontal(turn, square) + piece_to_index[turn][piece] + PS_END * 64;
 }
 
-struct batch *next_batch(void *ptr) {
-	struct data *data = ptr;
-	struct batch *batch = data->batch;
+void *batch_prepare(void *ptr) {
+	struct dataloader *dataloader = ptr;
+
+	pthread_mutex_lock(&dataloader->mutex);
+
+	struct batch *batch = dataloader->prepared;
 	batch->size = 0;
 	batch->ind_active = 0;
 
 	size_t counter1 = 0, counter2 = 0;
 
-	while (batch->size < data->requested_size) {
+	while (batch->size < dataloader->requested_size) {
 		move_t move = 0;
-		read_move(data->f, &move);
+		read_move(dataloader->f, &move);
 		if (move)
-			do_move(data->pos, &move);
+			do_move(dataloader->pos, &move);
 		else
-			read_position(data->f, data->pos);
+			read_position(dataloader->f, dataloader->pos);
 
 		int32_t eval = VALUE_NONE;
-		read_eval(data->f, &eval);
-		if (feof(data->f)) {
-			fseek(data->f, 0, SEEK_SET);
+		read_eval(dataloader->f, &eval);
+		if (feof(dataloader->f)) {
+			fseek(dataloader->f, 0, SEEK_SET);
 			continue;
 		}
 
-
-		int skip = (eval == VALUE_NONE) || bernoulli(data->random_skip, &seed);
+		int skip = (eval == VALUE_NONE) || bernoulli(dataloader->random_skip, &seed);
 		if (skip)
 			continue;
 
 		batch->eval[batch->size] = ((float)(FV_SCALE * eval)) / (127 * 64);
 		int index, square;
-		const int king_square[] = { orient_horizontal(BLACK, ctz(data->pos->piece[BLACK][KING])), orient_horizontal(WHITE, ctz(data->pos->piece[WHITE][KING])) };
+		const int king_square[] = { orient_horizontal(BLACK, ctz(dataloader->pos->piece[BLACK][KING])), orient_horizontal(WHITE, ctz(dataloader->pos->piece[WHITE][KING])) };
 		for (int piece = PAWN; piece < KING; piece++) {
 			for (int turn = 0; turn <= 1; turn++) {
-				uint64_t b = data->pos->piece[turn][piece];
+				uint64_t b = dataloader->pos->piece[turn][piece];
 				while (b) {
 					batch->ind_active += 2;
 					square = ctz(b);
-					index = make_index(data->pos->turn, square, colored_piece(piece, turn), king_square[data->pos->turn]);
+					index = make_index(dataloader->pos->turn, square, colored_piece(piece, turn), king_square[dataloader->pos->turn]);
 					batch->ind1[counter1++] = batch->size;
 					batch->ind1[counter1++] = index;
-					index = make_index(other_color(data->pos->turn), square, colored_piece(piece, turn), king_square[other_color(data->pos->turn)]);
+					index = make_index(other_color(dataloader->pos->turn), square, colored_piece(piece, turn), king_square[other_color(dataloader->pos->turn)]);
 					batch->ind2[counter2++] = batch->size;
 					batch->ind2[counter2++] = index;
-					index = make_index_virtual(data->pos->turn, square, colored_piece(piece, turn));
+					index = make_index_virtual(dataloader->pos->turn, square, colored_piece(piece, turn));
 					batch->ind1[counter1++] = batch->size;
 					batch->ind1[counter1++] = index;
-					index = make_index_virtual(other_color(data->pos->turn), square, colored_piece(piece, turn));
+					index = make_index_virtual(other_color(dataloader->pos->turn), square, colored_piece(piece, turn));
 					batch->ind2[counter2++] = batch->size;
 					batch->ind2[counter2++] = index;
 					b = clear_ls1b(b);
@@ -111,48 +120,105 @@ struct batch *next_batch(void *ptr) {
 		}
 		batch->size++;
 	}
+
+	dataloader->ready = 1;
+	pthread_cond_signal(&dataloader->cond);
+	pthread_mutex_unlock(&dataloader->mutex);
+
+	return NULL;
+}
+
+int batch_prepare_thread(void *ptr) {
+	pthread_t thread;
+	return pthread_create(&thread, NULL, &batch_prepare, ptr) || pthread_detach(thread);
+}
+
+struct batch *batch_fetch(void *ptr) {
+	struct dataloader *dataloader = ptr;
+
+	pthread_mutex_lock(&dataloader->mutex);
+
+	while (!dataloader->ready)
+		pthread_cond_wait(&dataloader->cond, &dataloader->mutex);
+
+	struct batch *batch = dataloader->batch;
+	struct batch *prepared = dataloader->prepared;
+
+	batch->size = prepared->size;
+	batch->ind_active = prepared->ind_active,
+	memcpy(batch->ind1, prepared->ind1, 4 * 30 * dataloader->requested_size * sizeof(*dataloader->batch->ind1));
+	memcpy(batch->ind2, prepared->ind2, 4 * 30 * dataloader->requested_size * sizeof(*dataloader->batch->ind2));
+	memcpy(batch->eval, prepared->eval, dataloader->requested_size * sizeof(*dataloader->batch->eval));
+	dataloader->ready = 0;
+
+	batch_prepare_thread(ptr);
+
+	pthread_mutex_unlock(&dataloader->mutex);
+
+	return dataloader->batch;
+}
+
+struct batch *balloc(size_t requested_size) {
+	struct batch *batch = calloc(1, sizeof(*batch));
+	batch->ind1 = malloc(4 * 30 * requested_size * sizeof(*batch->ind1));
+	batch->ind2 = malloc(4 * 30 * requested_size * sizeof(*batch->ind2));
+	batch->eval = malloc(requested_size * sizeof(*batch->eval));
+
 	return batch;
 }
 
-void *batch_open(const char *s, size_t requested_size, double random_skip) {
-	struct data *data = calloc(1, sizeof(*data));
-	data->pos = calloc(1, sizeof(*data->pos));
-	data->batch = calloc(1, sizeof(*data->batch));
+void bfree(struct batch *batch) {
+	free(batch->ind1);
+	free(batch->ind2);
+	free(batch->eval);
+	free(batch);
+}
 
-	data->requested_size = requested_size;
-	data->random_skip = random_skip;
-
-	data->batch->ind1 = malloc(4 * 30 * data->requested_size * sizeof(*data->batch->ind1));
-	data->batch->ind2 = malloc(4 * 30 * data->requested_size * sizeof(*data->batch->ind2));
-	data->batch->eval = malloc(data->requested_size * sizeof(*data->batch->eval));
-
-	startpos(data->pos);
-	data->f = fopen(s, "rb");
-	if (!data->f) {
-		printf("Failed to open data file.\n");
-		exit(1);
+void *loader_open(const char *s, size_t requested_size, double random_skip) {
+	FILE *f = fopen(s, "rb"); 
+	if (!f) {
+		fprintf(stderr, "error: failed to open file %s\n", s);
+		return NULL;
 	}
-	fseek(data->f, 0, SEEK_SET);
-	return data;
+	struct dataloader *dataloader = calloc(1, sizeof(*dataloader));
+	dataloader->pos = calloc(1, sizeof(*dataloader->pos));
+	dataloader->batch = balloc(requested_size);
+	dataloader->prepared = balloc(requested_size);
+
+	dataloader->requested_size = requested_size;
+	dataloader->random_skip = random_skip;
+
+	pthread_mutex_init(&dataloader->mutex, NULL);
+	pthread_cond_init(&dataloader->cond, NULL);
+
+	dataloader->f = f;
+	fseek(dataloader->f, 0, SEEK_SET);
+
+	dataloader->ready = 0;
+	batch_prepare_thread(dataloader);
+
+	return dataloader;
 }
 
-void batch_close(void *ptr) {
-	struct data *data = ptr;
-	fclose(data->f);
-	free(data->batch->ind1);
-	free(data->batch->ind2);
-	free(data->batch->eval);
-	free(data->batch);
-	free(data->pos);
-	free(data);
+void loader_close(void *ptr) {
+	struct dataloader *dataloader = ptr;
+	fclose(dataloader->f);
+	bfree(dataloader->batch);
+	bfree(dataloader->prepared);
+	free(dataloader->pos);
+	
+	pthread_mutex_destroy(&dataloader->mutex);
+	pthread_cond_destroy(&dataloader->cond);
+
+	free(dataloader);
 }
 
-void batch_reset(void *ptr) {
-	struct data *data = ptr;
-	fseek(data->f, 0, SEEK_SET);
+void loader_reset(void *ptr) {
+	struct dataloader *dataloader = ptr;
+	fseek(dataloader->f, 0, SEEK_SET);
 }
 
-void batch_init(void) {
+void batchbit_init(void) {
 	magicbitboard_init();
 	attackgen_init();
 	bitboard_init();

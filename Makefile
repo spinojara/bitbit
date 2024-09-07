@@ -126,7 +126,7 @@ all: bitbit
 
 everything: $(BIN)
 
-bitbit genbit: LDLIBS += -lpthread
+bitbit genbit libbatchbit.so: LDLIBS += -lpthread
 bitbit: $(OBJ_BITBIT)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 weightbit: $(OBJ_WEIGHTBIT)
@@ -166,11 +166,11 @@ obj/tune-%.o: src/%.c dep/%.d
 src/nnueweights.c: weightbit Makefile
 	./weightbit $(NNUE)
 
-%.so:                         LDFLAGS += -shared
+%.so:                            LDFLAGS += -shared
 
-obj/thread.o:                 CFLAGS += -pthread
-obj/genbit.o:                 CFLAGS += $(DSYZYGY) -pthread
-obj/init.o obj/interface.o:   CFLAGS += -DVERSION=$(VERSION)
+obj/thread.o obj/pic-batchbit.o: CFLAGS += -pthread
+obj/genbit.o:                    CFLAGS += $(DSYZYGY) -pthread
+obj/init.o obj/interface.o:      CFLAGS += -DVERSION=$(VERSION)
 obj/interface.o obj/option.o obj/tune-option.o: CFLAGS += -DTT=$(TT)
 
 dep/nnueweights.d:
