@@ -37,9 +37,8 @@
 #endif
 
 CONST double maximal = 0.8;
-CONST double margin = 1.2;
-CONST double instability1 = 0.6;
-CONST double instability2 = 1.3;
+CONST double instability1 = 0.5;
+CONST double instability2 = 1.1;
 
 void time_init(struct position *pos, struct timeinfo *ti) {
 	if (!ti)
@@ -92,7 +91,7 @@ int stop_searching(struct timeinfo *ti, move_t best_move) {
 
 	timepoint_t t;
 	return (t = time_since(ti)) >= ti->maximal ||
-		t * margin >= ti->optimal * instability;
+		t >= ti->optimal * instability;
 }
 
 timepoint_t time_now(void) {
