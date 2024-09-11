@@ -22,7 +22,7 @@
 #include <stdalign.h>
 #include <assert.h>
 
-#define K_HALF_DIMENSIONS (256)
+#define K_HALF_DIMENSIONS (512)
 
 struct position {
 	uint64_t piece[2][7];
@@ -41,7 +41,7 @@ struct position {
 	uint64_t endgame_key;
 
 	alignas(16) int16_t accumulation[2][K_HALF_DIMENSIONS];
-	int32_t psqtaccumulation[2];
+	int32_t psqtaccumulation[2][8];
 };
 
 struct pstate {

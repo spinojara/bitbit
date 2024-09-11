@@ -92,7 +92,9 @@ int main(int argc, char **argv) {
 		if (count % 20000 == 0)
 			printf("collecting data: %lu\r", count);
 		move = 0;
-		read_move(f, &move);
+		printf("bytes read: %ld\n", ftell(f));
+		if (read_move(f, &move))
+			break;
 		if (move) {
 			if (print_flag)
 				printf("%s\n", move_str_pgn(movestr, &pos, &move));
@@ -100,22 +102,21 @@ int main(int argc, char **argv) {
 			do_move(&pos, &move);
 		}
 		else {
-			read_position(f, &pos);
+			if (read_position(f, &pos))
+				break;
 			if (!feof(f))
 				games++;
 			pos_to_fen(startfen, &pos);
 		}
 		
-		read_eval(f, &eval);
-		if (feof(f))
+		if (read_eval(f, &eval))
 			break;
 
 		if (eval == VALUE_NONE)
 			continue;
 
-		if (gxorshift64() % 521 == 0) {
-			print_fen(&pos);
-		}
+		print_fen(&pos);
+		printf("eval: %d\n", eval);
 
 #if 0
 		const int material_values[] = { 0, 1, 3, 3, 5, 9, 0 };

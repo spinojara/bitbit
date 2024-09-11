@@ -82,54 +82,55 @@ int builtin;
 
 struct data {
 	alignas(64) int8_t ft_out[FT_OUT_DIMS];
-	alignas(64) int8_t hidden1_out[32];
+	alignas(64) int8_t hidden1_out[16];
 	alignas(64) int8_t hidden2_out[32];
 };
 
 extern alignas(64) ft_weight_t builtin_ft_weights[K_HALF_DIMENSIONS * FT_IN_DIMS];
 extern alignas(64) ft_bias_t builtin_ft_biases[K_HALF_DIMENSIONS];
 
-extern alignas(64) ft_weight_t builtin_psqt_weights[1 * FT_IN_DIMS];
+extern alignas(64) ft_weight_t builtin_psqt_weights[8 * FT_IN_DIMS];
 
-extern alignas(64) weight_t builtin_hidden1_weights[32 * FT_OUT_DIMS];
-extern alignas(64) bias_t builtin_hidden1_biases[32];
+extern alignas(64) weight_t builtin_hidden1_weights[8][16 * FT_OUT_DIMS];
+extern alignas(64) bias_t builtin_hidden1_biases[8][16];
 
-extern alignas(64) weight_t builtin_hidden2_weights[32 * 32];
-extern alignas(64) bias_t builtin_hidden2_biases[32];
+extern alignas(64) weight_t builtin_hidden2_weights[8][32 * 16];
+extern alignas(64) bias_t builtin_hidden2_biases[8][32];
 
-extern alignas(64) weight_t builtin_output_weights[1 * 32];
-extern alignas(64) bias_t builtin_output_biases[1];
+extern alignas(64) weight_t builtin_output_weights[8][1 * 32];
+extern alignas(64) bias_t builtin_output_biases[8][1];
 
 
 
 alignas(64) ft_weight_t file_ft_weights[K_HALF_DIMENSIONS * FT_IN_DIMS];
 alignas(64) ft_bias_t file_ft_biases[K_HALF_DIMENSIONS];
 
-alignas(64) ft_weight_t file_psqt_weights[1 * FT_IN_DIMS];
+alignas(64) ft_weight_t file_psqt_weights[8 * FT_IN_DIMS];
 
-alignas(64) weight_t file_hidden1_weights[32 * FT_OUT_DIMS];
-alignas(64) bias_t file_hidden1_biases[32];
+alignas(64) weight_t file_hidden1_weights[8][16 * FT_OUT_DIMS];
+alignas(64) bias_t file_hidden1_biases[8][16];
 
-alignas(64) weight_t file_hidden2_weights[32 * 32];
-alignas(64) bias_t file_hidden2_biases[32];
+alignas(64) weight_t file_hidden2_weights[8][32 * 16];
+alignas(64) bias_t file_hidden2_biases[8][32];
 
-alignas(64) weight_t file_output_weights[1 * 32];
-alignas(64) bias_t file_output_biases[1];
+alignas(64) weight_t file_output_weights[8][1 * 32];
+alignas(64) bias_t file_output_biases[8][1];
+
 
 
 const ft_weight_t *ft_weights;
 const ft_bias_t *ft_biases;
 
-const ft_weight_t *psqt_weights;
+ft_weight_t *psqt_weights;
 
-const weight_t *hidden1_weights;
-const bias_t *hidden1_biases;
+weight_t (*hidden1_weights)[16 * FT_OUT_DIMS];
+bias_t (*hidden1_biases)[16];
 
-const weight_t *hidden2_weights;
-const bias_t *hidden2_biases;
+weight_t (*hidden2_weights)[32 * 16];
+bias_t (*hidden2_biases)[32];
 
-const weight_t *output_weights;
-const bias_t *output_biases;
+weight_t (*output_weights)[1 * 32];
+bias_t (*output_biases)[1];
 
 static inline void transform(const struct position *pos, const int16_t accumulation[2][K_HALF_DIMENSIONS], int8_t *output) {
 #if defined(AVX2) || defined(SSE4)
@@ -154,7 +155,7 @@ static inline void transform(const struct position *pos, const int16_t accumulat
 #endif
 }
 
-static inline void affine_propagate(int8_t *input, int8_t *output, int in_dim,
+static inline void affine_propagate1(int8_t *input, int8_t *output,
 		const bias_t *biases, const weight_t *weights) {
 #if defined(AVX2)
 	const __m256i zero = _mm256_setzero_si256();
@@ -230,19 +231,33 @@ static inline void affine_propagate(int8_t *input, int8_t *output, int in_dim,
 	((__m128i *)output)[1] = _mm_max_epi8(_mm_packs_epi16(out4, out6), zero[0]);
 #else
 	int i, j;
+	bias_t tmp[16];
+	memcpy(tmp, biases, 16 * sizeof(biases[0]));
+
+	for (i = 0; i < FT_OUT_DIMS; i++)
+		if (input[i])
+			for (j = 0; j < 16; j++)
+				tmp[j] += input[i] * weights[16 * i + j];
+
+	for (i = 0; i < 16; i++)
+		output[i] = clamp(tmp[i] >> SHIFT, 0, 127);
+#endif
+}
+
+static inline void affine_propagate2(int8_t *input, int8_t *output,
+		const bias_t *biases, const weight_t *weights) {
+	int i, j;
 	bias_t tmp[32];
 	memcpy(tmp, biases, 32 * sizeof(biases[0]));
 
-	for (i = 0; i < in_dim; i++)
+	for (i = 0; i < 16; i++)
 		if (input[i])
 			for (j = 0; j < 32; j++)
 				tmp[j] += input[i] * weights[32 * i + j];
 
 	for (i = 0; i < 32; i++)
 		output[i] = clamp(tmp[i] >> SHIFT, 0, 127);
-#endif
 }
-
 static inline int32_t output_layer(int8_t *input, const bias_t *biases, const weight_t *weights) {
 #if defined(AVX2)
 	__m256i *a = (__m256i *)input;
@@ -278,7 +293,7 @@ static inline int32_t output_layer(int8_t *input, const bias_t *biases, const we
 #endif
 }
 
-static inline void add_index(unsigned index, int16_t accumulation[2][K_HALF_DIMENSIONS], int32_t psqtaccumulation[2], int turn) {
+static inline void add_index(unsigned index, int16_t accumulation[2][K_HALF_DIMENSIONS], int32_t psqtaccumulation[2][8], int turn) {
 	const unsigned offset = K_HALF_DIMENSIONS * index;
 #if defined(VECTOR)
 	for (int j = 0; j < K_HALF_DIMENSIONS; j += SIMD_WIDTH / 16) {
@@ -290,10 +305,11 @@ static inline void add_index(unsigned index, int16_t accumulation[2][K_HALF_DIME
 	for (int j = 0; j < K_HALF_DIMENSIONS; j++)
 		accumulation[turn][j] += ft_weights[offset + j];
 #endif
-	psqtaccumulation[turn] += psqt_weights[index];
+	for (int j = 0; j < 8; j++)
+		psqtaccumulation[turn][j] += psqt_weights[8 * index + j];
 }
 
-void add_index_slow(unsigned index, int16_t accumulation[2][K_HALF_DIMENSIONS], int32_t psqtaccumulation[2], int turn) {
+void add_index_slow(unsigned index, int16_t accumulation[2][K_HALF_DIMENSIONS], int32_t psqtaccumulation[2][8], int turn) {
 	const unsigned offset = K_HALF_DIMENSIONS * index;
 #if defined(VECTOR)
 	for (int j = 0; j < K_HALF_DIMENSIONS; j += SIMD_WIDTH / 16) {
@@ -305,10 +321,11 @@ void add_index_slow(unsigned index, int16_t accumulation[2][K_HALF_DIMENSIONS], 
 	for (int j = 0; j < K_HALF_DIMENSIONS; j++)
 		accumulation[turn][j] += ft_weights[offset + j];
 #endif
-	psqtaccumulation[turn] += psqt_weights[index];
+	for (int j = 0; j < 8; j++)
+		psqtaccumulation[turn][j] += psqt_weights[8 * index + j];
 }
 
-static inline void remove_index(unsigned index, int16_t accumulation[2][K_HALF_DIMENSIONS], int32_t psqtaccumulation[2], int turn) {
+static inline void remove_index(unsigned index, int16_t accumulation[2][K_HALF_DIMENSIONS], int32_t psqtaccumulation[2][8], int turn) {
 	const unsigned offset = K_HALF_DIMENSIONS * index;
 #if defined(VECTOR)
 	for (int j = 0; j < K_HALF_DIMENSIONS; j += SIMD_WIDTH / 16) {
@@ -320,36 +337,43 @@ static inline void remove_index(unsigned index, int16_t accumulation[2][K_HALF_D
 	for (int j = 0; j < K_HALF_DIMENSIONS; j++)
 		accumulation[turn][j] -= ft_weights[offset + j];
 #endif
-	psqtaccumulation[turn] -= psqt_weights[index];
+	for (int j = 0; j < 8; j++)
+		psqtaccumulation[turn][j] -= psqt_weights[8 * index + j];
 }
 
 void refresh_accumulator(struct position *pos, int turn) {
 	if (!option_nnue)
 		return;
 	memcpy(pos->accumulation[turn], ft_biases, K_HALF_DIMENSIONS * sizeof(*ft_biases));
-	pos->psqtaccumulation[turn] = 0;
+	memset(pos->psqtaccumulation[turn], 0, 8 * sizeof(*pos->psqtaccumulation[turn]));
 	int king_square = ctz(pos->piece[turn][KING]);
-	king_square = orient_horizontal(turn, king_square);
+	king_square = orient(turn, king_square, king_square);
 	uint64_t b;
 	int square;
+	int total = 0;
 	for (int color = 0; color < 2; color++) {
-		for (int piece = 1; piece < 6; piece++) {
+		for (int piece = PAWN; piece < KING; piece++) {
 			b = pos->piece[color][piece];
 			while (b) {
 				square = ctz(b);
 				int index = make_index(turn, square, colored_piece(piece, color), king_square);
 				add_index(index, pos->accumulation, pos->psqtaccumulation, turn);
+				total++;
 				b = clear_ls1b(b);
 			}
 		}
 	}
+	int index = make_index(turn, ctz(pos->piece[other_color(turn)][KING]), colored_piece(KING, other_color(turn)), king_square);
+	add_index(index, pos->accumulation, pos->psqtaccumulation, turn);
+	total++;
 }
 
 /* m cannot be a king move. */
 void do_update_accumulator(struct position *pos, move_t *move, int turn) {
 	int source_square = move_from(move);
 	int target_square = move_to(move);
-	int king_square = orient_horizontal(turn, ctz(pos->piece[turn][KING]));
+	int king_square = ctz(pos->piece[turn][KING]);
+	king_square = orient(turn, king_square, king_square);
 	unsigned index;
 	unsigned indext;
 
@@ -383,12 +407,45 @@ void do_update_accumulator(struct position *pos, move_t *move, int turn) {
 		add_index(index, pos->accumulation, pos->psqtaccumulation, turn);
 		remove_index(indext, pos->accumulation, pos->psqtaccumulation, turn);
 	}
+	else if (move_flag(move) == MOVE_CASTLE) {
+		switch (target_square) {
+		case g1:
+			index = make_index(BLACK, h1, WHITE_ROOK, king_square);
+			remove_index(index, pos->accumulation, pos->psqtaccumulation, BLACK);
+
+			index = make_index(BLACK, f1, WHITE_ROOK, king_square);
+			add_index(index, pos->accumulation, pos->psqtaccumulation, BLACK);
+			break;
+		case c1:
+			index = make_index(BLACK, a1, WHITE_ROOK, king_square);
+			remove_index(index, pos->accumulation, pos->psqtaccumulation, BLACK);
+
+			index = make_index(BLACK, d1, WHITE_ROOK, king_square);
+			add_index(index, pos->accumulation, pos->psqtaccumulation, BLACK);
+			break;
+		case g8:
+			index = make_index(WHITE, h8, BLACK_ROOK, king_square);
+			remove_index(index, pos->accumulation, pos->psqtaccumulation, WHITE);
+
+			index = make_index(WHITE, f8, BLACK_ROOK, king_square);
+			add_index(index, pos->accumulation, pos->psqtaccumulation, WHITE);
+			break;
+		case c8:
+			index = make_index(WHITE, a8, BLACK_ROOK, king_square);
+			remove_index(index, pos->accumulation, pos->psqtaccumulation, WHITE);
+
+			index = make_index(WHITE, d8, BLACK_ROOK, king_square);
+			add_index(index, pos->accumulation, pos->psqtaccumulation, WHITE);
+			break;
+		}
+	}
 }
 
 void undo_update_accumulator(struct position *pos, move_t *move, int turn) {
 	int source_square = move_from(move);
 	int target_square = move_to(move);
-	int king_square = orient_horizontal(turn, ctz(pos->piece[turn][KING]));
+	int king_square = ctz(pos->piece[turn][KING]);
+	king_square = orient(turn, king_square, king_square);
 	unsigned index;
 	unsigned indext;
 	
@@ -422,6 +479,38 @@ void undo_update_accumulator(struct position *pos, move_t *move, int turn) {
 		remove_index(index, pos->accumulation, pos->psqtaccumulation, turn);
 		add_index(indext, pos->accumulation, pos->psqtaccumulation, turn);
 	}
+	else if (move_flag(move) == MOVE_CASTLE) {
+		switch (target_square) {
+		case g1:
+			index = make_index(BLACK, h1, WHITE_ROOK, king_square);
+			add_index(index, pos->accumulation, pos->psqtaccumulation, BLACK);
+
+			index = make_index(BLACK, f1, WHITE_ROOK, king_square);
+			remove_index(index, pos->accumulation, pos->psqtaccumulation, BLACK);
+			break;
+		case c1:
+			index = make_index(BLACK, a1, WHITE_ROOK, king_square);
+			add_index(index, pos->accumulation, pos->psqtaccumulation, BLACK);
+
+			index = make_index(BLACK, d1, WHITE_ROOK, king_square);
+			remove_index(index, pos->accumulation, pos->psqtaccumulation, BLACK);
+			break;
+		case g8:
+			index = make_index(WHITE, h8, BLACK_ROOK, king_square);
+			add_index(index, pos->accumulation, pos->psqtaccumulation, WHITE);
+
+			index = make_index(WHITE, f8, BLACK_ROOK, king_square);
+			remove_index(index, pos->accumulation, pos->psqtaccumulation, WHITE);
+			break;
+		case c8:
+			index = make_index(WHITE, a8, BLACK_ROOK, king_square);
+			add_index(index, pos->accumulation, pos->psqtaccumulation, WHITE);
+
+			index = make_index(WHITE, d8, BLACK_ROOK, king_square);
+			remove_index(index, pos->accumulation, pos->psqtaccumulation, WHITE);
+			break;
+		}
+	}
 }
 
 /* Should be called after do_move. */
@@ -432,51 +521,46 @@ void do_accumulator(struct position *pos, move_t *move) {
 	if (!option_nnue)
 		return;
 	int target_square = move_to(move);
-	if (uncolored_piece(pos->mailbox[target_square]) == KING) {
+	if (uncolored_piece(pos->mailbox[target_square]) == KING)
 		refresh_accumulator(pos, other_color(pos->turn));
-		if (move_capture(move)) {
-			unsigned index;
-			int turn = pos->turn;
-			int king_square = orient_horizontal(turn, ctz(pos->piece[turn][KING]));
-			index = make_index(turn, target_square, colored_piece(move_capture(move), turn), king_square);
-			remove_index(index, pos->accumulation, pos->psqtaccumulation, turn);
-		}
-		else if (move_flag(move) == MOVE_CASTLE) {
-			unsigned index;
-			int turn = pos->turn;
-			int king_square = orient_horizontal(turn, ctz(pos->piece[turn][KING]));
-			switch (target_square) {
-			case g1:
-				index = make_index(BLACK, h1, WHITE_ROOK, king_square);
-				remove_index(index, pos->accumulation, pos->psqtaccumulation, BLACK);
-				index = make_index(BLACK, f1, WHITE_ROOK, king_square);
-				add_index(index, pos->accumulation, pos->psqtaccumulation, BLACK);
-				break;
-			case c1:
-				index = make_index(BLACK, a1, WHITE_ROOK, king_square);
-				remove_index(index, pos->accumulation, pos->psqtaccumulation, BLACK);
-				index = make_index(BLACK, d1, WHITE_ROOK, king_square);
-				add_index(index, pos->accumulation, pos->psqtaccumulation, BLACK);
-				break;
-			case g8:
-				index = make_index(WHITE, h8, BLACK_ROOK, king_square);
-				remove_index(index, pos->accumulation, pos->psqtaccumulation, WHITE);
-				index = make_index(WHITE, f8, BLACK_ROOK, king_square);
-				add_index(index, pos->accumulation, pos->psqtaccumulation, WHITE);
-				break;
-			case c8:
-				index = make_index(WHITE, a8, BLACK_ROOK, king_square);
-				remove_index(index, pos->accumulation, pos->psqtaccumulation, WHITE);
-				index = make_index(WHITE, d8, BLACK_ROOK, king_square);
-				add_index(index, pos->accumulation, pos->psqtaccumulation, WHITE);
-				break;
+	else
+		do_update_accumulator(pos, move, other_color(pos->turn));
+	do_update_accumulator(pos, move, pos->turn);
+#ifndef NDEBUG
+	int16_t accumulation[2][K_HALF_DIMENSIONS];
+	memcpy(accumulation, pos->accumulation, 2 * K_HALF_DIMENSIONS * sizeof(int16_t));
+
+	int32_t psqtaccumulation[2][8];
+	memcpy(psqtaccumulation, pos->psqtaccumulation, 2 * 8 * sizeof(int16_t));
+
+	refresh_accumulator(pos, 0);
+	refresh_accumulator(pos, 1);
+
+	for (int i = 0; i < 2; i++) {
+		for (int j = 0; j < K_HALF_DIMENSIONS; j++) {
+			if (accumulation[i][j] != pos->accumulation[i][j]) {
+				printf("ERROR DO ACCUMULATION[%d][%d]\n", i, j);
+				print_position(pos);
+				print_move(move);
+				printf("\n");
+				exit(1);
 			}
 		}
 	}
-	else {
-		do_update_accumulator(pos, move, BLACK);
-		do_update_accumulator(pos, move, WHITE);
+
+
+	for (int i = 0; i < 2; i++) {
+		for (int j = 0; j < 8; j++) {
+			if (accumulation[i][j] != pos->accumulation[i][j]) {
+				printf("ERROR DO PSQT[%d][%d]\n", i, j);
+				print_position(pos);
+				print_move(move);
+				printf("\n");
+				exit(1);
+			}
+		}
 	}
+#endif
 }
 
 /* Should be called after undo_move. */
@@ -486,61 +570,57 @@ void undo_accumulator(struct position *pos, move_t *move) {
 	if (!option_nnue)
 		return;
 	int source_square = move_from(move);
-	int target_square = move_to(move);
-	if (uncolored_piece(pos->mailbox[source_square]) == KING) {
+	if (uncolored_piece(pos->mailbox[source_square]) == KING)
 		refresh_accumulator(pos, pos->turn);
-		if (move_capture(move)) {
-			unsigned index;
-			int turn = other_color(pos->turn);
-			int king_square = orient_horizontal(turn, ctz(pos->piece[turn][KING]));
-			index = make_index(turn, target_square, colored_piece(move_capture(move), turn), king_square);
-			add_index(index, pos->accumulation, pos->psqtaccumulation, turn);
-		}
-		else if (move_flag(move) == MOVE_CASTLE) {
-			unsigned index;
-			int turn = other_color(pos->turn);
-			int king_square = orient_horizontal(turn, ctz(pos->piece[turn][KING]));
-			switch (target_square) {
-			case g1:
-				index = make_index(BLACK, h1, WHITE_ROOK, king_square);
-				add_index(index, pos->accumulation, pos->psqtaccumulation, BLACK);
-				index = make_index(BLACK, f1, WHITE_ROOK, king_square);
-				remove_index(index, pos->accumulation, pos->psqtaccumulation, BLACK);
-				break;
-			case c1:
-				index = make_index(BLACK, a1, WHITE_ROOK, king_square);
-				add_index(index, pos->accumulation, pos->psqtaccumulation, BLACK);
-				index = make_index(BLACK, d1, WHITE_ROOK, king_square);
-				remove_index(index, pos->accumulation, pos->psqtaccumulation, BLACK);
-				break;
-			case g8:
-				index = make_index(WHITE, h8, BLACK_ROOK, king_square);
-				add_index(index, pos->accumulation, pos->psqtaccumulation, WHITE);
-				index = make_index(WHITE, f8, BLACK_ROOK, king_square);
-				remove_index(index, pos->accumulation, pos->psqtaccumulation, WHITE);
-				break;
-			case c8:
-				index = make_index(WHITE, a8, BLACK_ROOK, king_square);
-				add_index(index, pos->accumulation, pos->psqtaccumulation, WHITE);
-				index = make_index(WHITE, d8, BLACK_ROOK, king_square);
-				remove_index(index, pos->accumulation, pos->psqtaccumulation, WHITE);
-				break;
+	else
+		undo_update_accumulator(pos, move, pos->turn);
+	undo_update_accumulator(pos, move, other_color(pos->turn));
+#ifndef NDEBUG
+	int16_t accumulation[2][K_HALF_DIMENSIONS];
+	memcpy(accumulation, pos->accumulation, 2 * K_HALF_DIMENSIONS * sizeof(int16_t));
+
+	int32_t psqtaccumulation[2][8];
+	memcpy(psqtaccumulation, pos->psqtaccumulation, 2 * 8 * sizeof(int16_t));
+
+	refresh_accumulator(pos, 0);
+	refresh_accumulator(pos, 1);
+
+	for (int i = 0; i < 2; i++) {
+		for (int j = 0; j < K_HALF_DIMENSIONS; j++) {
+			if (accumulation[i][j] != pos->accumulation[i][j]) {
+				printf("ERROR UNDO ACCUMULATION[%d][%d]\n", i, j);
+				print_position(pos);
+				print_move(move);
+				printf("\n");
+				exit(1);
 			}
 		}
 	}
-	else {
-		undo_update_accumulator(pos, move, BLACK);
-		undo_update_accumulator(pos, move, WHITE);
+
+
+	for (int i = 0; i < 2; i++) {
+		for (int j = 0; j < 8; j++) {
+			if (accumulation[i][j] != pos->accumulation[i][j]) {
+				printf("ERROR UNDO PSQT[%d][%d]\n", i, j);
+				print_position(pos);
+				print_move(move);
+				printf("\n");
+				exit(1);
+			}
+		}
 	}
+#endif
 }
 
 int32_t evaluate_accumulator(const struct position *pos) {
+	int bucket = get_bucket(pos);
+
 	struct data buf;
 	transform(pos, pos->accumulation, buf.ft_out);
-	affine_propagate(buf.ft_out, buf.hidden1_out, FT_OUT_DIMS, hidden1_biases, hidden1_weights);
-	affine_propagate(buf.hidden1_out, buf.hidden2_out, 32, hidden2_biases, hidden2_weights);
-	int32_t psqt = (pos->psqtaccumulation[pos->turn] - pos->psqtaccumulation[other_color(pos->turn)]) / 2;
-	return (output_layer(buf.hidden2_out, output_biases, output_weights)) / FV_SCALE + psqt;
+	affine_propagate1(buf.ft_out, buf.hidden1_out, hidden1_biases[bucket], hidden1_weights[bucket]);
+	affine_propagate2(buf.hidden1_out, buf.hidden2_out, hidden2_biases[bucket], hidden2_weights[bucket]);
+	int32_t psqt = (pos->psqtaccumulation[pos->turn][bucket] - pos->psqtaccumulation[other_color(pos->turn)][bucket]) / 2;
+	return (output_layer(buf.hidden2_out, output_biases[bucket], output_weights[bucket])) / FV_SCALE + psqt;
 }
 
 int32_t evaluate_nnue(struct position *pos) {
@@ -549,7 +629,7 @@ int32_t evaluate_nnue(struct position *pos) {
 	return evaluate_accumulator(pos);
 }
 
-void permute_biases(bias_t *biases) {
+void permute_biases(bias_t *biases, int dims) {
 #if defined(AVX2)
 	__m128i *b = (__m128i *)biases;
 	__m128i tmp[8];
@@ -593,9 +673,9 @@ void permute_weights(weight_t *weights) {
 }
 
 void nnue_init(void) {
-	permute_biases(builtin_hidden1_biases);
-	permute_biases(builtin_hidden2_biases);
-	permute_weights(builtin_hidden1_weights);
+	//permute_biases(builtin_hidden1_biases);
+	//permute_biases(builtin_hidden2_biases);
+	//permute_weights(builtin_hidden1_weights);
 	builtin_nnue();
 }
 
@@ -620,15 +700,15 @@ void file_nnue(const char *path) {
 		fprintf(stderr, "error: failed to open file %s\n", path);
 		goto error;
 	}
-	int i, j;
+	int i, j, k;
 	for (i = 0; i < K_HALF_DIMENSIONS; i++) {
 		if (read_uintx(f, &file_ft_biases[i], sizeof(*file_ft_biases)))
 			goto error;
-		assert(file_ft_biases[i] == builtin_ft_biases[i]);
 	}
-	read_uintx(f, NULL, sizeof(*file_ft_biases));
-	for (i = j = 0; i < (K_HALF_DIMENSIONS + 1) * FT_IN_DIMS; i++) {
-		if ((i + 1) % 257 == 0) {
+	for (i = 0; i < 8; i++)
+		read_uintx(f, NULL, sizeof(*file_ft_biases));
+	for (i = j = 0; i < (K_HALF_DIMENSIONS + 8) * FT_IN_DIMS; i++) {
+		if (i % (K_HALF_DIMENSIONS + 8) >= K_HALF_DIMENSIONS) {
 			if (read_uintx(f, &file_psqt_weights[j++], sizeof(*file_psqt_weights)))
 				goto error;
 		}
@@ -638,26 +718,42 @@ void file_nnue(const char *path) {
 		}
 	}
 
-	for (i = 0; i < 32; i++)
-		if (read_uintx(f, &file_hidden1_biases[i], sizeof(*file_hidden1_biases)))
+	for (j = 0; j < 8; j++)
+		for (i = 0; i < 16; i++)
+			if (read_uintx(f, &file_hidden1_biases[j][i], sizeof(**file_hidden1_biases)))
+				goto error;
+
+	for (j = 0; j < 8; j++)
+		for (i = 0; i < 16; i++)
+			for (k = 0; k < FT_OUT_DIMS; k++)
+				if (read_uintx(f, &file_hidden1_weights[j][16 * k + i], sizeof(**file_hidden1_weights)))
+					goto error;
+
+	for (j = 0; j < 8; j++)
+		for (i = 0; i < 32; i++)
+			if (read_uintx(f, &file_hidden2_biases[j][i], sizeof(**file_hidden2_biases)))
+				goto error;
+	for (j = 0; j < 8; j++)
+		for (i = 0; i < 32; i++)
+			for (k = 0; k < 16; k++)
+				if (read_uintx(f, &file_hidden2_weights[j][32 * k + i], sizeof(**file_hidden2_weights)))
+					goto error;
+
+	for (j = 0; j < 8; j++)
+		if (read_uintx(f, file_output_biases[j], sizeof(**file_output_biases)))
 			goto error;
-	if (read_hidden_weights(file_hidden1_weights, FT_OUT_DIMS, f))
-		goto error;
+	for (j = 0; j < 8; j++)
+		for (i = 0; i < 32; i++)
+			if (read_uintx(f, &file_output_weights[j][i], sizeof(**file_output_weights)))
+				goto error;
 
-	for (i = 0; i < 32; i++)
-		if (read_uintx(f, &file_hidden2_biases[i], sizeof(*file_hidden2_biases)))
-			goto error;
-	if (read_hidden_weights(file_hidden2_weights, 32, f))
-		goto error;
 
-	if (read_uintx(f, file_output_biases, sizeof(*file_output_biases)))
-		goto error;
-	if (read_output_weights(file_output_weights, f))
-		goto error;
-
-	permute_biases(file_hidden1_biases);
-	permute_biases(file_hidden2_biases);
-	permute_weights(file_hidden1_weights);
+	//permute_biases(file_hidden1_biases);
+	//permute_biases(file_hidden2_biases);
+	//permute_weights(file_hidden1_weights);
+	long current = ftell(f);
+	fseek(f, 0, SEEK_END);
+	printf("BYTES LEFT: %ld\n", ftell(f) - current);
 	if (fclose(f))
 		goto error;
 

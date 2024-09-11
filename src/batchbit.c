@@ -37,6 +37,7 @@ uint64_t seed;
 struct batch {
 	size_t size;
 	int ind_active;
+	int64_t *bucket;
 	int32_t *ind1;
 	int32_t *ind2;
 	float *eval;
@@ -59,8 +60,8 @@ struct dataloader {
 	FILE *f;
 };
 
-static inline uint16_t make_index_virtual(int turn, int square, int piece) {
-	return orient_horizontal(turn, square) + piece_to_index[turn][piece] + PS_END * 64;
+static inline uint16_t make_index_virtual(int turn, int square, int piece, int king_square) {
+	return orient(turn, square, king_square) + piece_to_index[turn][piece] + FT_IN_DIMS;
 }
 
 void *batch_prepare(void *ptr) {
@@ -76,15 +77,22 @@ void *batch_prepare(void *ptr) {
 
 	while (batch->size < dataloader->requested_size) {
 		move_t move = 0;
-		read_move(dataloader->f, &move);
-		if (move)
+		if (read_move(dataloader->f, &move)) {
+			fseek(dataloader->f, 0, SEEK_SET);
+			continue;
+		}
+		if (move) {
 			do_move(dataloader->pos, &move);
-		else
-			read_position(dataloader->f, dataloader->pos);
+		}
+		else {
+			if (read_position(dataloader->f, dataloader->pos)) {
+				fseek(dataloader->f, 0, SEEK_SET);
+				continue;
+			}
+		}
 
 		int32_t eval = VALUE_NONE;
-		read_eval(dataloader->f, &eval);
-		if (feof(dataloader->f)) {
+		if (read_eval(dataloader->f, &eval)) {
 			fseek(dataloader->f, 0, SEEK_SET);
 			continue;
 		}
@@ -94,10 +102,16 @@ void *batch_prepare(void *ptr) {
 			continue;
 
 		batch->eval[batch->size] = ((float)(FV_SCALE * eval)) / (127 * 64);
+		batch->bucket[batch->size] = get_bucket(dataloader->pos);
 		int index, square;
-		const int king_square[] = { orient_horizontal(BLACK, ctz(dataloader->pos->piece[BLACK][KING])), orient_horizontal(WHITE, ctz(dataloader->pos->piece[WHITE][KING])) };
-		for (int piece = PAWN; piece < KING; piece++) {
+		//const int king_square[] = { orient_horizontal(BLACK, ctz(dataloader->pos->piece[BLACK][KING])), orient_horizontal(WHITE, ctz(dataloader->pos->piece[WHITE][KING])) };
+		int king_square[] = { ctz(dataloader->pos->piece[BLACK][KING]), ctz(dataloader->pos->piece[WHITE][KING]) };
+		king_square[0] = orient(BLACK, king_square[0], king_square[0]);
+		king_square[1] = orient(BLACK, king_square[1], king_square[1]);
+		for (int piece = PAWN; piece <= KING; piece++) {
 			for (int turn = 0; turn <= 1; turn++) {
+				if (piece == KING && turn == dataloader->pos->turn)
+					continue;
 				uint64_t b = dataloader->pos->piece[turn][piece];
 				while (b) {
 					batch->ind_active += 2;
@@ -108,10 +122,10 @@ void *batch_prepare(void *ptr) {
 					index = make_index(other_color(dataloader->pos->turn), square, colored_piece(piece, turn), king_square[other_color(dataloader->pos->turn)]);
 					batch->ind2[counter2++] = batch->size;
 					batch->ind2[counter2++] = index;
-					index = make_index_virtual(dataloader->pos->turn, square, colored_piece(piece, turn));
+					index = make_index_virtual(dataloader->pos->turn, square, colored_piece(piece, turn), king_square[dataloader->pos->turn]);
 					batch->ind1[counter1++] = batch->size;
 					batch->ind1[counter1++] = index;
-					index = make_index_virtual(other_color(dataloader->pos->turn), square, colored_piece(piece, turn));
+					index = make_index_virtual(other_color(dataloader->pos->turn), square, colored_piece(piece, turn), king_square[other_color(dataloader->pos->turn)]);
 					batch->ind2[counter2++] = batch->size;
 					batch->ind2[counter2++] = index;
 					b = clear_ls1b(b);
@@ -145,9 +159,10 @@ struct batch *batch_fetch(void *ptr) {
 	struct batch *prepared = dataloader->prepared;
 
 	batch->size = prepared->size;
-	batch->ind_active = prepared->ind_active,
-	memcpy(batch->ind1, prepared->ind1, 4 * 30 * dataloader->requested_size * sizeof(*dataloader->batch->ind1));
-	memcpy(batch->ind2, prepared->ind2, 4 * 30 * dataloader->requested_size * sizeof(*dataloader->batch->ind2));
+	batch->ind_active = prepared->ind_active;
+	memcpy(batch->bucket, prepared->bucket, dataloader->requested_size * sizeof(*dataloader->batch->bucket));
+	memcpy(batch->ind1, prepared->ind1, 4 * 32 * dataloader->requested_size * sizeof(*dataloader->batch->ind1));
+	memcpy(batch->ind2, prepared->ind2, 4 * 32 * dataloader->requested_size * sizeof(*dataloader->batch->ind2));
 	memcpy(batch->eval, prepared->eval, dataloader->requested_size * sizeof(*dataloader->batch->eval));
 	dataloader->ready = 0;
 
@@ -160,14 +175,16 @@ struct batch *batch_fetch(void *ptr) {
 
 struct batch *balloc(size_t requested_size) {
 	struct batch *batch = calloc(1, sizeof(*batch));
-	batch->ind1 = malloc(4 * 30 * requested_size * sizeof(*batch->ind1));
-	batch->ind2 = malloc(4 * 30 * requested_size * sizeof(*batch->ind2));
+	batch->bucket = malloc(requested_size * sizeof(*batch->bucket));
+	batch->ind1 = malloc(4 * 32 * requested_size * sizeof(*batch->ind1));
+	batch->ind2 = malloc(4 * 32 * requested_size * sizeof(*batch->ind2));
 	batch->eval = malloc(requested_size * sizeof(*batch->eval));
 
 	return batch;
 }
 
 void bfree(struct batch *batch) {
+	free(batch->bucket);
 	free(batch->ind1);
 	free(batch->ind2);
 	free(batch->eval);
