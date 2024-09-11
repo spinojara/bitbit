@@ -38,8 +38,8 @@
 
 CONST double maximal = 0.8;
 CONST double margin = 1.2;
-CONST double instability1 = 0.8;
-CONST double instability2 = 2.0;
+CONST double instability1 = 0.6;
+CONST double instability2 = 1.3;
 
 void time_init(struct position *pos, struct timeinfo *ti) {
 	if (!ti)
