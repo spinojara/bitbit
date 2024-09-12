@@ -24,13 +24,15 @@
 #include "move.h"
 #include "util.h"
 
-#define K_HALF_DIMENSIONS (512)
+#define VERSION_NNUE 2
+
+#define K_HALF_DIMENSIONS 512
 #define FT_IN_DIMS (32 * PS_END)
 #define FT_OUT_DIMS (K_HALF_DIMENSIONS * 2)
 
-#define SHIFT (6)
-#define FT_SHIFT (0)
-#define FV_SCALE (16)
+#define SHIFT 6
+#define FT_SHIFT 0
+#define FV_SCALE 16
 
 typedef int16_t ft_weight_t;
 typedef int16_t ft_bias_t;

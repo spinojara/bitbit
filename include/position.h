@@ -22,7 +22,7 @@
 #include <stdalign.h>
 #include <assert.h>
 
-#define K_HALF_DIMENSIONS (512)
+#define K_HALF_DIMENSIONS 512
 
 struct position {
 	uint64_t piece[2][7];

@@ -48,12 +48,15 @@ int main(int argc, char **argv) {
 		return 2;
 	}
 	
-	if (nnuefile(f, ft_weights, ft_biases,
+	if ((i = nnuefile(f, ft_weights, ft_biases,
 			psqt_weights, hidden1_weights,
 			hidden1_biases, hidden2_weights,
 			hidden2_biases, output_weights,
-			output_biases)) {
-		fprintf(stderr, "error: failed to read nnue weights\n");
+			output_biases))) {
+		if (i == 2)
+			fprintf(stderr, "error: wrong nnue version\n");
+		else
+			fprintf(stderr, "error: failed to read nnue weights\n");
 		return 3;
 	}
 

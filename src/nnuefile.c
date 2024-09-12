@@ -29,6 +29,14 @@ int nnuefile(FILE *f, ft_weight_t *ft_weights,
 		bias_t (*hidden2_biases)[32],
 		weight_t (*output_weights)[1 * 32],
 		bias_t (*output_biases)[1]) {
+
+	uint16_t version;
+	if (read_uintx(f, &version, sizeof(version)))
+		return 1;
+
+	if (version != VERSION_NNUE)
+		return 2;
+
 	int i, j, k;
 	for (i = 0; i < K_HALF_DIMENSIONS; i++) {
 		if (read_uintx(f, &ft_biases[i], sizeof(*ft_biases)))
@@ -76,5 +84,6 @@ int nnuefile(FILE *f, ft_weight_t *ft_weights,
 			if (read_uintx(f, &output_weights[j][i], sizeof(**output_weights)))
 				return 1;
 
-	return 0;
+	/* This should be the end of file. */
+	return !read_uintx(f, NULL, 1) || !feof(f) || ferror(f);
 }
