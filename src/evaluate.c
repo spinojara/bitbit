@@ -677,10 +677,11 @@ void evaluate_print(struct position *pos) {
 		printf("\n+-------+-------+-------+-------+-------+-------+-------+-------+\n");
 	}
 	printf("Psqt: %+.2f\n", (double)(psqtaccumulation[WHITE][bucket] - psqtaccumulation[BLACK][bucket]) / 200);
-	printf("Positional %+.2f\n", (double)((2 * pos->turn - 1) * evaluate_nnue(pos) - (psqtaccumulation[WHITE][bucket] - psqtaccumulation[BLACK][bucket]) / 2) / 100);
+	int32_t eval = evaluate_nnue(pos);
+	printf("Positional %+.2f\n", (double)((2 * pos->turn - 1) * eval - (psqtaccumulation[WHITE][bucket] - psqtaccumulation[BLACK][bucket]) / 2) / 100);
 	printf("\n");
 	printf("Classical Evaluation: %+.2f\n", (double)(2 * pos->turn - 1) * evaluate_classical(pos) / 100);
-	printf("NNUE Evaluation: %+.2f\n", (double)(2 * pos->turn - 1) * evaluate_nnue(pos) / 100);
+	printf("NNUE Evaluation: %+.2f\n", (double)(2 * pos->turn - 1) * eval / 100);
 	option_nnue = old_option_nnue;
 }
 
