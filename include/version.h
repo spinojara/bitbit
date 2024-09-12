@@ -99,6 +99,8 @@ char *date(char *str) {
 char simd[] =
 #if defined(AVX2)
 "avx2"
+#elif defined(VNNI)
+"vnni"
 #elif defined(SSE4)
 "sse4"
 #elif defined(SSE2)

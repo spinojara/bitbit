@@ -19,6 +19,7 @@
 #include "nnue.h"
 #include "util.h"
 #include "io.h"
+#include "nnuefile.h"
 
 alignas(64) static ft_weight_t ft_weights[K_HALF_DIMENSIONS * FT_IN_DIMS];
 alignas(64) static ft_bias_t ft_biases[K_HALF_DIMENSIONS];
@@ -34,66 +35,9 @@ alignas(64) static bias_t hidden2_biases[8][32];
 alignas(64) static weight_t output_weights[8][1 * 32];
 alignas(64) static bias_t output_biases[8][1];
 
-void read_hidden_weights(weight_t *w, int dims, FILE *f) {
-	for (int i = 0; i < 32; i++)
-		for (int j = 0; j < dims; j++)
-			if (read_uintx(f, &w[j * 32 + i], sizeof(*w)))
-				exit(1);
-}
-
-void read_output_weights(weight_t *w, FILE *f) {
-	for (int i = 0; i < 32; i++)
-		if (read_uintx(f, &w[i], sizeof(*w)))
-			exit(1);
-}
-
-void print_ft_weights(FILE *f, ft_weight_t weights[], size_t size) {
-	for (size_t i = 0, j = 0; i < size; i++) {
-		if ((i + 1) % 257 == 0)
-			continue;
-		if (j++ % 32 == 0)
-			fprintf(f, "\n");
-		fprintf(f, "%d,", weights[i]);
-	}
-}
-
-void print_ft_biases(FILE *f, ft_bias_t biases[], size_t size) {
-	for (size_t i = 0, j = 0; i < size; i++) {
-		if ((i + 1) % 257 == 0)
-			continue;
-		if (j++ % 32 == 0)
-			fprintf(f, "\n");
-		fprintf(f, "%d,", biases[i]);
-	}
-}
-
-void print_psqt_weights(FILE *f, ft_weight_t weights[], size_t size) {
-	for (size_t i = 0, j = 0; i < size; i++) {
-		if ((i + 1) % 257 != 0)
-			continue;
-		if (j++ % 32 == 0)
-			fprintf(f, "\n");
-		fprintf(f, "%d,", weights[i]);
-	}
-}
-
-void print_weights(FILE *f, weight_t weights[], size_t size) {
-	for (size_t i = 0; i < size; i++) {
-		if (i % 32 == 0)
-			fprintf(f, "\n");
-		fprintf(f, "%d,", weights[i]);
-	}
-}
-
-void print_biases(FILE *f, bias_t biases[], size_t size) {
-	for (size_t i = 0; i < size; i++) {
-		if (i % 32 == 0)
-			fprintf(f, "\n");
-		fprintf(f, "%d,", biases[i]);
-	}
-}
-
 int main(int argc, char **argv) {
+	int i, j;
+
 	if (argc < 2) {
 		printf("usage: %s file\n", argv[0]);
 		return 1;
@@ -104,61 +48,14 @@ int main(int argc, char **argv) {
 		return 2;
 	}
 	
-	memset(ft_weights, 0, sizeof(ft_weights));
-	memset(ft_biases, 0, sizeof(ft_biases));
-	memset(hidden1_weights, 0, sizeof(hidden1_weights));
-	memset(hidden1_biases, 0, sizeof(hidden1_biases));
-	memset(hidden2_weights, 0, sizeof(hidden2_weights));
-	memset(hidden2_biases, 0, sizeof(hidden2_biases));
-	memset(output_weights, 0, sizeof(output_weights));
-	memset(output_biases, 0, sizeof(output_biases));
-	
-	int i, j, k;
-	for (i = 0; i < K_HALF_DIMENSIONS; i++) {
-		if (read_uintx(f, &ft_biases[i], sizeof(*ft_biases)))
-			return 3;
+	if (nnuefile(f, ft_weights, ft_biases,
+			psqt_weights, hidden1_weights,
+			hidden1_biases, hidden2_weights,
+			hidden2_biases, output_weights,
+			output_biases)) {
+		fprintf(stderr, "error: failed to read nnue weights\n");
+		return 3;
 	}
-	for (i = 0; i < 8; i++)
-		read_uintx(f, NULL, sizeof(*ft_biases));
-	for (i = j = 0; i < (K_HALF_DIMENSIONS + 8) * FT_IN_DIMS; i++) {
-		if (i % (K_HALF_DIMENSIONS + 8) >= K_HALF_DIMENSIONS) {
-			if (read_uintx(f, &psqt_weights[j++], sizeof(*psqt_weights)))
-				return 3;
-		}
-		else {
-			if (read_uintx(f, &ft_weights[i - j], sizeof(*ft_weights)))
-				return 3;
-		}
-	}
-
-	for (j = 0; j < 8; j++)
-		for (i = 0; i < 16; i++)
-			if (read_uintx(f, &hidden1_biases[j][i], sizeof(**hidden1_biases)))
-				return 3;
-
-	for (j = 0; j < 8; j++)
-		for (i = 0; i < 16; i++)
-			for (k = 0; k < FT_OUT_DIMS; k++)
-				if (read_uintx(f, &hidden1_weights[j][16 * k + i], sizeof(**hidden1_weights)))
-					return 3;
-
-	for (j = 0; j < 8; j++)
-		for (i = 0; i < 32; i++)
-			if (read_uintx(f, &hidden2_biases[j][i], sizeof(**hidden2_biases)))
-				return 3;
-	for (j = 0; j < 8; j++)
-		for (i = 0; i < 32; i++)
-			for (k = 0; k < 16; k++)
-				if (read_uintx(f, &hidden2_weights[j][32 * k + i], sizeof(**hidden2_weights)))
-					return 3;
-
-	for (j = 0; j < 8; j++)
-		if (read_uintx(f, output_biases[j], sizeof(**output_biases)))
-			return 3;
-	for (j = 0; j < 8; j++)
-		for (i = 0; i < 32; i++)
-			if (read_uintx(f, &output_weights[j][i], sizeof(**output_weights)))
-				return 3;
 
 	FILE *g = fopen("src/nnueweights.c", "w");
 	if (!g) {
