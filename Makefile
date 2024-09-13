@@ -93,6 +93,7 @@ SRC_PGNBIT    = pgnbit.c $(SRC)
 SRC_TEXELBIT  = texelbit.c $(subst evaluate,texel-evaluate,\
 	        $(subst pawn,texel-pawn,$(SRC)))
 SRC_BASEBIT   = basebit.c $(SRC_BASE)
+SRC_CONVBIT   = convbit.c $(SRC)
 SRC_BATCHBIT  = $(addprefix pic-,batchbit.c $(SRC_BASE) io.c)
 SRC_VISBIT    = pic-visbit.c pic-util.c pic-io.c
 
@@ -106,6 +107,7 @@ OBJ_HISTBIT   = $(patsubst %.c,obj/%.o,$(SRC_HISTBIT))
 OBJ_PGNBIT    = $(patsubst %.c,obj/%.o,$(SRC_PGNBIT))
 OBJ_TEXELBIT  = $(patsubst %.c,obj/%.o,$(SRC_TEXELBIT))
 OBJ_BASEBIT   = $(patsubst %.c,obj/%.o,$(SRC_BASEBIT))
+OBJ_CONVBIT   = $(patsubst %.c,obj/%.o,$(SRC_CONVBIT))
 OBJ_BATCHBIT  = $(patsubst %.c,obj/%.o,$(SRC_BATCHBIT))
 OBJ_VISBIT    = $(patsubst %.c,obj/%.o,$(SRC_VISBIT))
 OBJ_TUNEBIT   = $(patsubst %.c,obj/%.o,$(subst search,tune-search,\
@@ -113,7 +115,7 @@ OBJ_TUNEBIT   = $(patsubst %.c,obj/%.o,$(subst search,tune-search,\
 		$(SRC_BITBIT) tune.c))))
 
 BIN = bitbit weightbit genbit epdbit histbit pgnbit \
-      texelbit basebit libbatchbit.so libvisbit.so tunebit
+      texelbit basebit libbatchbit.so libvisbit.so tunebit convbit
 
 PREFIX = /usr/local
 BINDIR = $(PREFIX)/bin
@@ -142,6 +144,8 @@ pgnbit: $(OBJ_PGNBIT)
 texelbit: $(OBJ_TEXELBIT)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 basebit: $(OBJ_BASEBIT)
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+convbit: $(OBJ_CONVBIT)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 libbatchbit.so: $(OBJ_BATCHBIT)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@

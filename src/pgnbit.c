@@ -433,9 +433,7 @@ int main(int argc, char **argv) {
 			break;
 		}
 	}
-	if (error)
-		return 1;
-	if (optind + 1 >= argc) {
+	if (error || optind + 1 >= argc) {
 		fprintf(stderr, "usage: %s infile outfile\n", argv[0]);
 		return 3;
 	}
