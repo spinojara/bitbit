@@ -24,10 +24,10 @@
 #include "position.h"
 
 enum {
-	RESULT_UNKNOWN,
-	RESULT_LOSS,
+	RESULT_LOSS = -1,
 	RESULT_DRAW,
 	RESULT_WIN,
+	RESULT_UNKNOWN,
 };
 
 int write_uintx(FILE *f, uint64_t p, size_t x);

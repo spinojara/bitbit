@@ -196,16 +196,17 @@ int main(int argc, char **argv) {
 	attackgen_init();
 	bitboard_init();
 
-	char fen[128];
-	char move[64];
-	char score[64];
-	char ply[64];
-	char result[64];
-	char e[64];
+	char fen[128] = { 0 };
+	char move[64] = { 0 };
+	char score[64] = { 0 };
+	char ply[64] = { 0 };
+	char result[64] = { 0 };
+	char e[64] = { 0 };
 
 	struct position pos, new;
 	move_t m;
 	int32_t eval;
+	signed char resultnow = RESULT_UNKNOWN, resultsaved = RESULT_UNKNOWN;
 	int newgame = 1;
 
 	while (fgets(fen, sizeof(fen), in)) {
@@ -219,6 +220,13 @@ int main(int argc, char **argv) {
 		fen[strlen(fen) - 1] = '\0';
 		move[strlen(move) - 1] = '\0';
 
+		resultnow = result[7] == '1' ? RESULT_WIN : result[7] == '0' ? RESULT_DRAW : result[7] == '-' ? RESULT_LOSS : RESULT_UNKNOWN;
+
+		if (resultnow == RESULT_UNKNOWN) {
+			fprintf(stderr, "error: bad result\n");
+			return 1;
+		}
+
 		if (!fen_is_ok2(fen + 4)) {
 			newgame = 1;
 			continue;
@@ -228,16 +236,18 @@ int main(int argc, char **argv) {
 
 		if (!newgame) {
 			m = difference(&pos, &new);
-			if (!m)
+			if (!m || resultnow != -(2 * pos.turn - 1) * resultsaved)
 				newgame = 1;
 			memcpy(&pos, &new, ESSENTIALPOSITION);
 		}
 
 		if (newgame) {
 			pos_from_fen2(&pos, fen + 4);
-
+			
+			resultsaved = (2 * pos.turn - 1) * resultnow;
 			write_move(out, 0);
 			write_position(out, &pos);
+			write_result(out, resultsaved);
 		}
 		else {
 			write_move(out, m);

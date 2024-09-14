@@ -93,7 +93,7 @@ SRC_PGNBIT    = pgnbit.c $(SRC)
 SRC_TEXELBIT  = texelbit.c $(subst evaluate,texel-evaluate,\
 	        $(subst pawn,texel-pawn,$(SRC)))
 SRC_BASEBIT   = basebit.c $(SRC_BASE)
-SRC_CONVBIT   = convbit.c $(SRC)
+SRC_CONVBIT   = convbit.c io.c $(SRC_BASE)
 SRC_BATCHBIT  = $(addprefix pic-,batchbit.c $(SRC_BASE) io.c)
 SRC_VISBIT    = pic-visbit.c pic-util.c pic-io.c
 
