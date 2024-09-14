@@ -95,7 +95,8 @@ int main(int argc, char **argv) {
 		if (count % 20000 == 0)
 			printf("collecting data: %lu\r", count);
 		move = 0;
-		read_move(f, &move);
+		if (read_move(f, &move))
+			break;
 		if (move) {
 			if (print_flag)
 				printf("%s\n", move_str_pgn(movestr, &pos, &move));
@@ -109,14 +110,17 @@ int main(int argc, char **argv) {
 			do_move(&pos, &move);
 		}
 		else {
-			read_position(f, &pos);
-			read_result(f, &result);
+			if (read_position(f, &pos))
+				break;
+			if (read_result(f, &result))
+				break;
 			if (!feof(f))
 				games++;
 			pos_to_fen(startfen, &pos);
 		}
 		
-		read_eval(f, &eval);
+		if (read_eval(f, &eval))
+			break;
 		if (feof(f))
 			break;
 
@@ -164,14 +168,16 @@ int main(int argc, char **argv) {
 		store_information(&pos, piece_square);
 		total++;
 
-		if (result == 0)
+		if (result == RESULT_DRAW)
 			draws++;
 	}
 	printf("\033[2K");
 	printf("total positions: %lu\n", total);
 	printf("total games: %lu\n", games);
-	printf("draw percent: %lg\n", (double)draws / games);
+	printf("draw percent: %lg\n", (double)draws / total);
 	printf("percent: %f\n", (double)c / a);
 	for (int piece = PAWN; piece <= KING; piece++)
 		print_information(piece_square[piece], total);
+
+	fclose(f);
 }
