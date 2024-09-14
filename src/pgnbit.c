@@ -224,7 +224,7 @@ void parse_pgn(FILE *infile, FILE *outfile) {
 	int done_early = 0;
 	startpos(&pos);
 	int plycount = -1;
-	int result = -1;
+	int result = RESULT_UNKNOWN;
 	char white[BUFSIZ] = { 0 };
 	char black[BUFSIZ] = { 0 };
 	char line[BUFSIZ], quotes[BUFSIZ], *endptr;
@@ -273,7 +273,7 @@ void parse_pgn(FILE *infile, FILE *outfile) {
 			break;
 	}
 
-	if (result == -1)
+	if (result == RESULT_UNKNOWN)
 		line_error(infile, "no result");
 
 	if (plycount == -1)
