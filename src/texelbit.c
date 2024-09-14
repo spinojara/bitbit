@@ -1534,7 +1534,8 @@ size_t grad(FILE *f, struct position *pos) {
 			continue;
 
 		double score = result == RESULT_WIN ? 1.0 : result == RESULT_DRAW ? 0.5 : 0.0;
-		score = score * (2 * pos->turn - 1);
+		if (!pos->turn)
+			score = 1.0 - score;
 		grad_calc(pos, score);
 
 		actual_size++;
