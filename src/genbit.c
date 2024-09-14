@@ -194,7 +194,7 @@ void write_thread(FILE *f, struct threadinfo *threadinfo, long *curr_fens, long 
 				fprintf(stderr, "MAIN THREAD READ ERROR\n");
 				exit(1);
 			}
-			if (write_position(f, &pos)) {
+			if (write_position(f, &pos) || write_result(f, RESULT_UNKNOWN)) {
 				fprintf(stderr, "MAIN THREAD WRITE ERROR\n");
 				exit(1);
 			}

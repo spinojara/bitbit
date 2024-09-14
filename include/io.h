@@ -23,20 +23,26 @@
 #include "move.h"
 #include "position.h"
 
-int write_uintx(FILE *f, uint64_t p, size_t x);
+enum {
+	RESULT_UNKNOWN,
+	RESULT_LOSS,
+	RESULT_DRAW,
+	RESULT_WIN,
+};
 
+int write_uintx(FILE *f, uint64_t p, size_t x);
 int read_uintx(FILE *f, void *p, size_t x);
 
 int write_position(FILE *f, const struct position *pos);
-
 int read_position(FILE *f, struct position *pos);
 
 int write_move(FILE *f, move_t move);
-
 int read_move(FILE *f, move_t *move);
 
 int write_eval(FILE *f, int32_t eval);
-
 int read_eval(FILE *f, int32_t *eval);
+
+int write_result(FILE *f, char result);
+int read_result(FILE *f, char *result);
 
 #endif

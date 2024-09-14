@@ -77,10 +77,13 @@ void *batch_prepare(void *ptr) {
 	while (batch->size < dataloader->requested_size) {
 		move_t move = 0;
 		read_move(dataloader->f, &move);
-		if (move)
+		if (move) {
 			do_move(dataloader->pos, &move);
-		else
+		}
+		else {
 			read_position(dataloader->f, dataloader->pos);
+			read_result(dataloader->f, NULL);
+		}
 
 		int32_t eval = VALUE_NONE;
 		read_eval(dataloader->f, &eval);

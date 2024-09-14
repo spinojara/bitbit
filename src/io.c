@@ -110,11 +110,13 @@ int read_position(FILE *f, struct position *pos) {
 	uint8_t buf[62];
 	if (fread(buf, 1, 62, f) != 62)
 		return 1;
+	if (!pos)
+		return 0;
 	memset(pos->piece, 0, sizeof(pos->piece));
 	memset(pos->mailbox, 0, sizeof(pos->mailbox));
 	
-	pos->piece[WHITE][KING] = bitboard(buf[0]);
-	pos->piece[BLACK][KING] = bitboard(buf[1]);
+	pos->piece[WHITE][ALL] = pos->piece[WHITE][KING] = bitboard(buf[0]);
+	pos->piece[BLACK][ALL] = pos->piece[BLACK][KING] = bitboard(buf[1]);
 
 	pos->mailbox[buf[0]] = WHITE_KING;
 	pos->mailbox[buf[1]] = BLACK_KING;
@@ -164,7 +166,8 @@ int read_move(FILE *f, move_t *move) {
 	uint16_t temp;
 	if (read_uintx(f, &temp, 2))
 		return 1;
-	*move = temp;
+	if (move)
+		*move = temp;
 	return 0;
 }
 
@@ -180,6 +183,15 @@ int read_eval(FILE *f, int32_t *eval) {
 	if (read_uintx(f, &t.ueval, 2))
 		return 1;
 
-	*eval = t.eval;
+	if (eval)
+		*eval = t.eval;
 	return 0;
+}
+
+int write_result(FILE *f, char result) {
+	return write_uintx(f, result, 1);
+}
+
+int read_result(FILE *f, char *result) {
+	return read_uintx(f, result, 1);
 }
