@@ -40,8 +40,8 @@ struct position {
 	uint64_t zobrist_key;
 	uint64_t endgame_key;
 
-	alignas(16) int16_t accumulation[2][K_HALF_DIMENSIONS];
-	int32_t psqtaccumulation[2][8];
+	alignas(32) int16_t accumulation[2][K_HALF_DIMENSIONS];
+	alignas(32) int32_t psqtaccumulation[2][8];
 };
 
 struct pstate {
