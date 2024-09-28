@@ -212,7 +212,7 @@ static inline int32_t draw(const struct searchinfo *si) {
 	return 2 * (si->nodes & 0x3) - 3;
 }
 
-static inline int32_t evaluate(const struct position *pos) {
+static inline int32_t evaluate(const struct position *pos, const struct searchinfo *si) {
 	int32_t evaluation;
 	struct endgame *e = endgame_probe(pos);
 	if (e && (evaluation = endgame_evaluate(e, pos)) != VALUE_NONE)
@@ -238,6 +238,9 @@ static inline int32_t evaluate(const struct position *pos) {
 	
 	evaluation = clamp(evaluation, -VALUE_MAX, VALUE_MAX);
 
+	if (!option_deterministic)
+		evaluation += (si->seed ^ pos->zobrist_key) % 5 - 2;
+
 	return evaluation;
 }
 
@@ -245,8 +248,8 @@ int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, s
 	if (si->interrupt)
 		return 0;
 	if (ply >= PLY_MAX)
-		return evaluate(pos);
-	if ((check_time(si) || atomic_load_explicit(&ucistop, memory_order_relaxed)) && si->done_depth)
+		return evaluate(pos, si);
+	if ((check_time(si) || atomic_load_explicit(&ucistop, memory_order_relaxed) || (si->max_nodes > 0 && si->nodes >= si->max_nodes)) && si->done_depth)
 		si->interrupt = 1;
 
 	if (si->sel_depth < ply)
@@ -265,7 +268,7 @@ int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, s
 	else
 		pstate_init(pos, &pstate);
 
-	int32_t eval = evaluate(pos), best_eval = -VALUE_INFINITE;
+	int32_t eval = evaluate(pos, si), best_eval = -VALUE_INFINITE;
 
 	if (ply >= PLY_MAX)
 		return pstate.checkers ? 0 : eval;
@@ -348,8 +351,8 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	if (si->interrupt)
 		return 0;
 	if (ply >= PLY_MAX)
-		return evaluate(pos);
-	if ((check_time(si) || atomic_load_explicit(&ucistop, memory_order_relaxed)) && si->done_depth)
+		return evaluate(pos, si);
+	if ((check_time(si) || atomic_load_explicit(&ucistop, memory_order_relaxed) || (si->max_nodes > 0 && si->nodes >= si->max_nodes)) && si->done_depth)
 		si->interrupt = 1;
 
 	if (si->sel_depth < ply)
@@ -409,7 +412,7 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 		goto skip_pruning;
 
 #if 1
-	int32_t estimated_eval = ss->static_eval = evaluate(pos);
+	int32_t estimated_eval = ss->static_eval = evaluate(pos, si);
 	if (tteval != VALUE_NONE && ttbound & (tteval >= estimated_eval ? BOUND_LOWER : BOUND_UPPER))
 		estimated_eval = tteval;
 #endif
@@ -746,6 +749,9 @@ int32_t search(struct position *pos, int depth, int verbose, struct timeinfo *ti
 	struct searchstack ss[PLY_MAX + 1] = { 0 };
 
 	time_init(pos, si.ti);
+
+	if (!option_deterministic)
+		si.seed = time_now();
 
 	int32_t eval = VALUE_NONE;
 

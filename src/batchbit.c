@@ -41,6 +41,7 @@ struct batch {
 	int32_t *ind1;
 	int32_t *ind2;
 	float *eval;
+	float *result;
 };
 
 struct dataloader {
@@ -75,6 +76,7 @@ void *batch_prepare(void *ptr) {
 
 	size_t counter1 = 0, counter2 = 0;
 
+	char result = RESULT_UNKNOWN;
 	while (batch->size < dataloader->requested_size) {
 		move_t move = 0;
 		if (read_move(dataloader->f, &move)) {
@@ -86,6 +88,10 @@ void *batch_prepare(void *ptr) {
 		}
 		else {
 			if (read_position(dataloader->f, dataloader->pos)) {
+				fseek(dataloader->f, 0, SEEK_SET);
+				continue;
+			}
+			if (read_result(dataloader->f, &result)) {
 				fseek(dataloader->f, 0, SEEK_SET);
 				continue;
 			}
@@ -103,6 +109,8 @@ void *batch_prepare(void *ptr) {
 
 		batch->eval[batch->size] = ((float)(FV_SCALE * eval)) / (127 * 64);
 		batch->bucket[batch->size] = get_bucket(dataloader->pos);
+		batch->result[batch->size] = result != RESULT_UNKNOWN ? ((2 * dataloader->pos->turn - 1) * result + 1.0) / 2.0 : 0.5;
+
 		int index, square;
 		//const int king_square[] = { orient_horizontal(BLACK, ctz(dataloader->pos->piece[BLACK][KING])), orient_horizontal(WHITE, ctz(dataloader->pos->piece[WHITE][KING])) };
 		int king_square[] = { ctz(dataloader->pos->piece[BLACK][KING]), ctz(dataloader->pos->piece[WHITE][KING]) };
@@ -164,6 +172,7 @@ struct batch *batch_fetch(void *ptr) {
 	memcpy(batch->ind1, prepared->ind1, 4 * 32 * dataloader->requested_size * sizeof(*dataloader->batch->ind1));
 	memcpy(batch->ind2, prepared->ind2, 4 * 32 * dataloader->requested_size * sizeof(*dataloader->batch->ind2));
 	memcpy(batch->eval, prepared->eval, dataloader->requested_size * sizeof(*dataloader->batch->eval));
+	memcpy(batch->result, prepared->result, dataloader->requested_size * sizeof(*dataloader->batch->result));
 	dataloader->ready = 0;
 
 	batch_prepare_thread(ptr);
@@ -179,6 +188,7 @@ struct batch *balloc(size_t requested_size) {
 	batch->ind1 = malloc(4 * 32 * requested_size * sizeof(*batch->ind1));
 	batch->ind2 = malloc(4 * 32 * requested_size * sizeof(*batch->ind2));
 	batch->eval = malloc(requested_size * sizeof(*batch->eval));
+	batch->result = malloc(requested_size * sizeof(*batch->result));
 
 	return batch;
 }
@@ -188,6 +198,7 @@ void bfree(struct batch *batch) {
 	free(batch->ind1);
 	free(batch->ind2);
 	free(batch->eval);
+	free(batch->result);
 	free(batch);
 }
 

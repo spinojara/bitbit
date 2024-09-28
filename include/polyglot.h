@@ -14,23 +14,13 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef OPTION_H
-#define OPTION_H
+#ifndef POLYGLOT_H
+#define POLYGLOT_H
 
-#include "transposition.h"
+#include <stdint.h>
 
-extern int option_nnue;
-extern int option_pure_nnue;
-extern int option_transposition;
-extern int option_history;
-extern int option_endgame;
-extern int option_damp;
-extern int option_ponder;
-extern int option_elo;
-extern int option_deterministic;
+#include "position.h"
 
-void print_options(void);
-
-void setoption(int argc, char **argv, struct transpositiontable *tt);
+int polyglot_explore(FILE *f, struct position *pos, int max_moves, uint64_t *seed);
 
 #endif

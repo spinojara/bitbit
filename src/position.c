@@ -594,38 +594,85 @@ char *pos_to_fen(char *fen, const struct position *pos) {
 	return fen;
 }
 
-int pos_are_equal(const struct position *pos1, const struct position *pos2) {
+char *poscmp(const struct position *pos1, const struct position *pos2, int check_zobrist) {
+	static char error[128];
 	for (int j = 0; j < 2; j++) {
 		for (int i = 0; i < 7; i++) {
 			if (pos1->piece[j][i] != pos2->piece[j][i]) {
-				printf("BITBOARD ERROR: %i, %i\n", j, i);
-				return 0;
+				sprintf(error, "bitboard[%i][%i]", j, i);
+				return error;
 			}
 		}
 	}
 	if (pos1->turn != pos2->turn) {
-		printf("TURN ERROR\n");
-		return 0;
+		sprintf(error, "turn");
+		return error;
 	}
-	if (pos1->en_passant != pos2->en_passant) {
-		printf("EN PASSANT ERROR\n");
-		return 0;
-	}
+
 	if (pos1->castle != pos2->castle) {
-		printf("CASTLE ERROR\n");
-		return 0;
+		sprintf(error, "castle");
+		return error;
 	}
 	for (int i = 0; i < 64; i++) {
 		if (pos1->mailbox[i] != pos2->mailbox[i]) {
-			printf("MAILBOX ERROR: %i\n", i);
-			return 0;
+			sprintf(error, "mailbox[%i]", i);
+			return error;
 		}
 	}
-	if (pos1->zobrist_key != pos2->zobrist_key) {
-		printf("ZOBRIST KEY ERROR\n");
-		return 0;
+	if (check_zobrist && pos1->zobrist_key != pos2->zobrist_key) {
+		sprintf(error, "zobrist key");
+		return error;
 	}
-	return 1;
+	if (pos1->halfmove != pos2->halfmove) {
+		sprintf(error, "halfmove");
+		return error;
+	}
+
+	/* It could be that the en passant is different for two position, but
+	 * they are still equal. This happens if the en passant square is set,
+	 * but is not actually attacked by any enemy pawns.
+	 */
+	int en_passant_error = 0;
+	int en_passant1 = pos1->en_passant;
+	int en_passant2 = pos2->en_passant;
+	if (en_passant1 < 8 || en_passant1 >= 56)
+		en_passant1 = 0;
+	if (en_passant2 < 8 || en_passant2 >= 56)
+		en_passant2 = 0;
+
+	if ((en_passant1 && !en_passant2) || (!en_passant1 && en_passant2)) {
+		const struct position *pos = en_passant1 ? pos1 : pos2;
+
+		int en_passant = max(en_passant1, en_passant2);
+		en_passant1 = en_passant2 = 0;
+		struct pstate ps;
+		pstate_init(pos, &ps);
+
+		
+		int from[2];
+		if (pos->turn) {
+			from[0] = en_passant + 9;
+			from[1] = en_passant + 7;
+		}
+		else {
+			from[0] = en_passant - 9;
+			from[1] = en_passant - 7;
+		}
+
+		for (int i = 0; i < 2; i++) {
+			move_t move = M(from[i], en_passant, 0, 0);
+			if (uncolored_piece(pos->mailbox[from[i]]) == PAWN && pseudo_legal(pos, &ps, &move) && legal(pos, &ps, &move)) {
+				en_passant_error = 1;
+				break;
+			}
+		}
+	}
+	if (en_passant_error || en_passant1 != en_passant2) {
+		sprintf(error, "en passant");
+		return error;
+	}
+
+	return NULL;
 }
 
 void print_history_pgn(const struct history *h) {

@@ -42,6 +42,7 @@ extern int razor1;
 extern int razor2;
 extern int futility;
 extern double maximal;
+extern double instability1;
 extern double instability2;
 
 struct tune tunes[] = {

@@ -39,7 +39,7 @@ struct searchstack {
 };
 
 struct searchinfo {
-	uint64_t nodes;
+	uint64_t nodes, max_nodes;
 
 	move_t pv[PLY_MAX][PLY_MAX];
 	move_t killers[PLY_MAX][2];
@@ -55,7 +55,11 @@ struct searchinfo {
 	int interrupt;
 
 	struct timeinfo *ti;
+
+	uint64_t seed;
 };
+
+int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t beta, int cut_node, struct searchinfo *si, struct searchstack *ss);
 
 int32_t search(struct position *pos, int depth, int verbose, struct timeinfo *ti, move_t move[2], struct transpositiontable *tt, struct history *history, int iterative);
 

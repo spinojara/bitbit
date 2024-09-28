@@ -21,8 +21,10 @@
 #include <stdio.h>
 #include <stdalign.h>
 #include <assert.h>
+#include <stddef.h>
 
 #define K_HALF_DIMENSIONS 512
+#define ESSENTIALPOSITION (offsetof(struct position, accumulation))
 
 struct position {
 	uint64_t piece[2][7];
@@ -150,7 +152,7 @@ void print_position(const struct position *pos);
 
 void print_fen(const struct position *pos);
 
-int pos_are_equal(const struct position *pos1, const struct position *pos2);
+char *poscmp(const struct position *pos1, const struct position *pos2, int check_zobrist);
 
 struct history;
 

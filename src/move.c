@@ -378,7 +378,6 @@ char *move_str_pgn(char *str, const struct position *pos, const move_t *move) {
 	case QUEEN:
 		str[i++] = 'Q';
 		break;
-	/* King. */
 	case KING:
 		if (f == 4 && file_of(move_to(move)) == 6) {
 			sprintf(str, "O-O");
@@ -412,13 +411,9 @@ char *move_str_pgn(char *str, const struct position *pos, const move_t *move) {
 	assert(attackers);
 
 	if (popcount(attackers & file(move_from(move))) > 1) {
-		if (popcount(attackers & rank(move_from(move))) > 1) {
+		if (popcount(attackers & rank(move_from(move))) > 1)
 			str[i++] = "abcdefgh"[f];
-			str[i++] = "12345678"[r];
-		}
-		else {
-			str[i++] = "12345678"[r];
-		}
+		str[i++] = "12345678"[r];
 	}
 	else if (popcount(attackers) > 1) {
 		str[i++] = "abcdefgh"[f];

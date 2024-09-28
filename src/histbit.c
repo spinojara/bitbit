@@ -72,11 +72,13 @@ int main(int argc, char **argv) {
 	bitboard_init();
 	tables_init();
 	position_init();
-	struct position pos;
+	struct position pos = { 0 };
+	startpos(&pos);
 
 	uint64_t piece_square[7][64] = { 0 };
 
 	move_t move;
+	char result = 0;
 	int32_t eval = 0;
 	size_t total = 0;
 	size_t count = 0;
@@ -85,6 +87,7 @@ int main(int argc, char **argv) {
 	size_t a = 0;
 	size_t c = 0;
 	char startfen[128] = { 0 };
+	char fen[128];
 	char movestr[16];
 	int print_flag = 0;
 	while (1) {
@@ -92,17 +95,24 @@ int main(int argc, char **argv) {
 		if (count % 20000 == 0)
 			printf("collecting data: %lu\r", count);
 		move = 0;
-		printf("bytes read: %ld\n", ftell(f));
 		if (read_move(f, &move))
 			break;
 		if (move) {
 			if (print_flag)
 				printf("%s\n", move_str_pgn(movestr, &pos, &move));
 			print_flag = 0;
+			struct pstate ps;
+			pstate_init(&pos, &ps);
+			if (!pseudo_legal(&pos, &ps, &move) || !legal(&pos, &ps, &move)) {
+				fprintf(stderr, "error: illegal move %s for position %s\n", move_str_algebraic(movestr, &move), pos_to_fen(fen, &pos));
+				exit(1);
+			}
 			do_move(&pos, &move);
 		}
 		else {
 			if (read_position(f, &pos))
+				break;
+			if (read_result(f, &result))
 				break;
 			if (!feof(f))
 				games++;
@@ -111,13 +121,11 @@ int main(int argc, char **argv) {
 		
 		if (read_eval(f, &eval))
 			break;
+		if (feof(f))
+			break;
 
 		if (eval == VALUE_NONE)
 			continue;
-
-		print_fen(&pos);
-		printf("eval: %d\n", eval);
-
 #if 0
 		const int material_values[] = { 0, 1, 3, 3, 5, 9, 0 };
 		int material[2] = { 0 };
@@ -159,14 +167,16 @@ int main(int argc, char **argv) {
 		store_information(&pos, piece_square);
 		total++;
 
-		if (eval == 0)
+		if (result == RESULT_DRAW)
 			draws++;
 	}
 	printf("\033[2K");
 	printf("total positions: %lu\n", total);
 	printf("total games: %lu\n", games);
-	printf("draw percent: %lg\n", (double)draws / games);
+	printf("draw percent: %lg\n", (double)draws / total);
 	printf("percent: %f\n", (double)c / a);
 	for (int piece = PAWN; piece <= KING; piece++)
 		print_information(piece_square[piece], total);
+
+	fclose(f);
 }

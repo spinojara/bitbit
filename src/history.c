@@ -21,6 +21,7 @@
 #include "transposition.h"
 #include "attackgen.h"
 #include "bitboard.h"
+#include "endgame.h"
 
 static uint64_t cuckoo[8192];
 static unsigned char A[8192], B[8192];
@@ -29,6 +30,7 @@ void history_next(struct position *pos, struct history *h, move_t move) {
 	h->zobrist_key[h->ply] = pos->zobrist_key;
 	h->move[h->ply] = move;
 	do_zobrist_key(pos, &h->move[h->ply]);
+	do_endgame_key(pos, &h->move[h->ply]);
 	do_move(pos, &h->move[h->ply]);
 	h->ply++;
 }
@@ -36,6 +38,7 @@ void history_next(struct position *pos, struct history *h, move_t move) {
 void history_previous(struct position *pos, struct history *h) {
 	h->ply--;
 	undo_zobrist_key(pos, &h->move[h->ply]);
+	undo_endgame_key(pos, &h->move[h->ply]);
 	undo_move(pos, &h->move[h->ply]);
 }
 
@@ -118,6 +121,7 @@ int upcoming_repetition(const struct position *pos, const struct history *h, int
 }
 
 void history_init(void) {
+	const int max_tries = 1000000;
 	for (int piece = WHITE_PAWN; piece <= BLACK_KING; piece++) {
 	for (int a = a1; a <= h8; a++) {
 	for (int b = a + 1; b <= h8; b++) {
@@ -127,7 +131,8 @@ void history_init(void) {
 		uint64_t mv = zobrist_piece_key(piece, a) ^ zobrist_piece_key(piece, b) ^ zobrist_turn_key();
 		uint64_t i = H1(mv);
 		int aa = a, bb = b;
-		while (1) {
+		int k;
+		for (k = 0; k < max_tries; k++) {
 			SWAP(cuckoo[i], mv);
 			SWAP(A[i], aa);
 			SWAP(B[i], bb);
@@ -135,6 +140,10 @@ void history_init(void) {
 			if (!mv)
 				break;
 			i = (i == H1(mv)) ? H2(mv) : H1(mv);
+		}
+		if (k == max_tries) {
+			fprintf(stderr, "error: failed to initialize cuckoo tables\n");
+			exit(1);
 		}
 	}
 	}

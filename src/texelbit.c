@@ -1512,27 +1512,29 @@ double grad_calc(struct position *pos, double result) {
 size_t grad(FILE *f, struct position *pos) {
 
 	size_t actual_size = 0;
+	char result = RESULT_UNKNOWN;
 	while (actual_size < BATCH_SIZE) {
 		move_t move = 0;
 		read_move(f, &move);
-		if (move)
+		if (move) {
 			do_move(pos, &move);
-		else
+		}
+		else {
 			read_position(f, pos);
+			read_result(f, &result);
+		}
 
 		int32_t eval = 0;
 		read_eval(f, &eval);
 		if (feof(f))
 			break;
 
-		int skip = (eval == VALUE_NONE) || gbernoulli(0.9);
+		int skip = (result == RESULT_UNKNOWN) || (eval == VALUE_NONE) || gbernoulli(0.9);
 		if (skip)
 			continue;
 
-		eval = pos->turn == WHITE ? eval : -eval;
-		double result = sigmoid(eval);
-
-		grad_calc(pos, result);
+		double score = result == RESULT_WIN ? 1.0 : result == RESULT_DRAW ? 0.5 : 0.0;
+		grad_calc(pos, score);
 
 		actual_size++;
 	}
