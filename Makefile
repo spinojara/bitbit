@@ -97,6 +97,7 @@ SRC_PGNBIT    = pgnbit.c $(SRC)
 SRC_TEXELBIT  = texelbit.c $(subst evaluate,texel-evaluate,\
 	        $(subst pawn,texel-pawn,$(SRC)))
 SRC_BASEBIT   = basebit.c $(SRC_BASE)
+SRC_PLAYBIT   = playbit.c polyglot.c $(SRC)
 SRC_CONVBIT   = convbit.c io.c $(SRC_BASE)
 SRC_BATCHBIT  = $(addprefix pic-,batchbit.c $(SRC_BASE) io.c)
 SRC_VISBIT    = pic-visbit.c pic-util.c pic-io.c
@@ -111,6 +112,7 @@ OBJ_HISTBIT   = $(patsubst %.c,obj/%.o,$(SRC_HISTBIT))
 OBJ_PGNBIT    = $(patsubst %.c,obj/%.o,$(SRC_PGNBIT))
 OBJ_TEXELBIT  = $(patsubst %.c,obj/%.o,$(SRC_TEXELBIT))
 OBJ_BASEBIT   = $(patsubst %.c,obj/%.o,$(SRC_BASEBIT))
+OBJ_PLAYBIT   = $(patsubst %.c,obj/%.o,$(SRC_PLAYBIT))
 OBJ_CONVBIT   = $(patsubst %.c,obj/%.o,$(SRC_CONVBIT))
 OBJ_BATCHBIT  = $(patsubst %.c,obj/%.o,$(SRC_BATCHBIT))
 OBJ_VISBIT    = $(patsubst %.c,obj/%.o,$(SRC_VISBIT))
@@ -132,7 +134,7 @@ all: bitbit
 
 everything: $(BIN)
 
-bitbit genbit libbatchbit.so: LDLIBS += -lpthread
+bitbit genbit libbatchbit.so playbit: LDLIBS += -lpthread
 bitbit: $(OBJ_BITBIT)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 weightbit: $(OBJ_WEIGHTBIT)
@@ -148,6 +150,8 @@ pgnbit: $(OBJ_PGNBIT)
 texelbit: $(OBJ_TEXELBIT)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 basebit: $(OBJ_BASEBIT)
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+playbit: $(OBJ_PLAYBIT)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 convbit: $(OBJ_CONVBIT)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
@@ -177,7 +181,7 @@ src/nnueweights.c: weightbit Makefile
 %.so:                            LDFLAGS += -shared
 
 obj/thread.o obj/pic-batchbit.o: CFLAGS += -pthread
-obj/genbit.o:                    CFLAGS += $(DSYZYGY) -pthread
+obj/genbit.o obj/playbit.o:      CFLAGS += $(DSYZYGY) -pthread
 obj/init.o obj/interface.o:      CFLAGS += -DVERSION=$(VERSION)
 obj/interface.o obj/option.o obj/tune-option.o: CFLAGS += -DTT=$(TT)
 

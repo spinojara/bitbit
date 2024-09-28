@@ -38,6 +38,7 @@
 #define OPTION_DAMP          1
 #define OPTION_PONDER        0
 #define OPTION_ELO           0
+#define OPTION_DETERMINISTIC 1
 
 int option_nnue          = OPTION_NNUE;
 int option_pure_nnue     = OPTION_PURE_NNUE;
@@ -47,6 +48,7 @@ int option_endgame       = OPTION_ENDGAME;
 int option_damp          = OPTION_DAMP;
 int option_ponder        = OPTION_PONDER;
 int option_elo           = OPTION_ELO;
+int option_deterministic = OPTION_DETERMINISTIC;
 
 void print_options(void) {
 	printf("option name Clear Hash type button\n");
@@ -58,6 +60,7 @@ void print_options(void) {
 	printf("option name Elo type spin default %d min 0 max %u\n", OPTION_ELO, INT_MAX);
 	printf("option name FileNNUE type string\n");
 	printf("option name BuiltinNNUE type button\n");
+	printf("option name Deterministic type check default %s\n", OPTION_DETERMINISTIC ? "true" : "false");
 #if TUNE
 	print_tune();
 #endif
@@ -115,4 +118,6 @@ void setoption(int argc, char **argv, struct transpositiontable *tt) {
 		option_pure_nnue = set;
 	else if (!strcasecmp(argv[2], "filennue"))
 		file_nnue(argv[4]);
+	else if (!strcasecmp(argv[2], "deterministic"))
+		option_deterministic = set;
 }
