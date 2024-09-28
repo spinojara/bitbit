@@ -39,6 +39,7 @@ int gbernoulli(double p);
 int bernoulli(double p, uint64_t *seed);
 double guniform(void);
 double uniform(uint64_t *seed);
+int uniformint(uint64_t *seed, int a, int b);
 
 static inline int max(int a, int b) { return a < b ? b : a; }
 static inline int min(int a, int b) { return a < b ? a : b; }
@@ -51,5 +52,9 @@ int find_char(const char *s, char c);
 
 /* Returns 0 if s is not a non negative integer. */
 int strint(const char *s);
+
+#if !defined(NDEBUG) && defined(__GNUC__)
+void stacktrace(void);
+#endif
 
 #endif

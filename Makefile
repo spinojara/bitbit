@@ -62,6 +62,10 @@ CFLAGS     = $(CSTANDARD) $(CWARNINGS) $(COPTIMIZE) $(CDEBUG) -Iinclude
 LDFLAGS    = $(CFLAGS)
 LDLIBS     = -lm
 
+ifneq ($(DEBUG), )
+	LDFLAGS += -rdynamic
+endif
+
 ifeq ($(SIMD), avx2)
 	CFLAGS += -DAVX2 -mavx2
 endif

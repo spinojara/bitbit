@@ -19,6 +19,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#if !defined(NDEBUG) && defined(__GNUC__)
+#include <execinfo.h>
+#endif
 
 #include "bitboard.h"
 
@@ -39,15 +42,17 @@ int gbernoulli(double p) {
 	return bernoulli(p, &gseed);
 }
 int bernoulli(double p, uint64_t *seed) {
-	const uint64_t max = (uint64_t)1 << 32;
-	return (double)(xorshift64(seed) % max) / max < p;
+	return uniform(seed) < p;
 }
 double guniform(void) {
 	return uniform(&gseed);
 }
 double uniform(uint64_t *seed) {
 	const uint64_t max = (uint64_t)1 << 32;
-	return (double)(xorshift64(seed) % (max + 1)) / max;
+	return (double)(xorshift64(seed) % max) / max;
+}
+int uniformint(uint64_t *seed, int a, int b) {
+	return (int)((double)a + uniform(seed) * (b - a));
 }
 
 int find_char(const char *s, char c) {
@@ -67,3 +72,22 @@ int strint(const char *s) {
 	}
 	return ret;
 }
+
+#if !defined(NDEBUG) && defined(__GNUC__)
+/* <https://www.gnu.org/software/libc/manual/html_node/Backtraces.html> */
+void stacktrace(void) {
+	void *array[100];
+	char **strings;
+	int size, i;
+
+	size = backtrace(array, 10);
+	strings = backtrace_symbols(array, size);
+	if (strings != NULL) {
+		printf("Obtained %d stack frames\n", size);
+		for (i = 0; i < size; i++)
+			printf("%s\n", strings[i]);
+	}
+
+	free(strings);
+}
+#endif
