@@ -21,6 +21,6 @@
 
 #include "position.h"
 
-void polyglot_explore(FILE *f, struct position *pos, int max_moves, uint64_t *seed);
+int polyglot_explore(FILE *f, struct position *pos, int max_moves, uint64_t *seed);
 
 #endif

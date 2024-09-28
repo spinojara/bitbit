@@ -335,13 +335,16 @@ static move_t polyglot_random_move(FILE *f, const struct position *pos, uint64_t
 	return moves[uniformint(seed, 0, nmoves)];
 }
 
-void polyglot_explore(FILE *f, struct position *pos, int max_moves, uint64_t *seed) {
+int polyglot_explore(FILE *f, struct position *pos, int max_moves, uint64_t *seed) {
 	move_t move;
-	for (int i = 0; i < max_moves; i++) {
+	int moves;
+	for (moves = 0; moves < max_moves; moves++) {
 		move = polyglot_random_move(f, pos, seed);
 		if (move)
 			do_move(pos, &move);
 		else
 			break;
 	}
+
+	return moves;
 }
