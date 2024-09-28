@@ -332,8 +332,8 @@ void play_game(FILE *openings, struct transpositiontable *tt, uint64_t nodes, ui
 			move = *bestmove;
 		}
 		char str1[128], str2[16];
-		printf("%s\n", pos_to_fen(str1, &pos));
-		printf("%s (%s) %d\n", move_str_pgn(str1, &pos, &move), move_str_pgn(str2, &pos, bestmove), eval_now);
+		//printf("%s\n", pos_to_fen(str1, &pos));
+		//printf("%s (%s) %d\n", move_str_pgn(str1, &pos, &move), move_str_pgn(str2, &pos, bestmove), eval_now);
 
 		if (skip)
 			eval[h.ply] = VALUE_NONE;
