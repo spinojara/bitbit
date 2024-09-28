@@ -60,6 +60,8 @@ static atomic_int s = 0;
 static pthread_mutex_t filemutex;
 
 static inline void stop(void) {
+	if (!atomic_load_explicit(&s, memory_order_relaxed))
+		fprintf(stderr, "broadcasting stop signal...\n");
 	atomic_store_explicit(&s, 1, memory_order_relaxed);
 }
 
@@ -104,7 +106,8 @@ FILE *newfile(void) {
 		if (fd == -1 && errno != EEXIST) {
 			fprintf(stderr, "error: failed to create file %s\n", name);
 			stop();
-			break;
+			pthread_mutex_unlock(&filemutex);
+			return NULL;
 		}
 	}
 
@@ -240,7 +243,6 @@ void play_game(FILE *openings, struct transpositiontable *tt, uint64_t nodes, ui
 
 	struct history h = { 0 };
 	struct position pos;
-	startpos(&pos);
 
 	char result = RESULT_UNKNOWN;
 	move_t move = 0;
@@ -251,7 +253,12 @@ void play_game(FILE *openings, struct transpositiontable *tt, uint64_t nodes, ui
 
 	int draw_counter = 0;
 
-	polyglot_explore(openings, &pos, 10, seed);
+	startpos(&pos);
+	if (!polyglot_explore(openings, &pos, 10, seed)) {
+		fprintf(stderr, "error: start position not found in opening book\n");
+		stop();
+		return;
+	}
 
 	int random_moves = uniformint(seed, random_moves_min, random_moves_max + 1);
 	for (int i = 0; i < random_moves; i++) {
@@ -392,6 +399,7 @@ void *playthread(void *arg) {
 		if (!f) {
 			fprintf(stderr, "error: failed to create new file\n");
 			stop();
+			break;
 		}
 
 		while (ftell(f) < max_file_size && !stopped()) {
@@ -400,10 +408,12 @@ void *playthread(void *arg) {
 
 		fclose(f);
 
-		transposition_free(&tt);
 	}
 
+	transposition_free(&tt);
 	fclose(openings);
+
+	printf("exiting thread %d\n", ti->jobn);
 
 	return NULL;
 }
@@ -509,9 +519,7 @@ int main(int argc, char **argv) {
 	}
 
 	char buf[BUFSIZ];
-	while (fgets(buf, sizeof(buf), stdin) && strcmp(buf, "stop\n") && strcmp(buf, "q\n") && strcmp(buf, "quit"));
-
-	fprintf(stderr, "stopping...\n");
+	while (fgets(buf, sizeof(buf), stdin) && strcmp(buf, "stop\n") && strcmp(buf, "q\n") && strcmp(buf, "quit\n"));
 	stop();
 
 	for (int i = 0; i < jobs; i++)
