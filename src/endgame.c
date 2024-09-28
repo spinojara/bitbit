@@ -96,12 +96,12 @@ void endgame_store(const char *str, int32_t (*evaluate)(const struct position *p
 		
 		struct endgame *e = endgame_probe(&pos);
 		if (e) {
-			fprintf(stderr, "Endgame %s already exists.\n", str);
+			fprintf(stderr, "error: endgame %s already exists\n", str);
 			exit(1);
 		}
 		e = endgame_get(&pos);
 		if (e->evaluate) {
-			fprintf(stderr, "Endgame %s entry collision.\n", str);
+			fprintf(stderr, "error: endgame %s entry collision\n", str);
 			exit(1);
 		}
 
