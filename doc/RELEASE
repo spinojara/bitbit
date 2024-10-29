@@ -1,6 +1,8 @@
 Building releases
 =================
-Following is a table of binaries and their corresponding make invocation.
+Following is a table of binaries and their corresponding make invocation. Note
+that windows executables should be compiled with the -static flag because of
+pthreads.
 
 +--------------------------+----------------------------------------------------+
 | Binary                   | Command                                            |
