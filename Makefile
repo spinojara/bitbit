@@ -66,6 +66,10 @@ ifneq ($(DEBUG), )
 	LDFLAGS += -rdynamic
 endif
 
+ifneq ($(STATIC), )
+	LDFLAGS += -static
+endif
+
 ifeq ($(SIMD), avx2)
 	CFLAGS += -DAVX2 -mavx2
 endif
