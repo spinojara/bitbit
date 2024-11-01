@@ -105,8 +105,9 @@ SRC_PLAYBIT   = playbit.c polyglot.c $(SRC)
 SRC_CONVBIT   = convbit.c io.c $(SRC_BASE)
 SRC_BATCHBIT  = $(addprefix pic-,batchbit.c $(SRC_BASE) io.c)
 SRC_VISBIT    = pic-visbit.c pic-util.c pic-io.c
+SRC_CHECKBIT  = checkbit.c io.c $(SRC_BASE)
 
-DEP = $(sort $(patsubst %.c,dep/%.d,$(SRC_ALL)))
+DEP           = $(sort $(patsubst %.c,dep/%.d,$(SRC_ALL)))
 
 OBJ_BITBIT    = $(patsubst %.c,obj/%.o,$(SRC_BITBIT))
 OBJ_WEIGHTBIT = $(patsubst %.c,obj/%.o,$(SRC_WEIGHTBIT))
@@ -123,9 +124,10 @@ OBJ_VISBIT    = $(patsubst %.c,obj/%.o,$(SRC_VISBIT))
 OBJ_TUNEBIT   = $(patsubst %.c,obj/%.o,$(subst search,tune-search,\
 		$(subst option,tune-option,$(subst timeman,tune-timeman,\
 		$(SRC_BITBIT) tune.c))))
+OBJ_CHECKBIT  = $(patsubst %.c,obj/%.o,$(SRC_CHECKBIT))
 
-BIN = bitbit weightbit genbit epdbit histbit pgnbit \
-      texelbit basebit libbatchbit.so libvisbit.so tunebit convbit
+BIN = bitbit weightbit genbit epdbit histbit pgnbit texelbit basebit \
+      libbatchbit.so libvisbit.so tunebit convbit checkbit
 
 PREFIX = /usr/local
 BINDIR = $(PREFIX)/bin
@@ -164,6 +166,8 @@ libbatchbit.so: $(OBJ_BATCHBIT)
 libvisbit.so: $(OBJ_VISBIT)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 tunebit: $(OBJ_TUNEBIT)
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+checkbit: $(OBJ_CHECKBIT)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 obj/%.o: src/%.c dep/%.d

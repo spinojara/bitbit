@@ -43,13 +43,15 @@ int write_uintx(FILE *f, uint64_t p, size_t x) {
 		return 1;
 	}
 
-	return fwrite(buf, 1, x, f) != x;
+	return x - fwrite(buf, 1, x, f);
 }
 
 int read_uintx(FILE *f, void *p, size_t x) {
 	uint8_t buf[8];
-	if (fread(buf, 1, x, f) != x)
-		return 1;
+
+	size_t r;
+	if ((r = fread(buf, 1, x, f)) < x)
+		return x - r;
 	if (!p)
 		return 0;
 	switch (x) {
@@ -67,7 +69,7 @@ int read_uintx(FILE *f, void *p, size_t x) {
 			         (uint64_t)buf[4] << 32 | (uint64_t)buf[5] << 40 | (uint64_t)buf[6] << 48 | (uint64_t)buf[7] << 56;
 		break;
 	default:
-		return 1;
+		return -1;
 	}
 	return 0;
 }
@@ -121,7 +123,7 @@ int read_position(FILE *f, struct position *pos) {
 	pos->mailbox[buf[0]] = WHITE_KING;
 	pos->mailbox[buf[1]] = BLACK_KING;
 
-	for (int index = 2; index <= 62; ) {
+	for (int index = 2; index <= 62 - 2; ) {
 		int cpiece = buf[index++];
 		if (!cpiece)
 			break;
@@ -164,8 +166,9 @@ int write_move(FILE *f, move_t move) {
 
 int read_move(FILE *f, move_t *move) {
 	uint16_t temp;
-	if (read_uintx(f, &temp, 2))
-		return 1;
+	int r;
+	if ((r = read_uintx(f, &temp, 2)))
+		return r;
 	if (move)
 		*move = temp;
 	return 0;

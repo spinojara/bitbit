@@ -526,19 +526,79 @@ int fen_is_ok(int argc, char **argv) {
 	/* Now ok to generate preliminary position. */
 	struct position pos;
 	pos_from_fen(&pos, argc, argv);
-	uint64_t checkers = generate_checkers(&pos, other_color(pos.turn));
-	if (checkers)
+	return pos_is_ok(&pos);
+}
+
+int pos_is_ok(const struct position *pos) {
+	if (pos->halfmove > 100 || pos->fullmove > 6000)
 		return 0;
-	if (popcount(pos.piece[WHITE][ALL]) > 16 || popcount(pos.piece[BLACK][ALL]) > 16)
+
+	if (pos->turn != WHITE && pos->turn != BLACK)
 		return 0;
-	if (popcount(pos.piece[WHITE][PAWN]) > 8 || popcount(pos.piece[BLACK][PAWN]) > 8)
+
+	if (popcount(pos->piece[WHITE][ALL]) > 16 || popcount(pos->piece[BLACK][ALL]) > 16)
+		return 0;
+	if (popcount(pos->piece[WHITE][PAWN]) > 8 || popcount(pos->piece[BLACK][PAWN]) > 8)
 		return 0;
 	for (int piece = KNIGHT; piece <= ROOK; piece++)
-		if (popcount(pos.piece[WHITE][piece]) > 10 || popcount(pos.piece[BLACK][piece]) > 10)
+		if (popcount(pos->piece[WHITE][piece]) > 10 || popcount(pos->piece[BLACK][piece]) > 10)
 			return 0;
-	if (popcount(pos.piece[WHITE][QUEEN]) > 9 || popcount(pos.piece[BLACK][QUEEN]) > 9)
+	if (popcount(pos->piece[WHITE][QUEEN]) > 9 || popcount(pos->piece[BLACK][QUEEN]) > 9)
 		return 0;
-	if (popcount(pos.piece[WHITE][KING]) > 1 || popcount(pos.piece[BLACK][KING]) > 1)
+	if (popcount(pos->piece[WHITE][KING]) > 1 || popcount(pos->piece[BLACK][KING]) > 1)
+		return 0;
+
+	for (int color = BLACK; color <= WHITE; color++) {
+		uint64_t all = 0;
+		for (int piece = WHITE_PAWN; piece <= WHITE_KING; piece++) {
+			if (all & pos->piece[color][piece])
+				return 0;
+			all |= pos->piece[color][piece];
+		}
+		if (pos->piece[color][ALL] != all)
+			return 0;
+	}
+
+	if (pos->piece[WHITE][ALL] & pos->piece[BLACK][ALL])
+		return 0;
+
+	for (int sq = 0; sq < 63; sq++) {
+		int cpiece = pos->mailbox[sq];
+		if (cpiece < EMPTY || cpiece > BLACK_KING)
+			return 0;
+		if (cpiece == EMPTY) {
+			if ((pos->piece[WHITE][ALL] | pos->piece[BLACK][ALL]) & bitboard(sq))
+				return 0;
+		}
+		else {
+			int color = color_of_piece(cpiece);
+			int piece = uncolored_piece(cpiece);
+
+			if (!(pos->piece[color][piece] & bitboard(sq)))
+				return 0;
+		}
+	}
+
+	if (pos->en_passant) {
+		if (pos->turn && (pos->en_passant / 8 != 5 || pos->mailbox[pos->en_passant - 8] != BLACK_PAWN ||
+				pos->mailbox[pos->en_passant + 8] != EMPTY || pos->mailbox[pos->en_passant] != EMPTY))
+			return 0;
+		if (!pos->turn && (pos->en_passant / 8 != 2 || pos->mailbox[pos->en_passant + 8] != WHITE_PAWN ||
+				pos->mailbox[pos->en_passant - 8] != EMPTY || pos->mailbox[pos->en_passant] != EMPTY))
+			return 0;
+	}
+
+	if (pos->castle & 0x1 && (pos->mailbox[e1] != WHITE_KING || pos->mailbox[h1] != WHITE_ROOK))
+		return 0;
+	if (pos->castle & 0x2 && (pos->mailbox[e1] != WHITE_KING || pos->mailbox[a1] != WHITE_ROOK))
+		return 0;
+	if (pos->castle & 0x4 && (pos->mailbox[e8] != BLACK_KING || pos->mailbox[h8] != BLACK_ROOK))
+		return 0;
+	if (pos->castle & 0x8 && (pos->mailbox[e8] != BLACK_KING || pos->mailbox[a8] != BLACK_ROOK))
+		return 0;
+
+	uint64_t checkers = generate_checkers(pos, other_color(pos->turn));
+	if (checkers)
 		return 0;
 	return 1;
 }

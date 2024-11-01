@@ -148,6 +148,8 @@ char *pos_to_fen(char *fen, const struct position *pos);
 int fen_is_ok2(const char *str);
 int fen_is_ok(int argc, char **argv);
 
+int pos_is_ok(const struct position *pos);
+
 void print_position(const struct position *pos);
 
 void print_fen(const struct position *pos);
