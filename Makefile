@@ -207,7 +207,7 @@ install: all
 	$(INSTALL) -m 0644 man/bitbit.6 $(DESTDIR)$(MAN6DIR)
 
 install-everything: everything install
-	$(INSTALL) -m 0755 {epd,pgn,texel}bit $(DESTDIR)$(BINDIR)
+	$(INSTALL) -m 0755 {epd,pgn,texel,check}bit $(DESTDIR)$(BINDIR)
 	$(MKDIR_P) $(DESTDIR)$(LIBDIR)
 	$(INSTALL) -m 0755 lib{batch,vis}bit.so $(DESTDIR)$(LIBDIR)
 	$(INSTALL) -m 0644 man/{epd,pgn,texel}bit.6 $(DESTDIR)$(MAN6DIR)
