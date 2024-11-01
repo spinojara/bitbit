@@ -213,7 +213,7 @@ install-everything: everything install
 	$(INSTALL) -m 0644 man/{epd,pgn,texel}bit.6 $(DESTDIR)$(MAN6DIR)
 
 uninstall:
-	$(RM) -f $(DESTDIR)$(BINDIR)/{bit,epd,pgn,texel}bit
+	$(RM) -f $(DESTDIR)$(BINDIR)/{bit,epd,pgn,texel,check}bit
 	$(RM) -f $(DESTDIR)$(MAN6DIR)/{bit,epd,pgn,texel}bit.6
 	$(RM) -f $(DESTDIR)$(LIBDIR)/lib{batch,vis}bit.so
 
