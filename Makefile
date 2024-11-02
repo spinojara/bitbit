@@ -66,6 +66,10 @@ ifneq ($(DEBUG), )
 	LDFLAGS += -rdynamic
 endif
 
+ifneq ($(STATIC), )
+	LDFLAGS += -static
+endif
+
 ifeq ($(SIMD), avx2)
 	CFLAGS += -DAVX2 -mavx2
 else ifeq ($(SIMD), vnni)
@@ -103,8 +107,9 @@ SRC_PLAYBIT   = playbit.c polyglot.c $(SRC)
 SRC_CONVBIT   = convbit.c io.c $(SRC_BASE)
 SRC_BATCHBIT  = $(addprefix pic-,batchbit.c $(SRC_BASE) io.c)
 SRC_VISBIT    = pic-visbit.c pic-util.c pic-io.c
+SRC_CHECKBIT  = checkbit.c io.c $(SRC_BASE)
 
-DEP = $(sort $(patsubst %.c,dep/%.d,$(SRC_ALL)))
+DEP           = $(sort $(patsubst %.c,dep/%.d,$(SRC_ALL)))
 
 OBJ_BITBIT    = $(patsubst %.c,obj/%.o,$(SRC_BITBIT))
 OBJ_WEIGHTBIT = $(patsubst %.c,obj/%.o,$(SRC_WEIGHTBIT))
@@ -121,9 +126,10 @@ OBJ_VISBIT    = $(patsubst %.c,obj/%.o,$(SRC_VISBIT))
 OBJ_TUNEBIT   = $(patsubst %.c,obj/%.o,$(subst search,tune-search,\
 		$(subst option,tune-option,$(subst timeman,tune-timeman,\
 		$(SRC_BITBIT) tune.c))))
+OBJ_CHECKBIT  = $(patsubst %.c,obj/%.o,$(SRC_CHECKBIT))
 
-BIN = bitbit weightbit genbit epdbit histbit pgnbit \
-      texelbit basebit libbatchbit.so libvisbit.so tunebit convbit
+BIN = bitbit weightbit genbit epdbit histbit pgnbit texelbit basebit \
+      libbatchbit.so libvisbit.so tunebit convbit checkbit
 
 PREFIX = /usr/local
 BINDIR = $(PREFIX)/bin
@@ -163,6 +169,8 @@ libvisbit.so: $(OBJ_VISBIT)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 tunebit: $(OBJ_TUNEBIT)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+checkbit: $(OBJ_CHECKBIT)
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 obj/%.o: src/%.c dep/%.d
 	@$(MKDIR_P) obj
@@ -201,13 +209,13 @@ install: all
 	$(INSTALL) -m 0644 man/bitbit.6 $(DESTDIR)$(MAN6DIR)
 
 install-everything: everything install
-	$(INSTALL) -m 0755 {epd,pgn,texel}bit $(DESTDIR)$(BINDIR)
+	$(INSTALL) -m 0755 {epd,pgn,texel,check}bit $(DESTDIR)$(BINDIR)
 	$(MKDIR_P) $(DESTDIR)$(LIBDIR)
 	$(INSTALL) -m 0755 lib{batch,vis}bit.so $(DESTDIR)$(LIBDIR)
 	$(INSTALL) -m 0644 man/{epd,pgn,texel}bit.6 $(DESTDIR)$(MAN6DIR)
 
 uninstall:
-	$(RM) -f $(DESTDIR)$(BINDIR)/{bit,epd,pgn,texel}bit
+	$(RM) -f $(DESTDIR)$(BINDIR)/{bit,epd,pgn,texel,check}bit
 	$(RM) -f $(DESTDIR)$(MAN6DIR)/{bit,epd,pgn,texel}bit.6
 	$(RM) -f $(DESTDIR)$(LIBDIR)/lib{batch,vis}bit.so
 

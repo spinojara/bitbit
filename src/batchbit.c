@@ -48,6 +48,7 @@ struct dataloader {
 	size_t requested_size;
 	struct batch *batch;
 	struct batch *prepared;
+	int error;
 
 	int ready;
 	
@@ -79,28 +80,35 @@ void *batch_prepare(void *ptr) {
 	char result = RESULT_UNKNOWN;
 	while (batch->size < dataloader->requested_size) {
 		move_t move = 0;
-		if (read_move(dataloader->f, &move)) {
-			fseek(dataloader->f, 0, SEEK_SET);
-			continue;
+		int r;
+		if ((r = read_move(dataloader->f, &move))) {
+			if (r == 2 && feof(dataloader->f)) {
+				fseek(dataloader->f, 0, SEEK_SET);
+				continue;
+			}
+			else {
+				dataloader->error = 1;
+				break;
+			}
 		}
 		if (move) {
 			do_move(dataloader->pos, &move);
 		}
 		else {
 			if (read_position(dataloader->f, dataloader->pos)) {
-				fseek(dataloader->f, 0, SEEK_SET);
-				continue;
+				dataloader->error = 1;
+				break;
 			}
 			if (read_result(dataloader->f, &result)) {
-				fseek(dataloader->f, 0, SEEK_SET);
-				continue;
+				dataloader->error = 1;
+				break;
 			}
 		}
 
 		int32_t eval = VALUE_NONE;
 		if (read_eval(dataloader->f, &eval)) {
-			fseek(dataloader->f, 0, SEEK_SET);
-			continue;
+			dataloader->error = 1;
+			break;
 		}
 
 		int skip = (eval == VALUE_NONE) || bernoulli(dataloader->random_skip, &seed);
@@ -163,6 +171,12 @@ struct batch *batch_fetch(void *ptr) {
 	while (!dataloader->ready)
 		pthread_cond_wait(&dataloader->cond, &dataloader->mutex);
 
+	if (dataloader->error) {
+		fprintf(stderr, "error: failed to make batch\n");
+		pthread_mutex_unlock(&dataloader->mutex);
+		return NULL;
+	}
+
 	struct batch *batch = dataloader->batch;
 	struct batch *prepared = dataloader->prepared;
 
@@ -223,6 +237,7 @@ void *loader_open(const char *s, size_t requested_size, double random_skip) {
 	fseek(dataloader->f, 0, SEEK_SET);
 
 	dataloader->ready = 0;
+	dataloader->error = 0;
 	batch_prepare_thread(dataloader);
 
 	return dataloader;
