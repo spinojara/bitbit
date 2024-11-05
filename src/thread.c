@@ -90,6 +90,10 @@ void *search_thread(void *arg) {
 
 void search_start(struct position *pos, int depth, struct timeinfo *ti, struct transpositiontable *tt, struct history *history) {
 	struct threadinfo *tdi = malloc(sizeof(*tdi));
+	if (!tdi) {
+		fprintf(stderr, "error: failed to allocate thread info\n");
+		exit(5);
+	}
 	tdi->pos = pos;
 	tdi->depth = depth;
 	tdi->ti = *ti;
