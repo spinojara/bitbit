@@ -105,8 +105,8 @@ SRC_TEXELBIT  = texelbit.c $(subst evaluate,texel-evaluate,\
 SRC_BASEBIT   = basebit.c $(SRC_BASE)
 SRC_PLAYBIT   = playbit.c polyglot.c $(SRC)
 SRC_CONVBIT   = convbit.c io.c $(SRC_BASE)
-SRC_BATCHBIT  = $(addprefix pic-,batchbit.c $(SRC_BASE) io.c)
-SRC_VISBIT    = pic-visbit.c pic-util.c pic-io.c
+SRC_BATCHBIT  = $(addprefix pic-,batchbit.c io.c $(SRC_BASE))
+SRC_VISBIT    = $(addprefix pic-,visbit.c io.c)
 SRC_CHECKBIT  = checkbit.c io.c $(SRC_BASE)
 
 DEP           = $(sort $(patsubst %.c,dep/%.d,$(SRC_ALL)))
@@ -139,6 +139,8 @@ MANDIR = $(MANPREFIX)/man
 MAN6DIR = $(MANDIR)/man6
 
 all: bitbit
+
+nnue: nnueclean bitbit
 
 everything: $(BIN)
 
@@ -219,11 +221,14 @@ uninstall:
 	$(RM) -f $(DESTDIR)$(MAN6DIR)/{bit,epd,pgn,texel}bit.6
 	$(RM) -f $(DESTDIR)$(LIBDIR)/lib{batch,vis}bit.so
 
-clean:
+clean: nnueclean
 	$(RM) -rf obj dep
-	$(RM) -f src/nnueweights.c $(BIN)
+	$(RM) -f $(BIN)
+
+nnueclean:
+	$(RM) -f src/nnueweights.c
 
 -include $(DEP)
 .PRECIOUS: dep/%.d
 .SUFFIXES: .c .h .d
-.PHONY: all everything clean install uninstall
+.PHONY: all everything clean nnueclean install uninstall
