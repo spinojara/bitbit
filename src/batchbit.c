@@ -23,16 +23,10 @@
 #include <pthread.h>
 
 #include "position.h"
-#include "util.h"
-#include "magicbitboard.h"
-#include "attackgen.h"
-#include "bitboard.h"
 #include "move.h"
 #include "nnue.h"
 #include "evaluate.h"
 #include "io.h"
-
-uint64_t seed;
 
 struct batch {
 	size_t size;
@@ -58,8 +52,11 @@ struct dataloader {
 	struct position *pos;
 	
 	double random_skip;
+	int use_result;
 
 	FILE *f;
+
+	uint64_t seed;
 };
 
 static inline uint16_t make_index_virtual(int turn, int square, int piece, int king_square) {
@@ -111,7 +108,10 @@ void *batch_prepare(void *ptr) {
 			break;
 		}
 
-		int skip = (eval == VALUE_NONE) || bernoulli(dataloader->random_skip, &seed);
+		if (result == RESULT_UNKNOWN && dataloader->use_result)
+			continue;
+
+		int skip = (eval == VALUE_NONE) || bernoulli(dataloader->random_skip, &dataloader->seed);
 		if (skip)
 			continue;
 
@@ -216,7 +216,7 @@ void bfree(struct batch *batch) {
 	free(batch);
 }
 
-void *loader_open(const char *s, size_t requested_size, double random_skip) {
+void *loader_open(const char *s, size_t requested_size, double random_skip, int use_result) {
 	FILE *f = fopen(s, "rb"); 
 	if (!f) {
 		fprintf(stderr, "error: failed to open file %s\n", s);
@@ -229,6 +229,7 @@ void *loader_open(const char *s, size_t requested_size, double random_skip) {
 
 	dataloader->requested_size = requested_size;
 	dataloader->random_skip = random_skip;
+	dataloader->use_result = use_result;
 
 	pthread_mutex_init(&dataloader->mutex, NULL);
 	pthread_cond_init(&dataloader->cond, NULL);
@@ -238,6 +239,11 @@ void *loader_open(const char *s, size_t requested_size, double random_skip) {
 
 	dataloader->ready = 0;
 	dataloader->error = 0;
+
+	dataloader->seed = time(NULL);
+	if (!dataloader->seed)
+		dataloader->seed = 1;
+
 	batch_prepare_thread(dataloader);
 
 	return dataloader;
@@ -245,6 +251,12 @@ void *loader_open(const char *s, size_t requested_size, double random_skip) {
 
 void loader_close(void *ptr) {
 	struct dataloader *dataloader = ptr;
+
+	pthread_mutex_lock(&dataloader->mutex);
+	while (!dataloader->ready)
+		pthread_cond_wait(&dataloader->cond, &dataloader->mutex);
+	pthread_mutex_unlock(&dataloader->mutex);
+
 	fclose(dataloader->f);
 	bfree(dataloader->batch);
 	bfree(dataloader->prepared);
@@ -262,9 +274,9 @@ void loader_reset(void *ptr) {
 }
 
 void batchbit_init(void) {
-	magicbitboard_init();
-	attackgen_init();
 	bitboard_init();
-	position_init();
-	seed = time(NULL);
+}
+
+int main(void) {
+	loader_open(NULL, 0, 0, 0);
 }
