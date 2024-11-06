@@ -39,6 +39,10 @@
 #include "option.h"
 #include "endgame.h"
 
+#ifndef NDEBUG
+int search_init_done = 0;
+#endif
+
 volatile atomic_int ucistop;
 volatile atomic_int ucigo;
 volatile atomic_int uciponder;
@@ -67,6 +71,7 @@ static int reductions[PLY_MAX] = { 0 };
  * sqrt(C)=sqrt(1024/((log(3)-log(2))log(255))). D is experimental for now.
  */
 static inline int late_move_reduction(int index, int depth) {
+	assert(search_init_done);
 	assert(0 <= depth && depth < PLY_MAX);
 	int r = reductions[index] * reductions[depth];
 #if 1
@@ -809,4 +814,8 @@ void search_init(void) {
 	for (int i = 1; i < PLY_MAX; i++)
 		/* sqrt(C) * log(i) */
 		reductions[i] = (int)(21.34 * log(i));
+
+#ifndef NDEBUG
+	search_init_done = 1;
+#endif
 }

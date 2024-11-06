@@ -28,6 +28,10 @@
 #include "history.h"
 #include "interface.h"
 
+#ifndef NDEBUG
+int position_init_done = 0;
+#endif
+
 static struct position start;
 
 void print_position(const struct position *pos) {
@@ -224,6 +228,7 @@ char *castle_string(char *str, int castle) {
 }
 
 void startpos(struct position *pos) {
+	assert(position_init_done);
 	*pos = start;
 }
 
@@ -766,4 +771,8 @@ int has_sliding_piece(const struct position *pos) {
 
 void position_init(void) {
 	pos_from_fen2(&start, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+
+#ifndef NDEBUG
+	position_init_done = 1;
+#endif
 }

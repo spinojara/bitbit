@@ -18,12 +18,17 @@
 #define ENDGAME_H
 
 #include <stdint.h>
+#include <assert.h>
 
 #include "position.h"
 #include "bitboard.h"
 #include "move.h"
 #include "evaluate.h"
 #include "option.h"
+
+#ifndef NDEBUG
+extern int endgame_init_done;
+#endif
 
 #define ENDGAMEBITS (9)
 #define ENDGAMESIZE (1 << ENDGAMEBITS)
@@ -47,6 +52,8 @@ static inline struct endgame *endgame_get(const struct position *pos) {
 static inline struct endgame *endgame_probe(const struct position *pos) {
 	if (!option_endgame)
 		return NULL;
+
+	assert(endgame_init_done);
 
 	struct endgame *e = endgame_get(pos);
 	if (e->endgame_key == pos->endgame_key)

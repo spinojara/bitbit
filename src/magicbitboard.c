@@ -24,6 +24,10 @@
 #include "util.h"
 #include "position.h"
 
+#ifndef NDEBUG
+int magicbitboard_init_done = 0;
+#endif
+
 uint64_t bishop_attacks_lookup[5248];
 uint64_t rook_attacks_lookup[102400];
 
@@ -276,4 +280,8 @@ void magicbitboard_init(void) {
 		magic_calc(square, BISHOP);
 		magic_calc(square, ROOK);
 	}
+
+#ifndef NDEBUG
+	magicbitboard_init_done = 1;
+#endif
 }

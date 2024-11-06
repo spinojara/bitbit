@@ -32,6 +32,10 @@
 #include "option.h"
 #include "io.h"
 
+#ifndef NDEBUG
+int nnue_init_done = 0;
+#endif
+
 #ifdef AVX2
 #include <immintrin.h>
 #elif SSE4
@@ -279,6 +283,7 @@ static inline int32_t output_layer(int8_t *input, const bias_t *biases, const we
 }
 
 static inline void add_index(unsigned index, int16_t accumulation[2][K_HALF_DIMENSIONS], int32_t psqtaccumulation[2], int turn) {
+	assert(nnue_init_done);
 	const unsigned offset = K_HALF_DIMENSIONS * index;
 #if defined(VECTOR)
 	for (int j = 0; j < K_HALF_DIMENSIONS; j += SIMD_WIDTH / 16) {
@@ -294,6 +299,7 @@ static inline void add_index(unsigned index, int16_t accumulation[2][K_HALF_DIME
 }
 
 void add_index_slow(unsigned index, int16_t accumulation[2][K_HALF_DIMENSIONS], int32_t psqtaccumulation[2], int turn) {
+	assert(nnue_init_done);
 	const unsigned offset = K_HALF_DIMENSIONS * index;
 #if defined(VECTOR)
 	for (int j = 0; j < K_HALF_DIMENSIONS; j += SIMD_WIDTH / 16) {
@@ -309,6 +315,7 @@ void add_index_slow(unsigned index, int16_t accumulation[2][K_HALF_DIMENSIONS], 
 }
 
 static inline void remove_index(unsigned index, int16_t accumulation[2][K_HALF_DIMENSIONS], int32_t psqtaccumulation[2], int turn) {
+	assert(nnue_init_done);
 	const unsigned offset = K_HALF_DIMENSIONS * index;
 #if defined(VECTOR)
 	for (int j = 0; j < K_HALF_DIMENSIONS; j += SIMD_WIDTH / 16) {
@@ -326,6 +333,7 @@ static inline void remove_index(unsigned index, int16_t accumulation[2][K_HALF_D
 void refresh_accumulator(struct position *pos, int turn) {
 	if (!option_nnue)
 		return;
+	assert(nnue_init_done);
 	memcpy(pos->accumulation[turn], ft_biases, K_HALF_DIMENSIONS * sizeof(*ft_biases));
 	pos->psqtaccumulation[turn] = 0;
 	int king_square = ctz(pos->piece[turn][KING]);
@@ -431,6 +439,7 @@ void do_accumulator(struct position *pos, move_t *move) {
 	assert(pos->mailbox[move_to(move)]);
 	if (!option_nnue)
 		return;
+	assert(nnue_init_done);
 	int target_square = move_to(move);
 	if (uncolored_piece(pos->mailbox[target_square]) == KING) {
 		refresh_accumulator(pos, other_color(pos->turn));
@@ -485,6 +494,7 @@ void undo_accumulator(struct position *pos, move_t *move) {
 	assert(pos->mailbox[move_from(move)]);
 	if (!option_nnue)
 		return;
+	assert(nnue_init_done);
 	int source_square = move_from(move);
 	int target_square = move_to(move);
 	if (uncolored_piece(pos->mailbox[source_square]) == KING) {
@@ -535,6 +545,7 @@ void undo_accumulator(struct position *pos, move_t *move) {
 }
 
 int32_t evaluate_accumulator(const struct position *pos) {
+	assert(nnue_init_done);
 	struct data buf;
 	transform(pos, pos->accumulation, buf.ft_out);
 	affine_propagate(buf.ft_out, buf.hidden1_out, FT_OUT_DIMS, hidden1_biases, hidden1_weights);
@@ -597,6 +608,10 @@ void nnue_init(void) {
 	permute_biases(builtin_hidden2_biases);
 	permute_weights(builtin_hidden1_weights);
 	builtin_nnue();
+
+#ifndef NDEBUG
+	nnue_init_done = 1;
+#endif
 }
 
 int read_hidden_weights(weight_t *w, int dims, FILE *f) {
@@ -678,6 +693,10 @@ void file_nnue(const char *path) {
 	builtin = 0;
 	strncpy(pathnnue, path, sizeof(pathnnue));
 	pathnnue[sizeof(pathnnue) - 1] = '\0';
+
+#ifndef NDEBUG
+	nnue_init_done = 1;
+#endif
 	return;
 error:
 	if (f) {
@@ -719,4 +738,8 @@ void builtin_nnue(void) {
 	output_biases = builtin_output_biases;
 
 	builtin = 1;
+
+#ifndef NDEBUG
+	nnue_init_done = 1;
+#endif
 }

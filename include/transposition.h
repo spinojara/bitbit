@@ -27,6 +27,10 @@
 #include "search.h"
 #include "util.h"
 
+#ifndef NDEBUG
+extern int transposition_init_done;
+#endif
+
 extern int option_transposition;
 extern int option_history;
 
@@ -62,12 +66,14 @@ static inline uint64_t transposition_index(uint64_t size, uint64_t key) {
 }
 
 static inline struct transposition *transposition_get(const struct transpositiontable *tt, const struct position *pos) {
+	assert(transposition_init_done);
 	return &tt->table[transposition_index(tt->size, pos->zobrist_key)];
 }
 
 static inline struct transposition *transposition_probe(const struct transpositiontable *tt, const struct position *pos) {
 	if (!option_transposition)
 		return NULL;
+	assert(transposition_init_done);
 	struct transposition *e = transposition_get(tt, pos);
 	if (e->zobrist_key == pos->zobrist_key)
 		return e;
@@ -75,6 +81,7 @@ static inline struct transposition *transposition_probe(const struct transpositi
 }
 
 static inline void transposition_set(struct transposition *e, const struct position *pos, int32_t evaluation, int depth, int bound, move_t move) {
+	assert(transposition_init_done);
 	assert(-VALUE_INFINITE < evaluation && evaluation < VALUE_INFINITE);
 	e->flags = 0;
 	/* Keep old move if none available. */
@@ -91,6 +98,7 @@ static inline void transposition_set(struct transposition *e, const struct posit
 static inline void transposition_store(struct transpositiontable *tt, const struct position *pos, int32_t evaluation, int depth, int bound, move_t move) {
 	if (!option_transposition)
 		return;
+	assert(transposition_init_done);
 	struct transposition *e = transposition_get(tt, pos);
 	if (e->zobrist_key != pos->zobrist_key ||
 			depth >= e->depth ||
@@ -130,18 +138,22 @@ static inline int32_t adjust_score_mate_get(int32_t evaluation, int ply, int hal
 
 /* Can avoid the multiplication here if we instead do square + 64 * piece. */
 static inline uint64_t zobrist_piece_key(int piece, int square) {
+	assert(transposition_init_done);
 	return zobrist_keys[piece + 12 * square];
 }
 
 static inline uint64_t zobrist_turn_key(void) {
+	assert(transposition_init_done);
 	return zobrist_keys[12 * 64];
 }
 
 static inline uint64_t zobrist_castle_key(int castle) {
+	assert(transposition_init_done);
 	return zobrist_keys[12 * 64 + 1 + castle];
 }
 
 static inline uint64_t zobrist_en_passant_key(int square) {
+	assert(transposition_init_done);
 	if (square == 0)
 		return 0;
 	return zobrist_keys[12 * 64 + 1 + 16 + file_of(square)];
@@ -156,8 +168,6 @@ void transposition_free(struct transpositiontable *tt);
 int transposition_occupancy(const struct transpositiontable *tt, int bound);
 
 int hashfull(const struct transpositiontable *tt);
-
-void transposition_init(void);
 
 void do_zobrist_key(struct position *pos, const move_t *move);
 

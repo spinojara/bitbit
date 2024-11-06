@@ -23,6 +23,10 @@
 #include "search.h"
 #include "timeman.h"
 
+#ifndef NDEBUG
+int thread_init_done = 0;
+#endif
+
 pthread_mutex_t uci;
 
 struct threadinfo {
@@ -34,6 +38,7 @@ struct threadinfo {
 };
 
 int is_allowed(const char *arg) {
+	assert(thread_init_done);
 	pthread_mutex_lock(&uci);
 	if (!atomic_load_explicit(&uciponder, memory_order_relaxed) && !strcmp(arg, "ponderhit")) {
 		pthread_mutex_unlock(&uci);
@@ -55,6 +60,7 @@ int is_allowed(const char *arg) {
 }
 
 void search_stop(void) {
+	assert(thread_init_done);
 	pthread_mutex_lock(&uci);
 	if (ucigo) {
 		ucistop = 1;
@@ -64,12 +70,14 @@ void search_stop(void) {
 }
 
 void search_ponderhit(void) {
+	assert(thread_init_done);
 	pthread_mutex_lock(&uci);
 	uciponder = 0;
 	pthread_mutex_unlock(&uci);
 }
 
 void *search_thread(void *arg) {
+	assert(thread_init_done);
 	struct threadinfo *tdi = arg;
 	struct position *pos = tdi->pos;
 	int depth = tdi->depth;
@@ -108,6 +116,10 @@ void search_start(struct position *pos, int depth, struct timeinfo *ti, struct t
 
 void thread_init(void) {
 	pthread_mutex_init(&uci, NULL);
+
+#ifndef NDEBUG
+	thread_init_done = 1;
+#endif
 }
 
 void thread_term(void) {

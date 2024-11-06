@@ -26,6 +26,10 @@
 
 #include "position.h"
 
+#ifndef NDEBUG
+extern int bitboard_init_done;
+#endif
+
 void bitboard_init(void);
 
 static inline uint64_t ctz(uint64_t b) {
@@ -115,50 +119,62 @@ extern int distance_lookup[64 * 64];
 extern int castle_lookup[64 * 64 * 16];
 
 static inline uint64_t between(int source_square, int target_square) {
+	assert(bitboard_init_done);
 	return between_lookup[source_square + target_square * 64];
 }
 
 static inline uint64_t line(int source_square, int target_square) {
+	assert(bitboard_init_done);
 	return line_lookup[source_square + target_square * 64];
 }
 
 static inline uint64_t ray(int source_square, int target_square) {
+	assert(bitboard_init_done);
 	return ray_lookup[source_square + target_square * 64];
 }
 
 static inline int distance(int i, int j) {
+	assert(bitboard_init_done);
 	return distance_lookup[i + j * 64];
 }
 
 static inline uint64_t same_colored_squares(int square) {
+	assert(bitboard_init_done);
 	return same_colored_squares_lookup[square];
 }
 
 static inline uint64_t file(int square) {
+	assert(bitboard_init_done);
 	return file_lookup[square];
 }
 
 static inline uint64_t rank(int square) {
+	assert(bitboard_init_done);
 	return rank_lookup[square];
 }
 
 static inline uint64_t file_left(int square) {
+	assert(bitboard_init_done);
 	return file_left_lookup[square];
 }
 
 static inline uint64_t file_right(int square) {
+	assert(bitboard_init_done);
 	return file_right_lookup[square];
 }
 
 static inline uint64_t adjacent_files(int square) {
+	assert(bitboard_init_done);
 	return adjacent_files_lookup[square];
 }
 
 static inline uint64_t passed_files(int square, int color) {
+	assert(bitboard_init_done);
 	return passed_files_lookup[square + 64 * other_color(color)];
 }
 
 static inline int castle(int source_square, int target_square, int castle) {
+	assert(bitboard_init_done);
 	return castle_lookup[source_square + 64 * target_square + 64 * 64 * castle];
 }
 

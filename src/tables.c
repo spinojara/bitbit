@@ -18,6 +18,10 @@
 
 #include <string.h>
 
+#ifndef NDEBUG
+int tables_init_done = 0;
+#endif
+
 score_t psqtable[2][7][64];
 
 score_t piece_value[6] = { S(  97, 144), S( 491, 513), S( 514, 562), S( 609, 928), S(1374,1734), };
@@ -143,4 +147,8 @@ void tables_init(void) {
 			}
 		}
 	}
+
+#ifndef NDEBUG
+	tables_init_done = 1;
+#endif
 }
