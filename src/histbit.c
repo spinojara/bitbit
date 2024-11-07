@@ -28,6 +28,7 @@
 #include "endgame.h"
 #include "kpk.h"
 #include "io.h"
+#include "nnue.h"
 
 void store_information(struct position *pos, uint64_t piece_square[7][64]) {
 	for (int color = 0; color < 2; color++) {
@@ -76,6 +77,7 @@ int main(int argc, char **argv) {
 	startpos(&pos);
 
 	uint64_t piece_square[7][64] = { 0 };
+	uint64_t bucket[8] = { 0 };
 
 	move_t move;
 	char result = 0;
@@ -84,12 +86,11 @@ int main(int argc, char **argv) {
 	size_t count = 0;
 	size_t games = 0;
 	size_t draws = 0;
-	size_t a = 0;
-	size_t c = 0;
 	char startfen[128] = { 0 };
 	char fen[128];
 	char movestr[16];
 	int print_flag = 0;
+	unsigned char flag;
 	while (1) {
 		count++;
 		if (count % 20000 == 0)
@@ -119,14 +120,21 @@ int main(int argc, char **argv) {
 			pos_to_fen(startfen, &pos);
 		}
 		
-		if (read_eval(f, &eval))
+		if (read_eval(f, &eval) || read_flag(f, &flag))
 			break;
 		if (feof(f))
 			break;
 
-		if (eval == VALUE_NONE)
+		if ((popcount(all_pieces(&pos)) - 1) / 4 == 1) {
+			print_position(&pos);
+			print_fen(&pos);
+			if (eval == VALUE_NONE || flag & FLAG_SKIP)
+				printf("eval: none\n");
+			else
+				printf("eval: %d\n", eval);
+		}
+		if (eval == VALUE_NONE || flag & FLAG_SKIP)
 			continue;
-
 #if 0
 		const int material_values[] = { 0, 1, 3, 3, 5, 9, 0 };
 		int material[2] = { 0 };
@@ -164,7 +172,7 @@ int main(int argc, char **argv) {
 		}
 #endif
 #endif
-
+		bucket[(popcount(all_pieces(&pos)) - 1) / 4]++;
 		store_information(&pos, piece_square);
 		total++;
 
@@ -175,7 +183,8 @@ int main(int argc, char **argv) {
 	printf("total positions: %lu\n", total);
 	printf("total games: %lu\n", games);
 	printf("draw percent: %lg\n", (double)draws / total);
-	printf("percent: %f\n", (double)c / a);
+	for (int i = 0; i < 8; i++)
+		printf("bucket[%d]: %lg%%\n", i, 100.0 * bucket[i] / total);
 	for (int piece = PAWN; piece <= KING; piece++)
 		print_information(piece_square[piece], total);
 

@@ -263,6 +263,7 @@ int main(int argc, char **argv) {
 		eval = clamp(eval * scale_eval, -VALUE_WIN, VALUE_WIN);
 
 		write_eval(out, eval);
+		write_flag(out, 0);
 
 #if 0
 		print_position(&pos);

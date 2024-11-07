@@ -224,6 +224,7 @@ void parse_pgn(FILE *infile, FILE *outfile) {
 	int done_early = 0;
 	startpos(&pos);
 	int plycount = -1;
+	unsigned char flag;
 	int result = RESULT_UNKNOWN;
 	char white[BUFSIZ] = { 0 };
 	char black[BUFSIZ] = { 0 };
@@ -307,6 +308,7 @@ void parse_pgn(FILE *infile, FILE *outfile) {
 
 		/* comment */
 		eval = VALUE_NONE;
+		flag = 0;
 		next_token(token, sizeof(token), infile);
 
 		endptr = strchr(token, '/');
@@ -316,7 +318,7 @@ void parse_pgn(FILE *infile, FILE *outfile) {
 				if (skip_mates) {
 					if (done_early == 0)
 						done_early = 1;
-					eval = VALUE_NONE;
+					flag |= FLAG_SKIP;
 				}
 				else {
 					errno = 0;
@@ -335,26 +337,26 @@ void parse_pgn(FILE *infile, FILE *outfile) {
 			}
 		}
 
-		if (eval != VALUE_NONE && skip_endgames) {
+		if (!(flag & FLAG_SKIP) && skip_endgames) {
 			refresh_endgame_key(&pos);
 			if (endgame_probe(&pos)) {
 				if (done_early == 0)
 					done_early = 1;
-				eval = VALUE_NONE;
+				flag |= FLAG_SKIP;
 			}
 		}
 
-		if (eval != VALUE_NONE && skip_halfmove && !gbernoulli(exp(-pos.halfmove)))
-			eval = VALUE_NONE;
+		if (!(flag & FLAG_SKIP) && skip_halfmove && !gbernoulli(exp(-pos.halfmove)))
+			flag |= FLAG_SKIP;
 
-		if (eval != VALUE_NONE && quiet && (generate_checkers(&pos, pos.turn) ||
+		if (!(flag & FLAG_SKIP) && quiet && (generate_checkers(&pos, pos.turn) ||
 					is_capture(&pos, &move) ||
 					move_flag(&move) == MOVE_EN_PASSANT ||
 					move_flag(&move) == MOVE_PROMOTION ||
 					search_material(&pos, -VALUE_INFINITE, VALUE_INFINITE) != evaluate_material(&pos)))
-			eval = VALUE_NONE;
+			flag |= FLAG_SKIP;
 
-		if (eval != VALUE_NONE && skip_unlucky && result == RESULT_DRAW) {
+		if (!(flag & FLAG_SKIP) && skip_unlucky && result == RESULT_DRAW) {
 			int32_t mat = total_material(&pos);
 			int32_t eval1, eval2;
 			if (mat <= 2000 && abs(eval1 = evaluate_material(&pos)) >= 100 &&
@@ -362,16 +364,17 @@ void parse_pgn(FILE *infile, FILE *outfile) {
 					(double)eval1 * (double)eval2 > 0.0) {
 				if (done_early == 0)
 					done_early = 1;
-				eval = VALUE_NONE;
+				flag |= FLAG_SKIP;
 			}
 		}
 
 		do_move(&pos, &move);
-		if (eval != VALUE_NONE && skip_checks && generate_checkers(&pos, pos.turn))
-			eval = VALUE_NONE;
+		if (!(flag & FLAG_SKIP) && skip_checks && generate_checkers(&pos, pos.turn))
+			flag |= FLAG_SKIP;
 
 		if (done_early <= 1) {
 			write_eval(outfile, eval);
+			write_flag(outfile, flag);
 		}
 		if (done_early == 0) {
 			if (i < plycount)

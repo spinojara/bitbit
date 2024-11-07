@@ -58,7 +58,6 @@ struct evaluationinfo {
 	score_t eval;
 };
 
-
 #define S(m, e) ((int32_t)((m) + ((uint32_t)(e) << 16)))
 
 static inline int32_t score_mg(score_t eval) {

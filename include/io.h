@@ -30,6 +30,10 @@ enum {
 	RESULT_UNKNOWN,
 };
 
+enum {
+	FLAG_SKIP = 0x1,
+};
+
 int write_uintx(FILE *f, uint64_t p, size_t x);
 int read_uintx(FILE *f, void *p, size_t x);
 
@@ -44,5 +48,8 @@ int read_eval(FILE *f, int32_t *eval);
 
 int write_result(FILE *f, char result);
 int read_result(FILE *f, char *result);
+
+int write_flag(FILE *f, unsigned char flag);
+int read_flag(FILE *f, unsigned char *flag);
 
 #endif

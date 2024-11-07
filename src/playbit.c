@@ -278,6 +278,7 @@ void play_game(FILE *openings, struct transpositiontable *tt, uint64_t nodes, ui
 	refresh_zobrist_key(&pos);
 
 	int32_t eval[POSITIONS_MAX] = { 0 };
+	unsigned char flag[POSITIONS_MAX] = { 0 };
 
 	while (result == RESULT_UNKNOWN) {
 		custom_search(&pos, nodes, moves, evals, tt, &h, *seed);
@@ -357,6 +358,10 @@ void play_game(FILE *openings, struct transpositiontable *tt, uint64_t nodes, ui
 		for (int i = 0; i <= h.ply; i++) {
 			if (write_eval(out, eval[i])) {
 				fprintf(stderr, "error: failed to write eval\n");
+				stop();
+			}
+			if (write_flag(out, flag[i])) {
+				fprintf(stderr, "error: failed to write flag\n");
 				stop();
 			}
 			if (i < h.ply) {

@@ -198,3 +198,11 @@ int write_result(FILE *f, char result) {
 int read_result(FILE *f, char *result) {
 	return read_uintx(f, result, 1);
 }
+
+int write_flag(FILE *f, unsigned char flag) {
+	return write_uintx(f, flag, 1);
+}
+
+int read_flag(FILE *f, unsigned char *flag) {
+	return read_uintx(f, flag, 1);
+}

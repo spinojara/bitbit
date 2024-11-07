@@ -46,6 +46,7 @@ int main(int argc, char **argv) {
 	char result;
 	int32_t eval;
 	move_t move;
+	unsigned char flag;
 
 	int first = 1;
 
@@ -79,5 +80,7 @@ int main(int argc, char **argv) {
 
 		if (read_eval(f, &eval) || (eval != VALUE_NONE && (eval < -VALUE_INFINITE || eval > VALUE_INFINITE)))
 			return 8;
+		if (read_flag(f, &flag))
+			return 10;
 	}
 }
