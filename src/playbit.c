@@ -27,6 +27,10 @@
 #include <sys/param.h>
 #include <signal.h>
 
+#ifdef SYZYGY
+#include <tbprobe.h>
+#endif
+
 #include "search.h"
 #include "move.h"
 #include "transposition.h"
@@ -52,12 +56,21 @@ const struct searchinfo gsi = { 0 };
 static const char *prefix;
 
 static long max_file_size = 1024 * 1024;
-static int random_moves_min = 1;
+static int random_moves_min = 4;
 static int random_moves_max = 8;
+
+#if 0
+static int32_t eval_limit = 1500;
+#endif
 
 static atomic_int s = 0;
 
 static pthread_mutex_t filemutex;
+static pthread_mutex_t tbmutex;
+
+const char *syzygy = NULL;
+const char *openings = NULL;
+static int nosyzygy = 0;
 
 static inline void stop(void) {
 	if (!atomic_load_explicit(&s, memory_order_relaxed))
@@ -216,6 +229,30 @@ int32_t search_material(struct position *pos, int alpha, int beta) {
 	return best_eval;
 }
 
+int filter_move(struct position *pos, move_t *move, int32_t eval) {
+	UNUSED(pos);
+	UNUSED(move);
+	UNUSED(eval);
+	int ret = 0;
+#if 0
+	int piece = uncolored_piece(pos->mailbox[move_from(move)]);
+	if (piece == KING || piece == ROOK || piece == QUEEN)
+		return 1;
+
+	do_move(pos, move);
+	if (search_material(pos, -VALUE_INFINITE, VALUE_INFINITE) != -eval) {
+		ret = 1;
+	}
+	undo_move(pos, move);
+	if (ret) {
+		char movestr[16];
+		char fen[128];
+		printf("filtered move %s for position %s\n", move_str_algebraic(movestr, move), pos_to_fen(fen, pos));
+	}
+#endif
+	return ret;
+}
+
 move_t random_move(struct position *pos, uint64_t *seed) {
 	move_t moves[MOVES_MAX], filtered[MOVES_MAX] = { 0 };
 	movegen_legal(pos, moves, MOVETYPE_ALL);
@@ -225,10 +262,8 @@ move_t random_move(struct position *pos, uint64_t *seed) {
 	int nmoves = 0;
 	for (int i = 0; moves[i]; i++) {
 		move_t *move = &moves[i];
-		do_move(pos, move);
-		if (search_material(pos, -VALUE_INFINITE, VALUE_INFINITE) == -eval)
+		if (!filter_move(pos, move, eval))
 			filtered[nmoves++] = moves[i];
-		undo_move(pos, move);
 	}
 
 	if (nmoves <= 1)
@@ -237,7 +272,7 @@ move_t random_move(struct position *pos, uint64_t *seed) {
 	return filtered[uniformint(seed, 0, nmoves)];
 }
 
-void play_game(FILE *openings, struct transpositiontable *tt, uint64_t nodes, uint64_t *seed, FILE *out) {
+void play_game(FILE *openingsfile, struct transpositiontable *tt, uint64_t nodes, uint64_t *seed, FILE *out) {
 	move_t moves[MOVES_MAX];
 	int64_t evals[MOVES_MAX];
 
@@ -254,7 +289,7 @@ void play_game(FILE *openings, struct transpositiontable *tt, uint64_t nodes, ui
 	int draw_counter = 0;
 
 	startpos(&pos);
-	if (!polyglot_explore(openings, &pos, 10, seed)) {
+	if (openingsfile && !polyglot_explore(openingsfile, &pos, 6, seed)) {
 		fprintf(stderr, "error: start position not found in opening book\n");
 		stop();
 		return;
@@ -266,7 +301,7 @@ void play_game(FILE *openings, struct transpositiontable *tt, uint64_t nodes, ui
 		if (move)
 			do_move(&pos, &move);
 		else
-			break;
+			return;
 	}
 
 	movegen_legal(&pos, moves, MOVETYPE_ALL);
@@ -280,37 +315,138 @@ void play_game(FILE *openings, struct transpositiontable *tt, uint64_t nodes, ui
 	int32_t eval[POSITIONS_MAX] = { 0 };
 	unsigned char flag[POSITIONS_MAX] = { 0 };
 
-	while (result == RESULT_UNKNOWN) {
-		custom_search(&pos, nodes, moves, evals, tt, &h, *seed);
+	int tb_draw = 0;
+
+	while (1) {
+		int is_check = generate_checkers(&pos, pos.turn) != 0;
+		int tb_move = 0;
+
+		movegen_legal(&pos, moves, MOVETYPE_ALL);
+		if (!moves[0]) {
+			result = is_check ? (pos.turn ? RESULT_LOSS : RESULT_WIN) : RESULT_DRAW;
+			break;
+		}
+
+		move_t *bestmove = NULL;
+		eval[h.ply] = VALUE_NONE;
 	
-		move_t *bestmove = moves;
-		eval[h.ply] = evals[0];
+		if (popcount(all_pieces(&pos)) <= 2) {
+			result = RESULT_DRAW;
+			break;
+		}
+#ifdef SYZYGY
+		else if (syzygy && popcount(all_pieces(&pos)) <= TB_LARGEST && !pos.castle) {
+			uint64_t white = pos.piece[WHITE][ALL];
+			uint64_t black = pos.piece[BLACK][ALL];
+			uint64_t kings = pos.piece[WHITE][KING] | pos.piece[BLACK][KING];
+			uint64_t queens = pos.piece[WHITE][QUEEN] | pos.piece[BLACK][QUEEN];
+			uint64_t rooks = pos.piece[WHITE][ROOK] | pos.piece[BLACK][ROOK];
+			uint64_t bishops = pos.piece[WHITE][BISHOP] | pos.piece[BLACK][BISHOP];
+			uint64_t knights = pos.piece[WHITE][KNIGHT] | pos.piece[BLACK][KNIGHT];
+			uint64_t pawns = pos.piece[WHITE][PAWN] | pos.piece[BLACK][PAWN];
+			unsigned rule50 = 0;
+			unsigned castling = 0;
+			unsigned ep = 0;
+			int turn = pos.turn;
+			pthread_mutex_lock(&tbmutex);
+			unsigned ret;
+			ret = tb_probe_root(white, black, kings, queens, rooks, bishops, knights, pawns, rule50, castling, ep, turn, NULL);
+			if (ret != TB_RESULT_FAILED) {
+				unsigned wdl = TB_GET_WDL(ret);
+				unsigned from = TB_GET_FROM(ret);
+				unsigned to = TB_GET_TO(ret);
+				unsigned promote = TB_GET_PROMOTES(ret);
+				if (wdl == TB_DRAW)
+					eval[h.ply] = 0;
+				else if (wdl == TB_WIN || wdl == TB_CURSED_WIN)
+					eval[h.ply] = VALUE_WIN;
+				else if (wdl == TB_LOSS || wdl == TB_BLESSED_LOSS)
+					eval[h.ply] = -VALUE_WIN;
+
+				switch (promote) {
+				case TB_PROMOTES_QUEEN:
+					promote = 3;
+					break;
+				case TB_PROMOTES_ROOK:
+					promote = 2;
+					break;
+				case TB_PROMOTES_BISHOP:
+					promote = 1;
+					break;
+				case TB_PROMOTES_KNIGHT:
+				default:
+					promote = 0;
+					break;
+				}
+
+				for (int i = 0; moves[i]; i++) {
+					if (move_from(&moves[i]) == from && move_to(&moves[i]) == to && (move_flag(&moves[i]) != MOVE_PROMOTION || move_promote(&moves[i]) == promote)) {
+						tb_move = 1;
+						bestmove = &moves[i];
+						break;
+					}
+				}
+			}
+			else {
+				ret = tb_probe_wdl(white, black, kings, queens, rooks, bishops, knights, pawns, rule50, castling, ep, turn);
+				if (ret != TB_RESULT_FAILED) {
+					if (ret == TB_DRAW)
+						eval[h.ply] = 0;
+					else if (ret == TB_WIN || ret == TB_CURSED_WIN)
+						eval[h.ply] = VALUE_WIN;
+					else if (ret == TB_LOSS || ret == TB_BLESSED_LOSS)
+						eval[h.ply] = -VALUE_WIN;
+				}
+			}
+			pthread_mutex_unlock(&tbmutex);
+		}
+
+		if (eval[h.ply] == 0)
+			tb_draw++;
+		else
+			tb_draw = 0;
+#endif
+		if (eval[h.ply] == VALUE_NONE || !bestmove) {
+			custom_search(&pos, nodes, moves, evals, tt, &h, *seed);
+			bestmove = moves;
+			if (eval[h.ply] == VALUE_NONE)
+				eval[h.ply] = evals[0];
+		}
+
 		int32_t eval_now = eval[h.ply];
 
-		if (-8 <= eval_now && eval_now <= 8)
+		if (eval_now != VALUE_NONE && abs(eval_now) <= 15 + 35 * (tb_draw > 0))
 			draw_counter++;
-		else
+		else if (eval_now != VALUE_NONE)
 			draw_counter = 0;
-
-		int is_check = generate_checkers(&pos, pos.turn) != 0;
 
 		if (!*bestmove) {
 			result = is_check ? (pos.turn ? RESULT_LOSS : RESULT_WIN) : RESULT_DRAW;
 			break;
 		}
-		else if ((pos.halfmove >= 40 && draw_counter >= 8) || pos.halfmove >= 100 || repetition(&pos, &h, 0, 2))
+		else if ((((h.ply >= 80 && draw_counter >= 10) || h.ply >= 240) && (tb_draw || !tb_move)) ||
+				repetition(&pos, &h, 0, 2) || pos.halfmove >= 100) {
 			result = RESULT_DRAW;
+			if (eval_now != VALUE_NONE && !tb_draw) {
+				int32_t v = eval_now * (2 * pos.turn - 1);
+				if (v <= -400)
+					result = RESULT_LOSS;
+				else if (v >= 400)
+					result = RESULT_WIN;
+			}
+			break;
+		}
 		else if ((e = endgame_probe(&pos))) {
 			int32_t v = endgame_evaluate(e, &pos);
-			if (v != VALUE_NONE) {
+			result = RESULT_DRAW;
+			if (v != VALUE_NONE && !tb_draw) {
 				v *= 2 * pos.turn - 1;
 				if (v > VALUE_WIN / 2)
 					result = RESULT_WIN;
 				else if (v < -VALUE_WIN / 2)
 					result = RESULT_LOSS;
-				else
-					result = RESULT_DRAW;
 			}
+			break;
 		}
 		
 		int nmoves;
@@ -321,23 +457,30 @@ void play_game(FILE *openings, struct transpositiontable *tt, uint64_t nodes, ui
 		move_value_diff_threshold = max(15, move_value_diff_threshold - 2);
 
 		int skip = is_capture(&pos, bestmove) || is_check || move_flag(bestmove);
+#if 0
+		skip = skip || !bernoulli(exp(-(double)pos.halfmove / 8.0), seed));
+#endif
+
+		if (skip)
+			flag[h.ply] |= FLAG_SKIP;
 		
-		if (eval_now < VALUE_WIN) {
+		if (eval_now != VALUE_NONE && abs(eval_now) < VALUE_WIN && !tb_move) {
+#if 0
 			/* Density on (0,1) is f(x)=1.5-x so we are slightly
 			 * more likely to pick better moves. */
 			double r = 1.5 - sqrt(2.25 - 2.0 * uniform(seed));
+#else
+			double r = uniform(seed);
+#endif
 			r = MIN(MAX(r, 0.0), 0.999);
 			move = moves[(int)(nmoves * r)];
 		}
 		else {
 			move = *bestmove;
 		}
-		char str1[128], str2[16];
+		//char str1[128], str2[16];
 		//printf("%s\n", pos_to_fen(str1, &pos));
 		//printf("%s (%s) %d\n", move_str_pgn(str1, &pos, &move), move_str_pgn(str2, &pos, bestmove), eval_now);
-
-		if (skip)
-			eval[h.ply] = VALUE_NONE;
 
 		history_next(&pos, &h, move);
 	}
@@ -380,7 +523,6 @@ struct threadinfo {
 	uint64_t seed;
 	uint64_t nodes;
 	size_t tt_size;
-	const char *openings;
 };
 
 void *playthread(void *arg) {
@@ -393,9 +535,9 @@ void *playthread(void *arg) {
 		stop();
 	}
 
-	FILE *openings = fopen(ti->openings, "rb");
-	if (!openings) {
-		fprintf(stderr, "error: failed to open file %s\n", ti->openings);
+	FILE *openingsfile = openings ? fopen(openings, "rb") : NULL;
+	if (!openingsfile && openings) {
+		fprintf(stderr, "error: failed to open file %s\n", openings);
 		stop();
 	}
 
@@ -408,7 +550,7 @@ void *playthread(void *arg) {
 		}
 
 		while (ftell(f) < max_file_size && !stopped()) {
-			play_game(openings, &tt, nodes, &seed, f);
+			play_game(openingsfile, &tt, nodes, &seed, f);
 		}
 
 		fclose(f);
@@ -416,7 +558,8 @@ void *playthread(void *arg) {
 	}
 
 	transposition_free(&tt);
-	fclose(openings);
+	if (openingsfile)
+		fclose(openingsfile);
 
 	printf("exiting thread %d\n", ti->jobn);
 
@@ -436,9 +579,12 @@ int main(int argc, char **argv) {
 	int tt_MiB = 6 * 1024;
 	int nodes = 15000;
 	static struct option opts[] = {
-		{ "jobs",    required_argument, NULL, 'j' },
-		{ "tt",      required_argument, NULL, 't' },
-		{ "nodes",   required_argument, NULL, 'n' },
+		{ "jobs",           required_argument, NULL, 'j' },
+		{ "tt",             required_argument, NULL, 't' },
+		{ "nodes",          required_argument, NULL, 'n' },
+		{ "without-syzygy", no_argument,       NULL, 'w' },
+		{ "syzygy",         required_argument, NULL, 'z' },
+		{ "openings",       required_argument, NULL, 'o' },
 	};
 
 	char *endptr;
@@ -470,6 +616,15 @@ int main(int argc, char **argv) {
 				fprintf(stderr, "error: bad argument: nodes\n");
 			}
 			break;
+		case 'z':
+			syzygy = optarg;
+			break;
+		case 'w':
+			nosyzygy = 1;
+			break;
+		case 'o':
+			openings = optarg;
+			break;
 		default:
 			error =1;
 			break;
@@ -478,14 +633,34 @@ int main(int argc, char **argv) {
 	if (error)
 		return 1;
 
-	if (optind + 1 >= argc) {
-		fprintf(stderr, "usage: %s datadir openings\n", argv[0]);
+	if (optind >= argc) {
+		fprintf(stderr, "usage: %s datadir\n", argv[0]);
 		return 2;
 	}
 	prefix = argv[optind];
 	if (strlen(prefix) >= BUFSIZ - 1024) {
 		fprintf(stderr, "error: strlen of datadir is too large (%ld)\n", strlen(prefix));
 		return 3;
+	}
+	if (syzygy) {
+#if SYZYGY
+		if (!tb_init(syzygy)) {
+			fprintf(stderr, "error: init for syzygy tablebases failed for path '%s'.\n", syzygy);
+			return 4;
+		}
+		if (TB_LARGEST == 0) {
+			fprintf(stderr, "error: no syzygy tablebases found for path '%s'.\n", syzygy);
+			return 5;
+		}
+		printf("Running with syzygy tablebases for up to %d pieces.\n", TB_LARGEST);
+#else
+		fprintf(stderr, "error: syzygy tablebases not supported for this configuration.\n");
+		return 6;
+#endif
+	}
+	if (!syzygy && !nosyzygy) {
+		fprintf(stderr, "error: either --syzygy or --without-syzygy must be set.\n");
+		return 7;
 	}
 
 	magicbitboard_init();
@@ -506,6 +681,7 @@ int main(int argc, char **argv) {
 	option_deterministic = 0;
 
 	pthread_mutex_init(&filemutex, NULL);
+	pthread_mutex_init(&tbmutex, NULL);
 
 	timepoint_t t = time_now();
 
@@ -517,7 +693,6 @@ int main(int argc, char **argv) {
 		ti[i].seed = t + i;
 		ti[i].tt_size = tt_MiB / jobs;
 		ti[i].nodes = nodes;
-		ti[i].openings = argv[optind + 1];
 
 		pthread_create(&thread[i], NULL, &playthread, &ti[i]);
 		printf("started thread %d\n", i);
@@ -531,6 +706,7 @@ int main(int argc, char **argv) {
 		pthread_join(thread[i], NULL);
 
 	pthread_mutex_destroy(&filemutex);
+	pthread_mutex_destroy(&tbmutex);
 
 	free(ti);
 	free(thread);
