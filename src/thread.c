@@ -63,8 +63,8 @@ void search_stop(void) {
 	assert(thread_init_done);
 	pthread_mutex_lock(&uci);
 	if (ucigo) {
-		ucistop = 1;
-		uciponder = 0;
+		atomic_store_explicit(&ucistop, 1, memory_order_relaxed);
+		atomic_store_explicit(&uciponder, 0, memory_order_relaxed);
 	}
 	pthread_mutex_unlock(&uci);
 }
@@ -72,7 +72,7 @@ void search_stop(void) {
 void search_ponderhit(void) {
 	assert(thread_init_done);
 	pthread_mutex_lock(&uci);
-	uciponder = 0;
+	atomic_store_explicit(&uciponder, 0, memory_order_relaxed);
 	pthread_mutex_unlock(&uci);
 }
 
@@ -88,9 +88,9 @@ void *search_thread(void *arg) {
 	move_t move[2];
 	search(pos, depth, 1, &ti, move, tt, history, 1);
 	pthread_mutex_lock(&uci);
-	ucistop = 0;
-	ucigo = 0;
-	uciponder = 0;
+	atomic_store_explicit(&ucistop, 0, memory_order_relaxed);
+	atomic_store_explicit(&ucigo, 0, memory_order_relaxed);
+	atomic_store_explicit(&uciponder, 0, memory_order_relaxed);
 	print_bestmove(pos, move[0], move[1]);
 	pthread_mutex_unlock(&uci);
 	return NULL;
