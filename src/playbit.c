@@ -59,11 +59,15 @@ static long max_file_size = 1024 * 1024;
 static int random_moves_min = 4;
 static int random_moves_max = 8;
 
+<<<<<<< HEAD
 #if 0
 static int32_t eval_limit = 1500;
 #endif
 
 static atomic_int s = 0;
+=======
+static atomic_int s;
+>>>>>>> master
 
 static pthread_mutex_t filemutex;
 static pthread_mutex_t tbmutex;
@@ -478,9 +482,6 @@ void play_game(FILE *openingsfile, struct transpositiontable *tt, uint64_t nodes
 		else {
 			move = *bestmove;
 		}
-		//char str1[128], str2[16];
-		//printf("%s\n", pos_to_fen(str1, &pos));
-		//printf("%s (%s) %d\n", move_str_pgn(str1, &pos, &move), move_str_pgn(str2, &pos, bestmove), eval_now);
 
 		history_next(&pos, &h, move);
 	}
@@ -574,6 +575,8 @@ static void sigint(int num) {
 
 int main(int argc, char **argv) {
 	signal(SIGINT, &sigint);
+
+	atomic_init(&s, 0);
 
 	int jobs = 1;
 	int tt_MiB = 6 * 1024;

@@ -289,10 +289,10 @@ int interface_go(int argc, char **argv) {
 				ti.movestogo = strint(argv[i + 1]);
 		}
 		if (strcmp(argv[i], "ponder") == 0)
-			uciponder = 1;
+			atomic_store_explicit(&uciponder, 1, memory_order_relaxed);
 	}
 
-	ucigo = 1;
+	atomic_store_explicit(&ucigo, 1, memory_order_relaxed);
 	search_start(&pos, depth, &ti, &tt, &history);
 	return DONE;
 }
@@ -463,6 +463,9 @@ int parse(int margc, char **margv) {
 void interface_init(void) {
 	startpos(&pos);
 	startkey(&pos);
+	atomic_init(&ucigo, 0);
+	atomic_init(&ucistop, 0);
+	atomic_init(&uciponder, 0);
 	if (TT <= 0) {
 		tt.size = 0;
 		option_transposition = 0;
