@@ -254,7 +254,7 @@ int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, s
 		return 0;
 	if (ply >= PLY_MAX)
 		return evaluate(pos, si);
-	if ((check_time(si) || atomic_load_explicit(&ucistop, memory_order_relaxed) || (si->max_nodes > 0 && si->nodes >= si->max_nodes)) && si->done_depth)
+	if ((check_time(si) || atomic_load_explicit(&ucistop, memory_order_relaxed) || (si->max_nodes > 0 && si->nodes >= si->hard_max_nodes)) && si->done_depth)
 		si->interrupt = 1;
 
 	if (si->sel_depth < ply)
@@ -357,7 +357,7 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 		return 0;
 	if (ply >= PLY_MAX)
 		return evaluate(pos, si);
-	if ((check_time(si) || atomic_load_explicit(&ucistop, memory_order_relaxed) || (si->max_nodes > 0 && si->nodes >= si->max_nodes)) && si->done_depth)
+	if ((check_time(si) || atomic_load_explicit(&ucistop, memory_order_relaxed) || (si->max_nodes > 0 && si->nodes >= si->hard_max_nodes)) && si->done_depth)
 		si->interrupt = 1;
 
 	if (si->sel_depth < ply)
@@ -785,7 +785,7 @@ int32_t search(struct position *pos, int depth, int verbose, struct timeinfo *ti
 		best_move = si.pv[0][0];
 		ponder_move = si.pv[0][1];
 
-		if (si.interrupt)
+		if (si.interrupt || (si.max_nodes && si.nodes >= si.max_nodes))
 			break;
 
 		si.done_depth = d;

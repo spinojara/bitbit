@@ -39,7 +39,7 @@ struct searchstack {
 };
 
 struct searchinfo {
-	uint64_t nodes, max_nodes;
+	uint64_t nodes, max_nodes, hard_max_nodes;
 
 	move_t pv[PLY_MAX][PLY_MAX];
 	move_t killers[PLY_MAX][2];
