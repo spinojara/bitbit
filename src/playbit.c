@@ -59,18 +59,13 @@ static long max_file_size = 1024 * 1024;
 static int random_moves_min = 4;
 static int random_moves_max = 8;
 
-<<<<<<< HEAD
 #if 0
 static int32_t eval_limit = 1500;
 #endif
 
-static atomic_int s = 0;
-=======
 static atomic_int s;
->>>>>>> master
 
 static pthread_mutex_t filemutex;
-static pthread_mutex_t tbmutex;
 
 const char *syzygy = NULL;
 const char *openings = NULL;
@@ -352,7 +347,6 @@ void play_game(FILE *openingsfile, struct transpositiontable *tt, uint64_t nodes
 			unsigned castling = 0;
 			unsigned ep = 0;
 			int turn = pos.turn;
-			pthread_mutex_lock(&tbmutex);
 			unsigned ret;
 			ret = tb_probe_root(white, black, kings, queens, rooks, bishops, knights, pawns, rule50, castling, ep, turn, NULL);
 			if (ret != TB_RESULT_FAILED) {
@@ -402,7 +396,6 @@ void play_game(FILE *openingsfile, struct transpositiontable *tt, uint64_t nodes
 						eval[h.ply] = -VALUE_WIN;
 				}
 			}
-			pthread_mutex_unlock(&tbmutex);
 		}
 
 		if (eval[h.ply] == 0)
@@ -684,7 +677,6 @@ int main(int argc, char **argv) {
 	option_deterministic = 0;
 
 	pthread_mutex_init(&filemutex, NULL);
-	pthread_mutex_init(&tbmutex, NULL);
 
 	timepoint_t t = time_now();
 
@@ -709,8 +701,12 @@ int main(int argc, char **argv) {
 		pthread_join(thread[i], NULL);
 
 	pthread_mutex_destroy(&filemutex);
-	pthread_mutex_destroy(&tbmutex);
 
 	free(ti);
 	free(thread);
+
+#if SYZYGY
+	if (syzygy)
+		tb_free();
+#endif
 }
