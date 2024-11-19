@@ -134,6 +134,7 @@ void custom_search(struct position *pos, uint64_t nodes, move_t moves[MOVES_MAX]
 	si.ti = NULL;
 	si.history = history;
 	si.max_nodes = nodes;
+	si.hard_max_nodes = 5 * si.max_nodes;
 	si.seed = seed;
 
 	struct searchstack ss[PLY_MAX + 1] = { 0 };
@@ -154,8 +155,8 @@ void custom_search(struct position *pos, uint64_t nodes, move_t moves[MOVES_MAX]
 	int ply = 0;
 	history_store(pos, si.history, ply);
 
-	for (int depth = 1; depth <= PLY_MAX / 2 && !si.interrupt; depth++) {
-		for (int i = 0; moves[i]; i++) {
+	for (int depth = 1; depth <= PLY_MAX / 2 && !si.interrupt && si.nodes < si.max_nodes; depth++) {
+		for (int i = 0; moves[i] && !si.interrupt; i++) {
 			move_t *move = &moves[i];
 
 			do_zobrist_key(pos, move);
@@ -169,10 +170,16 @@ void custom_search(struct position *pos, uint64_t nodes, move_t moves[MOVES_MAX]
 			if (!si.interrupt)
 				evals[i] = eval;
 
+			if (si.nodes >= si.max_nodes)
+				si.interrupt = 1;
+
 			undo_zobrist_key(pos, move);
 			undo_endgame_key(pos, move);
 			undo_move(pos, move);
 			undo_accumulator(pos, move);
+
+			if (si.interrupt && i > 0)
+				moves[i] = 0;
 		}
 
 		si.done_depth = depth;
@@ -433,7 +440,10 @@ void play_game(FILE *openingsfile, struct transpositiontable *tt, uint64_t nodes
 			}
 			break;
 		}
-		else if ((e = endgame_probe(&pos))) {
+
+		int skip = is_capture(&pos, bestmove) || is_check || move_flag(bestmove);
+
+		if (!skip && (e = endgame_probe(&pos))) {
 			int32_t v = endgame_evaluate(e, &pos);
 			result = RESULT_DRAW;
 			if (v != VALUE_NONE && !tb_draw) {
@@ -451,9 +461,7 @@ void play_game(FILE *openingsfile, struct transpositiontable *tt, uint64_t nodes
 			if (evals[nmoves] < eval_now - move_value_diff_threshold)
 				break;
 
-		move_value_diff_threshold = max(15, move_value_diff_threshold - 2);
-
-		int skip = is_capture(&pos, bestmove) || is_check || move_flag(bestmove);
+		move_value_diff_threshold = max(10, move_value_diff_threshold - 2);
 #if 0
 		skip = skip || !bernoulli(exp(-(double)pos.halfmove / 8.0), seed));
 #endif
@@ -478,6 +486,8 @@ void play_game(FILE *openingsfile, struct transpositiontable *tt, uint64_t nodes
 
 		history_next(&pos, &h, move);
 	}
+
+	flag[h.ply] |= FLAG_SKIP;
 
 	if (h.ply) {
 		if (write_move(out, 0)) {
@@ -573,7 +583,7 @@ int main(int argc, char **argv) {
 
 	int jobs = 1;
 	int tt_MiB = 6 * 1024;
-	int nodes = 15000;
+	int nodes = 10000;
 	static struct option opts[] = {
 		{ "jobs",           required_argument, NULL, 'j' },
 		{ "tt",             required_argument, NULL, 't' },
@@ -586,7 +596,7 @@ int main(int argc, char **argv) {
 	char *endptr;
 	int c, option_index = 0;
 	int error = 0;
-	while ((c = getopt_long(argc, argv, "j:t:", opts, &option_index)) != -1) {
+	while ((c = getopt_long(argc, argv, "j:t:n:wz:o:", opts, &option_index)) != -1) {
 		switch (c) {
 		case 't':
 			errno = 0;
@@ -622,7 +632,7 @@ int main(int argc, char **argv) {
 			openings = optarg;
 			break;
 		default:
-			error =1;
+			error = 1;
 			break;
 		}
 	}
