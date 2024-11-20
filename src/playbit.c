@@ -696,7 +696,7 @@ int main(int argc, char **argv) {
 	for (int i = 0; i < jobs; i++) {
 		ti[i].jobn = i;
 		ti[i].seed = t + i;
-		ti[i].tt_size = tt_MiB / jobs;
+		ti[i].tt_size = 1024ll * 1024ll * tt_MiB / jobs;
 		ti[i].nodes = nodes;
 
 		pthread_create(&thread[i], NULL, &playthread, &ti[i]);
