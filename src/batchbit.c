@@ -27,6 +27,8 @@
 #include "nnue.h"
 #include "evaluate.h"
 #include "io.h"
+#include "magicbitboard.h"
+#include "attackgen.h"
 
 struct batch {
 	size_t size;
@@ -271,9 +273,7 @@ void loader_reset(void *ptr) {
 }
 
 void batchbit_init(void) {
+	magicbitboard_init();
+	attackgen_init();
 	bitboard_init();
-}
-
-int main(void) {
-	loader_open(NULL, 0, 0, 0);
 }
