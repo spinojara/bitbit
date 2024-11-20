@@ -137,7 +137,7 @@ int main(int argc, char **argv) {
 #endif
 		if (eval == VALUE_NONE || flag & FLAG_SKIP)
 			continue;
-		if (popcount(all_pieces(&pos)) < 6 && ((result == RESULT_LOSS && (2 * pos.turn - 1) * eval > 0) || (result == RESULT_WIN && (2 * pos.turn - 1) * eval < 0))) {
+		if (popcount(all_pieces(&pos)) < 6 && ((result == RESULT_LOSS && (2 * pos.turn - 1) * eval >= VALUE_WIN) || (result == RESULT_WIN && (2 * pos.turn - 1) * eval <= -VALUE_WIN))) {
 			print_position(&pos);
 			print_fen(&pos);
 			printf("eval: %d\n", eval);
