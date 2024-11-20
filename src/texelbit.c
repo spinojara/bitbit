@@ -1525,7 +1525,9 @@ size_t grad(FILE *f, struct position *pos) {
 		}
 
 		int32_t eval = 0;
+		unsigned char flag;
 		read_eval(f, &eval);
+		read_flag(f, &flag);
 		if (feof(f))
 			break;
 

@@ -23,6 +23,10 @@
 #include "position.h"
 #include "magicbitboard.h"
 
+#ifndef NDEBUG
+extern int attackgen_init_done;
+#endif
+
 void attackgen_init(void);
 
 extern uint64_t knight_attacks_lookup[64];
@@ -46,6 +50,7 @@ static inline uint64_t pawn_double_push(uint64_t pawns, uint64_t all, int color)
 }
 
 static inline uint64_t knight_attacks(int square, uint64_t own) {
+	assert(attackgen_init_done);
 	return knight_attacks_lookup[square] & ~own;
 }
 
@@ -62,6 +67,7 @@ static inline uint64_t queen_attacks(int square, uint64_t own, uint64_t all) {
 }
 
 static inline uint64_t king_attacks(int square, uint64_t own) {
+	assert(attackgen_init_done);
 	return king_attacks_lookup[square] & ~own;
 }
 

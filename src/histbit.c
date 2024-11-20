@@ -90,6 +90,7 @@ int main(int argc, char **argv) {
 	char fen[128];
 	char movestr[16];
 	int print_flag = 0;
+	unsigned char flag;
 	while (1) {
 		count++;
 		if (count % 20000 == 0)
@@ -119,12 +120,20 @@ int main(int argc, char **argv) {
 			pos_to_fen(startfen, &pos);
 		}
 		
-		if (read_eval(f, &eval))
+		if (read_eval(f, &eval) || read_flag(f, &flag))
 			break;
 		if (feof(f))
 			break;
 
-		if (eval == VALUE_NONE)
+		if ((popcount(all_pieces(&pos)) - 1) / 4 == 1) {
+			print_position(&pos);
+			print_fen(&pos);
+			if (eval == VALUE_NONE || flag & FLAG_SKIP)
+				printf("eval: none\n");
+			else
+				printf("eval: %d\n", eval);
+		}
+		if (eval == VALUE_NONE || flag & FLAG_SKIP)
 			continue;
 #if 0
 		const int material_values[] = { 0, 1, 3, 3, 5, 9, 0 };

@@ -18,9 +18,14 @@
 #define MAGIC_BITBOARD_H
 
 #include <stdint.h>
+#include <assert.h>
 
 #ifdef PEXT
 #include <immintrin.h>
+#endif
+
+#ifndef NDEBUG
+extern int magicbitboard_init_done;
 #endif
 
 void magicbitboard_init(void);
@@ -36,6 +41,7 @@ extern struct magic bishop_magic[64];
 extern struct magic rook_magic[64];
 
 static inline uint64_t magic_index(const struct magic *magic, uint64_t b) {
+	assert(magicbitboard_init_done);
 #ifdef PEXT
 	return _pext_u64(b, magic->mask);
 #else

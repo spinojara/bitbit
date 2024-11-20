@@ -203,7 +203,7 @@ void write_thread(FILE *f, struct threadinfo *threadinfo, long *curr_fens, long 
 			fprintf(stderr, "MAIN THREAD READ ERROR\n");
 			exit(1);
 		}
-		if (write_eval(f, eval)) {
+		if (write_eval(f, eval) || write_flag(f, 0)) {
 			fprintf(stderr, "MAIN THREAD WRITE ERROR\n");
 			exit(1);
 		}

@@ -24,6 +24,10 @@
 #include "evaluate.h"
 #include "transposition.h"
 
+#ifndef NDEBUG
+int moveorder_init_done = 0;
+#endif
+
 int mvv_lva_lookup[7 * 7];
 
 unsigned move_order_piece_value[] = { 0, 100, 300, 300, 500, 900, 0 };
@@ -189,4 +193,8 @@ uint64_t generate_defenders(struct position *pos, const move_t *move) {
 
 void moveorder_init(void) {
 	mvv_lva_init();
+
+#ifndef NDEBUG
+	moveorder_init_done = 1;
+#endif
 }

@@ -92,18 +92,15 @@ void *batch_prepare(void *ptr) {
 			do_move(dataloader->pos, &move);
 		}
 		else {
-			if (read_position(dataloader->f, dataloader->pos)) {
-				dataloader->error = 1;
-				break;
-			}
-			if (read_result(dataloader->f, &result)) {
+			if (read_position(dataloader->f, dataloader->pos) || read_result(dataloader->f, &result)) {
 				dataloader->error = 1;
 				break;
 			}
 		}
 
 		int32_t eval = VALUE_NONE;
-		if (read_eval(dataloader->f, &eval)) {
+		unsigned char flag;
+		if (read_eval(dataloader->f, &eval) || read_flag(dataloader->f, &flag)) {
 			dataloader->error = 1;
 			break;
 		}
@@ -111,7 +108,7 @@ void *batch_prepare(void *ptr) {
 		if (result == RESULT_UNKNOWN && dataloader->use_result)
 			continue;
 
-		int skip = (eval == VALUE_NONE) || bernoulli(dataloader->random_skip, &dataloader->seed);
+		int skip = (eval == VALUE_NONE) || (flag & FLAG_SKIP) || bernoulli(dataloader->random_skip, &dataloader->seed);
 		if (skip)
 			continue;
 

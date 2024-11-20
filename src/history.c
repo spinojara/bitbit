@@ -23,6 +23,10 @@
 #include "bitboard.h"
 #include "endgame.h"
 
+#ifndef NDEBUG
+int history_init_done = 0;
+#endif
+
 static uint64_t cuckoo[8192];
 static unsigned char A[8192], B[8192];
 
@@ -86,6 +90,7 @@ int repetition(const struct position *pos, const struct history *h, int ply, int
 int upcoming_repetition(const struct position *pos, const struct history *h, int ply) {
 	if (!option_history || pos->halfmove < 3)
 		return 0;
+	assert(history_init_done);
 
 	int offset = h->ply + ply;
 	int end = min(pos->halfmove, offset);
@@ -148,4 +153,8 @@ void history_init(void) {
 	}
 	}
 	}
+
+#ifndef NDEBUG
+	history_init_done = 1;
+#endif
 }

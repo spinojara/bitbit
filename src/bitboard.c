@@ -23,6 +23,10 @@
 #include "position.h"
 #include "util.h"
 
+#ifndef NDEBUG
+int bitboard_init_done = 0;
+#endif
+
 uint64_t between_lookup[64 * 64];
 uint64_t line_lookup[64 * 64];
 uint64_t ray_lookup[64 * 64];
@@ -243,6 +247,10 @@ void bitboard_init(void) {
 			}
 		}
 	}
+
+#ifndef NDEBUG
+	bitboard_init_done = 1;
+#endif
 }
 
 const uint64_t FILE_H = 0x8080808080808080;

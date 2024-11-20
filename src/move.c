@@ -47,7 +47,7 @@ void do_move(struct position *pos, move_t *move) {
 	move_set_halfmove(move, pos->halfmove);
 
 	pos->en_passant = 0;
-	pos->halfmove++;
+	pos->halfmove = min(pos->halfmove + 1, 100);
 
 	pos->castle = castle(source_square, target_square, pos->castle);
 

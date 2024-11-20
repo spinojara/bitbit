@@ -27,6 +27,10 @@
 #include "history.h"
 #include "position.h"
 
+#ifndef NDEBUG
+int transposition_init_done = 0;
+#endif
+
 /* 12 * 64: each piece each square.
  * 1: turn to move is white.
  * 16: each castling combination.
@@ -82,8 +86,12 @@ void transposition_init(void) {
 		zobrist_keys[i] = xorshift64(&seed);
 	struct position pos;
 	startpos(&pos);
+#ifndef NDEBUG
+	transposition_init_done = 1;
+#endif
 	refresh_zobrist_key(&pos);
 	start = pos.zobrist_key;
+
 }
 
 /* Should be called before do_move. */
@@ -92,6 +100,7 @@ void do_zobrist_key(struct position *pos, const move_t *move) {
 	assert(pos->mailbox[move_from(move)]);
 	if (!option_transposition && !option_history)
 		return;
+	assert(transposition_init_done);
 	int source_square = move_from(move);
 	int target_square = move_to(move);
 
@@ -162,6 +171,7 @@ void undo_zobrist_key(struct position *pos, const move_t *move) {
 	assert(pos->mailbox[move_to(move)]);
 	if (!option_transposition && !option_history)
 		return;
+	assert(transposition_init_done);
 	int source_square = move_from(move);
 	int target_square = move_to(move);
 
@@ -229,16 +239,19 @@ void undo_zobrist_key(struct position *pos, const move_t *move) {
 void do_null_zobrist_key(struct position *pos, int en_passant) {
 	if (!option_transposition && !option_history)
 		return;
+	assert(transposition_init_done);
 	pos->zobrist_key ^= zobrist_en_passant_key(pos->en_passant);
 	pos->zobrist_key ^= zobrist_en_passant_key(en_passant);
 	pos->zobrist_key ^= zobrist_turn_key();
 }
 
 void startkey(struct position *pos) {
+	assert(transposition_init_done);
 	pos->zobrist_key = start;
 }
 
 void refresh_zobrist_key(struct position *pos) {
+	assert(transposition_init_done);
 	pos->zobrist_key = 0;
 	for (int i = 0; i < 64; i++)
 		if (pos->mailbox[i])

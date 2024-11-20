@@ -208,6 +208,7 @@ int main(int argc, char **argv) {
 	int32_t eval;
 	signed char resultnow = RESULT_UNKNOWN, resultsaved = RESULT_UNKNOWN;
 	int newgame = 1;
+	unsigned char flag;
 
 	while (fgets(fen, sizeof(fen), in)) {
 		fgets(move, sizeof(move), in);
@@ -220,6 +221,7 @@ int main(int argc, char **argv) {
 		fen[strlen(fen) - 1] = '\0';
 		move[strlen(move) - 1] = '\0';
 
+		flag = 0;
 		resultnow = result[7] == '1' ? RESULT_WIN : result[7] == '0' ? RESULT_DRAW : result[7] == '-' ? RESULT_LOSS : RESULT_UNKNOWN;
 
 		if (resultnow == RESULT_UNKNOWN) {
@@ -261,8 +263,11 @@ int main(int argc, char **argv) {
 		}
 
 		eval = clamp(eval * scale_eval, -VALUE_WIN, VALUE_WIN);
+		if (generate_checkers(&pos, pos.turn))
+			flag |= FLAG_SKIP;
 
 		write_eval(out, eval);
+		write_flag(out, flag);
 
 #if 0
 		print_position(&pos);

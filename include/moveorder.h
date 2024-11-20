@@ -18,14 +18,20 @@
 #define MOVE_ORDER_H
 
 #include <stdint.h>
+#include <assert.h>
 
 #include "move.h"
 #include "position.h"
 #include "search.h"
 
+#ifndef NDEBUG
+extern int moveorder_init_done;
+#endif
+
 extern int mvv_lva_lookup[7 * 7];
 
 static inline int mvv_lva(int attacker, int victim) {
+	assert(moveorder_init_done);
 	return mvv_lva_lookup[attacker + 7 * victim];
 }
 

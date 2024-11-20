@@ -30,6 +30,10 @@
 #include "move.h"
 #include "bitbase.h"
 
+#ifndef NDEBUG
+int endgame_init_done = 0;
+#endif
+
 uint64_t endgame_keys[2 * 6 * 11];
 struct endgame endgame_table[ENDGAMESIZE] = { 0 };
 struct endgame endgame_KXK[2] = { 0 };
@@ -48,6 +52,7 @@ int verify_material(const struct position *pos, int color, int material_verify) 
 static inline uint64_t endgame_key(int color, int piece, int count) {
 	assert(color == 0 || color == 1);
 	assert(piece <= 5);
+	assert(transposition_init_done);
 	return endgame_keys[color + 2 * piece + 2 * 5 * count];
 }
 
@@ -462,6 +467,10 @@ void endgame_init(void) {
 	for (size_t i = 0; i < SIZE(endgame_keys); i++)
 		endgame_keys[i] = xorshift64(&seed);
 	
+#ifndef NDEBUG
+	endgame_init_done = 1;
+#endif
+
 	endgame_store("KPK",   &evaluate_KPK);
 	endgame_store("KPKP",  &evaluate_KPKP);
 	endgame_store("KNPK",  &evaluate_KNPK);

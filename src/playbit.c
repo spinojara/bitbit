@@ -55,7 +55,7 @@ static long max_file_size = 1024 * 1024;
 static int random_moves_min = 1;
 static int random_moves_max = 8;
 
-static atomic_int s = 0;
+static atomic_int s;
 
 static pthread_mutex_t filemutex;
 
@@ -278,6 +278,7 @@ void play_game(FILE *openings, struct transpositiontable *tt, uint64_t nodes, ui
 	refresh_zobrist_key(&pos);
 
 	int32_t eval[POSITIONS_MAX] = { 0 };
+	unsigned char flag[POSITIONS_MAX] = { 0 };
 
 	while (result == RESULT_UNKNOWN) {
 		custom_search(&pos, nodes, moves, evals, tt, &h, *seed);
@@ -331,9 +332,6 @@ void play_game(FILE *openings, struct transpositiontable *tt, uint64_t nodes, ui
 		else {
 			move = *bestmove;
 		}
-		char str1[128], str2[16];
-		//printf("%s\n", pos_to_fen(str1, &pos));
-		//printf("%s (%s) %d\n", move_str_pgn(str1, &pos, &move), move_str_pgn(str2, &pos, bestmove), eval_now);
 
 		if (skip)
 			eval[h.ply] = VALUE_NONE;
@@ -357,6 +355,10 @@ void play_game(FILE *openings, struct transpositiontable *tt, uint64_t nodes, ui
 		for (int i = 0; i <= h.ply; i++) {
 			if (write_eval(out, eval[i])) {
 				fprintf(stderr, "error: failed to write eval\n");
+				stop();
+			}
+			if (write_flag(out, flag[i])) {
+				fprintf(stderr, "error: failed to write flag\n");
 				stop();
 			}
 			if (i < h.ply) {
@@ -426,6 +428,8 @@ static void sigint(int num) {
 
 int main(int argc, char **argv) {
 	signal(SIGINT, &sigint);
+
+	atomic_init(&s, 0);
 
 	int jobs = 1;
 	int tt_MiB = 6 * 1024;

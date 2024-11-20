@@ -129,7 +129,7 @@ OBJ_TUNEBIT   = $(patsubst %.c,obj/%.o,$(subst search,tune-search,\
 OBJ_CHECKBIT  = $(patsubst %.c,obj/%.o,$(SRC_CHECKBIT))
 
 BIN = bitbit weightbit genbit epdbit histbit pgnbit texelbit basebit \
-      libbatchbit.so libvisbit.so tunebit convbit checkbit
+      libbatchbit.so libvisbit.so tunebit convbit checkbit playbit
 
 PREFIX = /usr/local
 BINDIR = $(PREFIX)/bin

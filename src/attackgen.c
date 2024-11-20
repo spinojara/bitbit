@@ -16,6 +16,10 @@
 
 #include "attackgen.h"
 
+#ifndef NDEBUG
+int attackgen_init_done = 0;
+#endif
+
 uint64_t knight_attacks_lookup[64];
 uint64_t king_attacks_lookup[64];
 
@@ -47,4 +51,8 @@ void attackgen_init(void) {
 		knight_attacks_lookup[i] = knight_attacks_calc(i);
 		king_attacks_lookup[i] = king_attacks_calc(i);
 	}
+
+#ifndef NDEBUG
+	attackgen_init_done = 1;
+#endif
 }
