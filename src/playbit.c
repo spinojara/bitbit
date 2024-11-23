@@ -67,9 +67,13 @@ static atomic_int s;
 
 static pthread_mutex_t filemutex;
 
-const char *syzygy = NULL;
-const char *openings = NULL;
+static const char *syzygy = NULL;
+static const char *openings = NULL;
 static int nosyzygy = 0;
+
+static atomic_uint_fast64_t bytes;
+static atomic_uint_fast64_t positions;
+static timepoint_t last_time;
 
 static inline void stop(void) {
 	if (!atomic_load_explicit(&s, memory_order_relaxed))
@@ -502,6 +506,7 @@ void play_game(FILE *openingsfile, struct transpositiontable *tt, uint64_t nodes
 			fprintf(stderr, "error: failed to write result\n");
 			stop();
 		}
+		int count = 0;
 		for (int i = 0; i <= h.ply; i++) {
 			if (write_eval(out, eval[i])) {
 				fprintf(stderr, "error: failed to write eval\n");
@@ -511,6 +516,8 @@ void play_game(FILE *openingsfile, struct transpositiontable *tt, uint64_t nodes
 				fprintf(stderr, "error: failed to write flag\n");
 				stop();
 			}
+			if (!(flag[i] & FLAG_SKIP) && eval[i] != VALUE_NONE)
+				count++;
 			if (i < h.ply) {
 				if (write_move(out, h.move[i])) {
 					fprintf(stderr, "error: failed to write move\n");
@@ -518,6 +525,8 @@ void play_game(FILE *openingsfile, struct transpositiontable *tt, uint64_t nodes
 				}
 			}
 		}
+		atomic_fetch_add(&bytes, 69 + 5 * h.ply);
+		atomic_fetch_add(&positions, count);
 	}
 
 }
@@ -579,6 +588,8 @@ static void sigint(int num) {
 int main(int argc, char **argv) {
 	signal(SIGINT, &sigint);
 
+	atomic_init(&bytes, 0);
+	atomic_init(&positions, 0);
 	atomic_init(&s, 0);
 
 	int jobs = 1;
@@ -704,7 +715,18 @@ int main(int argc, char **argv) {
 	}
 
 	char buf[BUFSIZ];
-	while (fgets(buf, sizeof(buf), stdin) && strcmp(buf, "stop\n") && strcmp(buf, "q\n") && strcmp(buf, "quit\n"));
+	last_time = time_now();
+	while (fgets(buf, sizeof(buf), stdin) && strcmp(buf, "stop\n") && strcmp(buf, "q\n") && strcmp(buf, "quit\n")) {
+		timepoint_t now = time_now();
+		timepoint_t elapsed = now - last_time;
+		if (elapsed <= 0)
+			continue;
+
+		uint64_t bytesnow = atomic_exchange(&bytes, 0);
+		uint64_t positionsnow = atomic_exchange(&positions, 0);
+		printf("%ld fens/s (%ld bytes/s)\n", positionsnow * TPPERSEC / elapsed, bytesnow * TPPERSEC / elapsed);
+		last_time = now;
+	}
 	stop();
 
 	for (int i = 0; i < jobs; i++)
