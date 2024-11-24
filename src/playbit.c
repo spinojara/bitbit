@@ -73,7 +73,6 @@ static int nosyzygy = 0;
 
 static atomic_uint_fast64_t bytes;
 static atomic_uint_fast64_t positions;
-static timepoint_t last_time;
 
 static inline void stop(void) {
 	if (!atomic_load_explicit(&s, memory_order_relaxed))
@@ -528,7 +527,6 @@ void play_game(FILE *openingsfile, struct transpositiontable *tt, uint64_t nodes
 		atomic_fetch_add(&bytes, 69 + 5 * h.ply);
 		atomic_fetch_add(&positions, count);
 	}
-
 }
 
 struct threadinfo {
@@ -580,13 +578,13 @@ void *playthread(void *arg) {
 }
 
 static void sigint(int num) {
-	(void)num;
-	fprintf(stderr, "\nenter 'quit' to quit\n");
-	signal(SIGINT, &sigint);
+	stop();
+	signal(num, &sigint);
 }
 
 int main(int argc, char **argv) {
 	signal(SIGINT, &sigint);
+	signal(SIGTERM, &sigint);
 
 	atomic_init(&bytes, 0);
 	atomic_init(&positions, 0);
@@ -714,18 +712,27 @@ int main(int argc, char **argv) {
 		printf("started thread %d\n", i);
 	}
 
-	char buf[BUFSIZ];
-	last_time = time_now();
-	while (fgets(buf, sizeof(buf), stdin) && strcmp(buf, "stop\n") && strcmp(buf, "q\n") && strcmp(buf, "quit\n")) {
+	/* Sleep here so that the threads have time to start up, this will give
+	 * a more accurate speed estimation.
+	 */
+	sleep(1);
+	int first = 1;
+	timepoint_t last = 0;
+	while (!stopped()) {
+		sleep(1);
 		timepoint_t now = time_now();
-		timepoint_t elapsed = now - last_time;
-		if (elapsed <= 0)
+		timepoint_t elapsed = now - last;
+		if (elapsed <= (first ? 3 : 20) * TPPERSEC)
 			continue;
 
 		uint64_t bytesnow = atomic_exchange(&bytes, 0);
 		uint64_t positionsnow = atomic_exchange(&positions, 0);
-		printf("%ld fens/s (%ld bytes/s)\n", positionsnow * TPPERSEC / elapsed, bytesnow * TPPERSEC / elapsed);
-		last_time = now;
+		if (last) {
+			first = 0;
+			printf("\33[2K%ld fens/s (%ld bytes/s)\r", positionsnow * TPPERSEC / elapsed, bytesnow * TPPERSEC / elapsed);
+			fflush(stdout);
+		}
+		last = now;
 	}
 	stop();
 
