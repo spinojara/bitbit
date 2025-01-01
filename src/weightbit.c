@@ -38,7 +38,7 @@ alignas(64) static bias_t output_biases[8][1];
 int main(int argc, char **argv) {
 	int i, j;
 
-	if (argc < 2) {
+	if (argc != 2) {
 		printf("usage: %s file\n", argv[0]);
 		return 1;
 	}
