@@ -277,3 +277,7 @@ void batchbit_init(void) {
 	attackgen_init();
 	bitboard_init();
 }
+
+int batchbit_version(void) {
+	return VERSION_NNUE;
+}
