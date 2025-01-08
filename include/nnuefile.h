@@ -19,6 +19,6 @@
 
 #include "nnue.h"
 
-int nnuefile(FILE *f, ft_weight_t *ft_weights, ft_bias_t *ft_biases, ft_weight_t *psqt_weights, weight_t (*hidden1_weights)[16 * FT_OUT_DIMS], bias_t (*hidden1_biases)[16], weight_t (*hidden2_weights)[32 * 16], bias_t (*hidden2_biases)[32], weight_t (*output_weights)[1 * 32], bias_t (*output_biases)[1]);
+int nnuefile(FILE *f, ft_weight_t *ft_weights, ft_bias_t *ft_biases, ft_weight_t *psqt_weights, weight_t *hidden1_weights, bias_t *hidden1_biases, weight_t *hidden2_weights, bias_t *hidden2_biases, weight_t *output_weights, bias_t *output_biases);
 
 #endif

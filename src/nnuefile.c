@@ -23,12 +23,12 @@
 int nnuefile(FILE *f, ft_weight_t *ft_weights,
 		ft_bias_t *ft_biases,
 		ft_weight_t *psqt_weights,
-		weight_t (*hidden1_weights)[16 * FT_OUT_DIMS],
-		bias_t (*hidden1_biases)[16],
-		weight_t (*hidden2_weights)[32 * 16],
-		bias_t (*hidden2_biases)[32],
-		weight_t (*output_weights)[1 * 32],
-		bias_t (*output_biases)[1]) {
+		weight_t *hidden1_weights,
+		bias_t *hidden1_biases,
+		weight_t *hidden2_weights,
+		bias_t *hidden2_biases,
+		weight_t *output_weights,
+		bias_t *output_biases) {
 
 	uint16_t version;
 	if (read_uintx(f, &version, sizeof(version)))
@@ -55,34 +55,28 @@ int nnuefile(FILE *f, ft_weight_t *ft_weights,
 		}
 	}
 
-	for (j = 0; j < 8; j++)
-		for (i = 0; i < 16; i++)
-			if (read_uintx(f, &hidden1_biases[j][i], sizeof(**hidden1_biases)))
-				return 1;
-
-	for (j = 0; j < 8; j++)
-		for (i = 0; i < 16; i++)
-			for (k = 0; k < FT_OUT_DIMS; k++)
-				if (read_uintx(f, &hidden1_weights[j][16 * k + i], sizeof(**hidden1_weights)))
-					return 1;
-
-	for (j = 0; j < 8; j++)
-		for (i = 0; i < 32; i++)
-			if (read_uintx(f, &hidden2_biases[j][i], sizeof(**hidden2_biases)))
-				return 1;
-	for (j = 0; j < 8; j++)
-		for (i = 0; i < 32; i++)
-			for (k = 0; k < 16; k++)
-				if (read_uintx(f, &hidden2_weights[j][32 * k + i], sizeof(**hidden2_weights)))
-					return 1;
-
-	for (j = 0; j < 8; j++)
-		if (read_uintx(f, output_biases[j], sizeof(**output_biases)))
+	for (i = 0; i < 16; i++)
+		if (read_uintx(f, &hidden1_biases[i], sizeof(*hidden1_biases)))
 			return 1;
-	for (j = 0; j < 8; j++)
-		for (i = 0; i < 32; i++)
-			if (read_uintx(f, &output_weights[j][i], sizeof(**output_weights)))
+
+	for (i = 0; i < 16; i++)
+		for (k = 0; k < FT_OUT_DIMS; k++)
+			if (read_uintx(f, &hidden1_weights[16 * k + i], sizeof(*hidden1_weights)))
 				return 1;
+
+	for (i = 0; i < 32; i++)
+		if (read_uintx(f, &hidden2_biases[i], sizeof(*hidden2_biases)))
+			return 1;
+	for (i = 0; i < 32; i++)
+		for (k = 0; k < 16; k++)
+			if (read_uintx(f, &hidden2_weights[32 * k + i], sizeof(*hidden2_weights)))
+				return 1;
+
+	if (read_uintx(f, output_biases, sizeof(*output_biases)))
+		return 1;
+	for (i = 0; i < 32; i++)
+		if (read_uintx(f, &output_weights[i], sizeof(*output_weights)))
+			return 1;
 
 	/* This should be the end of file. */
 	return !read_uintx(f, NULL, 1) || !feof(f) || ferror(f);

@@ -58,14 +58,14 @@ extern alignas(64) ft_bias_t builtin_ft_biases[K_HALF_DIMENSIONS];
 
 extern alignas(64) ft_weight_t builtin_psqt_weights[8 * FT_IN_DIMS];
 
-extern alignas(64) weight_t builtin_hidden1_weights[8][16 * FT_OUT_DIMS];
-extern alignas(64) bias_t builtin_hidden1_biases[8][16];
+extern alignas(64) weight_t builtin_hidden1_weights[16 * FT_OUT_DIMS];
+extern alignas(64) bias_t builtin_hidden1_biases[16];
 
-extern alignas(64) weight_t builtin_hidden2_weights[8][32 * 16];
-extern alignas(64) bias_t builtin_hidden2_biases[8][32];
+extern alignas(64) weight_t builtin_hidden2_weights[32 * 16];
+extern alignas(64) bias_t builtin_hidden2_biases[32];
 
-extern alignas(64) weight_t builtin_output_weights[8][1 * 32];
-extern alignas(64) bias_t builtin_output_biases[8][1];
+extern alignas(64) weight_t builtin_output_weights[1 * 32];
+extern alignas(64) bias_t builtin_output_biases[1];
 
 
 
@@ -74,14 +74,14 @@ alignas(64) ft_bias_t file_ft_biases[K_HALF_DIMENSIONS];
 
 alignas(64) ft_weight_t file_psqt_weights[8 * FT_IN_DIMS];
 
-alignas(64) weight_t file_hidden1_weights[8][16 * FT_OUT_DIMS];
-alignas(64) bias_t file_hidden1_biases[8][16];
+alignas(64) weight_t file_hidden1_weights[16 * FT_OUT_DIMS];
+alignas(64) bias_t file_hidden1_biases[16];
 
-alignas(64) weight_t file_hidden2_weights[8][32 * 16];
-alignas(64) bias_t file_hidden2_biases[8][32];
+alignas(64) weight_t file_hidden2_weights[32 * 16];
+alignas(64) bias_t file_hidden2_biases[32];
 
-alignas(64) weight_t file_output_weights[8][1 * 32];
-alignas(64) bias_t file_output_biases[8][1];
+alignas(64) weight_t file_output_weights[1 * 32];
+alignas(64) bias_t file_output_biases[1];
 
 
 
@@ -90,14 +90,14 @@ ft_bias_t *ft_biases;
 
 ft_weight_t *psqt_weights;
 
-weight_t (*hidden1_weights)[16 * FT_OUT_DIMS];
-bias_t (*hidden1_biases)[16];
+weight_t *hidden1_weights;
+bias_t *hidden1_biases;
 
-weight_t (*hidden2_weights)[32 * 16];
-bias_t (*hidden2_biases)[32];
+weight_t *hidden2_weights;
+bias_t *hidden2_biases;
 
-weight_t (*output_weights)[1 * 32];
-bias_t (*output_biases)[1];
+weight_t *output_weights;
+bias_t *output_biases;
 
 #if defined(AVX2) && !defined(NDEBUG)
 void print_m256i(__m256i a, int as) {
@@ -590,10 +590,10 @@ int32_t evaluate_accumulator(const struct position *pos) {
 	assert(nnue_init_done);
 	struct data buf;
 	transform(pos, pos->accumulation, buf.ft_out);
-	affine_propagate1024to16(buf.ft_out, buf.hidden1_out, hidden1_biases[bucket], hidden1_weights[bucket]);
-	affine_propagate16to32(buf.hidden1_out, buf.hidden2_out, hidden2_biases[bucket], hidden2_weights[bucket]);
+	affine_propagate1024to16(buf.ft_out, buf.hidden1_out, hidden1_biases, hidden1_weights);
+	affine_propagate16to32(buf.hidden1_out, buf.hidden2_out, hidden2_biases, hidden2_weights);
 	int32_t psqt = (pos->psqtaccumulation[pos->turn][bucket] - pos->psqtaccumulation[other_color(pos->turn)][bucket]) / 2;
-	return (output_layer(buf.hidden2_out, output_biases[bucket], output_weights[bucket])) / FV_SCALE + psqt;
+	return (output_layer(buf.hidden2_out, output_biases, output_weights)) / FV_SCALE + psqt;
 }
 
 int32_t evaluate_nnue(struct position *pos) {

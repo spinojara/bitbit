@@ -26,17 +26,17 @@ alignas(64) static ft_bias_t ft_biases[K_HALF_DIMENSIONS];
 
 alignas(64) static ft_weight_t psqt_weights[8 * FT_IN_DIMS];
 
-alignas(64) static weight_t hidden1_weights[8][16 * FT_OUT_DIMS];
-alignas(64) static bias_t hidden1_biases[8][16];
+alignas(64) static weight_t hidden1_weights[16 * FT_OUT_DIMS];
+alignas(64) static bias_t hidden1_biases[16];
 
-alignas(64) static weight_t hidden2_weights[8][32 * 16];
-alignas(64) static bias_t hidden2_biases[8][32];
+alignas(64) static weight_t hidden2_weights[32 * 16];
+alignas(64) static bias_t hidden2_biases[32];
 
-alignas(64) static weight_t output_weights[8][1 * 32];
-alignas(64) static bias_t output_biases[8][1];
+alignas(64) static weight_t output_weights[1 * 32];
+alignas(64) static bias_t output_biases[1];
 
 int main(int argc, char **argv) {
-	int i, j;
+	int i;
 
 	if (argc != 2) {
 		printf("usage: %s file\n", argv[0]);
@@ -89,71 +89,47 @@ int main(int argc, char **argv) {
 		fprintf(g, "%d,", psqt_weights[i]);
 	}
 	fprintf(g, "\n};\n\n");
-	fprintf(g, "alignas(64) weight_t builtin_hidden1_weights[8][16 * FT_OUT_DIMS] = {");
-	for (j = 0; j < 8; j++) {
-		fprintf(g, "{");
-		for (i = 0; i < 16 * FT_OUT_DIMS; i++) {
-			if (i % 32 == 0)
-				fprintf(g, "\n");
-			fprintf(g, "%d,", hidden1_weights[j][i]);
-		}
-		fprintf(g, "\n},");
+	fprintf(g, "alignas(64) weight_t builtin_hidden1_weights[16 * FT_OUT_DIMS] = {");
+	for (i = 0; i < 16 * FT_OUT_DIMS; i++) {
+		if (i % 32 == 0)
+			fprintf(g, "\n");
+		fprintf(g, "%d,", hidden1_weights[i]);
 	}
 	fprintf(g, "\n};\n\n");
-	fprintf(g, "alignas(64) bias_t builtin_hidden1_biases[8][16] = {");
-	for (j = 0; j < 8; j++) {
-		fprintf(g, "{");
-		for (i = 0; i < 16; i++) {
-			if (i % 32 == 0)
-				fprintf(g, "\n");
-			fprintf(g, "%d,", hidden1_biases[j][i]);
-		}
-		fprintf(g, "\n},");
+	fprintf(g, "alignas(64) bias_t builtin_hidden1_biases[16] = {");
+	for (i = 0; i < 16; i++) {
+		if (i % 32 == 0)
+			fprintf(g, "\n");
+		fprintf(g, "%d,", hidden1_biases[i]);
 	}
 	fprintf(g, "\n};\n\n");
-	fprintf(g, "alignas(64) weight_t builtin_hidden2_weights[8][32 * 16] = {");
-	for (j = 0; j < 8; j++) {
-		fprintf(g, "{");
-		for (i = 0; i < 32 * 16; i++) {
-			if (i % 32 == 0)
-				fprintf(g, "\n");
-			fprintf(g, "%d,", hidden2_weights[j][i]);
-		}
-		fprintf(g, "\n},");
+	fprintf(g, "alignas(64) weight_t builtin_hidden2_weights[32 * 16] = {");
+	for (i = 0; i < 32 * 16; i++) {
+		if (i % 32 == 0)
+			fprintf(g, "\n");
+		fprintf(g, "%d,", hidden2_weights[i]);
 	}
 	fprintf(g, "\n};\n\n");
-	fprintf(g, "alignas(64) bias_t builtin_hidden2_biases[8][32] = {");
-	for (j = 0; j < 8; j++) {
-		fprintf(g, "{");
-		for (i = 0; i < 32; i++) {
-			if (i % 32 == 0)
-				fprintf(g, "\n");
-			fprintf(g, "%d,", hidden2_biases[j][i]);
-		}
-		fprintf(g, "\n},");
+	fprintf(g, "alignas(64) bias_t builtin_hidden2_biases[32] = {");
+	for (i = 0; i < 32; i++) {
+		if (i % 32 == 0)
+			fprintf(g, "\n");
+		fprintf(g, "%d,", hidden2_biases[i]);
 	}
 	fprintf(g, "\n};\n\n");
 
-	fprintf(g, "alignas(64) weight_t builtin_output_weights[8][1 * 32] = {");
-	for (j = 0; j < 8; j++) {
-		fprintf(g, "{");
-		for (i = 0; i < 1 * 32; i++) {
-			if (i % 32 == 0)
-				fprintf(g, "\n");
-			fprintf(g, "%d,", output_weights[j][i]);
-		}
-		fprintf(g, "\n},");
+	fprintf(g, "alignas(64) weight_t builtin_output_weights[1 * 32] = {");
+	for (i = 0; i < 1 * 32; i++) {
+		if (i % 32 == 0)
+			fprintf(g, "\n");
+		fprintf(g, "%d,", output_weights[i]);
 	}
 	fprintf(g, "\n};\n\n");
-	fprintf(g, "alignas(64) bias_t builtin_output_biases[8][1] = {");
-	for (j = 0; j < 8; j++) {
-		fprintf(g, "{");
-		for (i = 0; i < 1; i++) {
-			if (i % 32 == 0)
-				fprintf(g, "\n");
-			fprintf(g, "%d,", output_biases[j][i]);
-		}
-		fprintf(g, "\n},");
+	fprintf(g, "alignas(64) bias_t builtin_output_biases[1] = {");
+	for (i = 0; i < 1; i++) {
+		if (i % 32 == 0)
+			fprintf(g, "\n");
+		fprintf(g, "%d,", output_biases[i]);
 	}
 	fprintf(g, "\n};\n");
 
