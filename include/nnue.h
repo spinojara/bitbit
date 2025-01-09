@@ -26,7 +26,6 @@
 
 #define VERSION_NNUE 2
 
-#define K_HALF_DIMENSIONS 256
 #define FT_IN_DIMS (32 * PS_END)
 #define FT_OUT_DIMS (K_HALF_DIMENSIONS * 2)
 

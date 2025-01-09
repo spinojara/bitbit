@@ -23,7 +23,7 @@
 #include <assert.h>
 #include <stddef.h>
 
-#define K_HALF_DIMENSIONS 256
+#define K_HALF_DIMENSIONS 128
 #define ESSENTIALPOSITION (offsetof(struct position, accumulation))
 
 struct position {
