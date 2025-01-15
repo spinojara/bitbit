@@ -21,6 +21,7 @@
 #include <time.h>
 #include <assert.h>
 #include <pthread.h>
+#include <errno.h>
 
 #include "position.h"
 #include "move.h"
@@ -33,7 +34,6 @@
 struct batch {
 	size_t size;
 	int ind_active;
-	int64_t *bucket;
 	int32_t *ind1;
 	int32_t *ind2;
 	float *eval;
@@ -68,7 +68,10 @@ static inline uint16_t make_index_virtual(int turn, int square, int piece, int k
 void *batch_prepare(void *ptr) {
 	struct dataloader *dataloader = ptr;
 
-	pthread_mutex_lock(&dataloader->mutex);
+	if (pthread_mutex_lock(&dataloader->mutex)) {
+		fprintf(stderr, "error: pthread_mutex_lock\n");
+		return NULL;
+	}
 
 	struct batch *batch = dataloader->prepared;
 	batch->size = 0;
@@ -115,7 +118,6 @@ void *batch_prepare(void *ptr) {
 			continue;
 
 		batch->eval[batch->size] = ((float)(FV_SCALE * eval)) / (127 * 64);
-		batch->bucket[batch->size] = get_bucket(dataloader->pos);
 		batch->result[batch->size] = result != RESULT_UNKNOWN ? ((2 * dataloader->pos->turn - 1) * result + 1.0) / 2.0 : 0.5;
 
 		int index, square;
@@ -151,8 +153,16 @@ void *batch_prepare(void *ptr) {
 	}
 
 	dataloader->ready = 1;
-	pthread_cond_signal(&dataloader->cond);
-	pthread_mutex_unlock(&dataloader->mutex);
+	if (pthread_cond_broadcast(&dataloader->cond)) {
+		fprintf(stderr, "error: pthread_cond_signal\n");
+		dataloader->error = 1;
+		return NULL;
+	}
+	if (pthread_mutex_unlock(&dataloader->mutex)) {
+		fprintf(stderr, "error: pthread_mutex_unlock\n");
+		dataloader->error = 1;
+		return NULL;
+	}
 
 	return NULL;
 }
@@ -165,10 +175,16 @@ int batch_prepare_thread(void *ptr) {
 struct batch *batch_fetch(void *ptr) {
 	struct dataloader *dataloader = ptr;
 
-	pthread_mutex_lock(&dataloader->mutex);
+	if (pthread_mutex_lock(&dataloader->mutex)) {
+		fprintf(stderr, "error: pthread_mutex_lock\n");
+		return NULL;
+	}
+
+	struct timespec ts = { .tv_sec = time(NULL) + 10 };
 
 	while (!dataloader->ready)
-		pthread_cond_wait(&dataloader->cond, &dataloader->mutex);
+		if (pthread_cond_timedwait(&dataloader->cond, &dataloader->mutex, &ts) == ETIMEDOUT)
+			fprintf(stderr, "error: pthread_cond_timedwait timed out\n");
 
 	if (dataloader->error) {
 		fprintf(stderr, "error: failed to make batch\n");
@@ -181,23 +197,30 @@ struct batch *batch_fetch(void *ptr) {
 
 	batch->size = prepared->size;
 	batch->ind_active = prepared->ind_active;
-	memcpy(batch->bucket, prepared->bucket, dataloader->requested_size * sizeof(*dataloader->batch->bucket));
 	memcpy(batch->ind1, prepared->ind1, 4 * 32 * dataloader->requested_size * sizeof(*dataloader->batch->ind1));
 	memcpy(batch->ind2, prepared->ind2, 4 * 32 * dataloader->requested_size * sizeof(*dataloader->batch->ind2));
 	memcpy(batch->eval, prepared->eval, dataloader->requested_size * sizeof(*dataloader->batch->eval));
 	memcpy(batch->result, prepared->result, dataloader->requested_size * sizeof(*dataloader->batch->result));
 	dataloader->ready = 0;
 
-	batch_prepare_thread(ptr);
+	if (batch_prepare_thread(ptr)) {
+		fprintf(stderr, "error: failed to create thread\n");
+		dataloader->error = 1;
+		pthread_mutex_unlock(&dataloader->mutex);
+		return NULL;
+	}
 
-	pthread_mutex_unlock(&dataloader->mutex);
+	if (pthread_mutex_unlock(&dataloader->mutex)) {
+		fprintf(stderr, "error: pthread_mutex_unlock\n");
+		dataloader->error = 1;
+		return NULL;
+	}
 
 	return dataloader->batch;
 }
 
 struct batch *balloc(size_t requested_size) {
 	struct batch *batch = calloc(1, sizeof(*batch));
-	batch->bucket = malloc(requested_size * sizeof(*batch->bucket));
 	batch->ind1 = malloc(4 * 32 * requested_size * sizeof(*batch->ind1));
 	batch->ind2 = malloc(4 * 32 * requested_size * sizeof(*batch->ind2));
 	batch->eval = malloc(requested_size * sizeof(*batch->eval));
@@ -207,7 +230,6 @@ struct batch *balloc(size_t requested_size) {
 }
 
 void bfree(struct batch *batch) {
-	free(batch->bucket);
 	free(batch->ind1);
 	free(batch->ind2);
 	free(batch->eval);
