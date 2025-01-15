@@ -126,6 +126,12 @@ int main(int argc, char **argv) {
 
 		if (eval == VALUE_NONE || flag & FLAG_SKIP)
 			continue;
+		if (popcount(all_pieces(&pos)) < 6 && ((result == RESULT_LOSS && (2 * pos.turn - 1) * eval >= VALUE_WIN) || (result == RESULT_WIN && (2 * pos.turn - 1) * eval <= -VALUE_WIN))) {
+			print_position(&pos);
+			print_fen(&pos);
+			printf("eval: %d\n", eval);
+			printf("result: %s\n", result == RESULT_DRAW ? "draw" : result == RESULT_LOSS ? "black wins" : result == RESULT_WIN ? "white wins" : "unknown");
+		}
 #if 0
 		const int material_values[] = { 0, 1, 3, 3, 5, 9, 0 };
 		int material[2] = { 0 };
