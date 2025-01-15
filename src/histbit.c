@@ -77,7 +77,6 @@ int main(int argc, char **argv) {
 	startpos(&pos);
 
 	uint64_t piece_square[7][64] = { 0 };
-	uint64_t bucket[8] = { 0 };
 
 	move_t move;
 	char result = 0;
@@ -125,14 +124,6 @@ int main(int argc, char **argv) {
 		if (feof(f))
 			break;
 
-		if ((popcount(all_pieces(&pos)) - 1) / 4 == 1) {
-			print_position(&pos);
-			print_fen(&pos);
-			if (eval == VALUE_NONE || flag & FLAG_SKIP)
-				printf("eval: none\n");
-			else
-				printf("eval: %d\n", eval);
-		}
 		if (eval == VALUE_NONE || flag & FLAG_SKIP)
 			continue;
 #if 0
@@ -172,7 +163,6 @@ int main(int argc, char **argv) {
 		}
 #endif
 #endif
-		bucket[get_bucket(&pos)]++;
 		store_information(&pos, piece_square);
 		total++;
 
@@ -183,8 +173,6 @@ int main(int argc, char **argv) {
 	printf("total positions: %lu\n", total);
 	printf("total games: %lu\n", games);
 	printf("draw percent: %lg\n", (double)draws / total);
-	for (int i = 0; i < 8; i++)
-		printf("bucket[%d]: %lg%%\n", i, 100.0 * bucket[i] / total);
 	for (int piece = PAWN; piece <= KING; piece++)
 		print_information(piece_square[piece], total);
 
