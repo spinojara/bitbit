@@ -42,10 +42,10 @@ int nnuefile(FILE *f, ft_weight_t *ft_weights,
 		if (read_uintx(f, &ft_biases[i], sizeof(*ft_biases)))
 			return 1;
 	}
-	for (i = 0; i < 8; i++)
+	for (i = 0; i < 1; i++)
 		read_uintx(f, NULL, sizeof(*ft_biases));
-	for (i = j = 0; i < (K_HALF_DIMENSIONS + 8) * FT_IN_DIMS; i++) {
-		if (i % (K_HALF_DIMENSIONS + 8) >= K_HALF_DIMENSIONS) {
+	for (i = j = 0; i < (K_HALF_DIMENSIONS + 1) * FT_IN_DIMS; i++) {
+		if (i % (K_HALF_DIMENSIONS + 1) >= K_HALF_DIMENSIONS) {
 			if (read_uintx(f, &psqt_weights[j++], sizeof(*psqt_weights)))
 				return 1;
 		}

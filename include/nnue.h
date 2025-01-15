@@ -83,7 +83,7 @@ static inline int get_bucket(const struct position *pos) {
 	return min((popcount(all_pieces(pos)) - 1) / 4, 7);
 }
 
-void add_index_slow(unsigned index, int16_t accumulation[2][K_HALF_DIMENSIONS], int32_t psqtaccumulation[2][8], int turn);
+void add_index_slow(unsigned index, int16_t accumulation[2][K_HALF_DIMENSIONS], int32_t psqtaccumulation[2], int turn);
 
 void refresh_accumulator(struct position *pos, int turn);
 

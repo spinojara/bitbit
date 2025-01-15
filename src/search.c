@@ -226,7 +226,7 @@ static inline int32_t evaluate(const struct position *pos, const struct searchin
 	int classical = 0;
 	/* NNUE. */
 	if (option_nnue) {
-		int32_t psqt = abs(pos->psqtaccumulation[WHITE][7] - pos->psqtaccumulation[BLACK][7]) / 2;
+		int32_t psqt = abs(pos->psqtaccumulation[WHITE] - pos->psqtaccumulation[BLACK]) / 2;
 		if (psqt > 350 && !option_pure_nnue)
 			classical = 1;
 		else

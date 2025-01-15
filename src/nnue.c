@@ -56,7 +56,7 @@ struct data {
 extern alignas(64) ft_weight_t builtin_ft_weights[K_HALF_DIMENSIONS * FT_IN_DIMS];
 extern alignas(64) ft_bias_t builtin_ft_biases[K_HALF_DIMENSIONS];
 
-extern alignas(64) ft_weight_t builtin_psqt_weights[8 * FT_IN_DIMS];
+extern alignas(64) ft_weight_t builtin_psqt_weights[FT_IN_DIMS];
 
 extern alignas(64) weight_t builtin_hidden1_weights[16 * FT_OUT_DIMS];
 extern alignas(64) bias_t builtin_hidden1_biases[16];
@@ -72,7 +72,7 @@ extern alignas(64) bias_t builtin_output_biases[1];
 alignas(64) ft_weight_t file_ft_weights[K_HALF_DIMENSIONS * FT_IN_DIMS];
 alignas(64) ft_bias_t file_ft_biases[K_HALF_DIMENSIONS];
 
-alignas(64) ft_weight_t file_psqt_weights[8 * FT_IN_DIMS];
+alignas(64) ft_weight_t file_psqt_weights[FT_IN_DIMS];
 
 alignas(64) weight_t file_hidden1_weights[16 * FT_OUT_DIMS];
 alignas(64) bias_t file_hidden1_biases[16];
@@ -139,7 +139,7 @@ static inline void transform(const struct position *pos, const int16_t accumulat
 	const int perspective[2] = { pos->turn, other_color(pos->turn) };
 	for (int j = 0; j < 2; j++) {
 		__m256i *out = (__m256i *)(output + j * K_HALF_DIMENSIONS);
-		for (int i = 0; i < 16; i++) {
+		for (int i = 0; i < K_HALF_DIMENSIONS / 32; i++) {
 			__m256i p0 = ((__m256i *)accumulation[perspective[j]])[2 * i];
 			__m256i p1 = ((__m256i *)accumulation[perspective[j]])[2 * i + 1];
 			out[i] = _mm256_max_epi8(_mm256_packs_epi16(_mm256_srai_epi16(p0, FT_SHIFT), _mm256_srai_epi16(p1, FT_SHIFT)), _mm256_setzero_si256());
@@ -240,6 +240,7 @@ static inline void affine_propagate16to32(int8_t *input, int8_t *output,
 		output[j] = clamp(tmp[j] >> SHIFT, 0, 127);
 #endif
 }
+
 static inline int32_t output_layer(int8_t *input, const bias_t *biases, const weight_t *weights) {
 #if defined(AVX2)
 	__m256i in = *(__m256i *)input;
@@ -262,7 +263,7 @@ static inline int32_t output_layer(int8_t *input, const bias_t *biases, const we
 #endif
 }
 
-static inline void add_index(unsigned index, int16_t accumulation[2][K_HALF_DIMENSIONS], int32_t psqtaccumulation[2][8], int turn) {
+static inline void add_index(unsigned index, int16_t accumulation[2][K_HALF_DIMENSIONS], int32_t psqtaccumulation[2], int turn) {
 	assert(nnue_init_done);
 	const unsigned offset = K_HALF_DIMENSIONS * index;
 #if defined(AVX2)
@@ -271,27 +272,22 @@ static inline void add_index(unsigned index, int16_t accumulation[2][K_HALF_DIME
 		__m256i b = *(__m256i *)(ft_weights + offset + j);
 		*a = _mm256_add_epi16(*a, b);
 	}
-	__m256i *a = (__m256i *)psqtaccumulation[turn];
-	__m128i b = *(__m128i *)(psqt_weights + 8 * index);
-	*a = _mm256_add_epi32(*a, _mm256_cvtepi16_epi32(b));
 #else
 	for (int j = 0; j < K_HALF_DIMENSIONS; j++)
 		accumulation[turn][j] += ft_weights[offset + j];
-	for (int j = 0; j < 8; j++)
-		psqtaccumulation[turn][j] += psqt_weights[8 * index + j];
 #endif
+	psqtaccumulation[turn] += psqt_weights[index];
 }
 
-void add_index_slow(unsigned index, int16_t accumulation[2][K_HALF_DIMENSIONS], int32_t psqtaccumulation[2][8], int turn) {
+void add_index_slow(unsigned index, int16_t accumulation[2][K_HALF_DIMENSIONS], int32_t psqtaccumulation[2], int turn) {
 	assert(nnue_init_done);
 	const unsigned offset = K_HALF_DIMENSIONS * index;
 	for (int j = 0; j < K_HALF_DIMENSIONS; j++)
 		accumulation[turn][j] += ft_weights[offset + j];
-	for (int j = 0; j < 8; j++)
-		psqtaccumulation[turn][j] += psqt_weights[8 * index + j];
+	psqtaccumulation[turn] += psqt_weights[index];
 }
 
-static inline void remove_index(unsigned index, int16_t accumulation[2][K_HALF_DIMENSIONS], int32_t psqtaccumulation[2][8], int turn) {
+static inline void remove_index(unsigned index, int16_t accumulation[2][K_HALF_DIMENSIONS], int32_t psqtaccumulation[2], int turn) {
 	assert(nnue_init_done);
 	const unsigned offset = K_HALF_DIMENSIONS * index;
 #if defined(AVX2)
@@ -300,15 +296,11 @@ static inline void remove_index(unsigned index, int16_t accumulation[2][K_HALF_D
 		__m256i b = *(__m256i *)(ft_weights + offset + j);
 		*a = _mm256_sub_epi16(*a, b);
 	}
-	__m256i *a = (__m256i *)psqtaccumulation[turn];
-	__m128i b = *(__m128i *)(psqt_weights + 8 * index);
-	*a = _mm256_sub_epi32(*a, _mm256_cvtepi16_epi32(b));
 #else
 	for (int j = 0; j < K_HALF_DIMENSIONS; j++)
 		accumulation[turn][j] -= ft_weights[offset + j];
-	for (int j = 0; j < 8; j++)
-		psqtaccumulation[turn][j] -= psqt_weights[8 * index + j];
 #endif
+	psqtaccumulation[turn] -= psqt_weights[index];
 }
 
 void refresh_accumulator(struct position *pos, int turn) {
@@ -316,7 +308,7 @@ void refresh_accumulator(struct position *pos, int turn) {
 		return;
 	assert(nnue_init_done);
 	memcpy(pos->accumulation[turn], ft_biases, K_HALF_DIMENSIONS * sizeof(*ft_biases));
-	memset(pos->psqtaccumulation[turn], 0, 8 * sizeof(*pos->psqtaccumulation[turn]));
+	pos->psqtaccumulation[turn] = 0;
 	int king_square = ctz(pos->piece[turn][KING]);
 	king_square = orient(turn, king_square, king_square);
 	uint64_t b;
@@ -586,13 +578,12 @@ void undo_accumulator(struct position *pos, move_t *move) {
 }
 
 int32_t evaluate_accumulator(const struct position *pos) {
-	int bucket = get_bucket(pos);
 	assert(nnue_init_done);
 	struct data buf;
 	transform(pos, pos->accumulation, buf.ft_out);
 	affine_propagate1024to16(buf.ft_out, buf.hidden1_out, hidden1_biases, hidden1_weights);
 	affine_propagate16to32(buf.hidden1_out, buf.hidden2_out, hidden2_biases, hidden2_weights);
-	int32_t psqt = (pos->psqtaccumulation[pos->turn][bucket] - pos->psqtaccumulation[other_color(pos->turn)][bucket]) / 2;
+	int32_t psqt = (pos->psqtaccumulation[pos->turn] - pos->psqtaccumulation[other_color(pos->turn)]) / 2;
 	return (output_layer(buf.hidden2_out, output_biases, output_weights)) / FV_SCALE + psqt;
 }
 
@@ -640,53 +631,36 @@ void swap4_biases(bias_t *biases, int row1, int row2) {
 	for (int row = 4 * row1; row < 4 * (row1 + 1); row++)
 		swap_biases(biases, row, row + 4 * (row2 - row1));
 }
+#endif
 
 void permute_weights(void) {
-	for (int j = 0; j < 8; j++) {
-		for (int col = 0; col < FT_OUT_DIMS; col++)
-			if (8 <= col % 32 && col % 32 < 16)
-				swap_cols(hidden1_weights[j], 16, col, col + 8);
+#if defined(AVX2)
+	for (int col = 0; col < FT_OUT_DIMS; col++)
+		if (8 <= col % 32 && col % 32 < 16)
+			swap_cols(hidden1_weights, 16, col, col + 8);
 
-		for (int col = 8; col < 16; col++)
-			swap_cols(output_weights[j], 1, col, col + 8);
+	for (int col = 8; col < 16; col++)
+		swap_cols(output_weights, 1, col, col + 8);
 
-		for (int col = 0; col < FT_OUT_DIMS; col += 2)
-			permute_cols(hidden1_weights[j], 16, col, col + 1);
+	for (int col = 0; col < FT_OUT_DIMS; col += 2)
+		permute_cols(hidden1_weights, 16, col, col + 1);
 
-		for (int col = 0; col < 16; col += 2)
-			permute_cols(hidden2_weights[j], 32, col, col + 1);
+	for (int col = 0; col < 16; col += 2)
+		permute_cols(hidden2_weights, 32, col, col + 1);
 
-		swap4_biases(hidden1_biases[j], 1, 2);
+	swap4_biases(hidden1_biases, 1, 2);
 
-		swap4_biases(hidden2_biases[j], 1, 2);
-		swap4_biases(hidden2_biases[j], 5, 6);
-	}
-}
+	swap4_biases(hidden2_biases, 1, 2);
+	swap4_biases(hidden2_biases, 5, 6);
 #endif
+}
 
 void nnue_init(void) {
 	builtin_nnue();
-#if defined(AVX2)
 	permute_weights();
-#endif
 #ifndef NDEBUG
 	nnue_init_done = 1;
 #endif
-}
-
-int read_hidden_weights(weight_t *w, int dims, FILE *f) {
-	for (int i = 0; i < 32; i++)
-		for (int j = 0; j < dims; j++)
-			if (read_uintx(f, &w[j * 32 + i], sizeof(*w)))
-				return 1;
-	return 0;
-}
-
-int read_output_weights(weight_t *w, FILE *f) {
-	for (int i = 0; i < 32; i++)
-		if (read_uintx(f, &w[i], sizeof(*w)))
-			return 1;
-	return 0;
 }
 
 void file_nnue(const char *path) {
@@ -721,9 +695,7 @@ void file_nnue(const char *path) {
 	strncpy(pathnnue, path, sizeof(pathnnue));
 	pathnnue[sizeof(pathnnue) - 1] = '\0';
 
-#if defined(AVX2)
 	permute_weights();
-#endif
 
 #ifndef NDEBUG
 	nnue_init_done = 1;
