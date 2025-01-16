@@ -41,6 +41,8 @@ struct tune {
 extern int razor1;
 extern int razor2;
 extern int futility;
+extern double red;
+extern int asp;
 extern double maximal;
 extern double instability1;
 extern double instability2;
@@ -52,6 +54,8 @@ struct tune tunes[] = {
 	TUNE("maximal", TYPE_DOUBLE, &maximal),
 	TUNE("instability1", TYPE_DOUBLE, &instability1),
 	TUNE("instability2", TYPE_DOUBLE, &instability2),
+	TUNE("reduction", TYPE_DOUBLE, &red),
+	TUNE("aspiration", TYPE_INT, &asp),
 };
 
 int rdi(double f) {
@@ -59,8 +63,12 @@ int rdi(double f) {
 }
 
 void print_tune(void) {
-	for (size_t i = 0; i < SIZE(tunes); i++)
-		printf("option name %s type string default %lf\n", tunes[i].name, tunes[i].type == TYPE_INT ? *(int *)tunes[i].p : *(double *)tunes[i].p);
+	for (size_t i = 0; i < SIZE(tunes); i++) {
+		if (tunes[i].type == TYPE_INT)
+			printf("option name %s type string default %d\n", tunes[i].name, *(int *)tunes[i].p);
+		else
+			printf("option name %s type string default %lf\n", tunes[i].name, *(double *)tunes[i].p);
+	}
 }
 
 void settune(int argc, char **argv) {

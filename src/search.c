@@ -56,6 +56,8 @@ volatile atomic_int uciponder;
 CONST int razor1 = 100;
 CONST int razor2 = 150;
 CONST int futility = 200;
+CONST double red = 119;
+CONST int asp = 25;
 
 static int reductions[PLY_MAX] = { 0 };
 
@@ -707,7 +709,7 @@ skip_pruning:;
 
 int32_t aspiration_window(struct position *pos, int depth, int verbose, int32_t last, struct searchinfo *si, struct searchstack *ss) {
 	int32_t eval = VALUE_NONE;
-	int32_t delta = 25 + last * last / 16384;
+	int32_t delta = asp + last * last / 16384;
 	int32_t alpha = max(last - delta, -VALUE_MATE);
 	int32_t beta = min(last + delta, VALUE_MATE);
 
@@ -813,7 +815,7 @@ int32_t search(struct position *pos, int depth, int verbose, struct timeinfo *ti
 void search_init(void) {
 	for (int i = 1; i < PLY_MAX; i++)
 		/* sqrt(C) * log(i) */
-		reductions[i] = (int)(21.34 * log(i));
+		reductions[i] = (int)(red * log(i));
 
 #ifndef NDEBUG
 	search_init_done = 1;
