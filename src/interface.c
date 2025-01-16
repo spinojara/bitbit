@@ -40,6 +40,7 @@
 #include "option.h"
 #include "thread.h"
 #include "bench.h"
+#include "nnue.h"
 
 #define LINESIZE 16384
 #define ARGSIZE 4096

@@ -746,3 +746,17 @@ void builtin_nnue(void) {
 	nnue_init_done = 1;
 #endif
 }
+
+const char *simd =
+#if defined(AVX2)
+"avx2"
+#elif defined(VNNI)
+"vnni"
+#elif defined(SSE4)
+"sse4"
+#elif defined(SSE2)
+"sse2"
+#else
+"none"
+#endif
+;

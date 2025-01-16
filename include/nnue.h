@@ -106,4 +106,6 @@ void builtin_nnue(void);
 
 void print_nnue_info(void);
 
+extern const char *simd;
+
 #endif
