@@ -23,6 +23,7 @@
 #include <string.h>
 
 #include "util.h"
+#include "search.h"
 
 enum {
 	TYPE_INT,
@@ -95,5 +96,8 @@ void settune(int argc, char **argv) {
 			*(double *)tune->p = value;
 			break;
 		}
+
+		if (!strcasecmp(tune->name, "reduction"))
+			search_init();
 	}
 }
