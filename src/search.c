@@ -53,11 +53,11 @@ volatile atomic_int uciponder;
 #define CONST const
 #endif
 
-CONST int razor1 = 100;
-CONST int razor2 = 150;
-CONST int futility = 200;
-CONST double red = 21.34;
-CONST int asp = 25;
+CONST int razor1 = 170;
+CONST int razor2 = 156;
+CONST int futility = 76;
+CONST double red = 24.60;
+CONST int asp = 17;
 
 static int reductions[PLY_MAX] = { 0 };
 
