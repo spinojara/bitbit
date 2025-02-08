@@ -144,16 +144,6 @@ static inline void store_killer_move(const move_t *move, int ply, move_t killers
 	killers[ply][0] = *move;
 }
 
-/* This option was configured for bitbit 1.2 when
- * bitbit was currently sitting at 3093 Elo ccrl.
- */
-static inline int elo_skip(int32_t ply) {
-	if (!option_elo)
-		return 0;
-	const double k = (3073 - option_elo) / 19748.0;
-	return guniform() > exp(-k * ply) + eps;
-}
-
 /* Suppose that h_0 is the original value of history.
  * After adding a bonus b we get h_1 = h_0 + b.
  * We scale the value back a little so that it doesn't
@@ -316,7 +306,7 @@ int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, s
 	move_t move;
 	int move_index = -1;
 	while ((move = next_move(&mp))) {
-		if (!legal(pos, &pstate, &move) || elo_skip(ply))
+		if (!legal(pos, &pstate, &move))
 			continue;
 
 		move_index++;
@@ -514,7 +504,7 @@ skip_pruning:;
 	int move_index = -1;
 	while ((move = next_move(&mp))) {
 
-		if (!legal(pos, &pstate, &move) || move == excluded_move || elo_skip(ply))
+		if (!legal(pos, &pstate, &move) || move == excluded_move)
 			continue;
 
 		move_index++;
