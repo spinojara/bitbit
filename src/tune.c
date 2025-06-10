@@ -48,6 +48,22 @@ extern double maximal;
 extern double instability1;
 extern double instability2;
 
+extern int from_attack;
+extern int into_attack;
+extern int not_defended;
+extern int check_threat;
+extern double mvv_lva_factor;
+extern double continuation_history_factor;
+extern int goodquiet_threshold;
+
+extern int quad_bonus;
+extern int lin_bonus;
+extern int offset_bonus;
+extern int quad_malus;
+extern int lin_malus;
+extern int offset_malus;
+extern double history_regularization;
+
 struct tune tunes[] = {
 	TUNE("razor1", TYPE_INT, &razor1),
 	TUNE("razor2", TYPE_INT, &razor2),
@@ -57,6 +73,22 @@ struct tune tunes[] = {
 	TUNE("instability2", TYPE_DOUBLE, &instability2),
 	TUNE("reduction", TYPE_DOUBLE, &red),
 	TUNE("aspiration", TYPE_INT, &asp),
+
+	TUNE("fromattack", TYPE_INT, &from_attack),
+	TUNE("intoattack", TYPE_INT, &into_attack),
+	TUNE("notdefended", TYPE_INT, &not_defended),
+	TUNE("checkthreat", TYPE_INT, &check_threat),
+	TUNE("mvvlvafactor", TYPE_DOUBLE, &mvv_lva_factor),
+	TUNE("continuationhistoryfactor", TYPE_DOUBLE, &continuation_history_factor),
+	TUNE("goodquietthreshold", TYPE_INT, &goodquiet_threshold),
+
+	TUNE("quadbonus", TYPE_INT, &quad_bonus),
+	TUNE("linbonus", TYPE_INT, &lin_bonus),
+	TUNE("offsetbonus", TYPE_INT, &offset_bonus),
+	TUNE("quadmalus", TYPE_INT, &quad_malus),
+	TUNE("linmalus", TYPE_INT, &lin_malus),
+	TUNE("offsetmalus", TYPE_INT, &offset_malus),
+	TUNE("historyregularization", TYPE_DOUBLE, &history_regularization),
 };
 
 int rdi(double f) {
@@ -83,11 +115,13 @@ void settune(int argc, char **argv) {
 	if (*endptr != '\0' || errno)
 		return;
 
+	int hit = 0;
 	for (size_t i = 0; i < SIZE(tunes); i++) {
 		struct tune *tune = &tunes[i];
 		if (strcasecmp(tune->name, argv[2]))
 			continue;
 
+		hit = 1;
 		switch (tune->type) {
 		case TYPE_INT:
 			*(int *)tune->p = rdi(value);
@@ -99,5 +133,10 @@ void settune(int argc, char **argv) {
 
 		if (!strcasecmp(tune->name, "reduction"))
 			search_init();
+	}
+
+	if (!hit) {
+		printf("error: no option '%s'\n", argv[2]);
+		exit(1);
 	}
 }

@@ -96,7 +96,7 @@ int see_geq(struct position *pos, const move_t *move, int32_t value) {
 
 	while (1) {
 		turn = other_color(turn);
-		
+
 		attackers &= occupied;
 
 		turnattackers = attackers & pos->piece[turn][ALL];

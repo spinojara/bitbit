@@ -21,7 +21,24 @@
 #include "moveorder.h"
 #include "bitboard.h"
 #include "movegen.h"
+#include "search.h"
 #include "util.h"
+
+#ifdef TUNE
+#define CONST
+#else
+#define CONST const
+#endif
+
+CONST int from_attack = 10000;
+CONST int into_attack = 15000;
+CONST int not_defended = 12500;
+CONST int check_threat = 15000;
+
+CONST double mvv_lva_factor = 1.0;
+CONST double continuation_history_factor = 1.0;
+
+CONST int goodquiet_threshold = -8000;
 
 static inline int good_capture(struct position *pos, move_t *move, int threshold) {
 	return (is_capture(pos, move) || move_flag(move) == MOVE_EN_PASSANT) && see_geq(pos, move, threshold);
@@ -35,9 +52,11 @@ static inline int promotion(struct position *pos, move_t *move, int threshold) {
 int find_next(struct movepicker *mp, int (*filter)(struct position *, move_t *, int), int threshold) {
 	for (int i = 0; mp->move[i]; i++) {
 		if (filter(mp->pos, &mp->move[i], threshold)) {
-			move_t move = mp->move[i];
-			mp->move[i] = mp->move[0];
-			mp->move[0] = move;
+			for (int j = i - 1; j >= 0; j--) {
+				move_t move = mp->move[j + 1];
+				mp->move[j + 1] = mp->move[j];
+				mp->move[j] = move;
+			}
 			return 1;
 		}
 	}
@@ -68,7 +87,11 @@ void evaluate_nonquiet(struct movepicker *mp) {
 		int attacker = mp->pos->mailbox[square_from];
 		int victim = move_flag(move) == MOVE_EN_PASSANT ? PAWN : uncolored_piece(mp->pos->mailbox[square_to]);
 		mp->eval[i] = mp->si->capture_history[attacker][victim][square_to] / 512;
-		mp->eval[i] += victim ? mvv_lva(uncolored_piece(attacker), victim) : 0;
+#ifdef TUNE
+		mp->eval[i] += mvv_lva_factor * (victim ? mvv_lva(uncolored_piece(attacker), victim) : 0);
+#else
+		mp->eval[i] += 1 * (victim ? mvv_lva(uncolored_piece(attacker), victim) : 0);
+#endif
 	}
 }
 
@@ -86,16 +109,34 @@ void evaluate_quiet(struct movepicker *mp) {
 		uint64_t to = bitboard(to_square);
 		int attacker = mp->pos->mailbox[from_square];
 		mp->eval[i] = mp->si->quiet_history[attacker][from_square][to_square];
+		if ((mp->ss - 1)->move)
+#ifdef TUNE
+			mp->eval[i] += continuation_history_factor * (*(mp->ss - 1)->continuation_history_entry)[attacker][to_square];
+#else
+			mp->eval[i] += 1 * (*(mp->ss - 1)->continuation_history_entry)[attacker][to_square];
+#endif
+		if ((mp->ss - 2)->move)
+#ifdef TUNE
+			mp->eval[i] += continuation_history_factor * (*(mp->ss - 2)->continuation_history_entry)[attacker][to_square];
+#else
+			mp->eval[i] += 1 * (*(mp->ss - 2)->continuation_history_entry)[attacker][to_square];
+#endif
+		if ((mp->ss - 4)->move)
+#ifdef TUNE
+			mp->eval[i] += continuation_history_factor * (*(mp->ss - 4)->continuation_history_entry)[attacker][to_square];
+#else
+			mp->eval[i] += 1 * (*(mp->ss - 4)->continuation_history_entry)[attacker][to_square];
+#endif
 		attacker = uncolored_piece(attacker);
 		if (from & attacked[attacker])
-			mp->eval[i] += 10000;
+			mp->eval[i] += from_attack;
 		if (to & attacked[attacker])
-			mp->eval[i] -= 15000;
+			mp->eval[i] -= into_attack;
 		else if (to & mp->pstate->attacked[ALL] && !generate_defenders(mp->pos, move))
-			mp->eval[i] -= 12500;
+			mp->eval[i] -= not_defended;
 
 		if (to & mp->pstate->check_threats[attacker])
-			mp->eval[i] += 15000;
+			mp->eval[i] += check_threat;
 	}
 }
 
@@ -183,8 +224,7 @@ move_t next_move(struct movepicker *mp) {
 		mp->stage++;
 		/* fallthrough */
 	case STAGE_GOODQUIET:
-		/* Change this constant. */
-		if (*mp->move && !mp->prune && *mp->eval > -8000)
+		if (*mp->move && !mp->prune && *mp->eval > goodquiet_threshold)
 			return mp->eval++, *mp->move++;
 		mp->stage++;
 		/* fallthrough */
@@ -206,7 +246,7 @@ move_t next_move(struct movepicker *mp) {
 	}
 }
 
-void movepicker_init(struct movepicker *mp, int quiescence, struct position *pos, const struct pstate *pstate, move_t ttmove, move_t killer1, move_t killer2, move_t counter_move, const struct searchinfo *si) {
+void movepicker_init(struct movepicker *mp, int quiescence, struct position *pos, const struct pstate *pstate, move_t ttmove, move_t killer1, move_t killer2, move_t counter_move, const struct searchinfo *si, const struct searchstack *ss) {
 	mp->quiescence = quiescence && !pstate->checkers;
 	mp->prune = 0;
 
@@ -218,6 +258,7 @@ void movepicker_init(struct movepicker *mp, int quiescence, struct position *pos
 	mp->pos = pos;
 	mp->pstate = pstate;
 	mp->si = si;
+	mp->ss = ss;
 	/* Now we keep checking for mp->quiescence on the
 	 * different stages because it might get changed
 	 * from negamax.

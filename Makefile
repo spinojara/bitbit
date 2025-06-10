@@ -125,7 +125,8 @@ OBJ_BATCHBIT  = $(patsubst %.c,obj/%.o,$(SRC_BATCHBIT))
 OBJ_VISBIT    = $(patsubst %.c,obj/%.o,$(SRC_VISBIT))
 OBJ_TUNEBIT   = $(patsubst %.c,obj/%.o,$(subst search,tune-search,\
 		$(subst option,tune-option,$(subst timeman,tune-timeman,\
-		$(SRC_BITBIT) tune.c))))
+		$(subst movepicker,tune-movepicker,\
+		$(SRC_BITBIT) tune.c)))))
 OBJ_CHECKBIT  = $(patsubst %.c,obj/%.o,$(SRC_CHECKBIT))
 
 BIN = bitbit weightbit genbit epdbit histbit pgnbit texelbit basebit \
