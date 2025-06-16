@@ -23,8 +23,8 @@ ifeq (Windows_NT, $(OS))
 	KERNEL := Windows_NT
 	ARCH   := x86_64
 else
-	KERNEL    := $(shell uname -s)
-	ARCH      := $(shell uname -m)
+	KERNEL := $(shell uname -s)
+	ARCH   := $(shell uname -m)
 endif
 
 ifneq ($(findstring ppc64, $(ARCH)), )
