@@ -230,7 +230,8 @@ static inline void update_history(struct searchinfo *si, const struct position *
 static inline void store_pv_move(const move_t *move, int ply, move_t pv[PLY_MAX][PLY_MAX]) {
 	assert(*move);
 	pv[ply][ply] = *move;
-	memcpy(pv[ply] + ply + 1, pv[ply + 1] + ply + 1, sizeof(**pv) * (PLY_MAX - (ply + 1)));
+	memcpy(&pv[ply][ply + 1], &pv[ply + 1][ply + 1], sizeof(**pv) * (PLY_MAX - (ply + 1)));
+	memset(&pv[ply + 1][ply + 1], 0, sizeof(**pv) * (PLY_MAX - (ply + 1)));
 }
 
 /* Random drawn score to avoid threefold blindness. */
@@ -472,7 +473,6 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 		do_null_move(pos, 0);
 		ss->move = 0;
 		ss->continuation_history_entry = NULL;
-		history_store(pos, si->history, ply);
 		eval = -negamax(pos, new_depth, ply + 1, -beta, -beta + 1, !cut_node, si, ss + 1);
 		do_null_zobrist_key(pos, ep);
 		do_null_move(pos, ep);
@@ -534,7 +534,6 @@ skip_pruning:;
 	int n_quiets = 0, n_captures = 0;
 	int move_index = -1;
 	while ((move = next_move(&mp))) {
-
 		if (!legal(pos, &pstate, &move) || move == excluded_move)
 			continue;
 

@@ -65,13 +65,11 @@ int repetition(const struct position *pos, const struct history *h, int ply, int
 	int offset = h->ply + ply;
 	int end = min(pos->halfmove, offset);
 
-	for (int d = 4, count = 0; d <= end; d += 2) {
-		if (h->zobrist_key[offset - d] == pos->zobrist_key) {
-			count++;
-			if (count == n)
-				return 1;
-		}
-	}
+	assert(h->zobrist_key[offset] == pos->zobrist_key);
+
+	for (int d = 4, count = 0; d <= end; d += 2)
+		if (h->zobrist_key[offset - d] == pos->zobrist_key && ++count == n)
+			return 1;
 	return 0;
 }
 
