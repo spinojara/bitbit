@@ -60,11 +60,7 @@ CONST double red = 24.60;
 CONST int asp = 17;
 
 CONST int quad_bonus = 16;
-CONST int lin_bonus = 0;
-CONST int offset_bonus = 0;
-CONST int quad_malus = 16;
-CONST int offset_malus = 0;
-CONST int lin_malus = 0;
+CONST int quad_malus = 4;
 
 CONST double history_regularization = 0.0625;
 
@@ -176,8 +172,8 @@ static inline void add_history(int64_t *history, int64_t bonus) {
 }
 
 static inline void update_history(struct searchinfo *si, const struct position *pos, int depth, int ply, move_t *best_move, int32_t best_eval, int32_t beta, move_t *captures, move_t *quiets, const struct searchstack *ss) {
-	int64_t bonus = quad_bonus * depth * depth + lin_bonus * depth + offset_bonus;
-	int64_t malus = quad_malus * depth * depth + lin_malus * depth + offset_malus;
+	int64_t bonus = quad_bonus * depth * depth;
+	int64_t malus = quad_malus * depth * depth;
 
 	int our_piece = pos->mailbox[move_from(best_move)];
 	int their_piece = move_capture(best_move);
@@ -262,7 +258,7 @@ static inline int32_t evaluate(const struct position *pos, const struct searchin
 	/* Damp when shuffling pieces. */
 	if (option_damp)
 		evaluation = evaluation * (200 - (int)pos->halfmove) / 200;
-	
+
 	evaluation = clamp(evaluation, -VALUE_MAX, VALUE_MAX);
 
 	if (!option_deterministic)
@@ -530,8 +526,8 @@ skip_pruning:;
 	struct movepicker mp;
 	movepicker_init(&mp, 0, pos, &pstate, ttmove, si->killers[ply][0], si->killers[ply][1], counter_move, si, ss);
 
-	move_t move, quiets[MOVES_MAX], captures[MOVES_MAX];
-	int n_quiets = 0, n_captures = 0;
+	move_t move, moves[MOVES_MAX], quiets[MOVES_MAX], captures[MOVES_MAX];
+	int n_moves = 0, n_quiets = 0, n_captures = 0;
 	int move_index = -1;
 	while ((move = next_move(&mp))) {
 		if (!legal(pos, &pstate, &move) || move == excluded_move)
@@ -700,23 +696,21 @@ skip_pruning:;
 					break;
 			}
 		}
-		/* If this move was not good we reduce its stats.
-		 * Note that in non-pv nodes we will only ever
-		 * have one best move and the problem of overwriting
-		 * best moves will not be a problem.
-		 */
-		if (!move_compare(move, best_move)) {
-			if (move_capture(&move))
-				captures[n_captures++] = move;
-			else
-				quiets[n_quiets++] = move;
-		}
+		moves[n_moves++] = move;
 	}
 	if (move_index == -1) {
 		best_eval = excluded_move ? alpha :
 			pstate.checkers ? -VALUE_MATE + ply : 0;
 	}
 	else if (best_move) {
+		for (int i = 0; i < n_moves; i++) {
+			if (!move_compare(moves[i], best_move)) {
+				if (move_capture(&moves[i]))
+					captures[n_captures++] = moves[i];
+				else
+					quiets[n_quiets++] = moves[i];
+			}
+		}
 		captures[n_captures] = quiets[n_quiets] = 0;
 		update_history(si, pos, depth, ply, &best_move, best_eval, beta, captures, quiets, ss);
 	}
