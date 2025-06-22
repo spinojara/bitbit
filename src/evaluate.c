@@ -216,7 +216,7 @@ static inline score_t evaluate_knights(const struct position *pos, struct evalua
 
 		int square = ctz(b);
 		uint64_t squareb = bitboard(square);
-		
+
 		uint64_t attacks = ei->pinned[us] & bitboard(square) ? 0 : knight_attacks(square, 0);
 
 		ei->attacked2[us] |= attacks & ei->attacked[us][ALL];
@@ -240,7 +240,7 @@ static inline score_t evaluate_knights(const struct position *pos, struct evalua
 			eval += knight_outpost_attack;
 			if (TRACE) trace.knight_outpost_attack[us]++;
 		}
-		
+
 		/* Minor behind pawn. */
 		if (squareb & shift(pos->piece[us][PAWN], down)) {
 			eval += knight_behind_pawn;
@@ -252,7 +252,7 @@ static inline score_t evaluate_knights(const struct position *pos, struct evalua
 			eval += defended_knight;
 			if (TRACE) trace.defended_knight[us]++;
 		}
-		
+
 		/* Penalty if piece is far from own king. */
 		eval += knight_far_from_king * distance(square, ei->king_square[us]);
 		if (TRACE) trace.knight_far_from_king[us] += distance(square, ei->king_square[us]);
@@ -285,7 +285,7 @@ static inline score_t evaluate_bishops(const struct position *pos, struct evalua
 
 		int square = ctz(b);
 		uint64_t squareb = bitboard(square);
-		
+
 		/* Attacks, including x-rays through both sides' queens and own bishops. */
 		uint64_t attacks = bishop_attacks(square, 0, all_pieces(pos) ^ pos->piece[WHITE][QUEEN] ^ pos->piece[BLACK][QUEEN] ^ pos->piece[us][BISHOP]);
 		if (ei->pinned[us] & bitboard(square))
@@ -330,7 +330,7 @@ static inline score_t evaluate_bishops(const struct position *pos, struct evalua
 			eval += bishop_long_diagonal;
 			if (TRACE) trace.bishop_long_diagonal[us]++;
 		}
-		
+
 		/* Penalty if piece is far from own king. */
 		eval += bishop_far_from_king * distance(square, ei->king_square[us]);
 		if (TRACE) trace.bishop_far_from_king[us] += distance(square, ei->king_square[us]);
@@ -363,7 +363,7 @@ static inline score_t evaluate_rooks(const struct position *pos, struct evaluati
 		ei->material_value[us] += material_value[ROOK];
 
 		int square = ctz(b);
-		
+
 		/* Attacks, including x-rays through both sides' queens and own rooks. */
 		uint64_t attacks = rook_attacks(square, 0, all_pieces(pos) ^ pos->piece[WHITE][QUEEN] ^ pos->piece[BLACK][QUEEN] ^ pos->piece[us][ROOK]);
 		if (ei->pinned[us] & bitboard(square))
@@ -426,7 +426,7 @@ static inline score_t evaluate_queens(const struct position *pos, struct evaluat
 		ei->material_value[us] += material_value[QUEEN];
 
 		int square = ctz(b);
-		
+
 		uint64_t attacks = queen_attacks(square, 0, all_pieces(pos));
 		if (ei->pinned[us] & bitboard(square))
 			attacks &= line(square, ei->king_square[us]);
@@ -639,7 +639,7 @@ void evaluate_print(struct position *pos) {
 	printf(" |\n");
 	printf("| Final                                   |       %+.2f |\n", (double)evaluate_tapered(pos, &ei) / 100);
 	printf("+-------------+-------------+-------------+-------------+\n");
-	
+
 	char pieces[] = " PNBRQKpnbrqk";
 
 	alignas(64) int16_t accumulation[2][K_HALF_DIMENSIONS];
@@ -663,7 +663,7 @@ void evaluate_print(struct position *pos) {
 					add_index_slow(index, accumulation, psqtaccumulation, color);
 				}
 				int16_t neweval = psqtaccumulation[WHITE] - psqtaccumulation[BLACK] - oldeval;
-				
+
 				if (abs(neweval) >= 2000)
 					printf(" %+.1f |", (double)neweval / 200);
 				else

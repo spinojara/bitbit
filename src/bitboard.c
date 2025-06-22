@@ -182,7 +182,7 @@ uint64_t file_right_calc(int square) {
 uint64_t adjacent_files_calc(int square) {
 	uint64_t ret = 0;
 	int f = file_of(square);
-	
+
 	if (f > 0)
 		ret |= file_left_calc(square);
 	if (f < 7)
@@ -193,7 +193,7 @@ uint64_t adjacent_files_calc(int square) {
 uint64_t passed_files_calc(int square, int color) {
 	uint64_t ret = 0;
 	int f = file_of(square);
-	
+
 	if (color) {
 		if (f > 0)
 			ret |= between_calc(square - 1, 55 + f);

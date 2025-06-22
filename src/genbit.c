@@ -234,7 +234,7 @@ void *worker(void *arg) {
 	int threadn = threadinfo->threadn;
 	struct transpositiontable *tt = &threadinfo->tt;
 	pthread_mutex_unlock(&lock);
-	
+
 	struct position pos;
 	struct history h;
 	startpos(&pos);
@@ -375,7 +375,7 @@ int main(int argc, char **argv) {
 		{ "syzygy",              required_argument, NULL, 'z' },
 #endif
 	};
-	
+
 	char *endptr;
 	int c, option_index = 0;
 	int error = 0;

@@ -430,7 +430,7 @@ char *move_str_pgn(char *str, const struct position *pos, const move_t *move) {
 		str[i++] = '=';
 		str[i++] = "NBRQ"[move_promote(move)];
 	}
-	
+
 	move_t movet = *move;
 	struct position post = *pos;
 	do_move(&post, &movet);

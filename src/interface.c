@@ -106,7 +106,7 @@ int interface_help(int argc, char **argv) {
 	printf("The following commands are available in bitbit:\n");
 	for (size_t k = 0; k < SIZE(commands); k++)
 		printf("%s\n", commands[k].name);
-	
+
 	return DONE;
 }
 
@@ -168,7 +168,7 @@ int interface_perft(int argc, char **argv) {
 	if (t != 0)
 		printf("mnps: %" PRIu64 "\n",
 			(p * CLOCKS_PER_SEC / ((uint64_t)t * 1000000)));
-	
+
 	return DONE;
 }
 

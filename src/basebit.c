@@ -115,7 +115,7 @@ static inline int legal_position(const struct position *pos, int king_white, int
 	/* Makes sure that all 2 to 4 squares are distinct. */
 	if (popcount(pos->piece[WHITE][ALL] | pos->piece[BLACK][ALL]) != 2ull + (piece_white != 0) + (piece_black != 0))
 		return 0;
-	
+
 	/* Not legal if we can capture enemy king. */
 	if (generate_checkers(pos, !pos->turn) || distance(king_white, king_black) <= 1)
 		return 0;
@@ -224,7 +224,7 @@ int main(void) {
 			}
 			pos.piece[white][all] = pos.piece[white][king] | pos.piece[white][piece_white];
 			pos.piece[black][all] = pos.piece[black][king] | pos.piece[black][piece_black];
-			
+
 			move_t moves[MOVES_MAX];
 			generate_all(&pos, moves);
 
@@ -239,7 +239,7 @@ int main(void) {
 				else if (p == BITBASE_LOSE && pos.turn == black)
 					break;
 			}
-			
+
 			if (exists[BITBASE_WIN] && pos.turn == white) {
 				bitbase_KXKX_store_by_index(index, BITBASE_WIN);
 				counter++;

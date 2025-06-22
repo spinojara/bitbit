@@ -109,7 +109,7 @@ FILE *newfile(void) {
 			pthread_mutex_unlock(&filemutex);
 			return NULL;
 		}
-		
+
 		n = 1;
 	}
 
@@ -168,7 +168,7 @@ void custom_search(struct position *pos, uint64_t nodes, move_t moves[MOVES_MAX]
 			do_accumulator(pos, move);
 			ss[1].move = *move;
 			si.nodes++;
-			
+
 			int32_t eval = -negamax(pos, depth - 1, ply + 1, -VALUE_MATE, VALUE_MATE, 0, &si, ss + 2);
 			if (!si.interrupt)
 				evals[i] = eval;
@@ -220,11 +220,11 @@ int32_t search_material(struct position *pos, int alpha, int beta) {
 	while ((move = next_move(&mp))) {
 		if (!legal(pos, &pstate, &move))
 			continue;
-		
+
 		do_move(pos, &move);
 		eval = -search_material(pos, -beta, -alpha);
 		undo_move(pos, &move);
-		
+
 		if (eval > best_eval) {
 			best_eval = eval;
 			if (eval > alpha) {
@@ -338,7 +338,7 @@ void play_game(FILE *openingsfile, struct transpositiontable *tt, uint64_t nodes
 
 		move_t *bestmove = NULL;
 		eval[h.ply] = VALUE_NONE;
-	
+
 		if (popcount(all_pieces(&pos)) <= 2) {
 			result = RESULT_DRAW;
 			break;
@@ -458,7 +458,7 @@ void play_game(FILE *openingsfile, struct transpositiontable *tt, uint64_t nodes
 			}
 			break;
 		}
-		
+
 		int nmoves;
 		for (nmoves = 1; moves[nmoves]; nmoves++)
 			if (evals[nmoves] < eval_now - move_value_diff_threshold)
@@ -471,7 +471,7 @@ void play_game(FILE *openingsfile, struct transpositiontable *tt, uint64_t nodes
 
 		if (skip)
 			flag[h.ply] |= FLAG_SKIP;
-		
+
 		if (eval_now != VALUE_NONE && abs(eval_now) < VALUE_WIN && !tb_move) {
 #if 0
 			/* Density on (0,1) is f(x)=1.5-x so we are slightly

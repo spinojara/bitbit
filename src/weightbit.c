@@ -47,7 +47,7 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "error: failed to open file %s\n", argv[1]);
 		return 2;
 	}
-	
+
 	if ((i = nnuefile(f, ft_weights, ft_biases,
 			psqt_weights, hidden1_weights,
 			hidden1_biases, hidden2_weights,

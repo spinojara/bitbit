@@ -575,7 +575,7 @@ void arrays_init(void) {
 		parameters[i].grad = malloc(2 * parameters[i].size * sizeof(*parameters[i].grad));
 		parameters[i].m = calloc(2 * parameters[i].size, sizeof(*parameters[i].m));
 		parameters[i].v = calloc(2 * parameters[i].size, sizeof(*parameters[i].v));
-		
+
 		for (size_t j = 0; j < parameters[i].size; j++) {
 			if (parameters[i].type == TYPE_SCORE) {
 				parameters[i].value[2 * j + mg] = score_mg(parameters[i].ptr[j]);

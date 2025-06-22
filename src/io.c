@@ -116,7 +116,7 @@ int read_position(FILE *f, struct position *pos) {
 		return 0;
 	memset(pos->piece, 0, sizeof(pos->piece));
 	memset(pos->mailbox, 0, sizeof(pos->mailbox));
-	
+
 	pos->piece[WHITE][ALL] = pos->piece[WHITE][KING] = bitboard(buf[0]);
 	pos->piece[BLACK][ALL] = pos->piece[BLACK][KING] = bitboard(buf[1]);
 

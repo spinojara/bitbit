@@ -64,7 +64,7 @@ void startpos_chess960(struct position *pos, uint64_t *seed) {
 	/* Light squared bishop. Can be b1, d1 or f1. */
 	int lb[3] = { b1, d1, f1 };
 	pos->mailbox[lb[xorshift64(seed) % 3]] = WHITE_BISHOP;
-	
+
 	/* Queen square. One of the remaining 3 squares.
 	 * The other two squares are occupied by knights.
 	 */
@@ -202,7 +202,7 @@ int epdbit_position(struct position *pos, struct transpositiontable *tt, uint64_
 	move_t moves[MOVES_MAX];
 	int moves_num = moves_min;
 	moves_num += xorshift64(seed) % (moves_max + 1 - moves_min);
-		
+
 	for (int m = 0; m < moves_num; m++) {
 		movegen_legal(pos, moves, MOVETYPE_ALL);
 		int c = move_count(moves);

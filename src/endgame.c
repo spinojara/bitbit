@@ -98,7 +98,7 @@ void endgame_store(const char *str, int32_t (*evaluate)(const struct position *p
 		char *fen[] = { pieces, "w", "-", "-", "0", "1", };
 		pos_from_fen(&pos, 6, fen);
 		refresh_endgame_key(&pos);
-		
+
 		struct endgame *e = endgame_probe(&pos);
 		if (e) {
 			fprintf(stderr, "error: endgame %s already exists\n", str);
@@ -466,7 +466,7 @@ void endgame_init(void) {
 	uint64_t seed = SEED;
 	for (size_t i = 0; i < SIZE(endgame_keys); i++)
 		endgame_keys[i] = xorshift64(&seed);
-	
+
 #ifndef NDEBUG
 	endgame_init_done = 1;
 #endif

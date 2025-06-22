@@ -210,7 +210,7 @@ static inline void affine_propagate16to32(int8_t *input, int8_t *output,
 		weight0 = ((__m256i *)weights)[i];
 		weight1 = ((__m256i *)weights)[i + 1];
 		in = _mm256_set1_epi16(input[i] | (input[i + 1] << 8));
-		
+
 		weight0 = _mm256_maddubs_epi16(in, weight0);
 		signs = _mm256_cmpgt_epi16(_mm256_setzero_si256(), weight0);
 		out0 = _mm256_add_epi32(out0, _mm256_unpacklo_epi16(weight0, signs));
@@ -411,7 +411,7 @@ void undo_update_accumulator(struct position *pos, move_t *move, int turn) {
 	king_square = orient(turn, king_square, king_square);
 	unsigned index;
 	unsigned indext;
-	
+
 	index = make_index(turn, target_square, pos->mailbox[source_square], king_square);
 	remove_index(index, pos->accumulation, pos->psqtaccumulation, turn);
 

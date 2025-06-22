@@ -118,7 +118,7 @@ int main(int argc, char **argv) {
 				games++;
 			pos_to_fen(startfen, &pos);
 		}
-		
+
 		if (read_eval(f, &eval) || read_flag(f, &flag))
 			break;
 		if (feof(f))
@@ -155,7 +155,7 @@ int main(int argc, char **argv) {
 #endif
 #if 1
 		int material_delta = abs(material[WHITE] - material[BLACK]);
-		
+
 		if (material_delta >= 3 && eval == 0 && pos.halfmove <= 0) {
 			print_position(&pos);
 			print_fen(&pos);

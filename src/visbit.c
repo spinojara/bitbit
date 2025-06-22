@@ -58,7 +58,7 @@ void image_ft(int32_t *image) {
 			int rex = x / (8 * 16);
 			int rey = y / (8 * 40);
 			int ren = rex + 32 * rey;
-			
+
 			int sqx = (x % (8 * 16)) / 8;
 			int sqy = (y % (8 * 40)) / 8;
 
@@ -102,7 +102,7 @@ void image_psqt(int32_t *image, int piece) {
 	for (int y = 0; y < 8; y++) {
 		for (int x = 0; x < 8; x++) {
 			int square = x + 8 * (7 - y);
-			
+
 			int32_t value = 0;
 			int num = 0;
 			for (int turn = 0; turn <= 1; turn++) {

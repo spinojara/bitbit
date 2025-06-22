@@ -235,7 +235,7 @@ void startpos(struct position *pos) {
 void pos_from_fen2(struct position *pos, const char *str) {
 	char fen[128] = { 0 };
 	snprintf(fen, 127, "%s", str);
-	
+
 	int argc;
 	char *argv[6] = { fen };
 
@@ -358,7 +358,7 @@ void mirror_position(struct position *pos) {
 int fen_is_ok2(const char *str) {
 	char fen[128] = { 0 };
 	snprintf(fen, 127, "%s", str);
-	
+
 	int argc;
 	char *argv[6] = { fen };
 
@@ -713,7 +713,7 @@ char *poscmp(const struct position *pos1, const struct position *pos2, int check
 		struct pstate ps;
 		pstate_init(pos, &ps);
 
-		
+
 		int from[2];
 		if (pos->turn) {
 			from[0] = en_passant + 9;

@@ -88,11 +88,11 @@ int32_t search_material(struct position *pos, int alpha, int beta) {
 	while ((move = next_move(&mp))) {
 		if (!legal(pos, &pstate, &move))
 			continue;
-		
+
 		do_move(pos, &move);
 		eval = -search_material(pos, -beta, -alpha);
 		undo_move(pos, &move);
-		
+
 		if (eval > best_eval) {
 			best_eval = eval;
 			if (eval > alpha) {

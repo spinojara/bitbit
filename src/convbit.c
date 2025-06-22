@@ -79,7 +79,7 @@ move_t difference(struct position *before, const struct position *after) {
 	if (to != -1 && from != -1) {
 		int flag = 0;
 		int piece = uncolored_piece(before->mailbox[from]);
-		
+
 		if (piece == PAWN) {
 			switch (rank_of(from)) {
 			case 1:
@@ -245,7 +245,7 @@ int main(int argc, char **argv) {
 
 		if (newgame) {
 			pos_from_fen2(&pos, fen + 4);
-			
+
 			resultsaved = (2 * pos.turn - 1) * resultnow;
 			write_move(out, 0);
 			write_position(out, &pos);

@@ -47,12 +47,12 @@ struct dataloader {
 	int error;
 
 	int ready;
-	
+
 	pthread_cond_t cond;
 	pthread_mutex_t mutex;
 
 	struct position *pos;
-	
+
 	double random_skip;
 	int use_result;
 
@@ -238,7 +238,7 @@ void bfree(struct batch *batch) {
 }
 
 void *loader_open(const char *s, size_t requested_size, double random_skip, int use_result) {
-	FILE *f = fopen(s, "rb"); 
+	FILE *f = fopen(s, "rb");
 	if (!f) {
 		fprintf(stderr, "error: failed to open file %s\n", s);
 		return NULL;
@@ -282,7 +282,7 @@ void loader_close(void *ptr) {
 	bfree(dataloader->batch);
 	bfree(dataloader->prepared);
 	free(dataloader->pos);
-	
+
 	pthread_mutex_destroy(&dataloader->mutex);
 	pthread_cond_destroy(&dataloader->cond);
 

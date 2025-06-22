@@ -61,7 +61,7 @@ score_t evaluate_pawns(const struct position *pos, struct evaluationinfo *ei, in
 		int r = rank_of(orient_horizontal(us, square));
 		int f = file_of(square);
 		int rf = min(f, 7 - f);
-		
+
 		/* uint64_t */
 		doubled    = ourpawns & bitboard(square + down_sq);
 		neighbours = ourpawns & adjacent_files(square);
@@ -108,7 +108,7 @@ score_t evaluate_pawns(const struct position *pos, struct evaluationinfo *ei, in
 			eval += doubled_pawn[rf];
 			if (TRACE) trace.doubled_pawn[us][rf]++;
 		}
-		
+
 		if (backward) {
 			eval += backward_pawn[rf];
 			if (TRACE) trace.backward_pawn[us][rf]++;
