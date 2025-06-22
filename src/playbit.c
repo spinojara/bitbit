@@ -140,7 +140,8 @@ void custom_search(struct position *pos, uint64_t nodes, move_t moves[MOVES_MAX]
 	si.hard_max_nodes = 5 * si.max_nodes;
 	si.seed = seed;
 
-	struct searchstack ss[PLY_MAX + 1] = { 0 };
+	struct searchstack realss[PLY_MAX + 4] = { 0 };
+	struct searchstack *ss = &realss[4];
 
 	refresh_accumulator(pos, 0);
 	refresh_accumulator(pos, 1);
@@ -166,10 +167,10 @@ void custom_search(struct position *pos, uint64_t nodes, move_t moves[MOVES_MAX]
 			do_endgame_key(pos, move);
 			do_move(pos, move);
 			do_accumulator(pos, move);
-			ss[1].move = *move;
+			ss[0].move = *move;
 			si.nodes++;
 
-			int32_t eval = -negamax(pos, depth - 1, ply + 1, -VALUE_MATE, VALUE_MATE, 0, &si, ss + 2);
+			int32_t eval = -negamax(pos, depth - 1, ply + 1, -VALUE_MATE, VALUE_MATE, 0, &si, ss + 1);
 			if (!si.interrupt)
 				evals[i] = eval;
 
@@ -215,7 +216,8 @@ int32_t search_material(struct position *pos, int alpha, int beta) {
 	struct pstate pstate;
 	pstate_init(pos, &pstate);
 	struct movepicker mp;
-	movepicker_init(&mp, 1, pos, &pstate, 0, 0, 0, 0, &gsi);
+	struct searchstack ss[10] = { 0 };
+	movepicker_init(&mp, 1, pos, &pstate, 0, 0, 0, 0, &gsi, ss + 5);
 	move_t move;
 	while ((move = next_move(&mp))) {
 		if (!legal(pos, &pstate, &move))

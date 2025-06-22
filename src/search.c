@@ -62,6 +62,9 @@ CONST int asp = 17;
 CONST int quad_bonus = 16;
 CONST int quad_malus = 4;
 
+CONST int damp_offset = 200;
+CONST int damp_factor = 200;
+
 CONST double history_regularization = 0.0625;
 
 static int reductions[PLY_MAX] = { 0 };
@@ -257,7 +260,7 @@ static inline int32_t evaluate(const struct position *pos, const struct searchin
 
 	/* Damp when shuffling pieces. */
 	if (option_damp)
-		evaluation = evaluation * (200 - (int)pos->halfmove) / 200;
+		evaluation = evaluation * (damp_offset - (int)pos->halfmove) / damp_factor;
 
 	evaluation = clamp(evaluation, -VALUE_MAX, VALUE_MAX);
 

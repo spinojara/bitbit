@@ -83,7 +83,8 @@ int32_t search_material(struct position *pos, int alpha, int beta) {
 	struct pstate pstate;
 	pstate_init(pos, &pstate);
 	struct movepicker mp;
-	movepicker_init(&mp, 1, pos, &pstate, 0, 0, 0, 0, &gsi);
+	struct searchstack ss[10] = { 0 };
+	movepicker_init(&mp, 1, pos, &pstate, 0, 0, 0, 0, &gsi, ss + 7);
 	move_t move;
 	while ((move = next_move(&mp))) {
 		if (!legal(pos, &pstate, &move))

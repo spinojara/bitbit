@@ -57,12 +57,11 @@ extern double continuation_history_factor;
 extern int goodquiet_threshold;
 
 extern int quad_bonus;
-extern int lin_bonus;
-extern int offset_bonus;
 extern int quad_malus;
-extern int lin_malus;
-extern int offset_malus;
 extern double history_regularization;
+
+extern int damp_offset;
+extern int damp_factor;
 
 struct tune tunes[] = {
 	TUNE("razor1", TYPE_INT, &razor1),
@@ -83,12 +82,11 @@ struct tune tunes[] = {
 	TUNE("goodquietthreshold", TYPE_INT, &goodquiet_threshold),
 
 	TUNE("quadbonus", TYPE_INT, &quad_bonus),
-	TUNE("linbonus", TYPE_INT, &lin_bonus),
-	TUNE("offsetbonus", TYPE_INT, &offset_bonus),
 	TUNE("quadmalus", TYPE_INT, &quad_malus),
-	TUNE("linmalus", TYPE_INT, &lin_malus),
-	TUNE("offsetmalus", TYPE_INT, &offset_malus),
 	TUNE("historyregularization", TYPE_DOUBLE, &history_regularization),
+
+	TUNE("dampoffset", TYPE_INT, &damp_offset),
+	TUNE("dampfactor", TYPE_INT, &damp_factor),
 };
 
 int rdi(double f) {
