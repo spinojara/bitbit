@@ -117,9 +117,13 @@ void do_zobrist_key(struct position *pos, const move_t *move) {
 	if (is_capture(pos, move))
 		pos->zobrist_key ^= zobrist_piece_key(pos->mailbox[target_square] - 1, target_square);
 
-	if (source_square + 16 == target_square && pos->mailbox[source_square] == WHITE_PAWN)
+	if (source_square + 16 == target_square && pos->mailbox[source_square] == WHITE_PAWN &&
+			((target_square != a4 && pos->mailbox[target_square - 1] == BLACK_PAWN) ||
+			(target_square != h4 && pos->mailbox[target_square + 1] == BLACK_PAWN)))
 		pos->zobrist_key ^= zobrist_en_passant_key(source_square + 8);
-	if (source_square - 16 == target_square && pos->mailbox[source_square] == BLACK_PAWN)
+	if (source_square - 16 == target_square && pos->mailbox[source_square] == BLACK_PAWN &&
+			((target_square != a5 && pos->mailbox[target_square - 1] == WHITE_PAWN) ||
+			(target_square != h5 && pos->mailbox[target_square + 1] == WHITE_PAWN)))
 		pos->zobrist_key ^= zobrist_en_passant_key(source_square - 8);
 
 	switch (move_flag(move)) {

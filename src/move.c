@@ -58,9 +58,13 @@ void do_move(struct position *pos, move_t *move) {
 		pos->halfmove = 0;
 	}
 
-	if (source_square + 16 == target_square && pos->mailbox[source_square] == WHITE_PAWN)
+	if (source_square + 16 == target_square && pos->mailbox[source_square] == WHITE_PAWN &&
+			((target_square != a4 && pos->mailbox[target_square - 1] == BLACK_PAWN) ||
+			(target_square != h4 && pos->mailbox[target_square + 1] == BLACK_PAWN)))
 		pos->en_passant = target_square - 8;
-	if (source_square - 16 == target_square && pos->mailbox[source_square] == BLACK_PAWN)
+	if (source_square - 16 == target_square && pos->mailbox[source_square] == BLACK_PAWN &&
+			((target_square != a5 && pos->mailbox[target_square - 1] == WHITE_PAWN) ||
+			(target_square != h5 && pos->mailbox[target_square + 1] == WHITE_PAWN)))
 		pos->en_passant = target_square + 8;
 
 	if (uncolored_piece(pos->mailbox[source_square]) == PAWN)
