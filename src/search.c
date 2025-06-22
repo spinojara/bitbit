@@ -278,9 +278,12 @@ int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, s
 	if (si->sel_depth < ply)
 		si->sel_depth = ply;
 
+	history_store(pos, si->history, ply);
+
 	const int pv_node = (beta != alpha + 1);
 
-	history_store(pos, si->history, ply);
+	if (pv_node)
+		si->pv[ply][ply] = 0;
 
 	struct pstate pstate;
 	/* Skip generation of pstate if it was already generated during
@@ -354,11 +357,16 @@ int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, s
 			return 0;
 
 		if (eval > best_eval) {
-			best_move = move;
 			best_eval = eval;
 			if (eval > alpha) {
-				alpha = eval;
-				if (eval >= beta)
+				best_move = move;
+
+				if (pv_node)
+					store_pv_move(&move, ply, si->pv);
+
+				if (pv_node && eval < beta)
+					alpha = eval;
+				else
 					break;
 			}
 		}
@@ -384,7 +392,7 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 
 	struct pstate pstate;
 	pstate_init(pos, &pstate);
-	
+
 	if (depth <= 0 && !pstate.checkers)
 		return quiescence(pos, ply, alpha, beta, si, &pstate, ss);
 
@@ -401,6 +409,9 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	assert(!(pv_node && cut_node));
 
 	if (!root_node) {
+		if (pv_node)
+			si->pv[ply][ply] = 0;
+
 		/* Draws. */
 		if (alpha < 0 && upcoming_repetition(pos, si->history, ply)) {
 			alpha = draw(si);
