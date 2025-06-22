@@ -62,10 +62,11 @@ CONST int asp = 17;
 CONST int quad_bonus = 16;
 CONST int quad_malus = 4;
 
-CONST int damp_offset = 200;
 CONST int damp_factor = 200;
 
 CONST double history_regularization = 0.0625;
+
+CONST int aspiration_depth = 5;
 
 static int reductions[PLY_MAX] = { 0 };
 
@@ -260,7 +261,7 @@ static inline int32_t evaluate(const struct position *pos, const struct searchin
 
 	/* Damp when shuffling pieces. */
 	if (option_damp)
-		evaluation = evaluation * (damp_offset - (int)pos->halfmove) / damp_factor;
+		evaluation = evaluation * (damp_factor - (int)pos->halfmove) / damp_factor;
 
 	evaluation = clamp(evaluation, -VALUE_MAX, VALUE_MAX);
 
@@ -806,7 +807,7 @@ int32_t search(struct position *pos, int depth, int verbose, struct timeinfo *ti
 		si.sel_depth = 1;
 
 		/* Minimum seems to be around d <= 5. */
-		if (d <= 5 || !iterative)
+		if (d <= aspiration_depth || !iterative)
 			eval = negamax(pos, d, 0, -VALUE_MATE, VALUE_MATE, 0, &si, ss);
 		else
 			eval = aspiration_window(pos, d, verbose, eval, &si, ss);

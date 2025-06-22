@@ -60,8 +60,9 @@ extern int quad_bonus;
 extern int quad_malus;
 extern double history_regularization;
 
-extern int damp_offset;
 extern int damp_factor;
+
+extern int aspiration_depth;
 
 struct tune tunes[] = {
 	TUNE("razor1", TYPE_INT, &razor1),
@@ -85,8 +86,9 @@ struct tune tunes[] = {
 	TUNE("quadmalus", TYPE_INT, &quad_malus),
 	TUNE("historyregularization", TYPE_DOUBLE, &history_regularization),
 
-	TUNE("dampoffset", TYPE_INT, &damp_offset),
 	TUNE("dampfactor", TYPE_INT, &damp_factor),
+
+	TUNE("aspirationdepth", TYPE_INT, &aspiration_depth),
 };
 
 int rdi(double f) {
