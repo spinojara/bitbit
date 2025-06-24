@@ -19,7 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#if !defined(NDEBUG) && defined(__GNUC__)
+#if !defined(NDEBUG) && defined(__GNUC__) && defined(__linux__)
 #include <execinfo.h>
 #endif
 
@@ -73,7 +73,7 @@ int strint(const char *s) {
 	return ret;
 }
 
-#if !defined(NDEBUG) && defined(__GNUC__)
+#if !defined(NDEBUG) && defined(__GNUC__) && defined(__linux__)
 /* <https://www.gnu.org/software/libc/manual/html_node/Backtraces.html> */
 void stacktrace(void) {
 	void *array[100];

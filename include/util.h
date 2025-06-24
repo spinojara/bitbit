@@ -53,7 +53,7 @@ int find_char(const char *s, char c);
 /* Returns 0 if s is not a non negative integer. */
 int strint(const char *s);
 
-#if !defined(NDEBUG) && defined(__GNUC__)
+#if !defined(NDEBUG) && defined(__GNUC__) && defined(__linux__)
 void stacktrace(void);
 #endif
 
