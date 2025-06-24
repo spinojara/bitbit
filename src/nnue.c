@@ -313,7 +313,6 @@ void refresh_accumulator(struct position *pos, int turn) {
 	king_square = orient(turn, king_square, king_square);
 	uint64_t b;
 	int square;
-	int total = 0;
 	for (int color = 0; color < 2; color++) {
 		for (int piece = PAWN; piece < KING; piece++) {
 			b = pos->piece[color][piece];
@@ -321,14 +320,12 @@ void refresh_accumulator(struct position *pos, int turn) {
 				square = ctz(b);
 				int index = make_index(turn, square, colored_piece(piece, color), king_square);
 				add_index(index, pos->accumulation, pos->psqtaccumulation, turn);
-				total++;
 				b = clear_ls1b(b);
 			}
 		}
 	}
 	int index = make_index(turn, ctz(pos->piece[other_color(turn)][KING]), colored_piece(KING, other_color(turn)), king_square);
 	add_index(index, pos->accumulation, pos->psqtaccumulation, turn);
-	total++;
 }
 
 /* m cannot be a king move of the side <turn>. */
