@@ -168,6 +168,7 @@ void custom_search(struct position *pos, uint64_t nodes, move_t moves[MOVES_MAX]
 			do_move(pos, move);
 			do_accumulator(pos, move);
 			ss[0].move = *move;
+			ss[0].continuation_history_entry = &(si.continuation_history[pos->mailbox[move_to(move)]][move_to(move)]);
 			si.nodes++;
 
 			int32_t eval = -negamax(pos, depth - 1, ply + 1, -VALUE_MATE, VALUE_MATE, 0, &si, ss + 1);
@@ -337,6 +338,8 @@ void play_game(FILE *openingsfile, struct transpositiontable *tt, uint64_t nodes
 			result = is_check ? (pos.turn ? RESULT_LOSS : RESULT_WIN) : RESULT_DRAW;
 			break;
 		}
+
+		h.zobrist_key[h.ply] = pos.zobrist_key;
 
 		move_t *bestmove = NULL;
 		eval[h.ply] = VALUE_NONE;
