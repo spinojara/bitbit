@@ -49,6 +49,8 @@ struct timeinfo {
 	timepoint_t optimal;
 	timepoint_t maximal;
 
+	uint64_t nodes;
+
 	int us;
 
 	move_t best_move;

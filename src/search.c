@@ -768,6 +768,8 @@ int32_t search(struct position *pos, int depth, int verbose, struct timeinfo *ti
 
 	struct searchinfo si = { 0 };
 	si.ti = ti;
+	si.max_nodes = ti->nodes;
+	si.hard_max_nodes = ti->nodes;
 	si.tt = tt;
 	si.history = history;
 
