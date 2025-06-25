@@ -1,5 +1,5 @@
 # bitbit, a bitboard based chess engine written in c.
-# Copyright (C) 2022-2024 Isak Ellmer
+# Copyright (C) 2022-2025 Isak Ellmer
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License, version 2 as
