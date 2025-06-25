@@ -43,7 +43,7 @@ MKDIR_P    = mkdir -p
 RM         = rm
 INSTALL    = install
 
-CC         = cc
+CC         = clang
 CSTANDARD  = -std=c11
 CWARNINGS  = -Wall -Wextra -Wshadow -pedantic -Wno-unused-result -Wvla
 COPTIMIZE  = -O3 $(ARCH) $(LTO)
