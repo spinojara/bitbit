@@ -35,10 +35,10 @@ Copying
 -------
 Copyright (C) 2022-2025 Isak Ellmer
 
-All source files, including man pages and TeX files, are distributed under the
-GNU General Public License, version 2 (GPLv2). In addition, all files that use
-this license begin with a license notice. A copy of GPLv2 is available in the
-file COPYING and at <https://www.gnu.org/licenses/>.
+All source files are distributed under the GNU General Public License, version 2
+(GPLv2). In addition, all files that use this license begin with a license
+notice. A copy of GPLv2 is available in the file COPYING and at
+<https://www.gnu.org/licenses/>.
 
 All other files are licensed under the Creative Commons Attribution-ShareAlike
 4.0 license (CC BY-SA 4.0). That includes this file, the various binary files
