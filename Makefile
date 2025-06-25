@@ -19,24 +19,9 @@ VERSION   := $(MAJOR).$(MINOR)
 
 MAKEFLAGS += -rR
 
-ifeq (Windows_NT, $(OS))
-	KERNEL := Windows_NT
-	ARCH   := x86_64
-else
-	KERNEL := $(shell uname -s)
-	ARCH   := $(shell uname -m)
-endif
-
-ifneq ($(findstring ppc64, $(ARCH)), )
-	ARCH = -mtune=native
-else
-	ARCH = -march=native -mtune=native
-endif
-
-ifeq (Windows_NT, $(KERNEL))
-	LTO =
-else
-	LTO = -flto=auto
+ARCH       = native
+ifneq ($(ARCH), )
+	CARCH = -march=$(ARCH)
 endif
 
 MKDIR_P    = mkdir -p
@@ -46,7 +31,7 @@ INSTALL    = install
 CC         = clang
 CSTANDARD  = -std=c11
 CWARNINGS  = -Wall -Wextra -Wshadow -pedantic -Wno-unused-result -Wvla
-COPTIMIZE  = -O3 $(ARCH) $(LTO)
+COPTIMIZE  = -O3 $(CARCH)
 
 ifeq ($(DEBUG), yes)
 	CDEBUG = -g3 -ggdb
@@ -58,7 +43,11 @@ else ifeq ($(DEBUG), )
 	CDEBUG = -DNDEBUG
 endif
 
-CFLAGS     = $(CSTANDARD) $(CWARNINGS) $(COPTIMIZE) $(CDEBUG) -Iinclude
+ifneq ($(TARGET), )
+	CTARGET = -target $(TARGET)
+endif
+
+CFLAGS     = $(CSTANDARD) $(CWARNINGS) $(COPTIMIZE) $(CDEBUG) $(CTARGET) -Iinclude
 LDFLAGS    = $(CFLAGS)
 LDLIBS     = -lm
 
