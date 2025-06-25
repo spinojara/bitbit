@@ -13,5 +13,3 @@ Following is a table of binaries and their corresponding make invocation.
 |                                |                                                                                       |
 | bitbit-x.x-windows-x86-64-avx2 | make CC=clang ARCH=x86-64-v3 TT=256 STATIC=yes SIMD=avx2 TARGET=x86_64-pc-windows-gnu |
 +--------------------------------+---------------------------------------------------------------------------------------+
-
-For the windows binaries, add '-target x86_64-pc-windows-gnu' to CFLAGS.
