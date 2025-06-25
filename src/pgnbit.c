@@ -36,7 +36,6 @@
 #include "endgame.h"
 #include "movegen.h"
 #include "movepicker.h"
-#include "tables.h"
 #include "io.h"
 
 int skip_mates = 0;
@@ -45,7 +44,6 @@ int quiet = 0;
 int skip_endgames = 0;
 int skip_halfmove = 0;
 int skip_checks = 0;
-int skip_unlucky = 0;
 int verbose = 0;
 
 static const struct searchinfo gsi = { 0 };
@@ -357,18 +355,6 @@ void parse_pgn(FILE *infile, FILE *outfile) {
 					search_material(&pos, -VALUE_INFINITE, VALUE_INFINITE) != evaluate_material(&pos)))
 			flag |= FLAG_SKIP;
 
-		if (!(flag & FLAG_SKIP) && skip_unlucky && result == RESULT_DRAW) {
-			int32_t mat = total_material(&pos);
-			int32_t eval1, eval2;
-			if (mat <= 2000 && abs(eval1 = evaluate_material(&pos)) >= 100 &&
-					abs(eval2 = evaluate_classical(&pos)) >= 50 &&
-					(double)eval1 * (double)eval2 > 0.0) {
-				if (done_early == 0)
-					done_early = 1;
-				flag |= FLAG_SKIP;
-			}
-		}
-
 		do_move(&pos, &move);
 		if (!(flag & FLAG_SKIP) && skip_checks && generate_checkers(&pos, pos.turn))
 			flag |= FLAG_SKIP;
@@ -401,7 +387,6 @@ int main(int argc, char **argv) {
 		{ "skip-checks",   no_argument,       NULL, 'c' },
 		{ "skip-endgames", no_argument,       NULL, 'e' },
 		{ "skip-halfmove", no_argument,       NULL, 'h' },
-		{ "skip-unlucky",  no_argument,       NULL, 'u' },
 		{ NULL,            0,                 NULL,  0  },
 	};
 	int c, option_index = 0;
@@ -429,9 +414,6 @@ int main(int argc, char **argv) {
 		case 'h':
 			skip_halfmove = 1;
 			break;
-		case 'u':
-			skip_unlucky = 1;
-			break;
 		default:
 			error = 1;
 			break;
@@ -455,7 +437,6 @@ int main(int argc, char **argv) {
 		return 2;
 	}
 
-	option_nnue = 0;
 	option_transposition = 0;
 	option_history = 0;
 	option_endgame = 1;
@@ -464,7 +445,6 @@ int main(int argc, char **argv) {
 	magicbitboard_init();
 	attackgen_init();
 	bitboard_init();
-	tables_init();
 	moveorder_init();
 	position_init();
 	endgame_init();

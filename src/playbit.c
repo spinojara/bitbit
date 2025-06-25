@@ -695,8 +695,6 @@ int main(int argc, char **argv) {
 	nnue_init();
 
 	option_history = 1;
-	option_nnue = 1;
-	option_pure_nnue = 1;
 	option_transposition = 1;
 	option_deterministic = 0;
 

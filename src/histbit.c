@@ -23,7 +23,6 @@
 #include "util.h"
 #include "magicbitboard.h"
 #include "attackgen.h"
-#include "tables.h"
 #include "option.h"
 #include "endgame.h"
 #include "kpk.h"
@@ -71,7 +70,6 @@ int main(int argc, char **argv) {
 	magicbitboard_init();
 	attackgen_init();
 	bitboard_init();
-	tables_init();
 	position_init();
 	struct position pos = { 0 };
 	startpos(&pos);

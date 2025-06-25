@@ -30,8 +30,6 @@
 #include "tune.h"
 #endif
 
-#define OPTION_NNUE          1
-#define OPTION_PURE_NNUE     1
 #define OPTION_TRANSPOSITION 1
 #define OPTION_HISTORY       1
 #define OPTION_ENDGAME       1
@@ -39,8 +37,6 @@
 #define OPTION_PONDER        0
 #define OPTION_DETERMINISTIC 1
 
-int option_nnue          = OPTION_NNUE;
-int option_pure_nnue     = OPTION_PURE_NNUE;
 int option_transposition = OPTION_TRANSPOSITION;
 int option_history       = OPTION_HISTORY;
 int option_endgame       = OPTION_ENDGAME;
@@ -50,8 +46,6 @@ int option_deterministic = OPTION_DETERMINISTIC;
 
 void print_options(void) {
 	printf("option name Clear Hash type button\n");
-	printf("option name NNUE type check default %s\n", OPTION_NNUE ? "true" : "false");
-	printf("option name PureNNUE type check default %s\n", OPTION_PURE_NNUE ? "true" : "false");
 	printf("option name Hash type spin default %u min 0 max %u\n", TT, INT_MAX);
 	printf("option name Usehash type check default %s\n", OPTION_TRANSPOSITION ? "true" : "false");
 	printf("option name Ponder type check default %s\n", OPTION_PONDER ? "true" : "false");
@@ -79,9 +73,7 @@ void setoption(int argc, char **argv, struct transpositiontable *tt) {
 		return;
 
 	int set = argv[4][0] == 't' || argv[4][0] == 'T';
-	if (!strcasecmp(argv[2], "nnue"))
-		option_nnue = set;
-	else if (!strcasecmp(argv[2], "hash")) {
+	if (!strcasecmp(argv[2], "hash")) {
 		errno = 0;
 		char *endptr;
 		long MiB = strtol(argv[4], &endptr, 10);
@@ -104,8 +96,6 @@ void setoption(int argc, char **argv, struct transpositiontable *tt) {
 		option_transposition = set && (tt->size > 0);
 	else if (!strcasecmp(argv[2], "ponder"))
 		option_ponder = set;
-	else if (!strcasecmp(argv[2], "purennue"))
-		option_pure_nnue = set;
 	else if (!strcasecmp(argv[2], "filennue"))
 		file_nnue(argv[4]);
 	else if (!strcasecmp(argv[2], "deterministic"))

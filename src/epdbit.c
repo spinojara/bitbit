@@ -31,7 +31,6 @@
 #include "movegen.h"
 #include "transposition.h"
 #include "search.h"
-#include "tables.h"
 #include "moveorder.h"
 
 /* I don't currently want to spend time refactoring the code to allow for
@@ -308,7 +307,6 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-	option_nnue = 0;
 	option_transposition = 1;
 	option_history = 0;
 	option_endgame = 0;
@@ -317,7 +315,6 @@ int main(int argc, char **argv) {
 	magicbitboard_init();
 	attackgen_init();
 	bitboard_init();
-	tables_init();
 	search_init();
 	moveorder_init();
 	position_init();

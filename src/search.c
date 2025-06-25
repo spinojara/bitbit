@@ -33,7 +33,6 @@
 #include "position.h"
 #include "attackgen.h"
 #include "timeman.h"
-#include "evaluate.h"
 #include "history.h"
 #include "movepicker.h"
 #include "option.h"
@@ -245,19 +244,8 @@ static inline int32_t evaluate(const struct position *pos, const struct searchin
 	if (e && (evaluation = endgame_evaluate(e, pos)) != VALUE_NONE)
 		return evaluation;
 
-	int classical = 0;
 	/* NNUE. */
-	if (option_nnue) {
-		int32_t psqt = abs(pos->psqtaccumulation[WHITE] - pos->psqtaccumulation[BLACK]) / 2;
-		if (psqt > 350 && !option_pure_nnue)
-			classical = 1;
-		else
-			evaluation = evaluate_accumulator(pos);
-	}
-	/* Classical. */
-	if (!option_nnue || classical) {
-		evaluation = evaluate_classical(pos);
-	}
+	evaluation = evaluate_accumulator(pos);
 
 	/* Damp when shuffling pieces. */
 	if (option_damp)

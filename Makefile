@@ -86,22 +86,19 @@ endif
 
 SRC_BASE      = bitboard.c magicbitboard.c attackgen.c move.c \
 	        util.c position.c movegen.c
-SRC           = $(SRC_BASE) perft.c search.c evaluate.c tables.c \
-	        transposition.c init.c timeman.c pawn.c history.c \
+SRC           = $(SRC_BASE) perft.c search.c evaluate.c \
+	        transposition.c init.c timeman.c history.c \
 		movepicker.c moveorder.c option.c endgame.c nnue.c \
 		nnuefile.c kpk.c kpkp.c krkp.c nnueweights.c io.c
-SRC_ALL       = $(SRC_BASE) $(SRC) $(SRC_BIBIT) $(SRC_GENBIT) \
+SRC_ALL       = $(SRC_BASE) $(SRC) $(SRC_BIBIT) \
 	        $(SRC_EPDBIT) $(SRC_HISTBIT) $(SRC_PGNBIT) \
-	        $(SRC_TEXELBIT) $(SRC_BASEBIT) $(SRC_BATCHBIT) \
+	        $(SRC_BASEBIT) $(SRC_BATCHBIT) \
 	        $(SRC_VISBIT) $(SRC_WNNUEBIT)
 SRC_BITBIT    = bitbit.c interface.c thread.c bench.c $(SRC)
 SRC_WEIGHTBIT = weightbit.c util.c io.c nnuefile.c
-SRC_GENBIT    = genbit.c $(SRC)
 SRC_EPDBIT    = epdbit.c $(SRC)
 SRC_HISTBIT   = histbit.c $(SRC)
 SRC_PGNBIT    = pgnbit.c $(SRC)
-SRC_TEXELBIT  = texelbit.c $(subst evaluate,texel-evaluate,\
-	        $(subst pawn,texel-pawn,$(SRC)))
 SRC_BASEBIT   = basebit.c $(SRC_BASE)
 SRC_PLAYBIT   = playbit.c polyglot.c $(SRC)
 SRC_CONVBIT   = convbit.c io.c $(SRC_BASE)
@@ -113,11 +110,9 @@ DEP           = $(sort $(patsubst %.c,dep/%.d,$(SRC_ALL)))
 
 OBJ_BITBIT    = $(patsubst %.c,obj/%.o,$(SRC_BITBIT))
 OBJ_WEIGHTBIT = $(patsubst %.c,obj/%.o,$(SRC_WEIGHTBIT))
-OBJ_GENBIT    = $(patsubst %.c,obj/%.o,$(SRC_GENBIT))
 OBJ_EPDBIT    = $(patsubst %.c,obj/%.o,$(SRC_EPDBIT))
 OBJ_HISTBIT   = $(patsubst %.c,obj/%.o,$(SRC_HISTBIT))
 OBJ_PGNBIT    = $(patsubst %.c,obj/%.o,$(SRC_PGNBIT))
-OBJ_TEXELBIT  = $(patsubst %.c,obj/%.o,$(SRC_TEXELBIT))
 OBJ_BASEBIT   = $(patsubst %.c,obj/%.o,$(SRC_BASEBIT))
 OBJ_PLAYBIT   = $(patsubst %.c,obj/%.o,$(SRC_PLAYBIT))
 OBJ_CONVBIT   = $(patsubst %.c,obj/%.o,$(SRC_CONVBIT))
@@ -129,7 +124,7 @@ OBJ_TUNEBIT   = $(patsubst %.c,obj/%.o,$(subst search,tune-search,\
 		$(SRC_BITBIT) tune.c)))))
 OBJ_CHECKBIT  = $(patsubst %.c,obj/%.o,$(SRC_CHECKBIT))
 
-BIN = bitbit weightbit genbit epdbit histbit pgnbit texelbit basebit \
+BIN = bitbit weightbit epdbit histbit pgnbit basebit \
       libbatchbit.so libvisbit.so tunebit convbit checkbit playbit
 
 PREFIX = /usr/local
@@ -145,20 +140,16 @@ nnue: nnueclean bitbit
 
 everything: $(BIN)
 
-bitbit genbit libbatchbit.so playbit: LDLIBS += -lpthread
+bitbit libbatchbit.so playbit: LDLIBS += -lpthread
 bitbit: $(OBJ_BITBIT)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 weightbit: $(OBJ_WEIGHTBIT)
-	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
-genbit: $(OBJ_GENBIT)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 epdbit: $(OBJ_EPDBIT)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 histbit: $(OBJ_HISTBIT)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 pgnbit: $(OBJ_PGNBIT)
-	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
-texelbit: $(OBJ_TEXELBIT)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 basebit: $(OBJ_BASEBIT)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
@@ -181,9 +172,6 @@ obj/%.o: src/%.c dep/%.d
 obj/pic-%.o: src/%.c dep/%.d
 	@$(MKDIR_P) obj
 	$(CC) $(CFLAGS) -fPIC -c $< -o $@
-obj/texel-%.o: src/%.c dep/%.d
-	@$(MKDIR_P) obj
-	$(CC) $(CFLAGS) -DTRACE -c $< -o $@
 obj/tune-%.o: src/%.c dep/%.d
 	@$(MKDIR_P) obj
 	$(CC) $(CFLAGS) -DTUNE -c $< -o $@
@@ -194,7 +182,7 @@ src/nnueweights.c: weightbit Makefile
 %.so:                            LDFLAGS += -shared
 
 obj/thread.o obj/pic-batchbit.o: CFLAGS += -pthread
-obj/genbit.o obj/playbit.o:      CFLAGS += $(DSYZYGY) -pthread
+obj/playbit.o:                   CFLAGS += $(DSYZYGY) -pthread
 obj/init.o obj/interface.o:      CFLAGS += -DVERSION=$(VERSION)
 obj/interface.o obj/option.o obj/tune-option.o: CFLAGS += -DTT=$(TT)
 
@@ -212,14 +200,14 @@ install: all
 	$(INSTALL) -m 0644 man/bitbit.6 $(DESTDIR)$(MAN6DIR)
 
 install-everything: everything install
-	$(INSTALL) -m 0755 {epd,pgn,texel,check}bit $(DESTDIR)$(BINDIR)
+	$(INSTALL) -m 0755 {epd,pgn,check}bit $(DESTDIR)$(BINDIR)
 	$(MKDIR_P) $(DESTDIR)$(LIBDIR)
 	$(INSTALL) -m 0755 lib{batch,vis}bit.so $(DESTDIR)$(LIBDIR)
-	$(INSTALL) -m 0644 man/{epd,pgn,texel}bit.6 $(DESTDIR)$(MAN6DIR)
+	$(INSTALL) -m 0644 man/{epd,pgn}bit.6 $(DESTDIR)$(MAN6DIR)
 
 uninstall:
-	$(RM) -f $(DESTDIR)$(BINDIR)/{bit,epd,pgn,texel,check}bit
-	$(RM) -f $(DESTDIR)$(MAN6DIR)/{bit,epd,pgn,texel}bit.6
+	$(RM) -f $(DESTDIR)$(BINDIR)/{bit,epd,pgn,check}bit
+	$(RM) -f $(DESTDIR)$(MAN6DIR)/{bit,epd,pgn}bit.6
 	$(RM) -f $(DESTDIR)$(LIBDIR)/lib{batch,vis}bit.so
 
 clean: nnueclean

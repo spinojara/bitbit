@@ -304,8 +304,6 @@ static inline void remove_index(unsigned index, int16_t accumulation[2][K_HALF_D
 }
 
 void refresh_accumulator(struct position *pos, int turn) {
-	if (!option_nnue)
-		return;
 	assert(nnue_init_done);
 	memcpy(pos->accumulation[turn], ft_biases, K_HALF_DIMENSIONS * sizeof(*ft_biases));
 	pos->psqtaccumulation[turn] = 0;
@@ -478,8 +476,6 @@ void do_accumulator(struct position *pos, move_t *move) {
 	assert(*move);
 	assert(!pos->mailbox[move_from(move)]);
 	assert(pos->mailbox[move_to(move)]);
-	if (!option_nnue)
-		return;
 	assert(nnue_init_done);
 	int target_square = move_to(move);
 	if (uncolored_piece(pos->mailbox[target_square]) == KING)
@@ -528,8 +524,6 @@ void do_accumulator(struct position *pos, move_t *move) {
 void undo_accumulator(struct position *pos, move_t *move) {
 	assert(*move);
 	assert(pos->mailbox[move_from(move)]);
-	if (!option_nnue)
-		return;
 	assert(nnue_init_done);
 	int source_square = move_from(move);
 	if (uncolored_piece(pos->mailbox[source_square]) == KING)
@@ -707,18 +701,11 @@ error:
 }
 
 void print_nnue_info(void) {
-	printf("info string evaluation ");
-	if (option_nnue) {
-		if (option_pure_nnue)
-			printf("pure ");
-		printf("nnue ");
-		if (builtin)
-			printf("built in");
-		else
-			printf("file <%s>", pathnnue);
-	}
+	printf("info string evaluation nnue ");
+	if (builtin)
+		printf("built in");
 	else
-		printf("classical");
+		printf("file <%s>", pathnnue);
 	printf("\n");
 }
 

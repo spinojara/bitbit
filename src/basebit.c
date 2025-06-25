@@ -123,6 +123,18 @@ static inline int legal_position(const struct position *pos, int king_white, int
 	return 1;
 }
 
+int mate(const struct position *pos) {
+	move_t moves[MOVES_MAX];
+	struct pstate pstate;
+	pstate_init(pos, &pstate);
+	movegen(pos, &pstate, moves, MOVETYPE_ALL);
+
+	if (moves[0])
+		return 0;
+
+	return pstate.checkers != 0ull ? 2 : 1;
+}
+
 int main(void) {
 	magicbitboard_init();
 	attackgen_init();
@@ -132,11 +144,6 @@ int main(void) {
 	bitbase_KXKX = calloc(BITBASE_KXKX_TABLE_SIZE, sizeof(*bitbase_KXKX));
 	invalid_KXKX = calloc(BITBASE_KXKX_TABLE_SIZE / BITBASE_KXKX_BITS_PER_POSITION, sizeof(*bitbase_KXKX));
 
-#if 1
-	FILE *file_KXKX = fopen("KXKX.bb", "rb");
-	fread(bitbase_KXKX, sizeof(*bitbase_KXKX), BITBASE_KXKX_TABLE_SIZE, file_KXKX);
-	fclose(file_KXKX);
-#else
 	long total = 0;
 	long counter = 0;
 	for (long index = 0; index < BITBASE_KXKX_INDEX_MAX; index++) {
@@ -151,20 +158,20 @@ int main(void) {
 
 		memset(&pos, 0, sizeof(pos));
 		pos.turn = turn;
-		pos.piece[white][king] = bitboard(king_white);
-		pos.mailbox[king_white] = white_king;
-		pos.piece[black][king] = bitboard(king_black);
-		pos.mailbox[king_black] = black_king;
+		pos.piece[WHITE][KING] = bitboard(king_white);
+		pos.mailbox[king_white] = WHITE_KING;
+		pos.piece[BLACK][KING] = bitboard(king_black);
+		pos.mailbox[king_black] = BLACK_KING;
 		if (piece_white) {
-			pos.piece[white][piece_white] = bitboard(square_white);
+			pos.piece[WHITE][piece_white] = bitboard(square_white);
 			pos.mailbox[square_white] = piece_white;
 		}
 		if (piece_black) {
-			pos.piece[black][piece_black] = bitboard(square_black);
+			pos.piece[BLACK][piece_black] = bitboard(square_black);
 			pos.mailbox[square_black] = piece_black + 6;
 		}
-		pos.piece[white][all] = pos.piece[white][king] | pos.piece[white][piece_white];
-		pos.piece[black][all] = pos.piece[black][king] | pos.piece[black][piece_black];
+		pos.piece[WHITE][ALL] = pos.piece[WHITE][KING] | pos.piece[WHITE][piece_white];
+		pos.piece[BLACK][ALL] = pos.piece[BLACK][KING] | pos.piece[BLACK][piece_black];
 
 		if (!legal_position(&pos, king_white, piece_white, square_white, king_black, piece_black, square_black)) {
 			total++;
@@ -173,11 +180,11 @@ int main(void) {
 		}
 
 		int m = mate(&pos);
-		if (m == 2 && pos.turn == black) {
+		if (m == 2 && pos.turn == BLACK) {
 			counter++;
 			bitbase_KXKX_store_by_index(index, BITBASE_WIN);
 		}
-		else if (m == 2 && pos.turn == white) {
+		else if (m == 2 && pos.turn == WHITE) {
 			counter++;
 			bitbase_KXKX_store_by_index(index, BITBASE_LOSE);
 		}
@@ -210,23 +217,23 @@ int main(void) {
 
 			memset(&pos, 0, sizeof(pos));
 			pos.turn = turn;
-			pos.piece[white][king] = bitboard(king_white);
-			pos.mailbox[king_white] = white_king;
-			pos.piece[black][king] = bitboard(king_black);
-			pos.mailbox[king_black] = black_king;
+			pos.piece[WHITE][KING] = bitboard(king_white);
+			pos.mailbox[king_white] = WHITE_KING;
+			pos.piece[BLACK][KING] = bitboard(king_black);
+			pos.mailbox[king_black] = BLACK_KING;
 			if (piece_white) {
-				pos.piece[white][piece_white] = bitboard(square_white);
+				pos.piece[WHITE][piece_white] = bitboard(square_white);
 				pos.mailbox[square_white] = piece_white;
 			}
 			if (piece_black) {
-				pos.piece[black][piece_black] = bitboard(square_black);
+				pos.piece[BLACK][piece_black] = bitboard(square_black);
 				pos.mailbox[square_black] = piece_black + 6;
 			}
-			pos.piece[white][all] = pos.piece[white][king] | pos.piece[white][piece_white];
-			pos.piece[black][all] = pos.piece[black][king] | pos.piece[black][piece_black];
+			pos.piece[WHITE][ALL] = pos.piece[WHITE][KING] | pos.piece[WHITE][piece_white];
+			pos.piece[BLACK][ALL] = pos.piece[BLACK][KING] | pos.piece[BLACK][piece_black];
 
 			move_t moves[MOVES_MAX];
-			generate_all(&pos, moves);
+			movegen_legal(&pos, moves, MOVETYPE_ALL);
 
 			int exists[4] = { 0 };
 			for (move_t *ptr = moves; *ptr; ptr++) {
@@ -234,19 +241,19 @@ int main(void) {
 				unsigned p = bitbase_KXKX_probe(&pos);
 				undo_move(&pos, ptr);
 				exists[p] = 1;
-				if (p == BITBASE_WIN && pos.turn == white)
+				if (p == BITBASE_WIN && pos.turn == WHITE)
 					break;
-				else if (p == BITBASE_LOSE && pos.turn == black)
+				else if (p == BITBASE_LOSE && pos.turn == BLACK)
 					break;
 			}
 
-			if (exists[BITBASE_WIN] && pos.turn == white) {
+			if (exists[BITBASE_WIN] && pos.turn == WHITE) {
 				bitbase_KXKX_store_by_index(index, BITBASE_WIN);
 				counter++;
 				total++;
 				changed = 1;
 			}
-			else if (exists[BITBASE_LOSE] && pos.turn == black) {
+			else if (exists[BITBASE_LOSE] && pos.turn == BLACK) {
 				bitbase_KXKX_store_by_index(index, BITBASE_LOSE);
 				counter++;
 				total++;
@@ -259,7 +266,7 @@ int main(void) {
 				changed = 1;
 			}
 			else if (!exists[BITBASE_UNKNOWN]) {
-				bitbase_KXKX_store_by_index(index, pos.turn == white ? BITBASE_LOSE : BITBASE_WIN);
+				bitbase_KXKX_store_by_index(index, pos.turn == WHITE ? BITBASE_LOSE : BITBASE_WIN);
 				counter++;
 				total++;
 				changed = 1;
@@ -274,8 +281,7 @@ int main(void) {
 	for (long index = 0; index < BITBASE_KXKX_INDEX_MAX; index++)
 		if (!invalid_KXKX_probe_by_index(index) && bitbase_KXKX_probe_by_index(index) == BITBASE_UNKNOWN)
 			bitbase_KXKX_store_by_index(index, BITBASE_DRAW);
-#endif
-#if 1
+
 	/* KPK bitbase. */
 	for (int turn = 0; turn < 2; turn++) {
 		for (int king_white = 0; king_white < 64; king_white++) {
@@ -332,13 +338,6 @@ int main(void) {
 			}
 		}
 	}
-#endif
-#if 0
-	/* KXKX bitbase seems correct. */
-	FILE *file_KXKX = fopen("KXKX.bb", "wb");
-	fwrite(bitbase_KXKX, sizeof(*bitbase_KXKX), BITBASE_KXKX_TABLE_SIZE, file_KXKX);
-	fclose(file_KXKX);
-#endif
 	write_bitbase("kpk", bitbase_KPK, BITBASE_KPK_TABLE_SIZE);
 	write_bitbase("kpkp", bitbase_KPKP, BITBASE_KPKP_TABLE_SIZE);
 	write_bitbase("krkp", bitbase_KRKP, BITBASE_KRKP_TABLE_SIZE);

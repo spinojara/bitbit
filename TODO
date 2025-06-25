@@ -2,7 +2,6 @@
 - Aspiration window should probably return VALUE_NONE if interrupted.
 - Try pgo (profile guided optimization).
 - Profile code using gcov, operf and gprof.
-- Add colored weakness detection to classical evaluation.
 
 VERY IMPORTANT
 - Verify that the new transposition table works correctly.

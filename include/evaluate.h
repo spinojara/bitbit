@@ -76,8 +76,6 @@ static inline int32_t score_eg(score_t eval) {
 	return (int32_t)ret.v;
 }
 
-int32_t evaluate_classical(const struct position *pos);
-
 void evaluate_print(struct position *pos);
 
 static inline int normal_eval(int32_t eval) {

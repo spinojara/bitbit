@@ -23,7 +23,6 @@
 #include "transposition.h"
 #include "moveorder.h"
 #include "interface.h"
-#include "tables.h"
 #include "endgame.h"
 #include "history.h"
 #include "nnue.h"
@@ -36,7 +35,6 @@ int main(int argc, char **argv) {
 	magicbitboard_init();
 	attackgen_init();
 	bitboard_init();
-	tables_init();
 	search_init();
 	moveorder_init();
 	position_init();
