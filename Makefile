@@ -19,7 +19,7 @@ VERSION   := $(MAJOR).$(MINOR)
 
 MAKEFLAGS += -rR
 
-ARCH       = native
+ARCH      ?= native
 ifneq ($(ARCH), )
 	CARCH = -march=$(ARCH)
 endif
@@ -47,8 +47,8 @@ ifneq ($(TARGET), )
 	CTARGET = -target $(TARGET)
 endif
 
-CFLAGS     = $(CSTANDARD) $(CWARNINGS) $(COPTIMIZE) $(CDEBUG) $(CTARGET) -Iinclude
-LDFLAGS    = $(CFLAGS)
+CFLAGS     = $(CSTANDARD) $(CWARNINGS) $(COPTIMIZE) $(CDEBUG) $(CTARGET) -Iinclude $(EXTRACFLAGS)
+LDFLAGS    = $(CFLAGS) $(EXTRALDFLAGS)
 LDLIBS     = -lm
 
 ifneq ($(DEBUG), )
@@ -129,6 +129,13 @@ nnue: nnueclean bitbit
 
 everything: $(BIN)
 
+bitbit-pgo: objclean pgoclean
+	$(MAKE) ARCH=$(ARCH) DEBUG=$(DEBUG) TARGET=$(TARGET) EXTRACFLAGS="-fprofile-generate" bitbit
+	./bitbit bench , quit
+	llvm-profdata merge *.profraw -output=bitbit.profdata
+	$(MAKE) ARCH=$(ARCH) DEBUG=$(DEBUG) TARGET=$(TARGET) objclean
+	$(MAKE) ARCH=$(ARCH) DEBUG=$(DEBUG) TARGET=$(TARGET) EXTRACFLAGS="-fprofile-use=bitbit.profdata" bitbit
+
 bitbit libbatchbit.so playbit: LDLIBS += -lpthread
 bitbit: $(OBJ_BITBIT)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
@@ -199,14 +206,19 @@ uninstall:
 	$(RM) -f $(DESTDIR)$(MAN6DIR)/{bit,epd,pgn}bit.6
 	$(RM) -f $(DESTDIR)$(LIBDIR)/lib{batch,vis}bit.so
 
-clean: nnueclean
-	$(RM) -rf obj dep
-	$(RM) -f $(BIN)
+clean: objclean nnueclean pgoclean
 
 nnueclean:
 	$(RM) -f src/nnueweights.c
 
+pgoclean:
+	$(RM) -f bitbit.profdata *.profraw
+
+objclean:
+	$(RM) -rf obj dep
+	$(RM) -f $(BIN)
+
 -include $(DEP)
 .PRECIOUS: dep/%.d
 .SUFFIXES: .c .h .d
-.PHONY: all everything clean nnueclean install uninstall
+.PHONY: all everything clean nnueclean pgoclean objclean install uninstall bitbit-pgo
