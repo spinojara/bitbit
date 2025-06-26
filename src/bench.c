@@ -17,6 +17,7 @@
 #include "bench.h"
 
 #include <pthread.h>
+#include <inttypes.h>
 
 #include "timeman.h"
 #include "util.h"
@@ -333,7 +334,7 @@ void *bench_thread(void *tt) {
 		print_bestmove(&pos, move[0], move[1]);
 	}
 
-	printf("time: %ld ms\n", (time_now() - start) / TPPERMS);
+	printf("time: %" PRId64 " ms\n", (time_now() - start) / TPPERMS);
 	return NULL;
 }
 
