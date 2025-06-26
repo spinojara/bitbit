@@ -16,6 +16,8 @@
 
 #include "bench.h"
 
+#include <pthread.h>
+
 #include "timeman.h"
 #include "util.h"
 #include "search.h"
@@ -317,7 +319,7 @@ static const char *fens[] = {
 static const int nodes = 100000;
 static struct position pos;
 
-void bench(struct transpositiontable *tt) {
+void *bench_thread(void *tt) {
 	struct history h = { 0 };
 	struct timeinfo ti = { .nodes = nodes };
 	move_t move[2];
@@ -332,4 +334,22 @@ void bench(struct transpositiontable *tt) {
 	}
 
 	printf("time: %ld ms\n", (time_now() - start) / TPPERMS);
+	return NULL;
+}
+
+void bench(struct transpositiontable *tt) {
+	pthread_t thread;
+	pthread_attr_t attr;
+
+	if (pthread_attr_init(&attr) ||
+			pthread_attr_setstacksize(&attr, 8 * 1024 * 1024) ||
+			pthread_create(&thread, &attr, &bench_thread, tt)) {
+		fprintf(stderr, "error: failed to create thread\n");
+		exit(4);
+	}
+
+	if (pthread_join(thread, NULL)) {
+		fprintf(stderr, "error: pthread_join\n");
+		exit(5);
+	}
 }
