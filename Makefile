@@ -31,7 +31,7 @@ INSTALL    = install
 CC         = clang
 CSTANDARD  = -std=c11
 CWARNINGS  = -Wall -Wextra -Wshadow -pedantic -Wno-unused-result -Wvla
-COPTIMIZE  = -O3 $(CARCH) -flto=full
+COPTIMIZE  = -O3 $(CARCH)
 
 ifeq ($(DEBUG), yes)
 	CDEBUG = -g3 -ggdb
@@ -48,8 +48,20 @@ ifneq ($(TARGET), )
 endif
 
 CFLAGS     = $(CSTANDARD) $(CWARNINGS) $(COPTIMIZE) $(CDEBUG) $(CTARGET) -Iinclude $(EXTRACFLAGS)
+
+ifeq ($(SIMD), avx2)
+	CFLAGS += -DAVX2 -mavx2
+else ifeq ($(SIMD), vnni)
+	CFLAGS += -DVNNI -mavxvnni -mavx2
+endif
+
+ifeq ($(CC), clang)
+	CFLAGS += -flto=full
+else ifeq ($(CC), gcc)
+	CFLAGS += -flto -flto-partition=one
+endif
+
 LDFLAGS    = $(CFLAGS) $(EXTRALDFLAGS)
-LDLIBS     = -lm
 
 ifneq ($(DEBUG), )
 	LDFLAGS += -rdynamic
@@ -59,18 +71,14 @@ ifneq ($(STATIC), )
 	LDFLAGS += -static
 endif
 
-ifeq ($(SIMD), avx2)
-	CFLAGS += -DAVX2 -mavx2
-else ifeq ($(SIMD), vnni)
-	CFLAGS += -DVNNI -mavxvnni -mavx2
-endif
+LDLIBS     = -lm
 
 TT        ?= 256
 NNUE      ?= etc/current.nnue
 
 ifneq ($(SYZYGY), )
-	LDLIBS  += -lfathom
-	DSYZYGY := -DSYZYGY
+	LDLIBS += -lfathom
+	DSYZYGY = -DSYZYGY
 endif
 
 SRC_BASE      = bitboard.c magicbitboard.c attackgen.c move.c \
@@ -127,14 +135,23 @@ all: bitbit
 
 nnue: nnueclean bitbit
 
-everything: $(BIN)
-
 bitbit-pgo: objclean pgoclean
-	$(MAKE) ARCH=$(ARCH) DEBUG=$(DEBUG) TARGET=$(TARGET) EXTRACFLAGS="-fprofile-generate" bitbit
-	./bitbit bench , quit
+	$(MAKE) CC=$(CC) ARCH=$(ARCH) DEBUG=$(DEBUG) TARGET=$(TARGET) $(CC)-pgo
+
+clang-pgo:
+	$(MAKE) CC=clang ARCH=$(ARCH) DEBUG=$(DEBUG) TARGET=$(TARGET) EXTRACFLAGS="-fprofile-generate" bitbit
+	./bitbit bench , quit > /dev/null
 	llvm-profdata merge *.profraw -output=bitbit.profdata
-	$(MAKE) ARCH=$(ARCH) DEBUG=$(DEBUG) TARGET=$(TARGET) objclean
-	$(MAKE) ARCH=$(ARCH) DEBUG=$(DEBUG) TARGET=$(TARGET) EXTRACFLAGS="-fprofile-use=bitbit.profdata" bitbit
+	$(MAKE) CC=clang ARCH=$(ARCH) DEBUG=$(DEBUG) TARGET=$(TARGET) objclean
+	$(MAKE) CC=clang ARCH=$(ARCH) DEBUG=$(DEBUG) TARGET=$(TARGET) EXTRACFLAGS="-fprofile-use=bitbit.profdata" bitbit
+
+gcc-pgo:
+	$(MAKE) CC=gcc ARCH=$(ARCH) DEBUG=$(DEBUG) TARGET=$(TARGET) EXTRACFLAGS="-fprofile-generate=profdir" bitbit
+	./bitbit bench , quit > /dev/null
+	$(MAKE) CC=gcc ARCH=$(ARCH) DEBUG=$(DEBUG) TARGET=$(TARGET) objclean
+	$(MAKE) CC=gcc ARCH=$(ARCH) DEBUG=$(DEBUG) TARGET=$(TARGET) EXTRACFLAGS="-fprofile-use=profdir" bitbit
+
+everything: $(BIN)
 
 bitbit libbatchbit.so playbit: LDLIBS += -lpthread
 bitbit: $(OBJ_BITBIT)
@@ -212,13 +229,12 @@ nnueclean:
 	$(RM) -f src/nnueweights.c
 
 pgoclean:
-	$(RM) -f bitbit.profdata *.profraw
+	$(RM) -rf bitbit.profdata *.profraw profdir
 
 objclean:
-	$(RM) -rf obj dep
-	$(RM) -f $(BIN)
+	$(RM) -rf obj dep $(BIN)
 
 -include $(DEP)
 .PRECIOUS: dep/%.d
 .SUFFIXES: .c .h .d
-.PHONY: all everything clean nnueclean pgoclean objclean install uninstall bitbit-pgo
+.PHONY: all everything clean nnueclean pgoclean objclean install uninstall bitbit-pgo clang-pgo gcc-pgo
