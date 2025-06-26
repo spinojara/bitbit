@@ -31,7 +31,7 @@ INSTALL    = install
 CC         = clang
 CSTANDARD  = -std=c11
 CWARNINGS  = -Wall -Wextra -Wshadow -pedantic -Wno-unused-result -Wvla
-COPTIMIZE  = -O3 $(CARCH)
+COPTIMIZE  = -O3 $(CARCH) -flto=full
 
 ifeq ($(DEBUG), yes)
 	CDEBUG = -g3 -ggdb
