@@ -314,7 +314,7 @@ static const char *fens[] = {
 	"8/8/6K1/8/5q2/8/8/k7 w - - 4 180",
 };
 
-static const int nodes = 10000;
+static const int nodes = 100000;
 static struct position pos;
 
 void bench(struct transpositiontable *tt) {
