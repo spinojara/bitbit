@@ -2,14 +2,12 @@ Building releases
 =================
 Following is a table of binaries and their corresponding make invocation.
 
-+--------------------------------+---------------------------------------------------------------------------------------+
-| Binary                         | Command                                                                               |
-+--------------------------------+---------------------------------------------------------------------------------------+
-| bitbit-x.y-linux-x86-64        | make CC=clang ARCH=x86-64-v2 TT=256 STATIC=yes                                        |
-|                                |                                                                                       |
-| bitbit-x.x-linux-x86-64-avx2   | make CC=clang ARCH=x86-64-v3 TT=256 STATIC=yes SIMD=avx2                              |
-|                                |                                                                                       |
-| bitbit-x.y-windows-x86-64      | make CC=clang ARCH=x86-64-v2 TT=256 STATIC=yes TARGET=x86_64-pc-windows-gnu           |
-|                                |                                                                                       |
-| bitbit-x.x-windows-x86-64-avx2 | make CC=clang ARCH=x86-64-v3 TT=256 STATIC=yes SIMD=avx2 TARGET=x86_64-pc-windows-gnu |
-+--------------------------------+---------------------------------------------------------------------------------------+
++----------------------------+---------------------------------------------------------------------+
+| Binary                     | Command                                                             |
++----------------------------+---------------------------------------------------------------------+
+| bitbit-x.y-z-x86-64        | make bitbit-pgo CC=clang ARCH=x86-64-v2 TT=256 STATIC=yes           |
+|                            |                                                                     |
+| bitbit-x.x-z-x86-64-avx2   | make bitbit-pgo CC=clang ARCH=x86-64-v3 TT=256 STATIC=yes SIMD=avx2 |
++----------------------------+---------------------------------------------------------------------+
+
+The windows binaries are produced using MSYS2.

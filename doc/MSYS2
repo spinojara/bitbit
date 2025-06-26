@@ -1,0 +1,6 @@
+Install MSYS2.
+
+$ pacman -Syu
+$ pacman -S git make mingw-w64-clang-x86_64-clang
+
+To use clang, start a `MSYS2 CLANG64` shell.
