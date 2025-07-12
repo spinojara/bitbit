@@ -121,10 +121,7 @@ void *batch_prepare(void *ptr) {
 		batch->result[batch->size] = result != RESULT_UNKNOWN ? ((2 * dataloader->pos->turn - 1) * result + 1.0) / 2.0 : 0.5;
 
 		int index, square;
-		//const int king_square[] = { orient_horizontal(BLACK, ctz(dataloader->pos->piece[BLACK][KING])), orient_horizontal(WHITE, ctz(dataloader->pos->piece[WHITE][KING])) };
 		int king_square[] = { ctz(dataloader->pos->piece[BLACK][KING]), ctz(dataloader->pos->piece[WHITE][KING]) };
-		king_square[0] = orient(BLACK, king_square[0], king_square[0]);
-		king_square[1] = orient(BLACK, king_square[1], king_square[1]);
 		for (int piece = PAWN; piece <= KING; piece++) {
 			for (int turn = 0; turn <= 1; turn++) {
 				if (piece == KING && turn == dataloader->pos->turn)

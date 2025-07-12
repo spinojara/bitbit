@@ -308,7 +308,6 @@ void refresh_accumulator(struct position *pos, int turn) {
 	memcpy(pos->accumulation[turn], ft_biases, K_HALF_DIMENSIONS * sizeof(*ft_biases));
 	pos->psqtaccumulation[turn] = 0;
 	int king_square = ctz(pos->piece[turn][KING]);
-	king_square = orient(turn, king_square, king_square);
 	uint64_t b;
 	int square;
 	for (int color = 0; color < 2; color++) {
@@ -331,7 +330,6 @@ void do_update_accumulator(struct position *pos, move_t *move, int turn) {
 	int source_square = move_from(move);
 	int target_square = move_to(move);
 	int king_square = ctz(pos->piece[turn][KING]);
-	king_square = orient(turn, king_square, king_square);
 	unsigned index;
 	unsigned indext;
 
@@ -403,7 +401,6 @@ void undo_update_accumulator(struct position *pos, move_t *move, int turn) {
 	int source_square = move_from(move);
 	int target_square = move_to(move);
 	int king_square = ctz(pos->piece[turn][KING]);
-	king_square = orient(turn, king_square, king_square);
 	unsigned index;
 	unsigned indext;
 
