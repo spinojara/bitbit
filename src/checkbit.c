@@ -16,6 +16,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <time.h>
 
 #include "position.h"
 #include "move.h"
@@ -25,15 +27,38 @@
 #include "attackgen.h"
 #include "bitboard.h"
 #include "position.h"
+#include "util.h"
+
+int ends_with(const char *string, const char *end) {
+	unsigned len = strlen(end);
+	if (len > strlen(string))
+		return 1;
+
+	return !strcmp(string + (strlen(string) - len), end);
+}
 
 int main(int argc, char **argv) {
-	if (argc < 2) {
-		fprintf(stderr, "error: no argument\n");
+	if (argc < 2 || argc >= 4) {
+		fprintf(stderr, "usage: %s [--shuffle] file\n", argv[0]);
 		return 1;
 	}
-	FILE *f = fopen(argv[1], "rb");
+	int shuffle = 0;
+	int i = 1;
+	if (argc == 3) {
+		if (!strcmp(argv[1], "--shuffle")) {
+			shuffle = 1;
+			i = 2;
+		}
+		else if (!strcmp(argv[2], "--shuffle")) {
+			shuffle = 1;
+			i = 1;
+		}
+	}
+	if (!ends_with(argv[i], ".bit"))
+		return 11;
+	FILE *f = fopen(argv[i], "rb");
 	if (!f) {
-		fprintf(stderr, "error: failed to open file '%s'\n", argv[1]);
+		fprintf(stderr, "error: failed to open file '%s'\n", argv[i]);
 		return 2;
 	}
 
@@ -50,10 +75,18 @@ int main(int argc, char **argv) {
 
 	int first = 1;
 
+	size_t games = 0;
+	uint64_t *start = NULL;
+	uint64_t *end = NULL;
+
 	while (1) {
 		int r;
-		if ((r = read_move(f, &move)))
-			return r == 2 && feof(f) ? 0 : 3;
+		if ((r = read_move(f, &move))) {
+			if (r == 2 && feof(f))
+				break;
+			else
+				return 3;
+		}
 
 		if (move) {
 			if (first)
@@ -69,6 +102,14 @@ int main(int argc, char **argv) {
 			do_move(&pos, &move);
 		}
 		else {
+			if (shuffle) {
+				games++;
+				start = realloc(start, sizeof(*start) * games);
+				end = realloc(end, sizeof(*end) * games);
+				start[games - 1] = ftell(f) - 2;
+				if (games >= 2)
+					end[games - 2] = start[games - 1];
+			}
 			if (read_position(f, &pos))
 				return 5;
 			if (!pos_is_ok(&pos))
@@ -83,4 +124,63 @@ int main(int argc, char **argv) {
 		if (read_flag(f, &flag))
 			return 10;
 	}
+
+	if (!shuffle)
+		return 0;
+
+	if (games >= 1)
+		end[games - 1] = ftell(f);
+
+	uint64_t seed = time(NULL);
+	for (size_t k = games - 1; k > 0; k--) {
+		size_t j = xorshift64(&seed) % (k + 1);
+		long t;
+		t = start[k];
+		start[k] = start[j];
+		start[j] = t;
+		t = end[k];
+		end[k] = end[j];
+		end[j] = t;
+	}
+
+	char *str = malloc(strlen(argv[i]) + 10);
+	if (!str) {
+		fprintf(stderr, "error: malloc\n");
+		return 12;
+	}
+
+	strcpy(str, argv[i]);
+	str[strlen(str) - 4] = '\0';
+	strcat(str, ".shuffled.bit");
+	FILE *g = fopen(str, "wbx");
+	if (!g) {
+		fprintf(stderr, "error: file '%s' exists\n", str);
+		return 13;
+	}
+
+	for (size_t k = 0; k < games; k++) {
+		char *bytes = malloc(end[k] - start[k]);
+		if (!bytes) {
+			fprintf(stderr, "error: malloc\n");
+			return 13;
+		}
+
+		if (fseek(f, start[k], SEEK_SET)) {
+			fprintf(stderr, "error: fseek\n");
+			return 14;
+		}
+		if (fread(bytes, 1, end[k] - start[k], f) != end[k] - start[k]) {
+			fprintf(stderr, "error: fread\n");
+			return 15;
+		}
+		if (fwrite(bytes, 1, end[k] - start[k], g) != end[k] - start[k]) {
+			fprintf(stderr, "error: fwrite\n");
+			return 16;
+		}
+
+		free(bytes);
+	}
+
+	fclose(g);
+	return 0;
 }
