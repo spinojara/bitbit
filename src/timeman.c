@@ -24,12 +24,6 @@
 #include "util.h"
 #include "option.h"
 
-#ifdef CLOCK_MONOTONIC_RAW
-#define CLOCK CLOCK_MONOTONIC_RAW
-#else
-#define CLOCK CLOCK_MONOTONIC
-#endif
-
 #ifdef TUNE
 #define CONST
 #else
@@ -96,6 +90,6 @@ int stop_searching(struct timeinfo *ti, move_t best_move) {
 
 timepoint_t time_now(void) {
 	struct timespec tp;
-	clock_gettime(CLOCK, &tp);
+	clock_gettime(CLOCK_MONOTONIC, &tp);
 	return (timepoint_t)tp.tv_sec * TPPERSEC + (timepoint_t)tp.tv_nsec;
 }
