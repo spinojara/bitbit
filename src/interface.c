@@ -308,8 +308,8 @@ int interface_version(int argc, char **argv) {
 	char t[8];
 	printf("compilation date: %s\n", date(t));
 	printf("simd: %s\n", simd);
-	printf("transposition table size: %" PRIu64 " B (%" PRIu64 " MiB)\n", tt.size * sizeof(*tt.table), tt.size * sizeof(*tt.table) / (1024 * 1024));
-	printf("transposition entry size: %" PRIu64 " B\n", sizeof(struct transposition));
+	printf("transposition table size: %zu B (%zu MiB)\n", tt.size * sizeof(*tt.table), tt.size * sizeof(*tt.table) / (1024 * 1024));
+	printf("transposition entry size: %zu B\n", sizeof(struct transposition));
 	return DONE;
 }
 
