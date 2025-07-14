@@ -47,7 +47,7 @@ ifneq ($(TARGET), )
 	CTARGET = -target $(TARGET)
 endif
 
-CFLAGS     = $(CSTANDARD) $(CWARNINGS) $(COPTIMIZE) $(CDEBUG) $(CTARGET) -Iinclude -pthread $(EXTRACFLAGS)
+CFLAGS     = $(CSTANDARD) $(CWARNINGS) $(COPTIMIZE) $(CDEBUG) $(CTARGET) -Iinclude -pthread $(EXTRACFLAGS) -msimd128
 
 ifeq ($(SIMD), avx2)
 	CFLAGS += -DAVX2 -mavx2
@@ -61,7 +61,7 @@ else ifeq ($(CC), gcc)
 	CFLAGS += -flto -flto-partition=one
 endif
 
-LDFLAGS    = $(CFLAGS) $(EXTRALDFLAGS)
+LDFLAGS    = $(CFLAGS) $(EXTRALDFLAGS) -sPROXY_TO_PTHREAD -sINITIAL_MEMORY=64MB -sALLOW_MEMORY_GROWTH -sEXIT_RUNTIME
 
 ifneq ($(DEBUG), )
 	LDFLAGS += -rdynamic
@@ -154,7 +154,7 @@ gcc-pgo:
 everything: $(BIN)
 
 bitbit: $(OBJ_BITBIT)
-	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@.js
 weightbit: $(OBJ_WEIGHTBIT)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 epdbit: $(OBJ_EPDBIT)
@@ -188,7 +188,7 @@ obj/tune-%.o: src/%.c dep/%.d
 	@$(MKDIR_P) obj
 	$(CC) $(CFLAGS) -DTUNE -c $< -o $@
 
-src/nnueweights.c: weightbit Makefile
+src/nnueweights.c:
 	./weightbit $(NNUE)
 
 %.so:                            LDFLAGS += -shared
