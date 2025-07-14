@@ -47,7 +47,7 @@ ifneq ($(TARGET), )
 	CTARGET = -target $(TARGET)
 endif
 
-CFLAGS     = $(CSTANDARD) $(CWARNINGS) $(COPTIMIZE) $(CDEBUG) $(CTARGET) -Iinclude $(EXTRACFLAGS)
+CFLAGS     = $(CSTANDARD) $(CWARNINGS) $(COPTIMIZE) $(CDEBUG) $(CTARGET) -Iinclude -pthread $(EXTRACFLAGS)
 
 ifeq ($(SIMD), avx2)
 	CFLAGS += -DAVX2 -mavx2
@@ -71,7 +71,7 @@ ifneq ($(STATIC), )
 	LDFLAGS += -static
 endif
 
-LDLIBS     = -lm
+LDLIBS     = -lm -lpthread
 
 TT        ?= 256
 NNUE      ?= etc/current.nnue
@@ -153,7 +153,6 @@ gcc-pgo:
 
 everything: $(BIN)
 
-bitbit libbatchbit.so playbit: LDLIBS += -lpthread
 bitbit: $(OBJ_BITBIT)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 weightbit: $(OBJ_WEIGHTBIT)
@@ -194,8 +193,7 @@ src/nnueweights.c: weightbit Makefile
 
 %.so:                            LDFLAGS += -shared
 
-obj/thread.o obj/pic-batchbit.o: CFLAGS += -pthread
-obj/playbit.o:                   CFLAGS += $(DSYZYGY) -pthread
+obj/playbit.o:                   CFLAGS += $(DSYZYGY)
 obj/init.o obj/interface.o:      CFLAGS += -DVERSION=$(VERSION)
 obj/interface.o obj/option.o obj/tune-option.o: CFLAGS += -DTT=$(TT)
 
