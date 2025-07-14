@@ -19,7 +19,7 @@ VERSION   := $(MAJOR).$(MINOR)
 
 MAKEFLAGS += -rR
 
-ARCH      ?= native
+ARCH       =
 ifneq ($(ARCH), )
 	CARCH = -march=$(ARCH)
 endif
@@ -28,7 +28,7 @@ MKDIR_P    = mkdir -p
 RM         = rm
 INSTALL    = install
 
-CC         = clang
+CC         = emcc
 CSTANDARD  = -std=c11
 CWARNINGS  = -Wall -Wextra -Wshadow -pedantic -Wno-unused-result -Wvla
 COPTIMIZE  = -O3 $(CARCH)
@@ -47,7 +47,8 @@ ifneq ($(TARGET), )
 	CTARGET = -target $(TARGET)
 endif
 
-CFLAGS     = $(CSTANDARD) $(CWARNINGS) $(COPTIMIZE) $(CDEBUG) $(CTARGET) -Iinclude -pthread $(EXTRACFLAGS) -msimd128
+EXTRACFLAGS ?= -msimd128
+CFLAGS     = $(CSTANDARD) $(CWARNINGS) $(COPTIMIZE) $(CDEBUG) $(CTARGET) -Iinclude -pthread $(EXTRACFLAGS)
 
 ifeq ($(SIMD), avx2)
 	CFLAGS += -DAVX2 -mavx2
@@ -61,7 +62,8 @@ else ifeq ($(CC), gcc)
 	CFLAGS += -flto -flto-partition=one
 endif
 
-LDFLAGS    = $(CFLAGS) $(EXTRALDFLAGS) -sPROXY_TO_PTHREAD -sINITIAL_MEMORY=64MB -sALLOW_MEMORY_GROWTH -sEXIT_RUNTIME
+EXTRALDFLAGS ?= -sPROXY_TO_PTHREAD -sINITIAL_MEMORY=64MB -sALLOW_MEMORY_GROWTH -sEXIT_RUNTIME
+LDFLAGS    = $(CFLAGS) $(EXTRALDFLAGS)
 
 ifneq ($(DEBUG), )
 	LDFLAGS += -rdynamic
@@ -83,15 +85,15 @@ endif
 
 SRC_BASE      = bitboard.c magicbitboard.c attackgen.c move.c \
 	        util.c position.c movegen.c
-SRC           = $(SRC_BASE) perft.c search.c evaluate.c \
+SRC           = nnueweights.c $(SRC_BASE) perft.c search.c evaluate.c \
 	        transposition.c init.c timeman.c history.c \
 		movepicker.c moveorder.c option.c endgame.c nnue.c \
-		nnuefile.c kpk.c kpkp.c krkp.c nnueweights.c io.c
+		nnuefile.c kpk.c kpkp.c krkp.c io.c
 SRC_ALL       = $(SRC_BASE) $(SRC) $(SRC_BIBIT) \
 	        $(SRC_EPDBIT) $(SRC_HISTBIT) $(SRC_PGNBIT) \
 	        $(SRC_BASEBIT) $(SRC_BATCHBIT) \
 	        $(SRC_VISBIT) $(SRC_WNNUEBIT)
-SRC_BITBIT    = bitbit.c interface.c thread.c bench.c $(SRC)
+SRC_BITBIT    = $(SRC) bitbit.c interface.c thread.c bench.c
 SRC_WEIGHTBIT = weightbit.c util.c io.c nnuefile.c
 SRC_EPDBIT    = epdbit.c $(SRC)
 SRC_HISTBIT   = histbit.c $(SRC)
@@ -121,7 +123,7 @@ OBJ_TUNEBIT   = $(patsubst %.c,obj/%.o,$(subst search,tune-search,\
 		$(SRC_BITBIT) tune.c)))))
 OBJ_CHECKBIT  = $(patsubst %.c,obj/%.o,$(SRC_CHECKBIT))
 
-BIN = bitbit weightbit epdbit histbit pgnbit basebit \
+BIN = bitbit.js weightbit epdbit histbit pgnbit basebit \
       libbatchbit.so libvisbit.so tunebit convbit checkbit playbit
 
 PREFIX = /usr/local
@@ -131,9 +133,9 @@ MANPREFIX = $(PREFIX)/share
 MANDIR = $(MANPREFIX)/man
 MAN6DIR = $(MANDIR)/man6
 
-all: bitbit
+all: bitbit.js
 
-nnue: nnueclean bitbit
+nnue: nnueclean bitbit.js
 
 bitbit-pgo: objclean pgoclean
 	$(MAKE) CC=$(CC) ARCH=$(ARCH) DEBUG=$(DEBUG) TARGET=$(TARGET) $(CC)-pgo
@@ -153,8 +155,8 @@ gcc-pgo:
 
 everything: $(BIN)
 
-bitbit: $(OBJ_BITBIT)
-	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@.js
+bitbit.js: $(OBJ_BITBIT)
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 weightbit: $(OBJ_WEIGHTBIT)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 epdbit: $(OBJ_EPDBIT)
@@ -188,8 +190,10 @@ obj/tune-%.o: src/%.c dep/%.d
 	@$(MKDIR_P) obj
 	$(CC) $(CFLAGS) -DTUNE -c $< -o $@
 
-src/nnueweights.c:
+src/nnueweights.c: Makefile
+	$(MAKE) CC=clang EXTRACFLAGS= EXTRALDFLAGS= weightbit
 	./weightbit $(NNUE)
+	$(MAKE) objclean
 
 %.so:                            LDFLAGS += -shared
 
@@ -230,7 +234,7 @@ pgoclean:
 	$(RM) -rf bitbit.profdata *.profraw profdir
 
 objclean:
-	$(RM) -rf obj dep $(BIN)
+	$(RM) -rf obj dep $(BIN) bitbit.wasm
 
 -include $(DEP)
 .PRECIOUS: dep/%.d
