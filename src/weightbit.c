@@ -24,7 +24,7 @@
 alignas(64) static ft_weight_t ft_weights[K_HALF_DIMENSIONS * FT_IN_DIMS];
 alignas(64) static ft_bias_t ft_biases[K_HALF_DIMENSIONS];
 
-alignas(64) static ft_weight_t psqt_weights[FT_IN_DIMS];
+alignas(64) static ft_weight_t psqt_weights[FT_IN_DIMS * PSQT_BUCKETS];
 
 alignas(64) static weight_t hidden1_weights[HIDDEN1_OUT_DIMS * FT_OUT_DIMS];
 alignas(64) static bias_t hidden1_biases[HIDDEN1_OUT_DIMS];
@@ -82,8 +82,8 @@ int main(int argc, char **argv) {
 		fprintf(g, "%d,", ft_biases[i]);
 	}
 	fprintf(g, "\n};\n\n");
-	fprintf(g, "alignas(64) ft_weight_t builtin_psqt_weights[FT_IN_DIMS] = {");
-	for (i = 0; i < FT_IN_DIMS; i++) {
+	fprintf(g, "alignas(64) ft_weight_t builtin_psqt_weights[FT_IN_DIMS * PSQT_BUCKETS] = {");
+	for (i = 0; i < FT_IN_DIMS * PSQT_BUCKETS; i++) {
 		if (i % 32 == 0)
 			fprintf(g, "\n");
 		fprintf(g, "%d,", psqt_weights[i]);

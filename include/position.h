@@ -24,6 +24,7 @@
 #include <stddef.h>
 
 #define K_HALF_DIMENSIONS 128
+#define PSQT_BUCKETS 1
 #define ESSENTIALPOSITION (offsetof(struct position, accumulation))
 
 struct position {
@@ -43,7 +44,7 @@ struct position {
 	uint64_t endgame_key;
 
 	alignas(32) int16_t accumulation[2][K_HALF_DIMENSIONS];
-	alignas(32) int32_t psqtaccumulation[2];
+	alignas(32) int32_t psqtaccumulation[2][PSQT_BUCKETS];
 };
 
 struct pstate {

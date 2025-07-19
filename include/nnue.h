@@ -81,7 +81,7 @@ static inline uint16_t make_index(int turn, int square, int piece, int king_squa
 	return orient(turn, square, king_square) + piece_to_index[turn][piece] + PS_END * king_bucket[orient_horizontal(turn, king_square)];
 }
 
-void add_index_slow(unsigned index, int16_t accumulation[2][K_HALF_DIMENSIONS], int32_t psqtaccumulation[2], int turn);
+void add_index_slow(unsigned index, int16_t accumulation[2][K_HALF_DIMENSIONS], int32_t psqtaccumulation[2][PSQT_BUCKETS], int turn);
 
 void refresh_accumulator(struct position *pos, int turn);
 

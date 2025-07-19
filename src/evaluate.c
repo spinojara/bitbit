@@ -31,7 +31,7 @@ void evaluate_print(struct position *pos) {
 	char pieces[] = " PNBRQKpnbrqk";
 
 	alignas(64) int16_t accumulation[2][K_HALF_DIMENSIONS];
-	alignas(64) int32_t psqtaccumulation[2] = { 0 };
+	alignas(64) int32_t psqtaccumulation[2][PSQT_BUCKETS] = { 0 };
 	printf("+-------+-------+-------+-------+-------+-------+-------+-------+\n");
 	for (int r = 7; r >= 0; r--) {
 		printf("|");
@@ -43,13 +43,13 @@ void evaluate_print(struct position *pos) {
 			int square = make_square(f, r);
 			int piece = pos->mailbox[square];
 			if (uncolored_piece(piece) && uncolored_piece(piece) != KING) {
-				int16_t oldeval = psqtaccumulation[WHITE] - psqtaccumulation[BLACK];
+				int32_t oldeval = psqtaccumulation[WHITE][0] - psqtaccumulation[BLACK][0];
 				for (int color = 0; color < 2; color++) {
 					int king_square = ctz(pos->piece[color][KING]);
 					int index = make_index(color, square, piece, king_square);
 					add_index_slow(index, accumulation, psqtaccumulation, color);
 				}
-				int16_t neweval = psqtaccumulation[WHITE] - psqtaccumulation[BLACK] - oldeval;
+				int32_t neweval = psqtaccumulation[WHITE][0] - psqtaccumulation[BLACK][0] - oldeval;
 
 				if (abs(neweval) >= 2000)
 					printf(" %+.1f |", (double)neweval / 200);
@@ -62,8 +62,8 @@ void evaluate_print(struct position *pos) {
 		}
 		printf("\n+-------+-------+-------+-------+-------+-------+-------+-------+\n");
 	}
-	printf("Psqt: %+.2f\n", (double)(psqtaccumulation[WHITE] - psqtaccumulation[BLACK]) / 200);
+	printf("Psqt: %+.2f\n", (double)(psqtaccumulation[WHITE][0] - psqtaccumulation[BLACK][0]) / 200);
 	int32_t eval = evaluate_nnue(pos);
-	printf("Positional %+.2f\n", (double)((2 * pos->turn - 1) * eval - (psqtaccumulation[WHITE] - psqtaccumulation[BLACK]) / 2) / 100);
+	printf("Positional %+.2f\n", (double)((2 * pos->turn - 1) * eval - (psqtaccumulation[WHITE][0] - psqtaccumulation[BLACK][0]) / 2) / 100);
 	printf("NNUE Evaluation: %+.2f\n", (double)(2 * pos->turn - 1) * eval / 100);
 }

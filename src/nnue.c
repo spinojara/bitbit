@@ -56,7 +56,7 @@ struct data {
 extern alignas(64) ft_weight_t builtin_ft_weights[K_HALF_DIMENSIONS * FT_IN_DIMS];
 extern alignas(64) ft_bias_t builtin_ft_biases[K_HALF_DIMENSIONS];
 
-extern alignas(64) ft_weight_t builtin_psqt_weights[FT_IN_DIMS];
+extern alignas(64) ft_weight_t builtin_psqt_weights[FT_IN_DIMS * PSQT_BUCKETS];
 
 extern alignas(64) weight_t builtin_hidden1_weights[HIDDEN1_OUT_DIMS * FT_OUT_DIMS];
 extern alignas(64) bias_t builtin_hidden1_biases[HIDDEN1_OUT_DIMS];
@@ -72,7 +72,7 @@ extern alignas(64) bias_t builtin_output_biases[1];
 alignas(64) ft_weight_t file_ft_weights[K_HALF_DIMENSIONS * FT_IN_DIMS];
 alignas(64) ft_bias_t file_ft_biases[K_HALF_DIMENSIONS];
 
-alignas(64) ft_weight_t file_psqt_weights[FT_IN_DIMS];
+alignas(64) ft_weight_t file_psqt_weights[FT_IN_DIMS * PSQT_BUCKETS];
 
 alignas(64) weight_t file_hidden1_weights[HIDDEN1_OUT_DIMS * FT_OUT_DIMS];
 alignas(64) bias_t file_hidden1_biases[HIDDEN1_OUT_DIMS];
@@ -263,7 +263,7 @@ static inline int32_t output_layer(int8_t *input, const bias_t *biases, const we
 #endif
 }
 
-static inline void add_index(unsigned index, int16_t accumulation[2][K_HALF_DIMENSIONS], int32_t psqtaccumulation[2], int turn) {
+static inline void add_index(unsigned index, int16_t accumulation[2][K_HALF_DIMENSIONS], int32_t psqtaccumulation[2][PSQT_BUCKETS], int turn) {
 	assert(nnue_init_done);
 	const unsigned offset = K_HALF_DIMENSIONS * index;
 #if defined(AVX2)
@@ -276,18 +276,15 @@ static inline void add_index(unsigned index, int16_t accumulation[2][K_HALF_DIME
 	for (int j = 0; j < K_HALF_DIMENSIONS; j++)
 		accumulation[turn][j] += ft_weights[offset + j];
 #endif
-	psqtaccumulation[turn] += psqt_weights[index];
+	for (int j = 0; j < PSQT_BUCKETS; j++)
+		psqtaccumulation[turn][j] += psqt_weights[PSQT_BUCKETS * index + j];
 }
 
-void add_index_slow(unsigned index, int16_t accumulation[2][K_HALF_DIMENSIONS], int32_t psqtaccumulation[2], int turn) {
-	assert(nnue_init_done);
-	const unsigned offset = K_HALF_DIMENSIONS * index;
-	for (int j = 0; j < K_HALF_DIMENSIONS; j++)
-		accumulation[turn][j] += ft_weights[offset + j];
-	psqtaccumulation[turn] += psqt_weights[index];
+void add_index_slow(unsigned index, int16_t accumulation[2][K_HALF_DIMENSIONS], int32_t psqtaccumulation[2][PSQT_BUCKETS], int turn) {
+	add_index(index, accumulation, psqtaccumulation, turn);
 }
 
-static inline void remove_index(unsigned index, int16_t accumulation[2][K_HALF_DIMENSIONS], int32_t psqtaccumulation[2], int turn) {
+static inline void remove_index(unsigned index, int16_t accumulation[2][K_HALF_DIMENSIONS], int32_t psqtaccumulation[2][PSQT_BUCKETS], int turn) {
 	assert(nnue_init_done);
 	const unsigned offset = K_HALF_DIMENSIONS * index;
 #if defined(AVX2)
@@ -300,13 +297,14 @@ static inline void remove_index(unsigned index, int16_t accumulation[2][K_HALF_D
 	for (int j = 0; j < K_HALF_DIMENSIONS; j++)
 		accumulation[turn][j] -= ft_weights[offset + j];
 #endif
-	psqtaccumulation[turn] -= psqt_weights[index];
+	for (int j = 0; j < PSQT_BUCKETS; j++)
+		psqtaccumulation[turn][j] -= psqt_weights[PSQT_BUCKETS * index + j];
 }
 
 void refresh_accumulator(struct position *pos, int turn) {
 	assert(nnue_init_done);
 	memcpy(pos->accumulation[turn], ft_biases, K_HALF_DIMENSIONS * sizeof(*ft_biases));
-	pos->psqtaccumulation[turn] = 0;
+	memset(pos->psqtaccumulation[turn], 0, PSQT_BUCKETS * sizeof(*pos->psqtaccumulation[turn]));
 	int king_square = ctz(pos->piece[turn][KING]);
 	uint64_t b;
 	int square;
@@ -482,10 +480,10 @@ void do_accumulator(struct position *pos, move_t *move) {
 	do_update_accumulator(pos, move, pos->turn);
 #ifndef NDEBUG
 	int16_t accumulation[2][K_HALF_DIMENSIONS];
-	memcpy(accumulation, pos->accumulation, 2 * K_HALF_DIMENSIONS * sizeof(int16_t));
+	memcpy(accumulation, pos->accumulation, 2 * K_HALF_DIMENSIONS * sizeof(**accumulation));
 
-	int32_t psqtaccumulation[2][8];
-	memcpy(psqtaccumulation, pos->psqtaccumulation, 2 * 8 * sizeof(int16_t));
+	int32_t psqtaccumulation[2][PSQT_BUCKETS];
+	memcpy(psqtaccumulation, pos->psqtaccumulation, 2 * PSQT_BUCKETS * sizeof(**psqtaccumulation));
 
 	refresh_accumulator(pos, 0);
 	refresh_accumulator(pos, 1);
@@ -504,8 +502,8 @@ void do_accumulator(struct position *pos, move_t *move) {
 
 
 	for (int i = 0; i < 2; i++) {
-		for (int j = 0; j < 8; j++) {
-			if (accumulation[i][j] != pos->accumulation[i][j]) {
+		for (int j = 0; j < PSQT_BUCKETS; j++) {
+			if (psqtaccumulation[i][j] != psqtpos->accumulation[i][j]) {
 				printf("ERROR DO PSQT[%d][%d]\n", i, j);
 				print_position(pos);
 				print_move(move);
@@ -530,10 +528,10 @@ void undo_accumulator(struct position *pos, move_t *move) {
 	undo_update_accumulator(pos, move, other_color(pos->turn));
 #ifndef NDEBUG
 	int16_t accumulation[2][K_HALF_DIMENSIONS];
-	memcpy(accumulation, pos->accumulation, 2 * K_HALF_DIMENSIONS * sizeof(int16_t));
+	memcpy(accumulation, pos->accumulation, 2 * K_HALF_DIMENSIONS * sizeof(**accumulation));
 
-	int32_t psqtaccumulation[2][8];
-	memcpy(psqtaccumulation, pos->psqtaccumulation, 2 * 8 * sizeof(int16_t));
+	int32_t psqtaccumulation[2][PSQT_BUCKETS];
+	memcpy(psqtaccumulation, pos->psqtaccumulation, 2 * PSQT_BUCKETS * sizeof(**psqtaccumulation));
 
 	refresh_accumulator(pos, 0);
 	refresh_accumulator(pos, 1);
@@ -541,7 +539,7 @@ void undo_accumulator(struct position *pos, move_t *move) {
 	for (int i = 0; i < 2; i++) {
 		for (int j = 0; j < K_HALF_DIMENSIONS; j++) {
 			if (accumulation[i][j] != pos->accumulation[i][j]) {
-				printf("ERROR UNDO ACCUMULATION[%d][%d]\n", i, j);
+				printf("ERROR DO ACCUMULATION[%d][%d]\n", i, j);
 				print_position(pos);
 				print_move(move);
 				printf("\n");
@@ -552,9 +550,9 @@ void undo_accumulator(struct position *pos, move_t *move) {
 
 
 	for (int i = 0; i < 2; i++) {
-		for (int j = 0; j < 8; j++) {
-			if (accumulation[i][j] != pos->accumulation[i][j]) {
-				printf("ERROR UNDO PSQT[%d][%d]\n", i, j);
+		for (int j = 0; j < PSQT_BUCKETS; j++) {
+			if (psqtaccumulation[i][j] != psqtpos->accumulation[i][j]) {
+				printf("ERROR DO PSQT[%d][%d]\n", i, j);
 				print_position(pos);
 				print_move(move);
 				printf("\n");
@@ -571,7 +569,7 @@ int32_t evaluate_accumulator(const struct position *pos) {
 	transform(pos, pos->accumulation, buf.ft_out);
 	affine_propagate_hidden1(buf.ft_out, buf.hidden1_out, hidden1_biases, hidden1_weights);
 	affine_propagate_hidden2(buf.hidden1_out, buf.hidden2_out, hidden2_biases, hidden2_weights);
-	int32_t psqt = (pos->psqtaccumulation[pos->turn] - pos->psqtaccumulation[other_color(pos->turn)]) / 2;
+	int32_t psqt = (pos->psqtaccumulation[pos->turn][0] - pos->psqtaccumulation[other_color(pos->turn)][0]) / 2;
 	return (output_layer(buf.hidden2_out, output_biases, output_weights)) / FV_SCALE + psqt;
 }
 
