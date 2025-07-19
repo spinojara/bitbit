@@ -35,7 +35,7 @@ struct searchstack {
 	move_t move;
 	move_t excluded_move;
 
-	int32_t static_eval;
+	int32_t eval;
 
 	int64_t (*continuation_history_entry)[13][64];
 };

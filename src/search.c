@@ -67,6 +67,12 @@ CONST double history_regularization = 0.0625;
 
 CONST int aspiration_depth = 5;
 
+CONST int base_lmr = 1024;
+CONST int improving_lmr = 0;
+CONST int pv_node_lmr = 1024;
+CONST int ttcapture_lmr = 1024;
+CONST int cut_node_lmr = 1024;
+
 static int reductions[PLY_MAX] = { 0 };
 
 /* We choose r(x,y)=Clog(x)log(y)+D because it is increasing and concave.
@@ -85,7 +91,7 @@ static inline int late_move_reduction(int index, int depth) {
 	assert(0 <= depth && depth < PLY_MAX);
 	int r = reductions[index] * reductions[depth];
 #if 1
-	return (r >> 10) + 1;
+	return r;
 #else
 	return ((r + 512) >> 10) + 1;
 #endif
@@ -168,7 +174,7 @@ static inline void store_killer_move(const move_t *move, int ply, move_t killers
 static inline void add_history(int64_t *history, int64_t bonus) {
 	*history += bonus;
 #ifdef TUNE
-	*history -= *history * history_regularization;
+	*history -= (int)(*history * history_regularization);
 #else
 	*history -= *history / 16;
 #endif
@@ -439,14 +445,16 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 		goto skip_pruning;
 
 #if 1
-	int32_t estimated_eval = ss->static_eval = evaluate(pos, si);
-	if (tteval != VALUE_NONE && ttbound & (tteval >= estimated_eval ? BOUND_LOWER : BOUND_UPPER))
-		estimated_eval = tteval;
+	ss->eval = evaluate(pos, si);
+	if (tteval != VALUE_NONE && ttbound & (tteval >= ss->eval ? BOUND_LOWER : BOUND_UPPER))
+		ss->eval = tteval;
 #endif
+
+	int improving = (ss - 2)->eval != VALUE_NONE && (ss - 2)->eval < ss->eval;
 
 #if 1
 	/* Razoring (37+-5 Elo). */
-	if (!pv_node && depth <= 8 && estimated_eval + razor1 + razor2 * depth * depth < alpha) {
+	if (!pv_node && depth <= 8 && ss->eval + razor1 + razor2 * depth * depth < alpha) {
 		eval = quiescence(pos, ply, alpha - 1, alpha, si, &pstate, ss);
 		if (eval < alpha)
 			return eval;
@@ -455,16 +463,16 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 #if 1
 	/* Futility pruning (60+-8 Elo). */
 #if 1
-	if (!pv_node && depth <= 6 && estimated_eval - futility * depth > beta)
-		return estimated_eval;
+	if (!pv_node && depth <= 6 && ss->eval - futility * depth > beta)
+		return ss->eval;
 #else
-	if (!pv_node && depth <= 12 && estimated_eval - (100 - 40 * (cut_node && !tthit)) * depth + 70 > beta)
+	if (!pv_node && depth <= 12 && ss->eval - (100 - 40 * (cut_node && !tthit)) * depth + 70 > beta)
 		return beta;
 #endif
 #endif
 #if 1
 	/* Null move pruning (43+-6 Elo). */
-	if (!pv_node && (ss - 1)->move && estimated_eval >= beta && depth >= 3 && has_sliding_piece(pos)) {
+	if (!pv_node && (ss - 1)->move && ss->eval >= beta && depth >= 3 && has_sliding_piece(pos)) {
 		int reduction = 4;
 		int new_depth = clamp(depth - reduction, 1, depth);
 		int ep = pos->en_passant;
@@ -537,8 +545,6 @@ skip_pruning:;
 			continue;
 
 		move_index++;
-
-		int r = late_move_reduction(move_index, depth);
 
 #if 1
 		if (!root_node) {
@@ -617,27 +623,15 @@ skip_pruning:;
 
 		/* Late move reductions. */
 		int full_depth_search = 0;
-#if 0
-		if (new_depth >= 2 && !pstate.checkers && move_index >= (1 + pv_node) && (!move_capture(&move) || cut_node)) {
-#else
-		if (depth >= 2 && !pstate.checkers && move_index >= (1 + pv_node) && (!move_capture(&move) || cut_node)) {
-#endif
+		if (depth >= 2 && !pstate.checkers && move_index >= (1 + pv_node)) {
+			int32_t r = late_move_reduction(move_index, depth);
+			r += base_lmr;
+			r += improving_lmr * improving;
+			r -= pv_node_lmr * pv_node;
+			r += ttcapture_lmr * ttcapture;
+			r += cut_node_lmr * cut_node;
 
-
-#if 1
-			if (pv_node)
-				r -= 1;
-			if (!move_capture(&move) && ttcapture)
-				r += 1;
-			if (cut_node && !move_compare(move, si->killers[ply][0]) && !move_compare(move, si->killers[ply][1]))
-				r += 1;
-#endif
-
-#if 1
-			int lmr_depth = clamp(new_depth - r, 1, new_depth);
-#else
-			int lmr_depth = new_depth;
-#endif
+			int lmr_depth = clamp(new_depth - (r / 1024), 1, new_depth + 1);
 			/* Since this is a child of either a pv, all, or cut node and it is not the first
 			 * child it is an expected cut node. Instead of searching in [-beta, -alpha], we
 			 * expect there to be a cut and it should suffice to search in [-alpha - 1, -alpha].
@@ -774,6 +768,8 @@ int32_t search(struct position *pos, int depth, int verbose, struct timeinfo *ti
 	si.history = history;
 
 	struct searchstack realss[PLY_MAX + 4] = { 0 };
+	for (int i = 0; i < PLY_MAX + 4; i++)
+		realss[i].eval = VALUE_NONE;
 	struct searchstack *ss = &realss[4];
 
 	time_init(pos, si.ti);

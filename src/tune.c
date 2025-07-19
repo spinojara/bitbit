@@ -64,6 +64,12 @@ extern int damp_factor;
 
 extern int aspiration_depth;
 
+extern int base_lmr;
+extern int improving_lmr;
+extern int pv_node_lmr;
+extern int ttcapture_lmr;
+extern int cut_node_lmr;
+
 struct tune tunes[] = {
 	TUNE("razor1", TYPE_INT, &razor1),
 	TUNE("razor2", TYPE_INT, &razor2),
@@ -89,6 +95,12 @@ struct tune tunes[] = {
 	TUNE("dampfactor", TYPE_INT, &damp_factor),
 
 	TUNE("aspirationdepth", TYPE_INT, &aspiration_depth),
+
+	TUNE("baselmr", TYPE_INT, &base_lmr),
+	TUNE("improvinglmr", TYPE_INT, &improving_lmr),
+	TUNE("pvnodelmr", TYPE_INT, &pv_node_lmr),
+	TUNE("ttcapturelmr", TYPE_INT, &ttcapture_lmr),
+	TUNE("cutnodelmr", TYPE_INT, &cut_node_lmr),
 };
 
 int rdi(double f) {
