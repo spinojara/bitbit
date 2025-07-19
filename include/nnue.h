@@ -28,6 +28,8 @@
 
 #define FT_IN_DIMS (32 * PS_END)
 #define FT_OUT_DIMS (K_HALF_DIMENSIONS * 2)
+#define HIDDEN1_OUT_DIMS 16
+#define HIDDEN2_OUT_DIMS 32
 
 #define SHIFT 6
 #define FT_SHIFT 0

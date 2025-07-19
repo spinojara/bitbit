@@ -55,26 +55,26 @@ int nnuefile(FILE *f, ft_weight_t *ft_weights,
 		}
 	}
 
-	for (i = 0; i < 16; i++)
+	for (i = 0; i < HIDDEN1_OUT_DIMS; i++)
 		if (read_uintx(f, &hidden1_biases[i], sizeof(*hidden1_biases)))
 			return 1;
 
-	for (i = 0; i < 16; i++)
+	for (i = 0; i < HIDDEN1_OUT_DIMS; i++)
 		for (k = 0; k < FT_OUT_DIMS; k++)
-			if (read_uintx(f, &hidden1_weights[16 * k + i], sizeof(*hidden1_weights)))
+			if (read_uintx(f, &hidden1_weights[HIDDEN1_OUT_DIMS * k + i], sizeof(*hidden1_weights)))
 				return 1;
 
-	for (i = 0; i < 32; i++)
+	for (i = 0; i < HIDDEN2_OUT_DIMS; i++)
 		if (read_uintx(f, &hidden2_biases[i], sizeof(*hidden2_biases)))
 			return 1;
-	for (i = 0; i < 32; i++)
-		for (k = 0; k < 16; k++)
-			if (read_uintx(f, &hidden2_weights[32 * k + i], sizeof(*hidden2_weights)))
+	for (i = 0; i < HIDDEN2_OUT_DIMS; i++)
+		for (k = 0; k < HIDDEN1_OUT_DIMS; k++)
+			if (read_uintx(f, &hidden2_weights[HIDDEN2_OUT_DIMS * k + i], sizeof(*hidden2_weights)))
 				return 1;
 
 	if (read_uintx(f, output_biases, sizeof(*output_biases)))
 		return 1;
-	for (i = 0; i < 32; i++)
+	for (i = 0; i < HIDDEN2_OUT_DIMS; i++)
 		if (read_uintx(f, &output_weights[i], sizeof(*output_weights)))
 			return 1;
 

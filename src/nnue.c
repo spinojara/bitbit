@@ -58,13 +58,13 @@ extern alignas(64) ft_bias_t builtin_ft_biases[K_HALF_DIMENSIONS];
 
 extern alignas(64) ft_weight_t builtin_psqt_weights[FT_IN_DIMS];
 
-extern alignas(64) weight_t builtin_hidden1_weights[16 * FT_OUT_DIMS];
-extern alignas(64) bias_t builtin_hidden1_biases[16];
+extern alignas(64) weight_t builtin_hidden1_weights[HIDDEN1_OUT_DIMS * FT_OUT_DIMS];
+extern alignas(64) bias_t builtin_hidden1_biases[HIDDEN1_OUT_DIMS];
 
-extern alignas(64) weight_t builtin_hidden2_weights[32 * 16];
-extern alignas(64) bias_t builtin_hidden2_biases[32];
+extern alignas(64) weight_t builtin_hidden2_weights[HIDDEN2_OUT_DIMS * HIDDEN1_OUT_DIMS];
+extern alignas(64) bias_t builtin_hidden2_biases[HIDDEN2_OUT_DIMS];
 
-extern alignas(64) weight_t builtin_output_weights[1 * 32];
+extern alignas(64) weight_t builtin_output_weights[1 * HIDDEN2_OUT_DIMS];
 extern alignas(64) bias_t builtin_output_biases[1];
 
 
@@ -74,13 +74,13 @@ alignas(64) ft_bias_t file_ft_biases[K_HALF_DIMENSIONS];
 
 alignas(64) ft_weight_t file_psqt_weights[FT_IN_DIMS];
 
-alignas(64) weight_t file_hidden1_weights[16 * FT_OUT_DIMS];
-alignas(64) bias_t file_hidden1_biases[16];
+alignas(64) weight_t file_hidden1_weights[HIDDEN1_OUT_DIMS * FT_OUT_DIMS];
+alignas(64) bias_t file_hidden1_biases[HIDDEN1_OUT_DIMS];
 
-alignas(64) weight_t file_hidden2_weights[32 * 16];
-alignas(64) bias_t file_hidden2_biases[32];
+alignas(64) weight_t file_hidden2_weights[HIDDEN2_OUT_DIMS * HIDDEN1_OUT_DIMS];
+alignas(64) bias_t file_hidden2_biases[HIDDEN2_OUT_DIMS];
 
-alignas(64) weight_t file_output_weights[1 * 32];
+alignas(64) weight_t file_output_weights[1 * HIDDEN2_OUT_DIMS];
 alignas(64) bias_t file_output_biases[1];
 
 
@@ -158,7 +158,7 @@ static inline void transform(const struct position *pos, const int16_t accumulat
 
 
 /* (AVX2) After affine_propagate1024to16, the output is in the right order. */
-static inline void affine_propagate1024to16(int8_t *input, int8_t *output,
+static inline void affine_propagate_hidden1(int8_t *input, int8_t *output,
 		const bias_t *biases, const weight_t *weights) {
 #if defined(AVX2)
 	__m256i out0 = ((__m256i *)biases)[0];
@@ -181,15 +181,15 @@ static inline void affine_propagate1024to16(int8_t *input, int8_t *output,
 	*(__m128i *)output = _mm_max_epi8(out, _mm_setzero_si128());
 #else
 	int i, j;
-	bias_t tmp[16];
-	memcpy(tmp, biases, 16 * sizeof(biases[0]));
+	bias_t tmp[HIDDEN1_OUT_DIMS];
+	memcpy(tmp, biases, HIDDEN1_OUT_DIMS * sizeof(biases[0]));
 
 	for (i = 0; i < FT_OUT_DIMS; i++)
 		if (input[i])
-			for (j = 0; j < 16; j++)
-				tmp[j] += input[i] * weights[16 * i + j];
+			for (j = 0; j < HIDDEN1_OUT_DIMS; j++)
+				tmp[j] += input[i] * weights[HIDDEN1_OUT_DIMS * i + j];
 
-	for (j = 0; j < 16; j++)
+	for (j = 0; j < HIDDEN1_OUT_DIMS; j++)
 		output[j] = clamp(tmp[j] >> SHIFT, 0, 127);
 #endif
 }
@@ -197,7 +197,7 @@ static inline void affine_propagate1024to16(int8_t *input, int8_t *output,
 /* (AVX2) After affine_propagate16to32, the output is in the wrong order.
  * More precisely output[8-15] is swapped with output[16-23].
  */
-static inline void affine_propagate16to32(int8_t *input, int8_t *output,
+static inline void affine_propagate_hidden2(int8_t *input, int8_t *output,
 		const bias_t *biases, const weight_t *weights) {
 #if defined(AVX2)
 	__m256i out0 = ((__m256i *)biases)[0];
@@ -206,7 +206,7 @@ static inline void affine_propagate16to32(int8_t *input, int8_t *output,
 	__m256i out3 = ((__m256i *)biases)[3];
 	__m256i weight0, weight1, in, signs;
 
-	for (int i = 0; i < 16; i += 2) {
+	for (int i = 0; i < HIDDEN1_OUT_DIMS; i += 2) {
 		weight0 = ((__m256i *)weights)[i];
 		weight1 = ((__m256i *)weights)[i + 1];
 		in = _mm256_set1_epi16(input[i] | (input[i + 1] << 8));
@@ -228,15 +228,15 @@ static inline void affine_propagate16to32(int8_t *input, int8_t *output,
 	*(__m256i *)output = _mm256_max_epi8(out0, _mm256_setzero_si256());
 #else
 	int i, j;
-	bias_t tmp[32];
-	memcpy(tmp, biases, 32 * sizeof(biases[0]));
+	bias_t tmp[HIDDEN2_OUT_DIMS];
+	memcpy(tmp, biases, HIDDEN2_OUT_DIMS * sizeof(biases[0]));
 
-	for (i = 0; i < 16; i++)
+	for (i = 0; i < HIDDEN1_OUT_DIMS; i++)
 		if (input[i])
-			for (j = 0; j < 32; j++)
-				tmp[j] += input[i] * weights[32 * i + j];
+			for (j = 0; j < HIDDEN2_OUT_DIMS; j++)
+				tmp[j] += input[i] * weights[HIDDEN2_OUT_DIMS * i + j];
 
-	for (j = 0; j < 32; j++)
+	for (j = 0; j < HIDDEN2_OUT_DIMS; j++)
 		output[j] = clamp(tmp[j] >> SHIFT, 0, 127);
 #endif
 }
@@ -257,7 +257,7 @@ static inline int32_t output_layer(int8_t *input, const bias_t *biases, const we
 	return _mm_cvtsi128_si32(sum) + _mm_extract_epi32(sum, 1) + biases[0];
 #else
 	int32_t sum = biases[0];
-	for (int i = 0; i < 32; i++)
+	for (int i = 0; i < HIDDEN2_OUT_DIMS; i++)
 		sum += weights[i] * input[i];
 	return sum;
 #endif
@@ -569,8 +569,8 @@ int32_t evaluate_accumulator(const struct position *pos) {
 	assert(nnue_init_done);
 	struct data buf;
 	transform(pos, pos->accumulation, buf.ft_out);
-	affine_propagate1024to16(buf.ft_out, buf.hidden1_out, hidden1_biases, hidden1_weights);
-	affine_propagate16to32(buf.hidden1_out, buf.hidden2_out, hidden2_biases, hidden2_weights);
+	affine_propagate_hidden1(buf.ft_out, buf.hidden1_out, hidden1_biases, hidden1_weights);
+	affine_propagate_hidden2(buf.hidden1_out, buf.hidden2_out, hidden2_biases, hidden2_weights);
 	int32_t psqt = (pos->psqtaccumulation[pos->turn] - pos->psqtaccumulation[other_color(pos->turn)]) / 2;
 	return (output_layer(buf.hidden2_out, output_biases, output_weights)) / FV_SCALE + psqt;
 }
