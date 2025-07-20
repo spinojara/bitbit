@@ -438,31 +438,21 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	if (pstate.checkers)
 		goto skip_pruning;
 
-#if 1
 	int32_t estimated_eval = ss->static_eval = evaluate(pos, si);
 	if (tteval != VALUE_NONE && ttbound & (tteval >= estimated_eval ? BOUND_LOWER : BOUND_UPPER))
 		estimated_eval = tteval;
-#endif
 
-#if 1
 	/* Razoring (37+-5 Elo). */
 	if (!pv_node && depth <= 8 && estimated_eval + razor1 + razor2 * depth * depth < alpha) {
 		eval = quiescence(pos, ply, alpha - 1, alpha, si, &pstate, ss);
 		if (eval < alpha)
 			return eval;
 	}
-#endif
-#if 1
+
 	/* Futility pruning (60+-8 Elo). */
-#if 1
 	if (!pv_node && depth <= 6 && estimated_eval - futility * depth > beta)
 		return estimated_eval;
-#else
-	if (!pv_node && depth <= 12 && estimated_eval - (100 - 40 * (cut_node && !tthit)) * depth + 70 > beta)
-		return beta;
-#endif
-#endif
-#if 1
+
 	/* Null move pruning (43+-6 Elo). */
 	if (!pv_node && (ss - 1)->move && estimated_eval >= beta && depth >= 3 && has_sliding_piece(pos)) {
 		int reduction = 4;
@@ -478,44 +468,14 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 		if (eval >= beta)
 			return beta;
 	}
-#endif
-#if 0
-	/* Internal iterative deepening. */
-	if (depth >= 4 && (pv_node || cut_node) && !(ttbound & BOUND_UPPER) && !excluded_move && !ttmove) {
-		int reduction = 3;
-		int new_depth = depth - reduction;
-		negamax(pos, new_depth, ply, alpha, beta, cut_node, si, ss);
-		e = transposition_probe(si->tt, pos);
-		if (e) {
-			/* Not this tthit, but last tthit. */
-			if (!tthit) {
-				tteval = adjust_score_mate_get(e->eval, ply);
-				ttbound = e->bound;
-				ttdepth = e->depth;
-				/* Can once more update estimated_eval but maybe
-				 * we won't use it anyway.
-				 */
-			}
-			tthit = 1;
-			ttmove = e->move;
-			ttmove = pseudo_legal(pos, &pstate, &ttmove) ? ttmove : 0;
-		}
-	}
-#endif
-#if 0
-	if (pv_node && !ttmove)
-		depth = max(depth - 3 + (tthit && ttdepth >= depth), 0);
-#endif
 
 #if 0
+	if (all_node && depth >= 6 && !ttmove)
+		depth--;
+#endif
+
 	if (!root_node && depth <= 0)
 		return quiescence(pos, ply, alpha, beta, si, &pstate, ss);
-#endif
-
-#if 0
-	if (cut_node && depth >= 8 && !ttmove)
-		depth -= 2;
-#endif
 
 skip_pruning:;
 	move_t best_move = 0;
