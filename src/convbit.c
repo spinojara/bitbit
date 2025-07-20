@@ -218,14 +218,20 @@ int main(int argc, char **argv) {
 		fgets(e, sizeof(e), in);
 
 		/* Remove newline. */
-		fen[strlen(fen) - 1] = '\0';
-		move[strlen(move) - 1] = '\0';
+		fen[strcspn(fen, "\n")] = '\0';
+		move[strcspn(move, "\n")] = '\0';
+		result[strcspn(result, "\n")] = '\0';
 
 		flag = 0;
 		resultnow = result[7] == '1' ? RESULT_WIN : result[7] == '0' ? RESULT_DRAW : result[7] == '-' ? RESULT_LOSS : RESULT_UNKNOWN;
 
 		if (resultnow == RESULT_UNKNOWN) {
-			fprintf(stderr, "error: bad result\n");
+			fprintf(stderr, "error: bad result '%s'\n", result);
+			return 1;
+		}
+
+		if (move[4 + 5] == 0 && square(move + 2 + 5) == -1) {
+			fprintf(stderr, "error: bad move '%s'\n", move);
 			return 1;
 		}
 
@@ -263,7 +269,9 @@ int main(int argc, char **argv) {
 		}
 
 		eval = clamp(eval * scale_eval, -VALUE_WIN, VALUE_WIN);
-		if (generate_checkers(&pos, pos.turn))
+
+		/* Skip if in check, or promotion or capture. */
+		if (generate_checkers(&pos, pos.turn) || move[4 + 5] || pos.mailbox[square(move + 2 + 5)])
 			flag |= FLAG_SKIP;
 
 		write_eval(out, eval);
