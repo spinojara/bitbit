@@ -32,6 +32,8 @@
 #include "transposition.h"
 #include "search.h"
 #include "moveorder.h"
+#include "timeman.h"
+#include "nnue.h"
 
 /* I don't currently want to spend time refactoring the code to allow for
  * chess960 castling. Since castling is important for game outcomes we require
@@ -221,9 +223,10 @@ int epdbit_position(struct position *pos, struct transpositiontable *tt, uint64_
 	}
 
 	movegen_legal(pos, moves, MOVETYPE_ALL);
+	struct timeinfo ti = { 0 };
 	if (!moves[0] ||
 			(unique && already_written(pos, written_keys, i)) ||
-			(centipawns >= 0 && filter_depth >= 0 && abs(search(pos, filter_depth, 0, NULL, NULL, tt, NULL, 1)) > centipawns))
+			(centipawns >= 0 && filter_depth >= 0 && abs(search(pos, filter_depth, 0, &ti, NULL, tt, NULL, 1)) > centipawns))
 		return 1;
 	return 0;
 }
@@ -319,6 +322,7 @@ int main(int argc, char **argv) {
 	moveorder_init();
 	position_init();
 	transposition_init();
+	nnue_init();
 
 	struct transpositiontable tt;
 	if (filter_depth >= 0)
@@ -334,7 +338,8 @@ int main(int argc, char **argv) {
 
 	for (int i = 0; i < count; i++) {
 		char fen[128];
-		transposition_clear(&tt);
+		if (filter_depth >= 0)
+			transposition_clear(&tt);
 		if (epdbit_position(&pos, &tt, written_keys, i, &seed)) {
 			i--;
 			continue;
