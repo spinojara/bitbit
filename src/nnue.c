@@ -503,7 +503,7 @@ void do_accumulator(struct position *pos, move_t *move) {
 
 	for (int i = 0; i < 2; i++) {
 		for (int j = 0; j < PSQT_BUCKETS; j++) {
-			if (psqtaccumulation[i][j] != psqtpos->accumulation[i][j]) {
+			if (psqtaccumulation[i][j] != pos->psqtaccumulation[i][j]) {
 				printf("ERROR DO PSQT[%d][%d]\n", i, j);
 				print_position(pos);
 				print_move(move);
@@ -551,7 +551,7 @@ void undo_accumulator(struct position *pos, move_t *move) {
 
 	for (int i = 0; i < 2; i++) {
 		for (int j = 0; j < PSQT_BUCKETS; j++) {
-			if (psqtaccumulation[i][j] != psqtpos->accumulation[i][j]) {
+			if (psqtaccumulation[i][j] != pos->psqtaccumulation[i][j]) {
 				printf("ERROR DO PSQT[%d][%d]\n", i, j);
 				print_position(pos);
 				print_move(move);
