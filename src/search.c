@@ -67,11 +67,11 @@ CONST double history_regularization = 0.0625;
 
 CONST int aspiration_depth = 5;
 
-CONST int base_lmr = 1024;
-CONST int improving_lmr = 0;
-CONST int pv_node_lmr = 1024;
-CONST int ttcapture_lmr = 1024;
-CONST int cut_node_lmr = 1024;
+CONST int base_lmr = 1377;
+CONST int improving_lmr = -729;
+CONST int pv_node_lmr = 730;
+CONST int ttcapture_lmr = 170;
+CONST int cut_node_lmr = 907;
 
 static int reductions[PLY_MAX] = { 0 };
 
@@ -90,11 +90,7 @@ static inline int late_move_reduction(int index, int depth) {
 	assert(search_init_done);
 	assert(0 <= depth && depth < PLY_MAX);
 	int r = reductions[index] * reductions[depth];
-#if 1
 	return r;
-#else
-	return ((r + 512) >> 10) + 1;
-#endif
 }
 
 void print_pv(struct position *pos, move_t *pv_move, int ply) {
