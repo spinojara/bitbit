@@ -54,6 +54,8 @@ struct dataloader {
 	struct position *pos;
 
 	double random_skip;
+	int ply;
+	int wdl_skip;
 	int use_result;
 
 	FILE *f;
@@ -63,6 +65,35 @@ struct dataloader {
 
 static inline uint16_t make_index_virtual(int turn, int square, int piece, int king_square) {
 	return orient(turn, square, king_square) + piece_to_index[turn][piece] + FT_IN_DIMS;
+}
+
+/* From https://github.com/official-stockfish/nnue-pytorch
+ * but fitted to bitbit's own data. */
+double win_rate_model(int fullmove, int32_t eval, int result) {
+	double m = (fullmove < 125 ? fullmove : 125) / 64.0;
+	double x = eval / 100.0;
+
+	double a = ((-0.26358 * m + 1.69976) * m + 0.18960) * m + 0.71337;
+	double b = ((-0.06160 * m + 0.40556) * m - 0.13854) * m + 0.47889;
+
+	double w = 1.0 / (1.0 + exp((a - x) / b));
+	double l = 1.0 / (1.0 + exp((a + x) / b));
+	double d = 1.0 - w - l;
+
+	switch (result) {
+	case RESULT_WIN:
+		return w;
+	case RESULT_LOSS:
+		return l;
+	case RESULT_DRAW:
+		return d;
+	default:
+		return 0.0;
+	}
+}
+
+int wdl_skip(int fullmove, int32_t eval, int result, uint64_t *seed) {
+	return bernoulli(1.0 - win_rate_model(fullmove, eval, result), seed);
 }
 
 void *batch_prepare(void *ptr) {
@@ -113,7 +144,7 @@ void *batch_prepare(void *ptr) {
 		if (result == RESULT_UNKNOWN && dataloader->use_result)
 			continue;
 
-		int skip = (eval == VALUE_NONE) || (flag & FLAG_SKIP) || bernoulli(dataloader->random_skip, &dataloader->seed);
+		int skip = (eval == VALUE_NONE) || (flag & FLAG_SKIP) || bernoulli(dataloader->random_skip, &dataloader->seed) || (dataloader->wdl_skip && result != RESULT_UNKNOWN && wdl_skip(dataloader->pos->fullmove, eval, dataloader->pos->turn * result, &dataloader->seed));
 		if (skip)
 			continue;
 
@@ -234,7 +265,7 @@ void bfree(struct batch *batch) {
 	free(batch);
 }
 
-void *loader_open(const char *s, size_t requested_size, double random_skip, int use_result) {
+void *loader_open(const char *s, size_t requested_size, double random_skip, int wdl_skip, int use_result) {
 	FILE *f = fopen(s, "rb");
 	if (!f) {
 		fprintf(stderr, "error: failed to open file %s\n", s);
@@ -247,6 +278,7 @@ void *loader_open(const char *s, size_t requested_size, double random_skip, int 
 
 	dataloader->requested_size = requested_size;
 	dataloader->random_skip = random_skip;
+	dataloader->wdl_skip = wdl_skip;
 	dataloader->use_result = use_result;
 
 	pthread_mutex_init(&dataloader->mutex, NULL);
