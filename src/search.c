@@ -55,8 +55,11 @@ volatile atomic_int uciponder;
 CONST int razor1 = 170;
 CONST int razor2 = 156;
 CONST int futility = 76;
+CONST int futility_improving = 64;
 CONST double red = 24.60;
 CONST int asp = 17;
+
+CONST int futility_depth = 6;
 
 CONST int quad_bonus = 16;
 CONST int quad_malus = 4;
@@ -454,7 +457,7 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	}
 
 	/* Futility pruning (60+-8 Elo). */
-	if (!pv_node && depth <= 6 && ss->eval - futility * depth > beta)
+	if (!pv_node && depth <= futility_depth && ss->eval - futility * depth + futility_improving * improving >= beta && ss->eval >= beta)
 		return ss->eval;
 
 	/* Null move pruning (43+-6 Elo). */

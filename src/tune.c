@@ -70,6 +70,9 @@ extern int pv_node_lmr;
 extern int ttcapture_lmr;
 extern int cut_node_lmr;
 
+extern int futility_depth;
+extern int futility_improving;
+
 struct tune tunes[] = {
 	TUNE("razor1", TYPE_INT, &razor1),
 	TUNE("razor2", TYPE_INT, &razor2),
@@ -101,6 +104,9 @@ struct tune tunes[] = {
 	TUNE("pvnodelmr", TYPE_INT, &pv_node_lmr),
 	TUNE("ttcapturelmr", TYPE_INT, &ttcapture_lmr),
 	TUNE("cutnodelmr", TYPE_INT, &cut_node_lmr),
+
+	TUNE("futilitydepth", TYPE_INT, &futility_depth),
+	TUNE("futilityimproving", TYPE_INT, &futility_improving),
 };
 
 int rdi(double f) {
