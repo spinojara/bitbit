@@ -73,6 +73,8 @@ extern int cut_node_lmr;
 extern int futility_depth;
 extern int futility_improving;
 
+extern double reduce_non_improving;
+
 struct tune tunes[] = {
 	TUNE("razor1", TYPE_INT, &razor1),
 	TUNE("razor2", TYPE_INT, &razor2),
@@ -107,6 +109,8 @@ struct tune tunes[] = {
 
 	TUNE("futilitydepth", TYPE_INT, &futility_depth),
 	TUNE("futilityimproving", TYPE_INT, &futility_improving),
+
+	TUNE("reducenonimproving", TYPE_DOUBLE, &reduce_non_improving),
 };
 
 int rdi(double f) {

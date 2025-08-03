@@ -76,6 +76,8 @@ CONST int pv_node_lmr = 730;
 CONST int ttcapture_lmr = 170;
 CONST int cut_node_lmr = 907;
 
+CONST double reduce_non_improving = 0;
+
 static int reductions[PLY_MAX] = { 0 };
 
 /* We choose r(x,y)=Clog(x)log(y)+D because it is increasing and concave.
@@ -89,11 +91,15 @@ static int reductions[PLY_MAX] = { 0 };
  * its square root we get the formula
  * sqrt(C)=sqrt(1024/((log(3)-log(2))log(255))). D is experimental for now.
  */
-static inline int late_move_reduction(int index, int depth) {
+static inline int late_move_reduction(int improving, int index, int depth) {
 	assert(search_init_done);
 	assert(0 <= depth && depth < PLY_MAX);
 	int r = reductions[index] * reductions[depth];
-	return r;
+#ifdef TUNE
+	return r + !improving * r * reduce_non_improving;
+#else
+	return r + !improving * r * 0;
+#endif
 }
 
 void print_pv(struct position *pos, move_t *pv_move, int ply) {
@@ -583,7 +589,7 @@ skip_pruning:;
 		/* Late move reductions. */
 		int full_depth_search = 0;
 		if (depth >= 2 && !pstate.checkers && move_index >= (1 + pv_node)) {
-			int32_t r = late_move_reduction(move_index, depth);
+			int32_t r = late_move_reduction(improving, move_index, depth);
 			r += base_lmr;
 			r += improving_lmr * improving;
 			r -= pv_node_lmr * pv_node;
