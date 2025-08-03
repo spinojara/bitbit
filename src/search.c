@@ -512,7 +512,7 @@ skip_pruning:;
 		move_index++;
 
 #if 1
-		if (!root_node) {
+		if (!root_node && !pstate.checkers && best_eval > -VALUE_INFINITE) {
 			/* Late move pruning (85+-5 Elo). */
 			if (move_index >= 4 + depth * depth)
 				mp.prune = 1;
