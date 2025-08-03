@@ -446,6 +446,8 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	move_t ttmove = pseudo_legal(pos, &pstate, &ttmove_unsafe) ? ttmove_unsafe : 0;
 	int ttcapture = ttmove ? is_capture(pos, &ttmove) : 0;
 
+	int improving = 0;
+
 	if (pstate.checkers)
 		goto skip_pruning;
 
@@ -453,7 +455,7 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	if (tteval != VALUE_NONE && ttbound & (tteval >= ss->eval ? BOUND_LOWER : BOUND_UPPER))
 		ss->eval = tteval;
 
-	int improving = (ss - 2)->eval != VALUE_NONE && (ss - 2)->eval < ss->eval;
+	improving = (ss - 2)->eval != VALUE_NONE && (ss - 2)->eval < ss->eval;
 
 	/* Razoring (37+-5 Elo). */
 	if (!pv_node && depth <= 8 && ss->eval + razor1 + razor2 * depth * depth < alpha) {
