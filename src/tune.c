@@ -71,7 +71,7 @@ extern int ttcapture_lmr;
 extern int cut_node_lmr;
 
 extern int futility_depth;
-extern int futility_improving;
+extern double futility_improving;
 
 extern double reduce_non_improving;
 
@@ -108,7 +108,7 @@ struct tune tunes[] = {
 	TUNE("cutnodelmr", TYPE_INT, &cut_node_lmr),
 
 	TUNE("futilitydepth", TYPE_INT, &futility_depth),
-	TUNE("futilityimproving", TYPE_INT, &futility_improving),
+	TUNE("futilityimproving", TYPE_DOUBLE, &futility_improving),
 
 	TUNE("reducenonimproving", TYPE_DOUBLE, &reduce_non_improving),
 };

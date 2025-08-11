@@ -55,7 +55,7 @@ volatile atomic_int uciponder;
 CONST int razor1 = 170;
 CONST int razor2 = 156;
 CONST int futility = 76;
-CONST int futility_improving = 64;
+CONST double futility_improving = 1.09;
 CONST double red = 24.60;
 CONST int asp = 17;
 
@@ -76,7 +76,7 @@ CONST int pv_node_lmr = 730;
 CONST int ttcapture_lmr = 170;
 CONST int cut_node_lmr = 907;
 
-CONST double reduce_non_improving = 0;
+CONST double reduce_non_improving = 0.20112;
 
 static int reductions[PLY_MAX] = { 0 };
 
@@ -91,15 +91,11 @@ static int reductions[PLY_MAX] = { 0 };
  * its square root we get the formula
  * sqrt(C)=sqrt(1024/((log(3)-log(2))log(255))). D is experimental for now.
  */
-static inline int late_move_reduction(int improving, int index, int depth) {
+static inline int late_move_reduction(int improvement, int index, int depth) {
 	assert(search_init_done);
 	assert(0 <= depth && depth < PLY_MAX);
 	int r = reductions[index] * reductions[depth];
-#ifdef TUNE
-	return r + !improving * r * reduce_non_improving;
-#else
-	return r + !improving * r * 0;
-#endif
+	return r;
 }
 
 void print_pv(struct position *pos, move_t *pv_move, int ply) {
@@ -446,16 +442,18 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	move_t ttmove = pseudo_legal(pos, &pstate, &ttmove_unsafe) ? ttmove_unsafe : 0;
 	int ttcapture = ttmove ? is_capture(pos, &ttmove) : 0;
 
-	int improving = 0;
+	int32_t improvement = 0;
 
-	if (pstate.checkers)
+	if (pstate.checkers) {
+		ss->eval = VALUE_NONE;
 		goto skip_pruning;
+	}
 
 	ss->eval = evaluate(pos, si);
 	if (tteval != VALUE_NONE && ttbound & (tteval >= ss->eval ? BOUND_LOWER : BOUND_UPPER))
 		ss->eval = tteval;
 
-	improving = (ss - 2)->eval != VALUE_NONE && (ss - 2)->eval < ss->eval;
+	improvement = (ss - 2)->eval != VALUE_NONE ? clamp(ss->eval - (ss - 2)->eval, 0, 128) : 0;
 
 	/* Razoring (37+-5 Elo). */
 	if (!pv_node && depth <= 8 && ss->eval + razor1 + razor2 * depth * depth < alpha) {
@@ -465,7 +463,13 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	}
 
 	/* Futility pruning (60+-8 Elo). */
-	if (!pv_node && depth <= futility_depth && ss->eval - futility * depth + futility_improving * improving >= beta && ss->eval >= beta)
+	if (!pv_node && depth <= futility_depth &&
+#ifdef TUNE
+			ss->eval - futility * depth + futility_improving * improvement >= beta &&
+#else
+			ss->eval - futility * depth + 279 * improvement / 256 >= beta &&
+#endif
+			ss->eval >= beta)
 		return ss->eval;
 
 	/* Null move pruning (43+-6 Elo). */
@@ -591,9 +595,9 @@ skip_pruning:;
 		/* Late move reductions. */
 		int full_depth_search = 0;
 		if (depth >= 2 && !pstate.checkers && move_index >= (1 + pv_node)) {
-			int32_t r = late_move_reduction(improving, move_index, depth);
+			int32_t r = late_move_reduction(improvement, move_index, depth);
 			r += base_lmr;
-			r += improving_lmr * improving;
+			r += improving_lmr * (improvement > 0);
 			r -= pv_node_lmr * pv_node;
 			r += ttcapture_lmr * ttcapture;
 			r += cut_node_lmr * cut_node;
