@@ -56,7 +56,7 @@ CONST int razor1 = 170;
 CONST int razor2 = 156;
 CONST int futility = 76;
 CONST double futility_improving = 1.09;
-CONST double red = 24.60;
+CONST double red = 25.439;
 CONST int asp = 17;
 
 CONST int futility_depth = 6;
@@ -70,13 +70,15 @@ CONST double history_regularization = 0.0625;
 
 CONST int aspiration_depth = 5;
 
-CONST int base_lmr = 1377;
-CONST int improving_lmr = -729;
-CONST int pv_node_lmr = 730;
-CONST int ttcapture_lmr = 170;
-CONST int cut_node_lmr = 907;
+CONST int base_lmr = 277;
+CONST int improving_lmr = -649;
+CONST int pv_node_lmr = 573;
+CONST int ttcapture_lmr = 100;
+CONST int cut_node_lmr = 634;
 
-CONST double reduce_non_improving = 0.20112;
+CONST double reduce_non_improving = 0.39935;
+
+CONST int prune_depth = 4;
 
 static int reductions[PLY_MAX] = { 0 };
 
@@ -95,7 +97,11 @@ static inline int late_move_reduction(int improvement, int index, int depth) {
 	assert(search_init_done);
 	assert(0 <= depth && depth < PLY_MAX);
 	int r = reductions[index] * reductions[depth];
-	return r;
+#ifdef TUNE
+	return r + reduce_non_improving * r * max(-improvement, 0) / 128;
+#else
+	return r + 102 * r * max(-improvement, 0) / 32768;
+#endif
 }
 
 void print_pv(struct position *pos, move_t *pv_move, int ply) {
@@ -453,7 +459,7 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	if (tteval != VALUE_NONE && ttbound & (tteval >= ss->eval ? BOUND_LOWER : BOUND_UPPER))
 		ss->eval = tteval;
 
-	improvement = (ss - 2)->eval != VALUE_NONE ? clamp(ss->eval - (ss - 2)->eval, 0, 128) : 0;
+	improvement = (ss - 2)->eval != VALUE_NONE ? clamp(ss->eval - (ss - 2)->eval, -128, 128) : 0;
 
 	/* Razoring (37+-5 Elo). */
 	if (!pv_node && depth <= 8 && ss->eval + razor1 + razor2 * depth * depth < alpha) {
@@ -465,9 +471,9 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	/* Futility pruning (60+-8 Elo). */
 	if (!pv_node && depth <= futility_depth &&
 #ifdef TUNE
-			ss->eval - futility * depth + futility_improving * improvement >= beta &&
+			ss->eval - futility * depth + futility_improving * max(improvement, 0) >= beta &&
 #else
-			ss->eval - futility * depth + 279 * improvement / 256 >= beta &&
+			ss->eval - futility * depth + 279 * max(improvement, 0) / 256 >= beta &&
 #endif
 			ss->eval >= beta)
 		return ss->eval;
@@ -520,7 +526,7 @@ skip_pruning:;
 #if 1
 		if (!root_node && !pstate.checkers && best_eval > -VALUE_INFINITE) {
 			/* Late move pruning (85+-5 Elo). */
-			if (move_index >= 4 + depth * depth)
+			if (move_index >= prune_depth + depth * depth)
 				mp.prune = 1;
 		}
 #endif
@@ -597,7 +603,7 @@ skip_pruning:;
 		if (depth >= 2 && !pstate.checkers && move_index >= (1 + pv_node)) {
 			int32_t r = late_move_reduction(improvement, move_index, depth);
 			r += base_lmr;
-			r += improving_lmr * (improvement > 0);
+			r += improving_lmr * max(improvement, 0) / 128;
 			r -= pv_node_lmr * pv_node;
 			r += ttcapture_lmr * ttcapture;
 			r += cut_node_lmr * cut_node;

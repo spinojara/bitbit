@@ -75,6 +75,8 @@ extern double futility_improving;
 
 extern double reduce_non_improving;
 
+extern int prune_depth;
+
 struct tune tunes[] = {
 	TUNE("razor1", TYPE_INT, &razor1),
 	TUNE("razor2", TYPE_INT, &razor2),
@@ -111,6 +113,8 @@ struct tune tunes[] = {
 	TUNE("futilityimproving", TYPE_DOUBLE, &futility_improving),
 
 	TUNE("reducenonimproving", TYPE_DOUBLE, &reduce_non_improving),
+
+	TUNE("prunedepth", TYPE_INT, &prune_depth),
 };
 
 int rdi(double f) {
