@@ -288,6 +288,8 @@ int interface_go(int argc, char **argv) {
 			}
 			else if (strcmp(argv[i], "movestogo") == 0)
 				ti.movestogo = strint(argv[i + 1]);
+			else if (strcmp(argv[i], "nodes") == 0)
+				ti.nodes = strint(argv[i + 1]);
 		}
 		if (strcmp(argv[i], "ponder") == 0)
 			atomic_store_explicit(&uciponder, 1, memory_order_relaxed);
