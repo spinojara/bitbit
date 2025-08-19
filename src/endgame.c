@@ -74,14 +74,10 @@ void endgame_store(const char *str, int32_t (*evaluate)(const struct position *p
 		for (size_t i = 0, j = 0, k = 0, K = 0; i < strlen(str); i++) {
 			if (str[i] == 'K')
 				K++;
-			if (K == 1) {
-				char c = str[i];
-				strong[j++] = c;
-			}
-			else if (K == 2) {
-				char c = str[i];
-				weak[k++] = c;
-			}
+			if (K == 1)
+				strong[j++] = str[i];
+			else if (K == 2)
+				weak[k++] = str[i];
 			strong[j] = '\0';
 			weak[k] = '\0';
 		}
@@ -116,12 +112,9 @@ void endgame_store(const char *str, int32_t (*evaluate)(const struct position *p
 	}
 }
 
+#ifndef NDEBUG
 /* This function makes sure that the hashing of endgames is injective. */
 void endgame_test(void) {
-#ifdef NDEBUG
-	printf("Assertions need to be enabled for endgame_test to work properly.\n");
-	exit(1);
-#endif
 	struct position pos = { 0 };
 	size_t max_pieces[] = { 0, 9, 11, 11, 11, 10 };
 	size_t max_index = 1;
@@ -166,6 +159,7 @@ outer:;
 	}
 	printf("Endgame table works correctly.\n");
 }
+#endif
 
 /* +---+---+---+---+---+---+---+---+
  * | 6 | 5 | 4 | 3 | 3 | 4 | 5 | 6 |
