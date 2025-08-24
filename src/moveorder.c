@@ -57,12 +57,17 @@ int see_geq(struct position *pos, const move_t *move, int32_t value) {
 	if (swap < 0)
 		return 0;
 
+	if (attacker == KING)
+		return swap >= 0;
+
 	swap = move_order_piece_value[attacker] - swap;
 	if (swap <= 0)
 		return 1;
 
-	pos->piece[them][victim] ^= tob;
-	pos->piece[them][ALL] ^= tob;
+	if (victim) {
+		pos->piece[them][victim] ^= tob;
+		pos->piece[them][ALL] ^= tob;
+	}
 	pos->piece[us][attacker] ^= tob | fromb;
 	pos->piece[us][ALL] ^= tob | fromb;
 
@@ -162,8 +167,10 @@ int see_geq(struct position *pos, const move_t *move, int32_t value) {
 		if (discovery[turn] & ~occupied)
 			break;
 	}
-	pos->piece[them][victim] ^= tob;
-	pos->piece[them][ALL] ^= tob;
+	if (victim) {
+		pos->piece[them][victim] ^= tob;
+		pos->piece[them][ALL] ^= tob;
+	}
 	pos->piece[us][attacker] ^= tob | fromb;
 	pos->piece[us][ALL] ^= tob | fromb;
 	return ret;
