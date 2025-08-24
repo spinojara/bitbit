@@ -54,6 +54,8 @@ int transposition_alloc(struct transpositiontable *tt, size_t bytes) {
 }
 
 int transposition_occupancy(const struct transpositiontable *tt, int bound) {
+	if (tt->size == 0)
+		return 0;
 	uint64_t occupied = 0;
 	for (size_t i = 0; i < tt->size; i++) {
 		struct transposition *e = &tt->table[i];
