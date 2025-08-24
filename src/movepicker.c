@@ -32,13 +32,12 @@
 
 CONST int from_attack = 10000;
 CONST int into_attack = 15000;
-CONST int not_defended = 12500;
-CONST int check_threat = 15000;
+CONST int check_threat = 28577;
 
-CONST double mvv_lva_factor = 1.0;
-CONST double continuation_history_factor = 1.0;
+CONST double mvv_lva_factor = 4.83;
+CONST double continuation_history_factor = 8.08;
 
-CONST int goodquiet_threshold = -8000;
+CONST int goodquiet_threshold = 5715;
 
 static inline int good_capture(struct position *pos, move_t *move, int threshold) {
 	return (is_capture(pos, move) || move_flag(move) == MOVE_EN_PASSANT) && see_geq(pos, move, threshold);
@@ -90,7 +89,7 @@ void evaluate_nonquiet(struct movepicker *mp) {
 #ifdef TUNE
 		mp->eval[i] += mvv_lva_factor * (victim ? mvv_lva(uncolored_piece(attacker), victim) : 0);
 #else
-		mp->eval[i] += 1 * (victim ? mvv_lva(uncolored_piece(attacker), victim) : 0);
+		mp->eval[i] += 5 * (victim ? mvv_lva(uncolored_piece(attacker), victim) : 0);
 #endif
 	}
 }
@@ -113,27 +112,26 @@ void evaluate_quiet(struct movepicker *mp) {
 #ifdef TUNE
 			mp->eval[i] += continuation_history_factor * (*(mp->ss - 1)->continuation_history_entry)[attacker][to_square];
 #else
-			mp->eval[i] += 1 * (*(mp->ss - 1)->continuation_history_entry)[attacker][to_square];
+			mp->eval[i] += 8 * (*(mp->ss - 1)->continuation_history_entry)[attacker][to_square];
 #endif
 		if ((mp->ss - 2)->move)
 #ifdef TUNE
 			mp->eval[i] += continuation_history_factor * (*(mp->ss - 2)->continuation_history_entry)[attacker][to_square];
 #else
-			mp->eval[i] += 1 * (*(mp->ss - 2)->continuation_history_entry)[attacker][to_square];
+			mp->eval[i] += 8 * (*(mp->ss - 2)->continuation_history_entry)[attacker][to_square];
 #endif
 		if ((mp->ss - 4)->move)
 #ifdef TUNE
 			mp->eval[i] += continuation_history_factor * (*(mp->ss - 4)->continuation_history_entry)[attacker][to_square];
 #else
-			mp->eval[i] += 1 * (*(mp->ss - 4)->continuation_history_entry)[attacker][to_square];
+			mp->eval[i] += 8 * (*(mp->ss - 4)->continuation_history_entry)[attacker][to_square];
 #endif
 		attacker = uncolored_piece(attacker);
 		if (from & attacked[attacker])
-			mp->eval[i] += from_attack;
-		if (to & attacked[attacker])
-			mp->eval[i] -= into_attack;
-		else if (to & mp->pstate->attacked[ALL] && !generate_defenders(mp->pos, move))
-			mp->eval[i] -= not_defended;
+			mp->eval[i] += 100000000;
+
+		if (!see_geq(mp->pos, &mp->move[i], 0))
+			mp->eval[i] -= 1000000000;
 
 		if (to & mp->pstate->check_threats[attacker])
 			mp->eval[i] += check_threat;

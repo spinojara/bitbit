@@ -50,7 +50,6 @@ extern double instability2;
 
 extern int from_attack;
 extern int into_attack;
-extern int not_defended;
 extern int check_threat;
 extern double mvv_lva_factor;
 extern double continuation_history_factor;
@@ -89,7 +88,6 @@ struct tune tunes[] = {
 
 	TUNE("fromattack", TYPE_INT, &from_attack),
 	TUNE("intoattack", TYPE_INT, &into_attack),
-	TUNE("notdefended", TYPE_INT, &not_defended),
 	TUNE("checkthreat", TYPE_INT, &check_threat),
 	TUNE("mvvlvafactor", TYPE_DOUBLE, &mvv_lva_factor),
 	TUNE("continuationhistoryfactor", TYPE_DOUBLE, &continuation_history_factor),
