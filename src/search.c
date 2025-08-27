@@ -110,6 +110,8 @@ void print_pv(struct position *pos, move_t *pv_move, int ply) {
 	char str[8];
 	if (!(ply < PLY_MAX) || !(pseudo_legal(pos, &pstate, pv_move) && legal(pos, &pstate, pv_move)))
 		return;
+	if (ply == 0)
+		printf("pv");
 	printf(" %s", move_str_algebraic(str, pv_move));
 	do_move(pos, pv_move);
 	print_pv(pos, pv_move + 1, ply + 1);
@@ -138,16 +140,18 @@ void print_info(struct position *pos, struct searchinfo *si, int depth, int32_t 
 		if (hf >= 0)
 			printf("hashfull %d ", hf);
 	}
-	printf("pv");
 	print_pv(pos, si->pv[0], 0);
 	printf("\n");
 }
 
 void print_bestmove(struct position *pos, move_t best_move, move_t ponder_move) {
+	struct pstate pstate;
+	pstate_init(pos, &pstate);
+	if (!pseudo_legal(pos, &pstate, &best_move) || !legal(pos, &pstate, &best_move))
+		return;
 	char str[6];
 	printf("bestmove %s", move_str_algebraic(str, &best_move));
 	do_move(pos, &best_move);
-	struct pstate pstate;
 	pstate_init(pos, &pstate);
 	if (pseudo_legal(pos, &pstate, &ponder_move) && legal(pos, &pstate, &ponder_move))
 		printf(" ponder %s\n", move_str_algebraic(str, &ponder_move));
@@ -696,11 +700,10 @@ skip_pruning:;
 	return best_eval;
 }
 
-int32_t aspiration_window(struct position *pos, int depth, int verbose, int32_t last, struct searchinfo *si, struct searchstack *ss) {
-	int32_t eval = VALUE_NONE;
-	int32_t delta = asp + last * last / 16384;
-	int32_t alpha = max(last - delta, -VALUE_MATE);
-	int32_t beta = min(last + delta, VALUE_MATE);
+int32_t aspiration_window(struct position *pos, int depth, int verbose, int32_t eval, struct searchinfo *si, struct searchstack *ss) {
+	int32_t delta = asp + eval * eval / 16384;
+	int32_t alpha = max(eval - delta, -VALUE_INFINITE);
+	int32_t beta = min(eval + delta, VALUE_INFINITE);
 
 	while (1) {
 		eval = negamax(pos, depth, 0, alpha, beta, 0, si, ss);
@@ -711,13 +714,14 @@ int32_t aspiration_window(struct position *pos, int depth, int verbose, int32_t 
 		if (eval <= alpha) {
 			eval = alpha;
 			bound = BOUND_UPPER;
-			alpha = max(alpha - delta, -VALUE_MATE);
-			beta = (alpha + 3 * beta) / 4;
+			beta = (alpha + beta) / 2;
+			alpha = max(eval - delta, -VALUE_INFINITE);
 		}
 		else if (eval >= beta) {
 			eval = beta;
 			bound = BOUND_LOWER;
-			beta = min(beta + delta, VALUE_MATE);
+			alpha = alpha;
+			beta = min(eval + delta, VALUE_INFINITE);
 		}
 		else {
 			return eval;
@@ -771,7 +775,7 @@ int32_t search(struct position *pos, int depth, int verbose, struct timeinfo *ti
 
 		/* Minimum seems to be around d <= 5. */
 		if (d <= aspiration_depth || !iterative)
-			eval = negamax(pos, d, 0, -VALUE_MATE, VALUE_MATE, 0, &si, ss);
+			eval = negamax(pos, d, 0, -VALUE_INFINITE, VALUE_INFINITE, 0, &si, ss);
 		else
 			eval = aspiration_window(pos, d, verbose, eval, &si, ss);
 
