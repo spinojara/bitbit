@@ -439,14 +439,14 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 
 	move_t excluded_move = ss->excluded_move;
 
-	struct transposition *e = excluded_move ? NULL : transposition_probe(si->tt, pos);
+	struct transposition *e = transposition_probe(si->tt, pos);
 	int tthit = e != NULL;
 	int32_t tteval = tthit ? adjust_score_mate_get(e->eval, ply, pos->halfmove) : VALUE_NONE;
 	int ttbound = tthit ? e->bound : 0;
 	int ttdepth = tthit ? e->depth : 0;
 	move_t ttmove_unsafe = root_node ? si->pv[0][0] : tthit ? e->move : 0;
 
-	if (!pv_node && tthit && normal_eval(tteval) && ttdepth >= depth && ttbound & (tteval >= beta ? BOUND_LOWER : BOUND_UPPER))
+	if (!pv_node && tthit && !excluded_move && normal_eval(tteval) && ttdepth >= depth && ttbound & (tteval >= beta ? BOUND_LOWER : BOUND_UPPER))
 		return tteval;
 
 	move_t ttmove = pseudo_legal(pos, &pstate, &ttmove_unsafe) ? ttmove_unsafe : 0;
@@ -460,7 +460,7 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	}
 
 	ss->eval = evaluate(pos, si);
-	if (tteval != VALUE_NONE && ttbound & (tteval >= ss->eval ? BOUND_LOWER : BOUND_UPPER))
+	if (tteval != VALUE_NONE && !excluded_move && ttbound & (tteval >= ss->eval ? BOUND_LOWER : BOUND_UPPER))
 		ss->eval = tteval;
 
 	improvement = (ss - 2)->eval != VALUE_NONE ? clamp(ss->eval - (ss - 2)->eval, -128, 128) : 0;
@@ -497,11 +497,6 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 		if (eval >= beta)
 			return beta;
 	}
-
-#if 0
-	if (all_node && depth >= 6 && !ttmove)
-		depth--;
-#endif
 
 	if (!root_node && depth <= 0)
 		return quiescence(pos, ply, alpha, beta, si, &pstate, ss);
