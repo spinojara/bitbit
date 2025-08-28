@@ -712,15 +712,12 @@ int32_t aspiration_window(struct position *pos, int depth, int verbose, int32_t 
 
 		int bound = 0;
 		if (eval <= alpha) {
-			eval = alpha;
 			bound = BOUND_UPPER;
 			beta = (alpha + beta) / 2;
 			alpha = max(eval - delta, -VALUE_INFINITE);
 		}
 		else if (eval >= beta) {
-			eval = beta;
 			bound = BOUND_LOWER;
-			alpha = alpha;
 			beta = min(eval + delta, VALUE_INFINITE);
 		}
 		else {
@@ -728,7 +725,7 @@ int32_t aspiration_window(struct position *pos, int depth, int verbose, int32_t 
 		}
 
 		if (verbose)
-			print_info(pos, si, depth, eval, bound);
+			print_info(pos, si, depth, bound == BOUND_UPPER ? alpha : beta, bound);
 
 		delta += delta / 3;
 	}
