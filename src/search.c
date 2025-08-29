@@ -532,58 +532,48 @@ skip_pruning:;
 
 		/* Extensions. */
 		int extensions = 0;
-#if 1
-		if (ply < 2 * si->root_depth) {
-#if 1
-			if (!root_node && depth >= 5 && move_compare(ttmove, move) && !excluded_move && ttbound & BOUND_LOWER && ttdepth >= depth - 3) {
-				int reduction = 3;
-				int new_depth = depth - reduction;
+		if (!root_node && depth >= 5 && move_compare(ttmove, move) && !excluded_move && ttbound & BOUND_LOWER && ttdepth >= depth - 3) {
+			int reduction = 3;
+			int new_depth = depth - reduction;
 
-				int32_t singular_beta = tteval - 2 * depth;
+			int32_t singular_beta = tteval - 2 * depth;
 
-				ss->excluded_move = move;
-				eval = negamax(pos, new_depth, ply, singular_beta - 1, singular_beta, cut_node, si, ss);
-				ss->excluded_move = 0;
+			ss->excluded_move = move;
+			eval = negamax(pos, new_depth, ply, singular_beta - 1, singular_beta, cut_node, si, ss);
+			ss->excluded_move = 0;
 
-				/* Singular extension (29+-5 Elo).
-				 * If eval < singular_beta we have the following inequalities,
-				 * eval < singular_beta < tteval <= exact_eval since tteval is
-				 * a lower bound. In particular all moves except ttmove fail
-				 * low on [singular_beta - 1, singular_beta] and ttmove is the
-				 * single best move by some margin.
-				 */
-				if (eval < singular_beta)
-					extensions = 1;
-#if 1
-				/* Multi cut (6+-4 Elo).
-				 * Now eval >= singular_beta. If also singular_beta >= beta
-				 * we get the inequalities
-				 * eval >= singular_beta >= beta and we have another move
-				 * that fails high. We assume at least one move fails high
-				 * on a regular search and we thus return beta.
-				 */
-#if 1
-				else if (singular_beta >= beta && !pstate.checkers)
-					return singular_beta;
-#endif
-				/* We get the following inequalities,
-				 * singular_beta < beta <= tteval < exact_eval.
-				 */
+			/* Singular extension (29+-5 Elo).
+			 * If eval < singular_beta we have the following inequalities,
+			 * eval < singular_beta < tteval <= exact_eval since tteval is
+			 * a lower bound. In particular all moves except ttmove fail
+			 * low on [singular_beta - 1, singular_beta] and ttmove is the
+			 * single best move by some margin.
+			 */
+			if (eval < singular_beta)
+				extensions = 1;
+			/* Multi cut (6+-4 Elo).
+			 * Now eval >= singular_beta. If also singular_beta >= beta
+			 * we get the inequalities
+			 * eval >= singular_beta >= beta and we have another move
+			 * that fails high. We assume at least one move fails high
+			 * on a regular search and we thus return beta.
+			 */
+			else if (singular_beta >= beta && !pstate.checkers)
+				return singular_beta;
+			/* We get the following inequalities,
+			 * singular_beta < beta <= tteval < exact_eval.
+			 */
 #if 0
-				else if (tteval >= beta && !pstate.checkers) {
-					extensions = -1;
-				}
+			else if (tteval >= beta && !pstate.checkers) {
+				extensions = -1;
+			}
 #endif
 #if 0
-				else if (tteval <= alpha && tteval <= eval && !pstate.checkers) {
-					extensions = -1;
-				}
-#endif
-#endif
+			else if (tteval <= alpha && tteval <= eval && !pstate.checkers) {
+				extensions = -1;
 			}
 #endif
 		}
-#endif
 
 		do_zobrist_key(pos, &move);
 		do_endgame_key(pos, &move);
