@@ -518,6 +518,7 @@ skip_pruning:;
 	int n_moves = 0, n_quiets = 0, n_captures = 0;
 	int move_index = -1;
 	while ((move = next_move(&mp))) {
+		/* We don't have to use move_compare here. */
 		if (!legal(pos, &pstate, &move) || move == excluded_move)
 			continue;
 
