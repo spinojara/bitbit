@@ -337,6 +337,7 @@ int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, s
 			alpha = best_eval;
 	}
 
+	/* Use any ttmove in quiescence search, even quiets (4+-3 Elo). */
 	move_t ttmove = pseudo_legal(pos, &pstate, &ttmove_unsafe) ? ttmove_unsafe : 0;
 	struct movepicker mp;
 	movepicker_init(&mp, 1, pos, &pstate, ttmove, 0, 0, 0, si, ss);

@@ -257,11 +257,7 @@ void movepicker_init(struct movepicker *mp, int quiescence, struct position *pos
 	mp->pstate = pstate;
 	mp->si = si;
 	mp->ss = ss;
-	/* Now we keep checking for mp->quiescence on the
-	 * different stages because it might get changed
-	 * from negamax.
-	 */
-	mp->ttmove = (!mp->quiescence || is_capture(mp->pos, &ttmove) || move_flag(&ttmove) == MOVE_PROMOTION) ? ttmove : 0;
+	mp->ttmove = ttmove;
 
 	mp->killer1 = killer1;
 	mp->killer2 = killer2;
