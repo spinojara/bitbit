@@ -206,3 +206,41 @@ int write_flag(FILE *f, unsigned char flag) {
 int read_flag(FILE *f, unsigned char *flag) {
 	return read_uintx(f, flag, 1);
 }
+
+int write_tt(FILE *f, const struct transpositiontable *tt) {
+	for (size_t x = 0; x < tt->size; x++) {
+		struct transposition *e = &tt->table[x];
+		if (write_uintx(f, e->zobrist_key, 8) ||
+				write_uintx(f, e->eval, 2) ||
+				write_uintx(f, e->depth, 1) ||
+				write_uintx(f, e->bound, 1) ||
+				write_uintx(f, e->move, 2) ||
+				write_uintx(f, e->flags, 1))
+			return 1;
+	}
+	return 0;
+}
+
+int read_tt(FILE *f, struct transpositiontable *tt) {
+	union {
+		int8_t i;
+		uint8_t u;
+	} t8;
+	union {
+		int16_t i;
+		uint16_t u;
+	} t16;
+	for (size_t x = 0; x < tt->size; x++) {
+		struct transposition *e = &tt->table[x];
+		if (read_uintx(f, &e->zobrist_key, 8) ||
+				read_uintx(f, &t16.u, 2) ||
+				read_uintx(f, &t8.u, 1) ||
+				read_uintx(f, &e->bound, 1) ||
+				read_uintx(f, &e->move, 2) ||
+				read_uintx(f, &e->flags, 1))
+			return 1;
+		e->eval = t16.i;
+		e->depth = t8.i;
+	}
+	return 0;
+}

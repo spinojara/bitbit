@@ -22,6 +22,7 @@
 
 #include "move.h"
 #include "position.h"
+#include "transposition.h"
 
 enum {
 	RESULT_LOSS = -1,
@@ -51,5 +52,8 @@ int read_result(FILE *f, char *result);
 
 int write_flag(FILE *f, unsigned char flag);
 int read_flag(FILE *f, unsigned char *flag);
+
+int write_tt(FILE *f, const struct transpositiontable *tt);
+int read_tt(FILE *f, struct transpositiontable *tt);
 
 #endif

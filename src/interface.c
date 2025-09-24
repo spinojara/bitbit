@@ -41,6 +41,7 @@
 #include "thread.h"
 #include "bench.h"
 #include "nnue.h"
+#include "io.h"
 
 #define LINESIZE 16384
 #define ARGSIZE 4096
@@ -318,14 +319,30 @@ int interface_version(int argc, char **argv) {
 int interface_tt(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
-	printf("pv    nodes: %4d pm\n", transposition_occupancy(&tt, BOUND_EXACT));
-	printf("cut   nodes: %4d pm\n", transposition_occupancy(&tt, BOUND_LOWER));
-	printf("all   nodes: %4d pm\n", transposition_occupancy(&tt, BOUND_UPPER));
-	printf("total nodes: %4d pm\n", transposition_occupancy(&tt, 0));
+	if (argc >= 3 && !strcmp(argv[1], "read")) {
+		FILE *f = fopen(argv[2], "rb");
+		if (!f || read_tt(f, &tt))
+			printf("error: failed to read tt\n");
+		fclose(f);
+		printf("read tt!\n");
+	}
+	else {
+		printf("pv    nodes: %4d pm\n", transposition_occupancy(&tt, BOUND_EXACT));
+		printf("cut   nodes: %4d pm\n", transposition_occupancy(&tt, BOUND_LOWER));
+		printf("all   nodes: %4d pm\n", transposition_occupancy(&tt, BOUND_UPPER));
+		printf("total nodes: %4d pm\n", transposition_occupancy(&tt, 0));
+	}
 	return DONE;
 }
 
 int interface_isready(int argc, char **argv) {
+	if (*option_debugtt) {
+		FILE *f = fopen(option_debugtt, "wb");
+		if (f) {
+			write_tt(f, &tt);
+			fclose(f);
+		}
+	}
 	UNUSED(argc);
 	UNUSED(argv);
 	printf("readyok\n");

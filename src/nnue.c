@@ -30,7 +30,6 @@
 #include "move.h"
 #include "position.h"
 #include "option.h"
-#include "io.h"
 #include "nnuefile.h"
 
 #ifdef VNNI
