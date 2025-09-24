@@ -25,7 +25,7 @@ extern int option_endgame;
 extern int option_damp;
 extern int option_ponder;
 extern int option_deterministic;
-extern char option_debugtt[4096];
+extern int option_debug;
 
 void print_options(void);
 

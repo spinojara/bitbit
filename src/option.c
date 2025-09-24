@@ -36,6 +36,7 @@
 #define OPTION_DAMP          1
 #define OPTION_PONDER        0
 #define OPTION_DETERMINISTIC 1
+#define OPTION_DEBUG         0
 
 int option_transposition  = OPTION_TRANSPOSITION;
 int option_history        = OPTION_HISTORY;
@@ -43,7 +44,7 @@ int option_endgame        = OPTION_ENDGAME;
 int option_damp           = OPTION_DAMP;
 int option_ponder         = OPTION_PONDER;
 int option_deterministic  = OPTION_DETERMINISTIC;
-char option_debugtt[4096] = "";
+int option_debug          = OPTION_DEBUG;
 
 void print_options(void) {
 	printf("option name Clear Hash type button\n");
@@ -53,7 +54,7 @@ void print_options(void) {
 	printf("option name FileNNUE type string\n");
 	printf("option name BuiltinNNUE type button\n");
 	printf("option name Deterministic type check default %s\n", OPTION_DETERMINISTIC ? "true" : "false");
-	printf("option name DebugHash type string\n");
+	printf("option name Debug type check default %s\n", OPTION_DEBUG ? "true" : "false");
 #if TUNE
 	print_tune();
 #endif
@@ -102,8 +103,6 @@ void setoption(int argc, char **argv, struct transpositiontable *tt) {
 		file_nnue(argv[4]);
 	else if (!strcasecmp(argv[2], "deterministic"))
 		option_deterministic = set;
-	else if (!strcasecmp(argv[2], "debughash")) {
-		strncpy(option_debugtt, argv[4], sizeof(option_debugtt));
-		option_debugtt[sizeof(option_debugtt) - 1] = '\0';
-	}
+	else if (!strcasecmp(argv[2], "debug"))
+		option_debug = set;
 }

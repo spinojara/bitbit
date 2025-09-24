@@ -281,8 +281,10 @@ int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, s
 		return 0;
 	if (ply >= PLY_MAX)
 		return evaluate(pos, si);
-	if ((check_time(si) || atomic_load_explicit(&ucistop, memory_order_relaxed) || (si->max_nodes > 0 && si->nodes >= si->hard_max_nodes)) && si->done_depth)
+	if ((check_time(si) || atomic_load_explicit(&ucistop, memory_order_relaxed) || (si->max_nodes > 0 && si->nodes >= si->hard_max_nodes)) && si->done_depth) {
 		si->interrupt = 1;
+		return 0;
+	}
 
 	if (si->sel_depth < ply)
 		si->sel_depth = ply;
@@ -394,8 +396,10 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 		return 0;
 	if (ply >= PLY_MAX)
 		return evaluate(pos, si);
-	if ((check_time(si) || atomic_load_explicit(&ucistop, memory_order_relaxed) || (si->max_nodes > 0 && si->nodes >= si->hard_max_nodes)) && si->done_depth)
+	if ((check_time(si) || atomic_load_explicit(&ucistop, memory_order_relaxed) || (si->max_nodes > 0 && si->nodes >= si->hard_max_nodes)) && si->done_depth) {
 		si->interrupt = 1;
+		return 0;
+	}
 
 	if (si->sel_depth < ply)
 		si->sel_depth = ply;
@@ -780,6 +784,9 @@ int32_t search(struct position *pos, int depth, int verbose, struct timeinfo *ti
 		if (stop_searching(si.ti, best_move))
 			break;
 	}
+
+	if (option_debug)
+		printf("info string nodes %" PRIu64 "\n", si.nodes);
 
 	/* We are not allowed to exit the search before either a ponderhit
 	 * or stop command. Both of these commands will set uciponder to 0.
