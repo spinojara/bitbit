@@ -336,13 +336,6 @@ int interface_tt(int argc, char **argv) {
 }
 
 int interface_isready(int argc, char **argv) {
-	if (*option_debugtt) {
-		FILE *f = fopen(option_debugtt, "wb");
-		if (f) {
-			write_tt(f, &tt);
-			fclose(f);
-		}
-	}
 	UNUSED(argc);
 	UNUSED(argv);
 	printf("readyok\n");

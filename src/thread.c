@@ -22,6 +22,8 @@
 
 #include "search.h"
 #include "timeman.h"
+#include "option.h"
+#include "io.h"
 
 #ifndef NDEBUG
 int thread_init_done = 0;
@@ -92,6 +94,13 @@ void *search_thread(void *arg) {
 	atomic_store_explicit(&ucigo, 0, memory_order_relaxed);
 	atomic_store_explicit(&uciponder, 0, memory_order_relaxed);
 	print_bestmove(pos, move[0], move[1]);
+	if (*option_debugtt) {
+		FILE *f = fopen(option_debugtt, "wb");
+		if (f) {
+			write_tt(f, tt);
+			fclose(f);
+		}
+	}
 	pthread_mutex_unlock(&uci);
 	return NULL;
 }
