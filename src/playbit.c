@@ -80,8 +80,6 @@ static atomic_uint_fast64_t bytes;
 static atomic_uint_fast64_t positions;
 
 static inline void do_stop(void) {
-	if (!atomic_load_explicit(&stopvar, memory_order_relaxed))
-		fprintf(stderr, "broadcasting stop signal...\n");
 	atomic_store_explicit(&stopvar, 1, memory_order_relaxed);
 	for (int i = 0; i < jobs; i++)
 		pthread_mutex_lock(&pausemutex[i]);
@@ -603,14 +601,38 @@ void *playthread(void *arg) {
 	if (openingsfile)
 		fclose(openingsfile);
 
-	printf("exiting thread %d\n", ti->jobn);
-
 	return NULL;
 }
 
 static void sigint(int num) {
 	do_stop();
 	signal(num, &sigint);
+}
+
+struct pattern {
+	char *regex;
+	int not_flag;
+	regex_t preg;
+};
+
+void print_help(const char *argv0) {
+	fprintf(stderr, "usage: %s [--help] [--jobs n] [--tt n] [--nodes n] [--without-syzygy]\n\t[--syzygy path] [--openings file] [[--not] --date regex] datadir\n", argv0);
+	fprintf(stderr, "\noptions:\n");
+	fprintf(stderr, "\t--help\t\t\tDisplay this page.\n");
+	fprintf(stderr, "\t--jobs n\t\tRun n parallel jobs.\n");
+	fprintf(stderr, "\t--tt n\t\t\tUse a total tt size for all threads of n MiB.\n");
+	fprintf(stderr, "\t--nodes n\t\tSearch for a maximum of n nodes for each\n\t\t\t\tposition.\n");
+	fprintf(stderr, "\t--without-syzygy\tDo not use syzygy tablebases.\n");
+	fprintf(stderr, "\t--syzygy path\t\tUse syzygy tablebases at path.\n");
+	fprintf(stderr, "\t--openings file\t\tUse openings file in polyglot format.\n");
+	fprintf(stderr, "\t--date regex\t\tOnly run when time in format\n\t\t\t\t'Saturday 20251028 22:56' matches regex.\n");
+	fprintf(stderr, "\t--not --date regex\tOnly run when time in format\n\t\t\t\t'Saturday 20251028 22:56' does not match regex.\n");
+	fprintf(stderr, "\nexamples:\n");
+	fprintf(stderr, "\tRun playbit with 11 parallel jobs, a total tt of 8 GiB, without syzygy\n\ttablesbases on weekdays when it's not between 17:00 and 22:00.\n");
+	for (int i = 0; i < 80; i++)
+		printf("x");
+	printf("\n");
+	fprintf(stderr, "\t$ %s /srv/selfplay --jobs 11 --tt 8192 --without-syzygy \\\n\t\t--not --date 'Saturday .*' --not --date 'Sunday .*' \\\n\t\t--date '.* (0[0-9]|1[0-6]|2[2-3]):[0-9]{2}'\n", argv0);
 }
 
 int main(int argc, char **argv) {
@@ -625,7 +647,6 @@ int main(int argc, char **argv) {
 
 	int tt_MiB = 6 * 1024;
 	int nodes = 10000;
-	char *date_regex = NULL;
 	static struct option opts[] = {
 		{ "jobs",           required_argument, NULL, 'j' },
 		{ "tt",             required_argument, NULL, 't' },
@@ -633,14 +654,24 @@ int main(int argc, char **argv) {
 		{ "without-syzygy", no_argument,       NULL, 'w' },
 		{ "syzygy",         required_argument, NULL, 'z' },
 		{ "openings",       required_argument, NULL, 'o' },
-		{ "date-regex",     required_argument, NULL, 'd' },
+		{ "date",           required_argument, NULL, 'd' },
+		{ "not",            no_argument,       NULL, '!' },
+		{ "help",           no_argument,       NULL, 'h' },
 		{ 0,                0,                 0,     0  },
 	};
 
+	int ndates = 0;
+	struct pattern *dates = NULL;
+
 	char *endptr;
 	int c, option_index = 0;
-	int error = 0;
-	while ((c = getopt_long(argc, argv, "j:t:n:wz:o:d:", opts, &option_index)) != -1) {
+	int error = 0, not_flag = 0;
+	while ((c = getopt_long(argc, argv, "j:t:n:wz:o:d:!h", opts, &option_index)) != -1) {
+		if (not_flag && c != 'd') {
+			printf("%c\n", c);
+			fprintf(stderr, "error: expected --date after --not\n");
+			error = 1;
+		}
 		switch (c) {
 		case 't':
 			errno = 0;
@@ -676,18 +707,34 @@ int main(int argc, char **argv) {
 			openings = optarg;
 			break;
 		case 'd':
-			date_regex = optarg;
+			ndates++;
+			dates = realloc(dates, ndates * sizeof(*dates));
+			dates[ndates - 1] = (struct pattern){ .regex = optarg, .not_flag = not_flag };
+			not_flag = 0;
 			break;
+		case '!':
+			not_flag = 1;
+			break;
+		case 'h':
+			print_help(argv[0]);
+			return 0;
 		default:
 			error = 1;
 			break;
 		}
 	}
+	if (not_flag) {
+		fprintf(stderr, "error: expected --date after --not\n");
+		return 1;
+	}
 	if (error)
 		return 1;
 
-	if (optind >= argc) {
-		fprintf(stderr, "usage: %s datadir\n", argv[0]);
+	for (int i = optind + 1; i < argc; i++)
+		fprintf(stderr, "error: unexpected extra argument '%s'\n", argv[i]);
+
+	if (optind != argc - 1) {
+		print_help(argv[0]);
 		return 2;
 	}
 	prefix = argv[optind];
@@ -716,16 +763,15 @@ int main(int argc, char **argv) {
 		return 7;
 	}
 
-	if (!date_regex)
-		date_regex = ".*";
-
-	regex_t date_preg;
-	if ((error = regcomp(&date_preg, date_regex, REG_EXTENDED | REG_NOSUB | REG_ICASE))) {
-		fprintf(stderr, "error: failed to compile date regex '%s'.\n", date_regex);
-		char errbuf[4096] = { 0 };
-		regerror(error, NULL, errbuf, sizeof(errbuf));
-		fprintf(stderr, "error: %s.\n", errbuf);
-		return 8;
+	for (int i = 0; i < ndates; i++) {
+		struct pattern *pattern = &dates[i];
+		if ((error = regcomp(&pattern->preg, pattern->regex, REG_EXTENDED | REG_NOSUB | REG_ICASE))) {
+			fprintf(stderr, "error: failed to compile date regex '%s'.\n", pattern->regex);
+			char errbuf[4096] = { 0 };
+			regerror(error, NULL, errbuf, sizeof(errbuf));
+			fprintf(stderr, "error: %s.\n", errbuf);
+			return 8;
+		}
 	}
 
 	magicbitboard_init();
@@ -759,15 +805,21 @@ int main(int argc, char **argv) {
 		ti[i].nodes = nodes;
 
 		pthread_create(&thread[i], NULL, &playthread, &ti[i]);
-		printf("started thread %d\n", i);
 	}
 
-	timepoint_t last = time_now();
+	timepoint_t last = 0;
 	while (!is_stopped()) {
 		time_t localnow = time(NULL);
 		char timestr[1024] = { 0 };
 		strftime(timestr, sizeof(timestr), "%Y%m%dT%H:%M", localtime(&localnow));
-		if (regexec(&date_preg, timestr, 0, NULL, 0) == 0) {
+
+		int matches = 1;
+		for (int i = 0; i < ndates && matches; i++) {
+			int regex_matches = regexec(&dates[i].preg, timestr, 0, NULL, 0) == 0;
+			matches = (regex_matches && !dates[i].not_flag) || (!regex_matches && dates[i].not_flag);
+		}
+
+		if (matches) {
 			for (int i = 0; i < jobs; i++)
 				pthread_mutex_lock(&pausemutex[i]);
 			pausevar = 0;
@@ -783,18 +835,19 @@ int main(int argc, char **argv) {
 				pthread_mutex_unlock(&pausemutex[i]);
 		}
 
-		sleep(10);
 		timepoint_t now = time_now();
 		timepoint_t elapsed = now - last;
 
 		uint64_t bytesnow = atomic_exchange(&bytes, 0);
 		uint64_t positionsnow = atomic_exchange(&positions, 0);
 		if (last) {
-			printf("\33[2K%ld fens/s (%ld bytes/s)\r", positionsnow * TPPERSEC / elapsed, bytesnow * TPPERSEC / elapsed);
+			printf("\33[2K%ld fens/s (%ld bytes/s)%s\r", positionsnow * TPPERSEC / elapsed, bytesnow * TPPERSEC / elapsed, matches ? "" : " (paused)");
 			fflush(stdout);
 		}
 		last = now;
+		sleep(10);
 	}
+	printf("\n");
 
 	for (int i = 0; i < jobs; i++)
 		pthread_join(thread[i], NULL);
@@ -807,7 +860,9 @@ int main(int argc, char **argv) {
 	for (int i = 0; i < jobs; i++)
 		pthread_mutex_destroy(&pausemutex[i]);
 	free(pausemutex);
-	regfree(&date_preg);
+	for (int i = 0; i < ndates; i++)
+		regfree(&dates[i].preg);
+	free(dates);
 
 #if SYZYGY
 	if (syzygy)
