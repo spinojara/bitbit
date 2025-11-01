@@ -211,13 +211,13 @@ install: all
 	$(INSTALL) -m 0644 man/bitbit.6 $(DESTDIR)$(MAN6DIR)
 
 install-everything: everything install
-	$(INSTALL) -m 0755 {epd,pgn,check}bit $(DESTDIR)$(BINDIR)
+	$(INSTALL) -m 0755 {epd,pgn,check,play}bit $(DESTDIR)$(BINDIR)
 	$(MKDIR_P) $(DESTDIR)$(LIBDIR)
 	$(INSTALL) -m 0755 lib{batch,vis}bit.so $(DESTDIR)$(LIBDIR)
 	$(INSTALL) -m 0644 man/{epd,pgn}bit.6 $(DESTDIR)$(MAN6DIR)
 
 uninstall:
-	$(RM) -f $(DESTDIR)$(BINDIR)/{bit,epd,pgn,check}bit
+	$(RM) -f $(DESTDIR)$(BINDIR)/{bit,epd,pgn,check,play}bit
 	$(RM) -f $(DESTDIR)$(MAN6DIR)/{bit,epd,pgn}bit.6
 	$(RM) -f $(DESTDIR)$(LIBDIR)/lib{batch,vis}bit.so
 
@@ -235,4 +235,4 @@ objclean:
 -include $(DEP)
 .PRECIOUS: dep/%.d
 .SUFFIXES: .c .h .d
-.PHONY: all everything clean nnueclean pgoclean objclean install uninstall bitbit-pgo clang-pgo gcc-pgo
+.PHONY: all everything clean nnueclean pgoclean objclean install install-everything uninstall bitbit-pgo clang-pgo gcc-pgo
