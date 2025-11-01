@@ -26,6 +26,7 @@
 #include <limits.h>
 #include <sys/param.h>
 #include <signal.h>
+#include <regex.h>
 
 #ifdef SYZYGY
 #include <tbprobe.h>
@@ -63,7 +64,10 @@ static int random_moves_max = 8;
 static int32_t eval_limit = 1500;
 #endif
 
-static atomic_int s;
+static pthread_mutex_t pausemutex;
+static pthread_cond_t pausecond;
+static int pausevar = 1;
+static atomic_int stopvar;
 
 static pthread_mutex_t filemutex;
 
@@ -74,18 +78,22 @@ static int nosyzygy = 0;
 static atomic_uint_fast64_t bytes;
 static atomic_uint_fast64_t positions;
 
-static inline void stop(void) {
-	if (!atomic_load_explicit(&s, memory_order_relaxed))
+static inline void do_stop(void) {
+	if (!atomic_load_explicit(&stopvar, memory_order_relaxed))
 		fprintf(stderr, "broadcasting stop signal...\n");
-	atomic_store_explicit(&s, 1, memory_order_relaxed);
+	atomic_store_explicit(&stopvar, 1, memory_order_relaxed);
+	pthread_mutex_lock(&pausemutex);
+	pausevar = 0;
+	pthread_cond_broadcast(&pausecond);
+	pthread_mutex_unlock(&pausemutex);
 }
 
-static inline int stopped(void) {
-	return atomic_load_explicit(&s, memory_order_relaxed);
+static inline int is_stopped(void) {
+	return atomic_load_explicit(&stopvar, memory_order_relaxed);
 }
 
 FILE *newfile(void) {
-	if (stopped())
+	if (is_stopped())
 		return NULL;
 
 	static long n = 1;
@@ -105,7 +113,7 @@ FILE *newfile(void) {
 		errno = 0;
 		if (mkdir(name, 0777) && errno != EEXIST) {
 			fprintf(stderr, "error: failed to create directory %s\n", name);
-			stop();
+			do_stop();
 			pthread_mutex_unlock(&filemutex);
 			return NULL;
 		}
@@ -120,7 +128,7 @@ FILE *newfile(void) {
 		fd = open(name, O_WRONLY | O_CREAT | O_EXCL, 0644);
 		if (fd == -1 && errno != EEXIST) {
 			fprintf(stderr, "error: failed to create file %s\n", name);
-			stop();
+			do_stop();
 			pthread_mutex_unlock(&filemutex);
 			return NULL;
 		}
@@ -303,7 +311,7 @@ void play_game(FILE *openingsfile, struct transpositiontable *tt, uint64_t nodes
 	startpos(&pos);
 	if (openingsfile && !polyglot_explore(openingsfile, &pos, 6, seed)) {
 		fprintf(stderr, "error: start position not found in opening book\n");
-		stop();
+		do_stop();
 		return;
 	}
 
@@ -500,32 +508,32 @@ void play_game(FILE *openingsfile, struct transpositiontable *tt, uint64_t nodes
 	if (h.ply) {
 		if (write_move(out, 0)) {
 			fprintf(stderr, "error: failed to write move\n");
-			stop();
+			do_stop();
 		}
 		if (write_position(out, &h.start)) {
 			fprintf(stderr, "error: failed to write position\n");
-			stop();
+			do_stop();
 		}
 		if (write_result(out, result)) {
 			fprintf(stderr, "error: failed to write result\n");
-			stop();
+			do_stop();
 		}
 		int count = 0;
 		for (int i = 0; i <= h.ply; i++) {
 			if (write_eval(out, eval[i])) {
 				fprintf(stderr, "error: failed to write eval\n");
-				stop();
+				do_stop();
 			}
 			if (write_flag(out, flag[i])) {
 				fprintf(stderr, "error: failed to write flag\n");
-				stop();
+				do_stop();
 			}
 			if (!(flag[i] & FLAG_SKIP) && eval[i] != VALUE_NONE)
 				count++;
 			if (i < h.ply) {
 				if (write_move(out, h.move[i])) {
 					fprintf(stderr, "error: failed to write move\n");
-					stop();
+					do_stop();
 				}
 			}
 		}
@@ -548,25 +556,40 @@ void *playthread(void *arg) {
 	struct transpositiontable tt = { 0 };
 	if (transposition_alloc(&tt, ti->tt_size)) {
 		fprintf(stderr, "error: failed to allocate transposition table\n");
-		stop();
+		do_stop();
 	}
 
 	FILE *openingsfile = openings ? fopen(openings, "rb") : NULL;
 	if (!openingsfile && openings) {
 		fprintf(stderr, "error: failed to open file %s\n", openings);
-		stop();
+		do_stop();
 	}
 
-	while (!stopped()) {
+	while (!is_stopped()) {
+		pthread_mutex_lock(&pausemutex);
+		while (pausevar)
+			pthread_cond_wait(&pausecond, &pausemutex);
+		pthread_mutex_unlock(&pausemutex);
+
+		if (is_stopped())
+			break;
+
 		FILE *f = newfile();
 		if (!f) {
 			fprintf(stderr, "error: failed to create new file\n");
-			stop();
+			do_stop();
 			break;
 		}
 
-		while (ftell(f) < max_file_size && !stopped()) {
+		while (ftell(f) < max_file_size && !is_stopped()) {
 			play_game(openingsfile, &tt, nodes, &seed, f);
+
+			pthread_mutex_lock(&pausemutex);
+			if (pausevar) {
+				pthread_mutex_unlock(&pausemutex);
+				break;
+			}
+			pthread_mutex_unlock(&pausemutex);
 		}
 
 		fclose(f);
@@ -583,7 +606,7 @@ void *playthread(void *arg) {
 }
 
 static void sigint(int num) {
-	stop();
+	do_stop();
 	signal(num, &sigint);
 }
 
@@ -593,11 +616,15 @@ int main(int argc, char **argv) {
 
 	atomic_init(&bytes, 0);
 	atomic_init(&positions, 0);
-	atomic_init(&s, 0);
+	atomic_init(&stopvar, 0);
+	pthread_cond_init(&pausecond, NULL);
+	pthread_mutex_init(&pausemutex, NULL);
+	pthread_mutex_init(&filemutex, NULL);
 
 	int jobs = 1;
 	int tt_MiB = 6 * 1024;
 	int nodes = 10000;
+	char *date_regex = NULL;
 	static struct option opts[] = {
 		{ "jobs",           required_argument, NULL, 'j' },
 		{ "tt",             required_argument, NULL, 't' },
@@ -605,12 +632,14 @@ int main(int argc, char **argv) {
 		{ "without-syzygy", no_argument,       NULL, 'w' },
 		{ "syzygy",         required_argument, NULL, 'z' },
 		{ "openings",       required_argument, NULL, 'o' },
+		{ "date-regex",     required_argument, NULL, 'd' },
+		{ 0,                0,                 0,     0  },
 	};
 
 	char *endptr;
 	int c, option_index = 0;
 	int error = 0;
-	while ((c = getopt_long(argc, argv, "j:t:n:wz:o:", opts, &option_index)) != -1) {
+	while ((c = getopt_long(argc, argv, "j:t:n:wz:o:d:", opts, &option_index)) != -1) {
 		switch (c) {
 		case 't':
 			errno = 0;
@@ -644,6 +673,9 @@ int main(int argc, char **argv) {
 			break;
 		case 'o':
 			openings = optarg;
+			break;
+		case 'd':
+			date_regex = optarg;
 			break;
 		default:
 			error = 1;
@@ -683,6 +715,18 @@ int main(int argc, char **argv) {
 		return 7;
 	}
 
+	if (!date_regex)
+		date_regex = ".*";
+
+	regex_t date_preg;
+	if ((error = regcomp(&date_preg, date_regex, REG_EXTENDED | REG_NOSUB | REG_ICASE))) {
+		fprintf(stderr, "error: failed to compile date regex '%s'.\n", date_regex);
+		char errbuf[4096] = { 0 };
+		regerror(error, NULL, errbuf, sizeof(errbuf));
+		fprintf(stderr, "error: %s.\n", errbuf);
+		return 8;
+	}
+
 	magicbitboard_init();
 	attackgen_init();
 	bitboard_init();
@@ -697,8 +741,6 @@ int main(int argc, char **argv) {
 	option_history = 1;
 	option_transposition = 1;
 	option_deterministic = 0;
-
-	pthread_mutex_init(&filemutex, NULL);
 
 	timepoint_t t = time_now();
 
@@ -715,18 +757,36 @@ int main(int argc, char **argv) {
 		printf("started thread %d\n", i);
 	}
 
-	/* Sleep here so that the threads have time to start up, this will give
-	 * a more accurate speed estimation.
-	 */
-	sleep(1);
 	int first = 1;
-	timepoint_t last = 0;
-	while (!stopped()) {
-		sleep(1);
+	timepoint_t last = time_now();
+	while (!is_stopped()) {
+		time_t localnow = time(NULL);
+		char timestr[1024] = { 0 };
+		strftime(timestr, sizeof(timestr), "%Y%m%dT%H:%M", localtime(&localnow));
+		if (regexec(&date_preg, timestr, 0, NULL, 0) == 0) {
+			pthread_mutex_lock(&pausemutex);
+			if (pausevar)
+				printf("resuming at %s...\n", timestr);
+			pausevar = 0;
+			pthread_cond_broadcast(&pausecond);
+			pthread_mutex_unlock(&pausemutex);
+		}
+		else {
+			pthread_mutex_lock(&pausemutex);
+			if (!pausevar)
+				printf("pausing at %s...\n", timestr);
+			pausevar = 1;
+			pthread_mutex_unlock(&pausemutex);
+			sleep(1);
+			continue;
+		}
+
 		timepoint_t now = time_now();
 		timepoint_t elapsed = now - last;
-		if (elapsed <= (first ? 3 : 20) * TPPERSEC)
+		if (elapsed <= (first ? 3 : 20) * TPPERSEC) {
+			sleep(1);
 			continue;
+		}
 
 		uint64_t bytesnow = atomic_exchange(&bytes, 0);
 		uint64_t positionsnow = atomic_exchange(&positions, 0);
@@ -736,16 +796,19 @@ int main(int argc, char **argv) {
 			fflush(stdout);
 		}
 		last = now;
+		sleep(1);
 	}
-	stop();
 
 	for (int i = 0; i < jobs; i++)
 		pthread_join(thread[i], NULL);
 
 	pthread_mutex_destroy(&filemutex);
+	pthread_mutex_destroy(&pausemutex);
+	pthread_cond_destroy(&pausecond);
 
 	free(ti);
 	free(thread);
+	regfree(&date_preg);
 
 #if SYZYGY
 	if (syzygy)
