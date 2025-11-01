@@ -56,6 +56,7 @@ const struct searchinfo gsi = { 0 };
 
 static const char *prefix;
 
+static int jobs = 1;
 static long max_file_size = 1024 * 1024;
 static int random_moves_min = 4;
 static int random_moves_max = 8;
@@ -64,7 +65,7 @@ static int random_moves_max = 8;
 static int32_t eval_limit = 1500;
 #endif
 
-static pthread_mutex_t pausemutex;
+static pthread_mutex_t *pausemutex;
 static pthread_cond_t pausecond;
 static int pausevar = 1;
 static atomic_int stopvar;
@@ -82,10 +83,12 @@ static inline void do_stop(void) {
 	if (!atomic_load_explicit(&stopvar, memory_order_relaxed))
 		fprintf(stderr, "broadcasting stop signal...\n");
 	atomic_store_explicit(&stopvar, 1, memory_order_relaxed);
-	pthread_mutex_lock(&pausemutex);
+	for (int i = 0; i < jobs; i++)
+		pthread_mutex_lock(&pausemutex[i]);
 	pausevar = 0;
 	pthread_cond_broadcast(&pausecond);
-	pthread_mutex_unlock(&pausemutex);
+	for (int i = 0; i < jobs; i++)
+		pthread_mutex_unlock(&pausemutex[i]);
 }
 
 static inline int is_stopped(void) {
@@ -566,10 +569,10 @@ void *playthread(void *arg) {
 	}
 
 	while (!is_stopped()) {
-		pthread_mutex_lock(&pausemutex);
+		pthread_mutex_lock(&pausemutex[ti->jobn]);
 		while (pausevar)
-			pthread_cond_wait(&pausecond, &pausemutex);
-		pthread_mutex_unlock(&pausemutex);
+			pthread_cond_wait(&pausecond, &pausemutex[ti->jobn]);
+		pthread_mutex_unlock(&pausemutex[ti->jobn]);
 
 		if (is_stopped())
 			break;
@@ -584,12 +587,12 @@ void *playthread(void *arg) {
 		while (ftell(f) < max_file_size && !is_stopped()) {
 			play_game(openingsfile, &tt, nodes, &seed, f);
 
-			pthread_mutex_lock(&pausemutex);
+			pthread_mutex_lock(&pausemutex[ti->jobn]);
 			if (pausevar) {
-				pthread_mutex_unlock(&pausemutex);
+				pthread_mutex_unlock(&pausemutex[ti->jobn]);
 				break;
 			}
-			pthread_mutex_unlock(&pausemutex);
+			pthread_mutex_unlock(&pausemutex[ti->jobn]);
 		}
 
 		fclose(f);
@@ -618,10 +621,8 @@ int main(int argc, char **argv) {
 	atomic_init(&positions, 0);
 	atomic_init(&stopvar, 0);
 	pthread_cond_init(&pausecond, NULL);
-	pthread_mutex_init(&pausemutex, NULL);
 	pthread_mutex_init(&filemutex, NULL);
 
-	int jobs = 1;
 	int tt_MiB = 6 * 1024;
 	int nodes = 10000;
 	char *date_regex = NULL;
@@ -746,6 +747,10 @@ int main(int argc, char **argv) {
 
 	pthread_t *thread = malloc(jobs * sizeof(*thread));
 	struct threadinfo *ti = malloc(jobs * sizeof(*ti));
+	pausemutex = malloc(jobs * sizeof(*pausemutex));
+
+	for (int i = 0; i < jobs; i++)
+		pthread_mutex_init(&pausemutex[i], NULL);
 
 	for (int i = 0; i < jobs; i++) {
 		ti[i].jobn = i;
@@ -757,57 +762,51 @@ int main(int argc, char **argv) {
 		printf("started thread %d\n", i);
 	}
 
-	int first = 1;
 	timepoint_t last = time_now();
 	while (!is_stopped()) {
 		time_t localnow = time(NULL);
 		char timestr[1024] = { 0 };
 		strftime(timestr, sizeof(timestr), "%Y%m%dT%H:%M", localtime(&localnow));
 		if (regexec(&date_preg, timestr, 0, NULL, 0) == 0) {
-			pthread_mutex_lock(&pausemutex);
-			if (pausevar)
-				printf("resuming at %s...\n", timestr);
+			for (int i = 0; i < jobs; i++)
+				pthread_mutex_lock(&pausemutex[i]);
 			pausevar = 0;
 			pthread_cond_broadcast(&pausecond);
-			pthread_mutex_unlock(&pausemutex);
+			for (int i = 0; i < jobs; i++)
+				pthread_mutex_unlock(&pausemutex[i]);
 		}
 		else {
-			pthread_mutex_lock(&pausemutex);
-			if (!pausevar)
-				printf("pausing at %s...\n", timestr);
+			for (int i = 0; i < jobs; i++)
+				pthread_mutex_lock(&pausemutex[i]);
 			pausevar = 1;
-			pthread_mutex_unlock(&pausemutex);
-			sleep(1);
-			continue;
+			for (int i = 0; i < jobs; i++)
+				pthread_mutex_unlock(&pausemutex[i]);
 		}
 
+		sleep(10);
 		timepoint_t now = time_now();
 		timepoint_t elapsed = now - last;
-		if (elapsed <= (first ? 3 : 20) * TPPERSEC) {
-			sleep(1);
-			continue;
-		}
 
 		uint64_t bytesnow = atomic_exchange(&bytes, 0);
 		uint64_t positionsnow = atomic_exchange(&positions, 0);
 		if (last) {
-			first = 0;
 			printf("\33[2K%ld fens/s (%ld bytes/s)\r", positionsnow * TPPERSEC / elapsed, bytesnow * TPPERSEC / elapsed);
 			fflush(stdout);
 		}
 		last = now;
-		sleep(1);
 	}
 
 	for (int i = 0; i < jobs; i++)
 		pthread_join(thread[i], NULL);
 
 	pthread_mutex_destroy(&filemutex);
-	pthread_mutex_destroy(&pausemutex);
 	pthread_cond_destroy(&pausecond);
 
 	free(ti);
 	free(thread);
+	for (int i = 0; i < jobs; i++)
+		pthread_mutex_destroy(&pausemutex[i]);
+	free(pausemutex);
 	regfree(&date_preg);
 
 #if SYZYGY
