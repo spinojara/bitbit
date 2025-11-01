@@ -629,9 +629,6 @@ void print_help(const char *argv0) {
 	fprintf(stderr, "\t--not --date regex\tOnly run when time in format\n\t\t\t\t'Saturday 20251028 22:56' does not match regex.\n");
 	fprintf(stderr, "\nexamples:\n");
 	fprintf(stderr, "\tRun playbit with 11 parallel jobs, a total tt of 8 GiB, without syzygy\n\ttablesbases on weekdays when it's not between 17:00 and 22:00.\n");
-	for (int i = 0; i < 80; i++)
-		printf("x");
-	printf("\n");
 	fprintf(stderr, "\t$ %s /srv/selfplay --jobs 11 --tt 8192 --without-syzygy \\\n\t\t--not --date 'Saturday .*' --not --date 'Sunday .*' \\\n\t\t--date '.* (0[0-9]|1[0-6]|2[2-3]):[0-9]{2}'\n", argv0);
 }
 
