@@ -27,6 +27,7 @@
 #include <sys/param.h>
 #include <signal.h>
 #include <regex.h>
+#include <sys/resource.h>
 
 #ifdef SYZYGY
 #include <tbprobe.h>
@@ -56,6 +57,7 @@ const struct searchinfo gsi = { 0 };
 
 static const char *prefix;
 
+static int niceness = 0;
 static int jobs = 1;
 static long max_file_size = 1024 * 1024;
 static int random_moves_min = 4;
@@ -551,6 +553,8 @@ struct threadinfo {
 };
 
 void *playthread(void *arg) {
+	/* This is Linux specific. */
+	setpriority(PRIO_PROCESS, gettid(), niceness);
 	struct threadinfo *ti = (struct threadinfo *)arg;
 	uint64_t seed = ti->seed;
 	uint64_t nodes = ti->nodes;
@@ -627,6 +631,7 @@ void print_help(const char *argv0) {
 	fprintf(stderr, "\t--openings file\t\tUse openings file in polyglot format.\n");
 	fprintf(stderr, "\t--date regex\t\tOnly run when time in format\n\t\t\t\t'Saturday 20251028 22:56' matches regex.\n");
 	fprintf(stderr, "\t--not --date regex\tOnly run when time in format\n\t\t\t\t'Saturday 20251028 22:56' does not match regex.\n");
+	fprintf(stderr, "\t--niceness n\t\tSet the niceness to n.\n");
 	fprintf(stderr, "\nexamples:\n");
 	fprintf(stderr, "\tRun playbit with 11 parallel jobs, a total tt of 8 GiB, without syzygy\n\ttablesbases on weekdays when it's not between 17:00 and 22:00.\n");
 	fprintf(stderr, "\t$ %s /srv/selfplay --jobs 11 --tt 8192 --without-syzygy \\\n\t\t--not --date 'Saturday .*' --not --date 'Sunday .*' \\\n\t\t--date '.* (0[0-9]|1[0-6]|2[2-3]):[0-9]{2}'\n", argv0);
@@ -654,6 +659,7 @@ int main(int argc, char **argv) {
 		{ "date",           required_argument, NULL, 'd' },
 		{ "not",            no_argument,       NULL, '!' },
 		{ "help",           no_argument,       NULL, 'h' },
+		{ "niceness",       required_argument, NULL, 'c' },
 		{ 0,                0,                 0,     0  },
 	};
 
@@ -663,7 +669,7 @@ int main(int argc, char **argv) {
 	char *endptr;
 	int c, option_index = 0;
 	int error = 0, not_flag = 0;
-	while ((c = getopt_long(argc, argv, "j:t:n:wz:o:d:!h", opts, &option_index)) != -1) {
+	while ((c = getopt_long(argc, argv, "j:t:n:wz:o:d:!hc:", opts, &option_index)) != -1) {
 		if (not_flag && c != 'd') {
 			printf("%c\n", c);
 			fprintf(stderr, "error: expected --date after --not\n");
@@ -692,6 +698,14 @@ int main(int argc, char **argv) {
 			if (errno || *endptr != '\0' || nodes < 100) {
 				error = 1;
 				fprintf(stderr, "error: bad argument: nodes\n");
+			}
+			break;
+		case 'c':
+			errno = 0;
+			niceness = strtoll(optarg, &endptr, 10);
+			if (errno || *endptr != '\0') {
+				error = 1;
+				fprintf(stderr, "error: bad argument: niceness\n");
 			}
 			break;
 		case 'z':
