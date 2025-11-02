@@ -822,7 +822,7 @@ int main(int argc, char **argv) {
 	while (!is_stopped()) {
 		time_t localnow = time(NULL);
 		char timestr[1024] = { 0 };
-		strftime(timestr, sizeof(timestr), "%Y%m%dT%H:%M", localtime(&localnow));
+		strftime(timestr, sizeof(timestr), "%A %Y%m%d %H:%M", localtime(&localnow));
 
 		int matches = 1;
 		for (int i = 0; i < ndates && matches; i++) {
