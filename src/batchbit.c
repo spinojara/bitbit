@@ -341,7 +341,6 @@ void *loader_open(const char *s, size_t requested_size, int jobs, double random_
 	dataloader->index = NULL;
 	dataloader->index_size = 0;
 
-	time_t t = time(NULL);
 	if (loader_index(dataloader)) {
 		fprintf(stderr, "error: file contains errors\n");
 		munmap(dataloader->data_unmap, dataloader->size);
