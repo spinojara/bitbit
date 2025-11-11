@@ -40,18 +40,23 @@ int read_uintx(FILE *f, void *p, size_t x);
 
 int write_position(FILE *f, const struct position *pos);
 int read_position(FILE *f, struct position *pos);
+int read_position_mem(const unsigned char *data, struct position *pos, size_t *index, size_t size);
 
 int write_move(FILE *f, move_t move);
 int read_move(FILE *f, move_t *move);
+int read_move_mem(const unsigned char *data, move_t *move, size_t *index, size_t size);
 
 int write_eval(FILE *f, int32_t eval);
 int read_eval(FILE *f, int32_t *eval);
+int read_eval_mem(const unsigned char *data, int32_t *eval, size_t *index, size_t size);
 
 int write_result(FILE *f, char result);
 int read_result(FILE *f, char *result);
+int read_result_mem(const unsigned char *data, char *result, size_t *index, size_t size);
 
 int write_flag(FILE *f, unsigned char flag);
 int read_flag(FILE *f, unsigned char *flag);
+int read_flag_mem(const unsigned char *data, unsigned char *flag, size_t *index, size_t size);
 
 int write_tt(FILE *f, const struct transpositiontable *tt);
 int read_tt(FILE *f, struct transpositiontable *tt);
