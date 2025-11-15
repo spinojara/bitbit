@@ -162,14 +162,21 @@ int entry_fetch(struct dataloader *dataloader, struct entry *entries, size_t n) 
 		return 1;
 	}
 	pthread_mutex_unlock(&dataloader->mutex);
-	for (size_t i = 0; i < n; i++) {
-		if (read_move(dataloader->f, &move)) {
-			pthread_mutex_lock(&dataloader->mutex);
-			dataloader->stop = dataloader->error = 1;
-			pthread_cond_broadcast(&dataloader->condready);
-			pthread_mutex_unlock(&dataloader->mutex);
-			pthread_mutex_unlock(&dataloader->readmutex);
-			return 1;
+	int r;
+	for (size_t i = 0; i < n; ) {
+		if ((r = read_move(dataloader->f, &move))) {
+			if (r == 2 && feof(dataloader->f)) {
+				fseek(dataloader->f, 0, SEEK_SET);
+				continue;
+			}
+			else {
+				pthread_mutex_lock(&dataloader->mutex);
+				dataloader->stop = dataloader->error = 1;
+				pthread_cond_broadcast(&dataloader->condready);
+				pthread_mutex_unlock(&dataloader->mutex);
+				pthread_mutex_unlock(&dataloader->readmutex);
+				return 1;
+			}
 		}
 		if (move) {
 			do_move(&dataloader->pos, &move);
@@ -201,6 +208,8 @@ int entry_fetch(struct dataloader *dataloader, struct entry *entries, size_t n) 
 		entry->turn = dataloader->pos.turn;
 		entry->result = dataloader->result;
 		entry->fullmove = dataloader->pos.fullmove;
+
+		i++;
 	}
 	pthread_mutex_unlock(&dataloader->readmutex);
 	return 0;
