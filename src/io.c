@@ -159,50 +159,6 @@ int read_position(FILE *f, struct position *pos) {
 	return 0;
 }
 
-int read_position_mem(const unsigned char *data, struct position *pos, size_t *index, size_t size) {
-	/* A position is 62 + 1 + 1 + 1 + 1 + 2 bytes. */
-	if (*index + 68 > size)
-		return 1;
-	if (!pos)
-		return 0;
-	memset(pos->piece, 0, sizeof(pos->piece));
-	memset(pos->mailbox, 0, sizeof(pos->mailbox));
-
-	pos->piece[WHITE][ALL] = pos->piece[WHITE][KING] = bitboard(data[*index]);
-	pos->piece[BLACK][ALL] = pos->piece[BLACK][KING] = bitboard(data[*index + 1]);
-
-	pos->mailbox[(int)data[*index]] = WHITE_KING;
-	pos->mailbox[(int)data[*index + 1]] = BLACK_KING;
-
-	int j;
-	for (j = 2; j <= 62 - 2; ) {
-		int cpiece = data[*index + j++];
-		if (!cpiece)
-			break;
-		int piece = uncolored_piece(cpiece);
-		int color = color_of_piece(cpiece);
-		int sq = data[*index + j++];
-
-		pos->piece[color][piece] |= bitboard(sq);
-		pos->piece[color][ALL] |= pos->piece[color][piece];
-		pos->mailbox[sq] = cpiece;
-	}
-	*index += 62;
-	uint8_t turn = data[*index];
-	uint8_t en_passant = data[*index + 1];
-	uint8_t castle = data[*index + 2];
-	uint8_t halfmove = data[*index + 3];
-	uint16_t fullmove = (uint16_t)data[*index + 4] | (uint16_t)data[*index + 5] << 8;
-	*index += 6;
-
-	pos->turn = turn;
-	pos->en_passant = en_passant < 64 ? en_passant : -1;
-	pos->castle = castle;
-	pos->halfmove = halfmove;
-	pos->fullmove = fullmove;
-	return 0;
-}
-
 int write_move(FILE *f, move_t move) {
 	return write_uintx(f, move, 2);
 }
@@ -214,14 +170,6 @@ int read_move(FILE *f, move_t *move) {
 		return r;
 	if (move)
 		*move = temp;
-	return 0;
-}
-
-int read_move_mem(const unsigned char *data, move_t *move, size_t *index, size_t size) {
-	if (*index + 2 > size)
-		return 1;
-	*move = (uint16_t)data[*index] | (uint16_t)data[*index + 1] << 8;
-	*index += 2;
 	return 0;
 }
 
@@ -242,19 +190,6 @@ int read_eval(FILE *f, int32_t *eval) {
 	return 0;
 }
 
-int read_eval_mem(const unsigned char *data, int32_t *eval, size_t *index, size_t size) {
-	if (*index + 2 > size)
-		return 1;
-	union {
-		int16_t eval;
-		uint16_t ueval;
-	} t;
-	t.ueval = (uint16_t)data[*index] | (uint16_t)data[*index + 1] << 8;
-	*eval = t.eval;
-	*index += 2;
-	return 0;
-}
-
 int write_result(FILE *f, char result) {
 	return write_uintx(f, result, 1);
 }
@@ -263,28 +198,12 @@ int read_result(FILE *f, char *result) {
 	return read_uintx(f, result, 1);
 }
 
-int read_result_mem(const unsigned char *data, char *result, size_t *index, size_t size) {
-	if (*index + 1 > size)
-		return 1;
-	*result = data[*index];
-	++*index;
-	return 0;
-}
-
 int write_flag(FILE *f, unsigned char flag) {
 	return write_uintx(f, flag, 1);
 }
 
 int read_flag(FILE *f, unsigned char *flag) {
 	return read_uintx(f, flag, 1);
-}
-
-int read_flag_mem(const unsigned char *data, unsigned char *flag, size_t *index, size_t size) {
-	if (*index + 1 > size)
-		return 1;
-	*flag = (unsigned char)data[*index];
-	++*index;
-	return 0;
 }
 
 int write_tt(FILE *f, const struct transpositiontable *tt) {
