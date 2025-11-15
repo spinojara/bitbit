@@ -23,9 +23,6 @@
 #include <assert.h>
 #include <pthread.h>
 #include <errno.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 #include <unistd.h>
 
 #include "position.h"
@@ -35,6 +32,15 @@
 #include "io.h"
 #include "magicbitboard.h"
 #include "attackgen.h"
+
+struct entry {
+	int result;
+	uint64_t piece[2][7];
+	int turn;
+	int fullmove;
+	unsigned flag;
+	int32_t eval;
+};
 
 struct batch {
 	size_t size;
@@ -49,6 +55,7 @@ struct batch {
 
 struct dataloader {
 	size_t requested_size;
+	size_t internal_size;
 	int error;
 	int stop;
 
@@ -61,6 +68,7 @@ struct dataloader {
 	pthread_cond_t condfetch;
 	pthread_cond_t condready;
 	pthread_mutex_t mutex;
+	pthread_mutex_t readmutex;
 
 	double random_skip;
 	int ply;
@@ -69,11 +77,10 @@ struct dataloader {
 
 	uint64_t baseseed;
 
-	size_t size;
-	const unsigned char *data;
-	unsigned char *data_unmap;
-	size_t index_size;
-	size_t *index;
+	FILE *f;
+
+	struct position pos;
+	char result;
 };
 
 static inline uint16_t make_index_virtual(int turn, int square, int piece, int king_square) {
@@ -141,12 +148,71 @@ void batch_append(struct dataloader *dataloader, struct batch *batch) {
 	}
 }
 
+int entry_fetch(struct dataloader *dataloader, struct entry *entries, size_t n) {
+	move_t move;
+	int32_t eval;
+	unsigned char flag;
+
+	pthread_mutex_lock(&dataloader->readmutex);
+
+	pthread_mutex_lock(&dataloader->mutex);
+	if (dataloader->error || dataloader->stop) {
+		pthread_mutex_unlock(&dataloader->mutex);
+		pthread_mutex_unlock(&dataloader->readmutex);
+		return 1;
+	}
+	pthread_mutex_unlock(&dataloader->mutex);
+	for (size_t i = 0; i < n; i++) {
+		if (read_move(dataloader->f, &move)) {
+			pthread_mutex_lock(&dataloader->mutex);
+			dataloader->stop = dataloader->error = 1;
+			pthread_cond_broadcast(&dataloader->condready);
+			pthread_mutex_unlock(&dataloader->mutex);
+			pthread_mutex_unlock(&dataloader->readmutex);
+			return 1;
+		}
+		if (move) {
+			do_move(&dataloader->pos, &move);
+		}
+		else {
+			if (read_position(dataloader->f, &dataloader->pos) || read_result(dataloader->f, &dataloader->result)) {
+				pthread_mutex_lock(&dataloader->mutex);
+				dataloader->stop = dataloader->error = 1;
+				pthread_cond_broadcast(&dataloader->condready);
+				pthread_mutex_unlock(&dataloader->mutex);
+				pthread_mutex_unlock(&dataloader->readmutex);
+				return 1;
+			}
+		}
+
+		if (read_eval(dataloader->f, &eval) || read_flag(dataloader->f, &flag)) {
+			pthread_mutex_lock(&dataloader->mutex);
+			dataloader->stop = dataloader->error = 1;
+			pthread_cond_broadcast(&dataloader->condready);
+			pthread_mutex_unlock(&dataloader->mutex);
+			pthread_mutex_unlock(&dataloader->readmutex);
+			return 1;
+		}
+
+		struct entry *entry = &entries[i];
+		entry->eval = eval;
+		entry->flag = flag;
+		memcpy(entry->piece, dataloader->pos.piece, sizeof(entry->piece));
+		entry->turn = dataloader->pos.turn;
+		entry->result = dataloader->result;
+		entry->fullmove = dataloader->pos.fullmove;
+	}
+	pthread_mutex_unlock(&dataloader->readmutex);
+	return 0;
+}
+
 void *batch_worker(void *ptr) {
 	struct dataloader *dataloader = ptr;
-	struct position pos;
 
 	uint64_t seed = dataloader->baseseed + gettid();
-	size_t data_index = 0;
+
+	struct entry *entries = calloc(dataloader->internal_size, sizeof(*entries));
+	size_t entry_index = dataloader->internal_size;
 
 	while (1) {
 		pthread_mutex_lock(&dataloader->mutex);
@@ -158,6 +224,7 @@ void *batch_worker(void *ptr) {
 			break;
 		}
 		dataloader->num_batches++;
+
 		pthread_mutex_unlock(&dataloader->mutex);
 
 		struct batch *batch = batch_alloc(dataloader->requested_size);
@@ -166,78 +233,79 @@ void *batch_worker(void *ptr) {
 
 		size_t counter1 = 0, counter2 = 0;
 
-		char result = RESULT_UNKNOWN;
 		while (batch->size < dataloader->requested_size) {
-			move_t move = 0;
-			if (data_index >= dataloader->size)
-				data_index = 0;
-
-			if (read_move_mem(dataloader->data, &move, &data_index, dataloader->size)) {
-				pthread_mutex_lock(&dataloader->mutex);
-				dataloader->stop = dataloader->error = 1;
-				pthread_cond_broadcast(&dataloader->condready);
-				pthread_mutex_unlock(&dataloader->mutex);
-				break;
-			}
-			if (move) {
-				do_move(&pos, &move);
-			}
-			else {
-				/* Go to a random location. */
-				data_index = dataloader->index[xorshift64(&seed) % dataloader->index_size];
-				if (read_position_mem(dataloader->data, &pos, &data_index, dataloader->size) || read_result_mem(dataloader->data, &result, &data_index, dataloader->size)) {
-					pthread_mutex_lock(&dataloader->mutex);
-					dataloader->stop = dataloader->error = 1;
-					pthread_cond_broadcast(&dataloader->condready);
-					pthread_mutex_unlock(&dataloader->mutex);
+			if (entry_index >= dataloader->internal_size) {
+				if (entry_fetch(dataloader, entries, dataloader->internal_size))
 					break;
-				}
+				entry_index = 0;
 			}
+			struct entry *entry = &entries[entry_index];
+			char result = entry->result;
+			int32_t eval = entry->eval;
+			unsigned char flag = entry->flag;
+			if (result != RESULT_UNKNOWN)
+				result *= (2 * entry->turn - 1);
+			entry_index++;
 
-			int32_t eval = VALUE_NONE;
-			unsigned char flag;
-			if (read_eval_mem(dataloader->data, &eval, &data_index, dataloader->size) || read_flag_mem(dataloader->data, &flag, &data_index, dataloader->size)) {
-				pthread_mutex_lock(&dataloader->mutex);
-				dataloader->stop = dataloader->error = 1;
-				pthread_cond_broadcast(&dataloader->condready);
-				pthread_mutex_unlock(&dataloader->mutex);
-				break;
-			}
-
-			if (result == RESULT_UNKNOWN && dataloader->use_result)
+			if (dataloader->use_result && result == RESULT_UNKNOWN)
 				continue;
 
-			int skip = (eval == VALUE_NONE) || (flag & FLAG_SKIP) || bernoulli(dataloader->random_skip, &seed) || (dataloader->wdl_skip && result != RESULT_UNKNOWN && wdl_skip(pos.fullmove, eval, pos.turn * result, &seed));
+			int skip = (eval == VALUE_NONE) || (flag & FLAG_SKIP) || bernoulli(dataloader->random_skip, &seed) || (dataloader->wdl_skip && result != RESULT_UNKNOWN && wdl_skip(entry->fullmove, eval, result, &seed));
 			if (skip)
 				continue;
 
 			batch->eval[batch->size] = ((float)(FV_SCALE * eval)) / (127 * 64);
-			batch->result[batch->size] = result != RESULT_UNKNOWN ? ((2 * pos.turn - 1) * result + 1.0) / 2.0 : 0.5;
+			batch->result[batch->size] = result != RESULT_UNKNOWN ? (result + 1.0) / 2.0 : 0.5;
 
 			int index, square;
-			int king_square[] = { ctz(pos.piece[BLACK][KING]), ctz(pos.piece[WHITE][KING]) };
+			int king_square[] = { ctz(entry->piece[BLACK][KING]), ctz(entry->piece[WHITE][KING]) };
+			size_t counter1_was = counter1;
+			size_t counter2_was = counter2;
 			for (int piece = PAWN; piece <= KING; piece++) {
 				for (int turn = 0; turn <= 1; turn++) {
-					if (piece == KING && turn == pos.turn)
+					if (piece == KING && turn == entry->turn)
 						continue;
-					uint64_t b = pos.piece[turn][piece];
+					uint64_t b = entry->piece[turn][piece];
 					while (b) {
 						batch->ind_active += 2;
 						square = ctz(b);
-						index = make_index(pos.turn, square, colored_piece(piece, turn), king_square[pos.turn]);
+						index = make_index(entry->turn, square, colored_piece(piece, turn), king_square[entry->turn]);
 						batch->ind1[counter1++] = batch->size;
 						batch->ind1[counter1++] = index;
-						index = make_index(other_color(pos.turn), square, colored_piece(piece, turn), king_square[other_color(pos.turn)]);
+
+						index = make_index(other_color(entry->turn), square, colored_piece(piece, turn), king_square[other_color(entry->turn)]);
 						batch->ind2[counter2++] = batch->size;
 						batch->ind2[counter2++] = index;
-						index = make_index_virtual(pos.turn, square, colored_piece(piece, turn), king_square[pos.turn]);
+
+						index = make_index_virtual(entry->turn, square, colored_piece(piece, turn), king_square[entry->turn]);
 						batch->ind1[counter1++] = batch->size;
 						batch->ind1[counter1++] = index;
-						index = make_index_virtual(other_color(pos.turn), square, colored_piece(piece, turn), king_square[other_color(pos.turn)]);
+
+						index = make_index_virtual(other_color(entry->turn), square, colored_piece(piece, turn), king_square[other_color(entry->turn)]);
 						batch->ind2[counter2++] = batch->size;
 						batch->ind2[counter2++] = index;
 						b = clear_ls1b(b);
 					}
+				}
+			}
+			for (size_t c = counter1_was + 3; c < counter1; c += 2) {
+				size_t d = c;
+
+				while (d > counter1_was + 1 && batch->ind1[d - 2] > batch->ind1[d]) {
+					int32_t temp = batch->ind1[d - 2];
+					batch->ind1[d - 2] = batch->ind1[d];
+					batch->ind1[d] = temp;
+					d -= 2;
+				}
+			}
+			for (size_t c = counter2_was + 3; c < counter2; c += 2) {
+				size_t d = c;
+
+				while (d > counter2_was + 1 && batch->ind2[d - 2] > batch->ind2[d]) {
+					int32_t temp = batch->ind2[d - 2];
+					batch->ind2[d - 2] = batch->ind2[d];
+					batch->ind2[d] = temp;
+					d -= 2;
 				}
 			}
 			batch->size++;
@@ -254,6 +322,8 @@ void *batch_worker(void *ptr) {
 		}
 		pthread_mutex_unlock(&dataloader->mutex);
 	}
+
+	free(entries);
 	return NULL;
 }
 
@@ -283,73 +353,26 @@ struct batch *batch_fetch(void *ptr) {
 	return batch;
 }
 
-int loader_index(struct dataloader *dataloader) {
-	size_t actual_size = 2;
-	dataloader->index = malloc(actual_size * sizeof(*dataloader->index));
-
-	for (size_t index = 0; index < dataloader->size - 1; ) {
-		int new_position = (dataloader->data[index] == 0) && (dataloader->data[index + 1] == 0);
-		if (index == 0 && !new_position)
-			return 1;
-		index += 2;
-		if (new_position) {
-			if (dataloader->index_size++ >= actual_size) {
-				actual_size *= 2;
-				dataloader->index = realloc(dataloader->index, actual_size * sizeof(*dataloader->index));
-			}
-			dataloader->index[dataloader->index_size - 1] = index;
-			/* position (68) + result (1) */
-			index += 68 + 1;
-		}
-
-		/* eval (2) + flag (1) */
-		index += 3;
-	}
-	return 0;
-}
-
 void *loader_open(const char *s, size_t requested_size, int jobs, double random_skip, int wdl_skip, int use_result) {
 	if (jobs <= 0)
 		jobs = 1;
-	int fd = open(s, O_RDONLY, 0);
-	if (fd == -1) {
+	FILE *f = fopen(s, "rb");
+	if (!f) {
 		fprintf(stderr, "error: failed to open file '%s'\n", s);
 		return NULL;
 	}
-	struct stat st;
-	if (fstat(fd, &st) == -1) {
-		fprintf(stderr, "error: fstat\n");
-		close(fd);
-		return NULL;
-	}
 	struct dataloader *dataloader = calloc(1, sizeof(*dataloader));
-	dataloader->size = st.st_size;
 	dataloader->jobs = jobs;
-	dataloader->data = dataloader->data_unmap = mmap(NULL, dataloader->size, PROT_READ, MAP_PRIVATE, fd, 0);
-	close(fd);
-	if (dataloader->data == MAP_FAILED) {
-		fprintf(stderr, "error: mmap\n");
-		free(dataloader);
-		return NULL;
-	}
 	dataloader->requested_size = requested_size;
+	dataloader->internal_size = requested_size;
 	dataloader->random_skip = random_skip;
 	dataloader->wdl_skip = wdl_skip;
 	dataloader->use_result = use_result;
 	dataloader->num_batches = 0;
-
-	dataloader->index = NULL;
-	dataloader->index_size = 0;
-
-	if (loader_index(dataloader)) {
-		fprintf(stderr, "error: file contains errors\n");
-		munmap(dataloader->data_unmap, dataloader->size);
-		free(dataloader->index);
-		free(dataloader);
-		return NULL;
-	}
+	dataloader->f = f;
 
 	pthread_mutex_init(&dataloader->mutex, NULL);
+	pthread_mutex_init(&dataloader->readmutex, NULL);
 	pthread_cond_init(&dataloader->condready, NULL);
 	pthread_cond_init(&dataloader->condfetch, NULL);
 
@@ -376,6 +399,7 @@ void loader_close(void *ptr) {
 		pthread_join(dataloader->thread[i], NULL);
 
 	pthread_mutex_destroy(&dataloader->mutex);
+	pthread_mutex_destroy(&dataloader->readmutex);
 	pthread_cond_destroy(&dataloader->condready);
 	pthread_cond_destroy(&dataloader->condfetch);
 
@@ -394,9 +418,8 @@ void loader_close(void *ptr) {
 	}
 
 	free(dataloader->thread);
-	free(dataloader->index);
 
-	munmap(dataloader->data_unmap, dataloader->size);
+	fclose(dataloader->f);
 	free(dataloader);
 }
 
