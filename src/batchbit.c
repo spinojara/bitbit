@@ -96,6 +96,8 @@ double win_rate_model(int fullmove, int32_t eval, int result) {
 	double a = ((-0.26358 * m + 1.69976) * m + 0.18960) * m + 0.71337;
 	double b = ((-0.06160 * m + 0.40556) * m - 0.13854) * m + 0.47889;
 
+	b *= 1.5;
+
 	double w = 1.0 / (1.0 + exp((a - x) / b));
 	double l = 1.0 / (1.0 + exp((a + x) / b));
 	double d = 1.0 - w - l;
