@@ -104,17 +104,20 @@ static inline int late_move_reduction(int improvement, int index, int depth) {
 #endif
 }
 
-void print_pv(struct position *pos, move_t *pv_move, int ply) {
+void print_pv(struct position *pos, move_t *pv_move, int ply, struct history *history) {
 	struct pstate pstate;
 	pstate_init(pos, &pstate);
 	char str[8];
-	if (!(ply < PLY_MAX) || !(pseudo_legal(pos, &pstate, pv_move) && legal(pos, &pstate, pv_move)))
+	history_store(pos, history, ply);
+	if (!(ply < PLY_MAX) || !(pseudo_legal(pos, &pstate, pv_move) && legal(pos, &pstate, pv_move)) || repetition(pos, history, ply, 2) || pos->halfmove >= 100)
 		return;
 	if (ply == 0)
 		printf("pv");
 	printf(" %s", move_str_algebraic(str, pv_move));
+	do_zobrist_key(pos, pv_move);
 	do_move(pos, pv_move);
-	print_pv(pos, pv_move + 1, ply + 1);
+	print_pv(pos, pv_move + 1, ply + 1, history);
+	undo_zobrist_key(pos, pv_move);
 	undo_move(pos, pv_move);
 }
 
@@ -140,7 +143,7 @@ void print_info(struct position *pos, struct searchinfo *si, int depth, int32_t 
 		if (hf >= 0)
 			printf("hashfull %d ", hf);
 	}
-	print_pv(pos, si->pv[0], 0);
+	print_pv(pos, si->pv[0], 0, si->history);
 	printf("\n");
 }
 
@@ -247,7 +250,6 @@ static inline void store_pv_move(const move_t *move, int ply, move_t pv[PLY_MAX]
 	assert(*move);
 	pv[ply][ply] = *move;
 	memcpy(&pv[ply][ply + 1], &pv[ply + 1][ply + 1], sizeof(**pv) * (PLY_MAX - (ply + 1)));
-	memset(&pv[ply + 1][ply + 1], 0, sizeof(**pv) * (PLY_MAX - (ply + 1)));
 }
 
 /* Random drawn score to avoid threefold blindness. */
