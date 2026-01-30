@@ -477,7 +477,7 @@ void do_accumulator(struct position *pos, move_t *move) {
 	else
 		do_update_accumulator(pos, move, other_color(pos->turn));
 	do_update_accumulator(pos, move, pos->turn);
-#ifndef NDEBUG
+#if !defined(NDEBUG) && defined(FULLDEBUG)
 	int16_t accumulation[2][K_HALF_DIMENSIONS];
 	memcpy(accumulation, pos->accumulation, 2 * K_HALF_DIMENSIONS * sizeof(**accumulation));
 
@@ -525,7 +525,7 @@ void undo_accumulator(struct position *pos, move_t *move) {
 	else
 		undo_update_accumulator(pos, move, pos->turn);
 	undo_update_accumulator(pos, move, other_color(pos->turn));
-#ifndef NDEBUG
+#if !defined(NDEBUG) && defined(FULLDEBUG)
 	int16_t accumulation[2][K_HALF_DIMENSIONS];
 	memcpy(accumulation, pos->accumulation, 2 * K_HALF_DIMENSIONS * sizeof(**accumulation));
 
