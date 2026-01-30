@@ -104,7 +104,7 @@ int upcoming_repetition(const struct position *pos, const struct history *h, int
 		if (cuckoo[i = H1(diff)] == diff || cuckoo[i = H2(diff)] == diff) {
 			/* We don't have to check that we are not capturing a piece.
 			 * If we were, then that piece would have already been captured
-			 * on the position in the h that we are comparing to.
+			 * on the position in the history that we are comparing to.
 			 */
 			if (!(between(A[i], B[i]) & all_pieces(pos))) {
 				if (ply > d || 1)
