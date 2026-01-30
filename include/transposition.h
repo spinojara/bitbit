@@ -139,7 +139,7 @@ static inline int32_t adjust_score_mate_get(int32_t evaluation, int ply, int hal
 /* Can avoid the multiplication here if we instead do square + 64 * piece. */
 static inline uint64_t zobrist_piece_key(int piece, int square) {
 	assert(transposition_init_done);
-	return zobrist_keys[piece + 12 * square];
+	return zobrist_keys[square + 64 * (piece - 1)];
 }
 
 static inline uint64_t zobrist_turn_key(void) {
