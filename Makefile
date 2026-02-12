@@ -61,6 +61,11 @@ else ifeq ($(CC), gcc)
 	CFLAGS += -flto -flto-partition=one
 endif
 
+ifneq ($(COLOR), )
+	CFLAGS += -fdiagnostics-color=always
+endif
+
+
 LDFLAGS    = $(CFLAGS) $(EXTRALDFLAGS)
 
 ifneq ($(DEBUG), )
