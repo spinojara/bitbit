@@ -30,7 +30,7 @@ int moveorder_init_done = 0;
 
 int mvv_lva_lookup[7 * 7];
 
-unsigned move_order_piece_value[] = { 0, 100, 300, 300, 500, 900, 0 };
+const int move_order_piece_value[] = { 0, 100, 300, 300, 500, 900, 0 };
 
 void mvv_lva_init(void) {
 	for (int attacker = 0; attacker < 7; attacker++)
