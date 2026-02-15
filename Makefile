@@ -226,6 +226,20 @@ uninstall:
 	$(RM) -f $(DESTDIR)$(MAN6DIR)/{bit,epd,pgn}bit.6
 	$(RM) -f $(DESTDIR)$(LIBDIR)/lib{batch,vis}bit.so
 
+TEST_SOURCES = attackgen.c bench.c bitboard.c endgame.c evaluate.c history.c \
+	       init.c interface.c io.c kpk.c kpkp.c krkp.c magicbitboard.c \
+	       move.c movegen.c moveorder.c movepicker.c nnue.c nnuefile.c \
+	       nnueweights.c option.c perft.c position.c search.c thread.c \
+	       timeman.c transposition.c util.c
+
+test: CDEBUG = -g
+test: LDLIBS+= $(shell pkg-config --libs cunit)
+test: CFLAGS += $(shell pkg-config --cflags cunit)
+test: tests/test.c $(patsubst %.c,src/%.c,$(TEST_SOURCES))
+	$(CC) $(LDFLAGS) -DTT=$(TT) -Isrc -Itests $^ -o $@ $(LDLIBS)
+	@./test
+	@$(RM) test
+
 clean: objclean nnueclean pgoclean
 
 nnueclean:
@@ -240,4 +254,4 @@ objclean:
 -include $(DEP)
 .PRECIOUS: dep/%.d
 .SUFFIXES: .c .h .d
-.PHONY: all everything clean nnueclean pgoclean objclean install install-everything uninstall bitbit-pgo clang-pgo gcc-pgo
+.PHONY: all everything clean nnueclean pgoclean objclean install install-everything uninstall bitbit-pgo clang-pgo gcc-pgo test
