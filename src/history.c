@@ -105,18 +105,11 @@ int upcoming_repetition(const struct position *pos, const struct history *h, int
 			/* We don't have to check that we are not capturing a piece.
 			 * If we were, then that piece would have already been captured
 			 * on the position in the history that we are comparing to.
+			 * We also don't have to check that we are not moving into check
+			 * since then the position we are comparing to would not be legal.
 			 */
-			if (!(between(A[i], B[i]) & all_pieces(pos))) {
-				if (ply > d || 1)
-					return 1;
-
-				if (color_of_piece(pos->mailbox[A[i]] ? pos->mailbox[A[i]] : pos->mailbox[B[i]]) != pos->turn)
-					continue;
-
-				for (int e = d + 4; e <= end; e += 2)
-					if (h->zobrist_key[offset - e] == pos->zobrist_key)
-						return 1;
-			}
+			if (!(between(A[i], B[i]) & all_pieces(pos)))
+				return 1;
 		}
 	}
 
