@@ -802,6 +802,7 @@ int main(int argc, char **argv) {
 
 	timepoint_t t = time_now();
 
+	int is_paused = pausevar;
 	pthread_t *thread = malloc(jobs * sizeof(*thread));
 	struct threadinfo *ti = malloc(jobs * sizeof(*ti));
 	pausemutex = malloc(jobs * sizeof(*pausemutex));
@@ -830,7 +831,8 @@ int main(int argc, char **argv) {
 			matches = (regex_matches && !dates[i].not_flag) || (!regex_matches && dates[i].not_flag);
 		}
 
-		if (matches) {
+		if (matches && is_paused) {
+			is_paused = 0;
 			for (int i = 0; i < jobs; i++)
 				pthread_mutex_lock(&pausemutex[i]);
 			pausevar = 0;
@@ -838,7 +840,8 @@ int main(int argc, char **argv) {
 			for (int i = 0; i < jobs; i++)
 				pthread_mutex_unlock(&pausemutex[i]);
 		}
-		else {
+		else if (!matches && !is_paused) {
+			is_paused = 1;
 			for (int i = 0; i < jobs; i++)
 				pthread_mutex_lock(&pausemutex[i]);
 			pausevar = 1;
