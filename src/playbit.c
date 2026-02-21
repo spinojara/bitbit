@@ -627,14 +627,14 @@ void print_help(const char *argv0) {
 	fprintf(stderr, "\t--tt n\t\t\tUse a total tt size for all threads of n MiB.\n");
 	fprintf(stderr, "\t--nodes n\t\tSearch for a maximum of n nodes for each\n\t\t\t\tposition.\n");
 	fprintf(stderr, "\t--without-syzygy\tDo not use syzygy tablebases.\n");
-	fprintf(stderr, "\t--syzygy path\t\tUse syzygy tablebases at path.\n");
+	fprintf(stderr, "\t--syzygy path\t\tColon separated list of syzygy tablebases\n\t\t\t\tdirectories.\n");
 	fprintf(stderr, "\t--openings file\t\tUse openings file in polyglot format.\n");
 	fprintf(stderr, "\t--date regex\t\tOnly run when time in format\n\t\t\t\t'Saturday 20251028 22:56' matches regex.\n");
 	fprintf(stderr, "\t--not --date regex\tOnly run when time in format\n\t\t\t\t'Saturday 20251028 22:56' does not match regex.\n");
 	fprintf(stderr, "\t--niceness n\t\tSet the niceness to n.\n");
 	fprintf(stderr, "\nexamples:\n");
 	fprintf(stderr, "\tRun playbit with 11 parallel jobs, a total tt of 8 GiB, without syzygy\n\ttablesbases on weekdays when it's not between 17:00 and 22:00.\n");
-	fprintf(stderr, "\t$ %s /srv/selfplay --jobs 11 --tt 8192 --without-syzygy \\\n\t\t--not --date 'Saturday .*' --not --date 'Sunday .*' \\\n\t\t--date '.* (0[0-9]|1[0-6]|2[2-3]):[0-9]{2}'\n", argv0);
+	fprintf(stderr, "\t$ %s /srv/selfplay --jobs 11 --tt 8192 \\\n\t\t--syzygy /srv/syzygy/3-4-5-wdl:/srv/syzygy/6-wdl \\\n\t\t--not --date 'Saturday .*' --not --date 'Sunday .*' \\\n\t\t--date '.* (0[0-9]|1[0-6]|2[2-3]):[0-9]{2}'\n", argv0);
 }
 
 int main(int argc, char **argv) {
