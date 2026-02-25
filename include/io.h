@@ -58,7 +58,4 @@ int write_flag(FILE *f, unsigned char flag);
 int read_flag(FILE *f, unsigned char *flag);
 int read_flag_mem(const unsigned char *data, unsigned char *flag, size_t *index, size_t size);
 
-int write_tt(FILE *f, const struct transpositiontable *tt);
-int read_tt(FILE *f, struct transpositiontable *tt);
-
 #endif

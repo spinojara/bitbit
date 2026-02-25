@@ -59,8 +59,8 @@ int transposition_occupancy(const struct transpositiontable *tt, int bound) {
 	uint64_t occupied = 0;
 	for (size_t i = 0; i < tt->size; i++) {
 		struct transposition *e = &tt->table[i];
-		if (bound ? (e->bound == bound) :
-			e->bound > 0)
+		if (bound ? ((e->boundflags & BOUND_EXACT) == bound) :
+			(e->boundflags & BOUND_EXACT) > 0)
 			occupied++;
 	}
 	return 1000 * occupied / tt->size;

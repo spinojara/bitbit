@@ -322,7 +322,7 @@ int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, s
 	struct transposition *e = transposition_probe(si->tt, pos);
 	int tthit = e != NULL;
 	int32_t tteval = tthit ? adjust_score_mate_get(e->eval, ply, pos->halfmove) : VALUE_NONE;
-	int ttbound = tthit ? e->bound : 0;
+	int ttbound = tthit ? (e->boundflags & BOUND_EXACT) : 0;
 	move_t ttmove_unsafe = tthit ? e->move : 0;
 	if (!pv_node && tthit && normal_eval(tteval) && ttbound & (tteval >= beta ? BOUND_LOWER : BOUND_UPPER))
 		return tteval;
@@ -446,7 +446,7 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	struct transposition *e = transposition_probe(si->tt, pos);
 	int tthit = e != NULL;
 	int32_t tteval = tthit ? adjust_score_mate_get(e->eval, ply, pos->halfmove) : VALUE_NONE;
-	int ttbound = tthit ? e->bound : 0;
+	int ttbound = tthit ? (e->boundflags & BOUND_EXACT) : 0;
 	int ttdepth = tthit ? e->depth : 0;
 	move_t ttmove_unsafe = root_node ? si->pv[0][0] : tthit ? e->move : 0;
 

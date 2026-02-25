@@ -41,16 +41,19 @@ enum {
 };
 
 enum {
-	TRANSPOSITION_OLD_MOVE = 0x1,
+	TRANSPOSITION_OLD_MOVE = 0x4,
 };
 
 struct transposition {
 	uint64_t zobrist_key;
 	int16_t eval;
 	int8_t depth;
-	uint8_t bound;
+	/* 0-1 bound
+	 * 2 old move flag
+	 */
+	uint8_t boundflags;
 	uint16_t move;
-	uint8_t flags;
+	int16_t static_eval;
 };
 
 struct transpositiontable {
@@ -83,16 +86,15 @@ static inline struct transposition *transposition_probe(const struct transpositi
 static inline void transposition_set(struct transposition *e, const struct position *pos, int32_t evaluation, int depth, int bound, move_t move) {
 	assert(transposition_init_done);
 	assert(-VALUE_INFINITE < evaluation && evaluation < VALUE_INFINITE);
-	e->flags = 0;
+	e->boundflags = bound;
 	/* Keep old move if none available. */
 	if (move)
 		e->move = (uint16_t)move;
 	else
-		e->flags |= TRANSPOSITION_OLD_MOVE;
+		e->boundflags |= TRANSPOSITION_OLD_MOVE;
 	e->zobrist_key = pos->zobrist_key;
 	e->eval = evaluation;
 	e->depth = depth;
-	e->bound = bound;
 }
 
 static inline void transposition_store(struct transpositiontable *tt, const struct position *pos, int32_t evaluation, int depth, int bound, move_t move) {
@@ -102,9 +104,9 @@ static inline void transposition_store(struct transpositiontable *tt, const stru
 	struct transposition *e = transposition_get(tt, pos);
 	if (e->zobrist_key != pos->zobrist_key ||
 			depth >= e->depth ||
-			(bound == BOUND_EXACT && e->bound != BOUND_EXACT))
+			(bound == BOUND_EXACT && (e->boundflags & BOUND_EXACT) != BOUND_EXACT))
 		transposition_set(e, pos, evaluation, depth, bound, move);
-	else if (move && e->flags & TRANSPOSITION_OLD_MOVE)
+	else if (move && e->boundflags & TRANSPOSITION_OLD_MOVE)
 		e->move = (uint16_t)move;
 }
 
