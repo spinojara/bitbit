@@ -343,7 +343,7 @@ void bench(struct transpositiontable *tt) {
 	pthread_attr_t attr;
 
 	if (pthread_attr_init(&attr) ||
-			pthread_attr_setstacksize(&attr, 8 * 1024 * 1024) ||
+			pthread_attr_setstacksize(&attr, 16 * 1024 * 1024) ||
 			pthread_create(&thread, &attr, &bench_thread, tt)) {
 		fprintf(stderr, "error: failed to create thread\n");
 		exit(4);

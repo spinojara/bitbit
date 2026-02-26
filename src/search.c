@@ -82,6 +82,8 @@ CONST int prune_depth = 4;
 
 CONST int32_t MAX_HISTORY = 4096;
 
+CONST int pawn_correction_weight = 0;
+
 static int reductions[PLY_MAX] = { 0 };
 
 /* We choose r(x,y)=Clog(x)log(y)+D because it is increasing and concave.
@@ -192,6 +194,26 @@ static inline void add_history(int16_t *history, int bonus) {
 	*history += bonus - *history * abs(bonus) / MAX_HISTORY;
 }
 
+static inline uint64_t hash(uint64_t key) {
+	key ^= key >> 33;
+	key *= 0xff51afd7ed558ccd;
+	key ^= key >> 33;
+	key *= 0xc4ceb9fe1a85ec53;
+	key ^= key >> 33;
+	return key;
+}
+
+static inline int32_t corrected_evaluation(const struct searchinfo *si, const struct position *pos, int32_t static_eval) {
+	return static_eval + pawn_correction_weight * si->pawn_correction[pos->turn][hash(pos->piece[0][PAWN] | pos->piece[1][PAWN]) & 0xffff] / 1024;
+}
+
+static inline void update_correction_history(struct searchinfo *si, const struct position *pos, int depth, int32_t best_eval, int32_t static_eval) {
+	int32_t MAX_HISTORY = 1024;
+	int32_t bonus = clamp((best_eval - static_eval) * depth / 10, -MAX_HISTORY, MAX_HISTORY);
+
+	si->pawn_correction[pos->turn][hash(pos->piece[0][PAWN] | pos->piece[1][PAWN]) & 0xffff] += bonus - si->pawn_correction[pos->turn][hash(pos->piece[0][PAWN] | pos->piece[1][PAWN]) & 0xffff] * abs(bonus) / MAX_HISTORY;
+}
+
 static inline void update_history(struct searchinfo *si, const struct position *pos, int depth, int ply, move_t *best_move, int32_t best_eval, int32_t beta, move_t *captures, move_t *quiets, const struct searchstack *ss) {
 	int bonus = quad_bonus * depth * depth;
 	int malus = quad_malus * depth * depth;
@@ -264,10 +286,6 @@ static inline int32_t evaluate(const struct position *pos, const struct searchin
 	/* NNUE. */
 	evaluation = evaluate_accumulator(pos);
 
-	/* Damp when shuffling pieces. */
-	if (option_damp)
-		evaluation = evaluation * (damp_factor - (int)pos->halfmove) / damp_factor;
-
 	evaluation = clamp(evaluation, -VALUE_MAX, VALUE_MAX);
 
 	if (!option_deterministic)
@@ -296,20 +314,6 @@ int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, s
 	if (pv_node)
 		si->pv[ply][ply] = 0;
 
-	struct pstate pstate;
-	/* Skip generation of pstate if it was already generated during
-	 * the previous negamax.
-	 */
-	if (pstateptr)
-		pstate = *pstateptr;
-	else
-		pstate_init(pos, &pstate);
-
-	int32_t eval = evaluate(pos, si), best_eval = -VALUE_INFINITE;
-
-	if (ply >= PLY_MAX)
-		return pstate.checkers ? 0 : eval;
-
 	if (alpha < 0 && upcoming_repetition(pos, si->history, ply)) {
 		alpha = draw(si);
 		if (alpha >= beta)
@@ -323,15 +327,27 @@ int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, s
 	int tthit = e != NULL;
 	int32_t tteval = tthit ? adjust_score_mate_get(e->eval, ply, pos->halfmove) : VALUE_NONE;
 	int ttbound = tthit ? (e->boundflags & BOUND_EXACT) : 0;
+	int32_t ttstatic_eval = tthit ? e->static_eval : VALUE_NONE;
 	move_t ttmove_unsafe = tthit ? e->move : 0;
 	if (!pv_node && tthit && normal_eval(tteval) && ttbound & (tteval >= beta ? BOUND_LOWER : BOUND_UPPER))
 		return tteval;
+
+	int32_t static_eval = tthit ? ttstatic_eval : evaluate(pos, si), best_eval = -VALUE_INFINITE, eval;
+
+	struct pstate pstate;
+	/* Skip generation of pstate if it was already generated during
+	 * the previous negamax.
+	 */
+	if (pstateptr)
+		pstate = *pstateptr;
+	else
+		pstate_init(pos, &pstate);
 
 	if (!pstate.checkers) {
 		if (tthit && normal_eval(tteval) && ttbound & (tteval >= beta ? BOUND_LOWER : BOUND_UPPER))
 			best_eval = tteval;
 		else
-			best_eval = eval;
+			best_eval = corrected_evaluation(si, pos, static_eval);
 
 		if (best_eval >= beta)
 			return beta;
@@ -386,7 +402,7 @@ int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, s
 		best_eval = -VALUE_MATE + ply;
 	assert(-VALUE_INFINITE < best_eval && best_eval < VALUE_INFINITE);
 	int bound = (best_eval >= beta) ? BOUND_LOWER : (pv_node && best_move) ? BOUND_EXACT : BOUND_UPPER;
-	transposition_store(si->tt, pos, adjust_score_mate_store(best_eval, ply), -1, bound, best_move);
+	transposition_store(si->tt, pos, adjust_score_mate_store(best_eval, ply), static_eval, -1, bound, best_move);
 	return best_eval;
 }
 
@@ -448,6 +464,7 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	int32_t tteval = tthit ? adjust_score_mate_get(e->eval, ply, pos->halfmove) : VALUE_NONE;
 	int ttbound = tthit ? (e->boundflags & BOUND_EXACT) : 0;
 	int ttdepth = tthit ? e->depth : 0;
+	int32_t ttstatic_eval = tthit ? e->static_eval : VALUE_NONE;
 	move_t ttmove_unsafe = root_node ? si->pv[0][0] : tthit ? e->move : 0;
 
 	if (!pv_node && tthit && !excluded_move && normal_eval(tteval) && ttdepth >= depth && ttbound & (tteval >= beta ? BOUND_LOWER : BOUND_UPPER))
@@ -457,15 +474,19 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	int ttcapture = ttmove ? is_capture(pos, &ttmove) : 0;
 
 	int32_t improvement = 0;
+	int32_t static_eval = VALUE_NONE;
 
 	if (pstate.checkers) {
 		ss->eval = VALUE_NONE;
 		goto skip_pruning;
 	}
 
-	ss->eval = evaluate(pos, si);
-	if (tteval != VALUE_NONE && !excluded_move && ttbound & (tteval >= ss->eval ? BOUND_LOWER : BOUND_UPPER))
+	static_eval = tthit ? ttstatic_eval : evaluate(pos, si);
+
+	if (tteval != VALUE_NONE && !excluded_move && ttbound & (tteval >= static_eval ? BOUND_LOWER : BOUND_UPPER))
 		ss->eval = tteval;
+	else
+		ss->eval = corrected_evaluation(si, pos, static_eval);
 
 	improvement = (ss - 2)->eval != VALUE_NONE ? clamp(ss->eval - (ss - 2)->eval, -128, 128) : 0;
 
@@ -683,8 +704,16 @@ skip_pruning:;
 		update_history(si, pos, depth, ply, &best_move, best_eval, beta, captures, quiets, ss);
 	}
 	int bound = (best_eval >= beta) ? BOUND_LOWER : (pv_node && best_move) ? BOUND_EXACT : BOUND_UPPER;
-	if (!excluded_move)
-		transposition_store(si->tt, pos, adjust_score_mate_store(best_eval, ply), depth, bound, best_move);
+	if (!excluded_move) {
+		if (static_eval == VALUE_NONE)
+			static_eval = evaluate(pos, si);
+		transposition_store(si->tt, pos, adjust_score_mate_store(best_eval, ply), static_eval, depth, bound, best_move);
+		if (!pstate.checkers
+			&& !(best_move && move_capture(&best_move))
+			&& (best_eval > static_eval) == (best_move != 0)) {
+			update_correction_history(si, pos, depth, best_eval, static_eval);
+		}
+	}
 	assert(-VALUE_INFINITE < best_eval && best_eval < VALUE_INFINITE);
 
 	return best_eval;

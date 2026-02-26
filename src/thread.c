@@ -111,7 +111,7 @@ void search_start(struct position *pos, int depth, struct timeinfo *ti, struct t
 	pthread_attr_t attr;
 
 	if (pthread_attr_init(&attr) ||
-			pthread_attr_setstacksize(&attr, 8 * 1024 * 1024) ||
+			pthread_attr_setstacksize(&attr, 16 * 1024 * 1024) ||
 			pthread_create(&thread, &attr, &search_thread, tdi) ||
 			pthread_detach(thread)) {
 		fprintf(stderr, "error: failed to create thread\n");
