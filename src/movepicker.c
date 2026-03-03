@@ -34,8 +34,8 @@ CONST int from_attack = 10000;
 CONST int into_attack = 15000;
 CONST int check_threat = 28577;
 
-CONST double mvv_lva_factor = 4.83;
-CONST double continuation_history_factor = 8.08;
+CONST double mvv_lva_factor = 11.58;
+CONST double continuation_history_factor = 9.82;
 
 CONST int goodquiet_threshold = 5715;
 
@@ -85,11 +85,11 @@ void evaluate_nonquiet(struct movepicker *mp) {
 		int square_to = move_to(move);
 		int attacker = mp->pos->mailbox[square_from];
 		int victim = move_flag(move) == MOVE_EN_PASSANT ? PAWN : uncolored_piece(mp->pos->mailbox[square_to]);
-		mp->eval[i] = mp->si->capture_history[attacker][victim][square_to] / 512;
+		mp->eval[i] = mp->si->capture_history[attacker][victim][square_to] / 4;
 #ifdef TUNE
 		mp->eval[i] += mvv_lva_factor * (victim ? mvv_lva(uncolored_piece(attacker), victim) : 0);
 #else
-		mp->eval[i] += 5 * (victim ? mvv_lva(uncolored_piece(attacker), victim) : 0);
+		mp->eval[i] += 12 * (victim ? mvv_lva(uncolored_piece(attacker), victim) : 0);
 #endif
 	}
 }
@@ -112,19 +112,19 @@ void evaluate_quiet(struct movepicker *mp) {
 #ifdef TUNE
 			mp->eval[i] += continuation_history_factor * (*(mp->ss - 1)->continuation_history_entry)[attacker][to_square];
 #else
-			mp->eval[i] += 8 * (*(mp->ss - 1)->continuation_history_entry)[attacker][to_square];
+			mp->eval[i] += 10 * (*(mp->ss - 1)->continuation_history_entry)[attacker][to_square];
 #endif
 		if ((mp->ss - 2)->move)
 #ifdef TUNE
 			mp->eval[i] += continuation_history_factor * (*(mp->ss - 2)->continuation_history_entry)[attacker][to_square];
 #else
-			mp->eval[i] += 8 * (*(mp->ss - 2)->continuation_history_entry)[attacker][to_square];
+			mp->eval[i] += 10 * (*(mp->ss - 2)->continuation_history_entry)[attacker][to_square];
 #endif
 		if ((mp->ss - 4)->move)
 #ifdef TUNE
 			mp->eval[i] += continuation_history_factor * (*(mp->ss - 4)->continuation_history_entry)[attacker][to_square];
 #else
-			mp->eval[i] += 8 * (*(mp->ss - 4)->continuation_history_entry)[attacker][to_square];
+			mp->eval[i] += 10 * (*(mp->ss - 4)->continuation_history_entry)[attacker][to_square];
 #endif
 		attacker = uncolored_piece(attacker);
 		if (from & attacked[attacker])

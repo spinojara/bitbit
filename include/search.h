@@ -37,7 +37,7 @@ struct searchstack {
 
 	int32_t eval;
 
-	int64_t (*continuation_history_entry)[13][64];
+	int16_t (*continuation_history_entry)[13][64];
 };
 
 struct searchinfo {
@@ -46,9 +46,9 @@ struct searchinfo {
 	move_t pv[PLY_MAX][PLY_MAX];
 	move_t killers[PLY_MAX][2];
 	move_t counter_move[13][64];
-	int64_t continuation_history[13][64][13][64];
-	int64_t quiet_history[13][64][64];
-	int64_t capture_history[13][7][64];
+	int16_t continuation_history[13][64][13][64];
+	int16_t quiet_history[13][64][64];
+	int16_t capture_history[13][7][64];
 
 	struct transpositiontable *tt;
 	struct history *history;

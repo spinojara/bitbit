@@ -61,8 +61,8 @@ CONST int asp = 17;
 
 CONST int futility_depth = 6;
 
-CONST int quad_bonus = 16;
-CONST int quad_malus = 4;
+CONST int quad_bonus = 28;
+CONST int quad_malus = 21;
 
 CONST int damp_factor = 200;
 
@@ -79,6 +79,8 @@ CONST int cut_node_lmr = 634;
 CONST double reduce_non_improving = 0.39935;
 
 CONST int prune_depth = 4;
+
+CONST int32_t MAX_HISTORY = 4096;
 
 static int reductions[PLY_MAX] = { 0 };
 
@@ -185,18 +187,14 @@ static inline void store_killer_move(const move_t *move, int ply, move_t killers
  *
  * We choose e.g. alpha = 15 / 16.
  */
-static inline void add_history(int64_t *history, int64_t bonus) {
-	*history += bonus;
-#ifdef TUNE
-	*history -= (int)(*history * history_regularization);
-#else
-	*history -= *history / 16;
-#endif
+static inline void add_history(int16_t *history, int bonus) {
+	bonus = clamp(bonus, -MAX_HISTORY, MAX_HISTORY);
+	*history += bonus - *history * abs(bonus) / MAX_HISTORY;
 }
 
 static inline void update_history(struct searchinfo *si, const struct position *pos, int depth, int ply, move_t *best_move, int32_t best_eval, int32_t beta, move_t *captures, move_t *quiets, const struct searchstack *ss) {
-	int64_t bonus = quad_bonus * depth * depth;
-	int64_t malus = quad_malus * depth * depth;
+	int bonus = quad_bonus * depth * depth;
+	int malus = quad_malus * depth * depth;
 
 	int our_piece = pos->mailbox[move_from(best_move)];
 	int their_piece = move_capture(best_move);

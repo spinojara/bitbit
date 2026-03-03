@@ -35,8 +35,7 @@ const int move_order_piece_value[] = { 0, 100, 300, 300, 500, 900, 0 };
 void mvv_lva_init(void) {
 	for (int attacker = 0; attacker < 7; attacker++)
 		for (int victim = 0; victim < 7; victim++)
-			mvv_lva_lookup[attacker + 7 * victim] = move_order_piece_value[victim] -
-			                                         move_order_piece_value[attacker];
+			mvv_lva_lookup[attacker + 7 * victim] = move_order_piece_value[victim] - move_order_piece_value[attacker];
 }
 
 int see_geq(struct position *pos, const move_t *move, int32_t value) {
