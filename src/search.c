@@ -82,7 +82,7 @@ CONST int prune_depth = 4;
 
 CONST int32_t MAX_HISTORY = 4096;
 
-CONST int pawn_correction_weight = 0;
+CONST double pawn_correction_weight = 17.89;
 
 static int reductions[PLY_MAX] = { 0 };
 
@@ -204,14 +204,17 @@ static inline uint64_t hash(uint64_t key) {
 }
 
 static inline int32_t corrected_evaluation(const struct searchinfo *si, const struct position *pos, int32_t static_eval) {
+#ifdef TUNE
 	return static_eval + pawn_correction_weight * si->pawn_correction[pos->turn][hash(pos->piece[0][PAWN] | pos->piece[1][PAWN]) & 0xffff] / 1024;
+#else
+	return static_eval + 18 * si->pawn_correction[pos->turn][hash(pos->piece[0][PAWN] | pos->piece[1][PAWN]) & 0xffff] / 1024;
+#endif
 }
 
-static inline void update_correction_history(struct searchinfo *si, const struct position *pos, int depth, int32_t best_eval, int32_t static_eval) {
-	int32_t MAX_HISTORY = 1024;
-	int32_t bonus = clamp((best_eval - static_eval) * depth / 10, -MAX_HISTORY, MAX_HISTORY);
+static inline void update_correction_history(struct searchinfo *si, const struct position *pos, int depth, int32_t best_eval, int32_t corrected_static_eval) {
+	int bonus = (best_eval - corrected_static_eval) * depth / 10;
 
-	si->pawn_correction[pos->turn][hash(pos->piece[0][PAWN] | pos->piece[1][PAWN]) & 0xffff] += bonus - si->pawn_correction[pos->turn][hash(pos->piece[0][PAWN] | pos->piece[1][PAWN]) & 0xffff] * abs(bonus) / MAX_HISTORY;
+	add_history(&si->pawn_correction[pos->turn][hash(pos->piece[0][PAWN] | pos->piece[1][PAWN]) & 0xffff], bonus);
 }
 
 static inline void update_history(struct searchinfo *si, const struct position *pos, int depth, int ply, move_t *best_move, int32_t best_eval, int32_t beta, move_t *captures, move_t *quiets, const struct searchstack *ss) {
@@ -474,19 +477,18 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	int ttcapture = ttmove ? is_capture(pos, &ttmove) : 0;
 
 	int32_t improvement = 0;
-	int32_t static_eval = VALUE_NONE;
+	int32_t static_eval = tthit ? ttstatic_eval : evaluate(pos, si);
+	int32_t corrected_static_eval = corrected_evaluation(si, pos, static_eval);
 
 	if (pstate.checkers) {
 		ss->eval = VALUE_NONE;
 		goto skip_pruning;
 	}
 
-	static_eval = tthit ? ttstatic_eval : evaluate(pos, si);
-
-	if (tteval != VALUE_NONE && !excluded_move && ttbound & (tteval >= static_eval ? BOUND_LOWER : BOUND_UPPER))
+	if (tteval != VALUE_NONE && !excluded_move && ttbound & (tteval >= corrected_static_eval ? BOUND_LOWER : BOUND_UPPER))
 		ss->eval = tteval;
 	else
-		ss->eval = corrected_evaluation(si, pos, static_eval);
+		ss->eval = corrected_static_eval;
 
 	improvement = (ss - 2)->eval != VALUE_NONE ? clamp(ss->eval - (ss - 2)->eval, -128, 128) : 0;
 
@@ -710,8 +712,8 @@ skip_pruning:;
 		transposition_store(si->tt, pos, adjust_score_mate_store(best_eval, ply), static_eval, depth, bound, best_move);
 		if (!pstate.checkers
 			&& !(best_move && move_capture(&best_move))
-			&& (best_eval > static_eval) == (best_move != 0)) {
-			update_correction_history(si, pos, depth, best_eval, static_eval);
+			&& (best_eval > corrected_static_eval) == (best_move != 0)) {
+			update_correction_history(si, pos, depth, best_eval, corrected_static_eval);
 		}
 	}
 	assert(-VALUE_INFINITE < best_eval && best_eval < VALUE_INFINITE);
