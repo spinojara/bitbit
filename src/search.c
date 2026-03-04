@@ -476,14 +476,20 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	move_t ttmove = pseudo_legal(pos, &pstate, &ttmove_unsafe) ? ttmove_unsafe : 0;
 	int ttcapture = ttmove ? is_capture(pos, &ttmove) : 0;
 
-	int32_t improvement = 0;
-	int32_t static_eval = tthit ? ttstatic_eval : evaluate(pos, si);
-	int32_t corrected_static_eval = corrected_evaluation(si, pos, static_eval);
+	/* In the astronomically unlikely state that two positions zobirst keys
+	 * align, where the first position is in check, it is better to set
+	 * static_eval which will be stored in tt to 0, than to VALUE_NONE.
+	 */
+	int32_t static_eval = 0, corrected_static_eval = 0;
 
+	int32_t improvement = 0;
 	if (pstate.checkers) {
 		ss->eval = VALUE_NONE;
 		goto skip_pruning;
 	}
+
+	static_eval = tthit ? ttstatic_eval : evaluate(pos, si);
+	corrected_static_eval = corrected_evaluation(si, pos, static_eval);
 
 	if (tteval != VALUE_NONE && !excluded_move && ttbound & (tteval >= corrected_static_eval ? BOUND_LOWER : BOUND_UPPER))
 		ss->eval = tteval;
@@ -707,8 +713,6 @@ skip_pruning:;
 	}
 	int bound = (best_eval >= beta) ? BOUND_LOWER : (pv_node && best_move) ? BOUND_EXACT : BOUND_UPPER;
 	if (!excluded_move) {
-		if (static_eval == VALUE_NONE)
-			static_eval = evaluate(pos, si);
 		transposition_store(si->tt, pos, adjust_score_mate_store(best_eval, ply), static_eval, depth, bound, best_move);
 		if (!pstate.checkers
 			&& !(best_move && move_capture(&best_move))
