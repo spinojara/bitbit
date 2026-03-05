@@ -77,6 +77,7 @@ extern double reduce_non_improving;
 extern int prune_depth;
 
 extern double pawn_correction_weight;
+extern double non_pawn_correction_weight;
 
 struct tune tunes[] = {
 	TUNE("razor1", TYPE_INT, &razor1),
@@ -117,6 +118,7 @@ struct tune tunes[] = {
 	TUNE("prunedepth", TYPE_INT, &prune_depth),
 
 	TUNE("pawncorrectionweight", TYPE_DOUBLE, &pawn_correction_weight),
+	TUNE("nonpawncorrectionweight", TYPE_DOUBLE, &non_pawn_correction_weight),
 };
 
 int rdi(double f) {

@@ -84,6 +84,8 @@ CONST int32_t MAX_HISTORY = 4096;
 
 CONST double pawn_correction_weight = 17.89;
 
+CONST double non_pawn_correction_weight = 0.0;
+
 static int reductions[PLY_MAX] = { 0 };
 
 /* We choose r(x,y)=Clog(x)log(y)+D because it is increasing and concave.
@@ -204,10 +206,14 @@ static inline uint64_t hash(uint64_t key) {
 }
 
 static inline int32_t corrected_evaluation(const struct searchinfo *si, const struct position *pos, int32_t static_eval) {
+	int16_t pc = si->pawn_correction[pos->turn][hash(pos->piece[0][PAWN] | pos->piece[1][PAWN]) & 0xffff];
+	int16_t npcw = si->non_pawn_correction[pos->turn][0][hash(pos->piece[0][ALL] ^ pos->piece[0][PAWN]) & 0xffff];
+	int16_t npcb = si->non_pawn_correction[pos->turn][1][hash(pos->piece[1][ALL] ^ pos->piece[1][PAWN]) & 0xffff];
+
 #ifdef TUNE
-	return static_eval + pawn_correction_weight * si->pawn_correction[pos->turn][hash(pos->piece[0][PAWN] | pos->piece[1][PAWN]) & 0xffff] / 1024;
+	return static_eval + (pawn_correction_weight * pc + non_pawn_correction_weight * (npcw + npcb)) / 1024;
 #else
-	return static_eval + 18 * si->pawn_correction[pos->turn][hash(pos->piece[0][PAWN] | pos->piece[1][PAWN]) & 0xffff] / 1024;
+	return static_eval + (16 * pc + 14 * (npcw + npcb)) / 1024;
 #endif
 }
 
@@ -215,6 +221,8 @@ static inline void update_correction_history(struct searchinfo *si, const struct
 	int bonus = (best_eval - corrected_static_eval) * depth / 10;
 
 	add_history(&si->pawn_correction[pos->turn][hash(pos->piece[0][PAWN] | pos->piece[1][PAWN]) & 0xffff], bonus);
+	add_history(&si->non_pawn_correction[pos->turn][0][hash(pos->piece[0][ALL] ^ pos->piece[0][PAWN]) & 0xffff], bonus);
+	add_history(&si->non_pawn_correction[pos->turn][1][hash(pos->piece[1][ALL] ^ pos->piece[1][PAWN]) & 0xffff], bonus);
 }
 
 static inline void update_history(struct searchinfo *si, const struct position *pos, int depth, int ply, move_t *best_move, int32_t best_eval, int32_t beta, move_t *captures, move_t *quiets, const struct searchstack *ss) {

@@ -51,7 +51,7 @@ struct searchinfo {
 	int16_t capture_history[13][7][64];
 
 	int16_t pawn_correction[2][65536];
-	int16_t non_pawn_correction[2][65536];
+	int16_t non_pawn_correction[2][2][65536];
 
 	struct transpositiontable *tt;
 	struct history *history;
