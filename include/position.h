@@ -41,6 +41,7 @@ struct position {
 	int mailbox[64];
 
 	uint64_t zobrist_key;
+	uint64_t piece_key[2][7];
 	uint64_t endgame_key;
 
 	alignas(32) int16_t accumulation[2][K_HALF_DIMENSIONS];

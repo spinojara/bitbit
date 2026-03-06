@@ -196,19 +196,10 @@ static inline void add_history(int16_t *history, int bonus) {
 	*history += bonus - *history * abs(bonus) / MAX_HISTORY;
 }
 
-static inline uint64_t hash(uint64_t key) {
-	key ^= key >> 33;
-	key *= 0xff51afd7ed558ccd;
-	key ^= key >> 33;
-	key *= 0xc4ceb9fe1a85ec53;
-	key ^= key >> 33;
-	return key;
-}
-
 static inline int32_t corrected_evaluation(const struct searchinfo *si, const struct position *pos, int32_t static_eval) {
-	int16_t pc = si->pawn_correction[pos->turn][hash(pos->piece[0][PAWN] | pos->piece[1][PAWN]) & 0xffff];
-	int16_t npcw = si->non_pawn_correction[pos->turn][0][hash(pos->piece[0][ALL] ^ pos->piece[0][PAWN]) & 0xffff];
-	int16_t npcb = si->non_pawn_correction[pos->turn][1][hash(pos->piece[1][ALL] ^ pos->piece[1][PAWN]) & 0xffff];
+	int16_t pc = si->pawn_correction[pos->turn][(pos->piece_key[0][PAWN] ^ pos->piece_key[1][PAWN]) & 0xffff];
+	int16_t npcw = si->non_pawn_correction[pos->turn][1][(pos->piece_key[1][KNIGHT] ^ pos->piece_key[1][BISHOP] ^ pos->piece_key[1][ROOK] ^ pos->piece_key[1][QUEEN] ^ pos->piece_key[1][KING]) & 0xffff];
+	int16_t npcb = si->non_pawn_correction[pos->turn][0][(pos->piece_key[0][KNIGHT] ^ pos->piece_key[0][BISHOP] ^ pos->piece_key[0][ROOK] ^ pos->piece_key[0][QUEEN] ^ pos->piece_key[0][KING]) & 0xffff];
 
 #ifdef TUNE
 	return static_eval + (pawn_correction_weight * pc + non_pawn_correction_weight * (npcw + npcb)) / 1024;
@@ -220,9 +211,9 @@ static inline int32_t corrected_evaluation(const struct searchinfo *si, const st
 static inline void update_correction_history(struct searchinfo *si, const struct position *pos, int depth, int32_t best_eval, int32_t corrected_static_eval) {
 	int bonus = (best_eval - corrected_static_eval) * depth / 10;
 
-	add_history(&si->pawn_correction[pos->turn][hash(pos->piece[0][PAWN] | pos->piece[1][PAWN]) & 0xffff], bonus);
-	add_history(&si->non_pawn_correction[pos->turn][0][hash(pos->piece[0][ALL] ^ pos->piece[0][PAWN]) & 0xffff], bonus);
-	add_history(&si->non_pawn_correction[pos->turn][1][hash(pos->piece[1][ALL] ^ pos->piece[1][PAWN]) & 0xffff], bonus);
+	add_history(&si->pawn_correction[pos->turn][(pos->piece_key[0][PAWN] ^ pos->piece_key[1][PAWN]) & 0xffff], bonus);
+	add_history(&si->non_pawn_correction[pos->turn][0][(pos->piece_key[0][KNIGHT] ^ pos->piece_key[0][BISHOP] ^ pos->piece_key[0][ROOK] ^ pos->piece_key[0][QUEEN] ^ pos->piece_key[0][KING]) & 0xffff], bonus);
+	add_history(&si->non_pawn_correction[pos->turn][1][(pos->piece_key[1][KNIGHT] ^ pos->piece_key[1][BISHOP] ^ pos->piece_key[1][ROOK] ^ pos->piece_key[1][QUEEN] ^ pos->piece_key[1][KING]) & 0xffff], bonus);
 }
 
 static inline void update_history(struct searchinfo *si, const struct position *pos, int depth, int ply, move_t *best_move, int32_t best_eval, int32_t beta, move_t *captures, move_t *quiets, const struct searchstack *ss) {
