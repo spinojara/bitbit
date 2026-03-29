@@ -82,9 +82,9 @@ CONST int prune_depth = 4;
 
 CONST int32_t MAX_HISTORY = 4096;
 
-CONST double pawn_correction_weight = 17.89;
+CONST double pawn_correction_weight = 16.00;
 
-CONST double non_pawn_correction_weight = 0.0;
+CONST double non_pawn_correction_weight = 14.0;
 
 static int reductions[PLY_MAX] = { 0 };
 
