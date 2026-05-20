@@ -23,21 +23,16 @@
 #include "movegen.h"
 #include "search.h"
 #include "util.h"
+#include "tune.h"
 
-#ifdef TUNE
-#define CONST
-#else
-#define CONST const
-#endif
+TUNEVAR(int, from_attack, 10000, NULL, NULL)
+TUNEVAR(int, into_attack, 15000, NULL, NULL)
+TUNEVAR(int, check_threat, 28577, NULL, NULL)
 
-CONST int from_attack = 10000;
-CONST int into_attack = 15000;
-CONST int check_threat = 28577;
+TUNEVAR(double, mvv_lva_factor, 11.58, NULL, NULL)
+TUNEVAR(double, continuation_history_factor, 9.82, NULL, NULL)
 
-CONST double mvv_lva_factor = 11.58;
-CONST double continuation_history_factor = 9.82;
-
-CONST int goodquiet_threshold = 5715;
+TUNEVAR(int, goodquiet_threshold, 5715, NULL, NULL)
 
 static inline int good_capture(struct position *pos, move_t *move, int threshold) {
 	return (is_capture(pos, move) || move_flag(move) == MOVE_EN_PASSANT) && see_geq(pos, move, threshold);

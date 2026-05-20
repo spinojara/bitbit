@@ -26,9 +26,7 @@
 #include "transposition.h"
 #include "interface.h"
 #include "nnue.h"
-#if TUNE
 #include "tune.h"
-#endif
 
 #define OPTION_TRANSPOSITION 1
 #define OPTION_HISTORY       1
@@ -55,15 +53,12 @@ void print_options(void) {
 	printf("option name BuiltinNNUE type button\n");
 	printf("option name Deterministic type check default %s\n", OPTION_DETERMINISTIC ? "true" : "false");
 	printf("option name Debug type check default %s\n", OPTION_DEBUG ? "true" : "false");
-#if TUNE
 	print_tune();
-#endif
 }
 
 void setoption(int argc, char **argv, struct transpositiontable *tt) {
-#if TUNE
 	settune(argc, argv);
-#endif
+
 	if (argc < 3)
 		return;
 

@@ -37,6 +37,7 @@
 #include "movepicker.h"
 #include "option.h"
 #include "endgame.h"
+#include "tune.h"
 
 #ifndef NDEBUG
 int search_init_done = 0;
@@ -46,45 +47,37 @@ volatile atomic_int ucistop;
 volatile atomic_int ucigo;
 volatile atomic_int uciponder;
 
-#ifdef TUNE
-#define CONST
-#else
-#define CONST const
-#endif
+TUNEVAR(int, razor1, 170, NULL, NULL)
+TUNEVAR(int, razor2, 156, NULL, NULL)
+TUNEVAR(int, futility, 76, NULL, NULL)
+TUNEVAR(double, futility_improving, 1.09, NULL, NULL)
+TUNEVAR(double, red, 25.439, 0.0, NULL)
+TUNEVAR(int, asp, 17, 1, NULL)
 
-CONST int razor1 = 170;
-CONST int razor2 = 156;
-CONST int futility = 76;
-CONST double futility_improving = 1.09;
-CONST double red = 25.439;
-CONST int asp = 17;
+TUNEVAR(int, futility_depth, 6, NULL, NULL)
 
-CONST int futility_depth = 6;
+TUNEVAR(int, quad_bonus, 28, NULL, NULL)
+TUNEVAR(int, quad_malus, 21, NULL, NULL)
 
-CONST int quad_bonus = 28;
-CONST int quad_malus = 21;
+TUNEVAR(double, history_regularization, 0.0625, NULL, NULL)
 
-CONST int damp_factor = 200;
+TUNEVAR(int, aspiration_depth, 5, 0, NULL)
 
-CONST double history_regularization = 0.0625;
+TUNEVAR(int, base_lmr, 277, NULL, NULL)
+TUNEVAR(int, improving_lmr, -649, NULL, NULL)
+TUNEVAR(int, pv_node_lmr, 573, NULL, NULL)
+TUNEVAR(int, ttcapture_lmr, 100, NULL, NULL)
+TUNEVAR(int, cut_node_lmr, 634, NULL, NULL)
 
-CONST int aspiration_depth = 5;
+TUNEVAR(double, reduce_non_improving, 0.39935, NULL, NULL)
 
-CONST int base_lmr = 277;
-CONST int improving_lmr = -649;
-CONST int pv_node_lmr = 573;
-CONST int ttcapture_lmr = 100;
-CONST int cut_node_lmr = 634;
+TUNEVAR(int, prune_depth, 4, NULL, NULL)
 
-CONST double reduce_non_improving = 0.39935;
+TUNEVAR(int32_t, MAX_HISTORY, 4096, 1, NULL)
 
-CONST int prune_depth = 4;
+TUNEVAR(double, pawn_correction_weight, 16.00, NULL, NULL)
 
-CONST int32_t MAX_HISTORY = 4096;
-
-CONST double pawn_correction_weight = 16.00;
-
-CONST double non_pawn_correction_weight = 14.0;
+TUNEVAR(double, non_pawn_correction_weight, 14.0, NULL, NULL)
 
 static int reductions[PLY_MAX] = { 0 };
 

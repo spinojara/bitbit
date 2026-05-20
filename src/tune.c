@@ -25,116 +25,71 @@
 #include "util.h"
 #include "search.h"
 
-enum {
-	TYPE_INT,
-	TYPE_DOUBLE,
-};
-
 struct tune {
-	char *name;
-	int type;
-	void *p;
+	const char *name;
+	double start;
+	void (*set)(double);
+	double (*get)(void);
+	int is_int_type;
 };
 
-#undef TUNE
-#define TUNE(x, y, z) { .name = x, .type = y, .p = z }
+size_t tunes_length;
+struct tune *tunes;
 
-extern int razor1;
-extern int razor2;
-extern int futility;
-extern double red;
-extern int asp;
-extern double maximal;
-extern double instability1;
-extern double instability2;
+char *remove_underscore(const char *var) {
+	char *copy = malloc(strlen(var) + 1);
 
-extern int from_attack;
-extern int into_attack;
-extern int check_threat;
-extern double mvv_lva_factor;
-extern double continuation_history_factor;
-extern int goodquiet_threshold;
+	size_t j, i;
+	for (i = 0, j = 0; i < strlen(var); i++) {
+		if (var[i] == '_')
+			continue;
+		copy[j++] = var[i];
+	}
+	copy[j] = '\0';
 
-extern int quad_bonus;
-extern int quad_malus;
-extern double history_regularization;
+	return copy;
+}
 
-extern int damp_factor;
+int tunecmp(const char *var1, const char *var2) {
+	char *var1_clean = remove_underscore(var1);
+	char *var2_clean = remove_underscore(var2);
 
-extern int aspiration_depth;
+	int ret = strcasecmp(var1_clean, var2_clean);
 
-extern int base_lmr;
-extern int improving_lmr;
-extern int pv_node_lmr;
-extern int ttcapture_lmr;
-extern int cut_node_lmr;
+	free(var1_clean);
+	free(var2_clean);
 
-extern int futility_depth;
-extern double futility_improving;
+	return ret;
+}
 
-extern double reduce_non_improving;
+void tune_variable(const char *name, double start, void (*set)(double), double (*get)(void), int is_int_type) {
+	for (size_t i = 0; i < tunes_length; i++)
+		if (!tunecmp(tunes[i].name, name)) {
+			fprintf(stderr, "error: already tuning variable with name '%s'\n", name);
+			exit(1);
+		}
 
-extern int prune_depth;
-
-extern double pawn_correction_weight;
-extern double non_pawn_correction_weight;
-
-struct tune tunes[] = {
-	TUNE("razor1", TYPE_INT, &razor1),
-	TUNE("razor2", TYPE_INT, &razor2),
-	TUNE("futility", TYPE_INT, &futility),
-	TUNE("maximal", TYPE_DOUBLE, &maximal),
-	TUNE("instability1", TYPE_DOUBLE, &instability1),
-	TUNE("instability2", TYPE_DOUBLE, &instability2),
-	TUNE("reduction", TYPE_DOUBLE, &red),
-	TUNE("aspiration", TYPE_INT, &asp),
-
-	TUNE("fromattack", TYPE_INT, &from_attack),
-	TUNE("intoattack", TYPE_INT, &into_attack),
-	TUNE("checkthreat", TYPE_INT, &check_threat),
-	TUNE("mvvlvafactor", TYPE_DOUBLE, &mvv_lva_factor),
-	TUNE("continuationhistoryfactor", TYPE_DOUBLE, &continuation_history_factor),
-	TUNE("goodquietthreshold", TYPE_INT, &goodquiet_threshold),
-
-	TUNE("quadbonus", TYPE_INT, &quad_bonus),
-	TUNE("quadmalus", TYPE_INT, &quad_malus),
-	TUNE("historyregularization", TYPE_DOUBLE, &history_regularization),
-
-	TUNE("dampfactor", TYPE_INT, &damp_factor),
-
-	TUNE("aspirationdepth", TYPE_INT, &aspiration_depth),
-
-	TUNE("baselmr", TYPE_INT, &base_lmr),
-	TUNE("improvinglmr", TYPE_INT, &improving_lmr),
-	TUNE("pvnodelmr", TYPE_INT, &pv_node_lmr),
-	TUNE("ttcapturelmr", TYPE_INT, &ttcapture_lmr),
-	TUNE("cutnodelmr", TYPE_INT, &cut_node_lmr),
-
-	TUNE("futilitydepth", TYPE_INT, &futility_depth),
-	TUNE("futilityimproving", TYPE_DOUBLE, &futility_improving),
-
-	TUNE("reducenonimproving", TYPE_DOUBLE, &reduce_non_improving),
-
-	TUNE("prunedepth", TYPE_INT, &prune_depth),
-
-	TUNE("pawncorrectionweight", TYPE_DOUBLE, &pawn_correction_weight),
-	TUNE("nonpawncorrectionweight", TYPE_DOUBLE, &non_pawn_correction_weight),
-};
-
-int rdi(double f) {
-	return (int)(f < 0.0 ? f - 0.5 : f + 0.5);
+	tunes = realloc(tunes, (++tunes_length) * sizeof(*tunes));
+	tunes[tunes_length - 1] = (struct tune){ name, start, set, get, is_int_type };
 }
 
 void print_tune(void) {
-	for (size_t i = 0; i < SIZE(tunes); i++) {
-		if (tunes[i].type == TYPE_INT)
-			printf("option name %s type string default %d\n", tunes[i].name, *(int *)tunes[i].p);
-		else
-			printf("option name %s type string default %lf\n", tunes[i].name, *(double *)tunes[i].p);
+	if (tunes_length)
+		printf("option name Restore Tune type button\n");
+	for (size_t i = 0; i < tunes_length; i++) {
+		struct tune *tune = &tunes[i];
+		printf("option name %s type string default %g\n", tune->name, tune->get());
 	}
 }
 
 void settune(int argc, char **argv) {
+	if (!tunes_length)
+		return;
+	if (!strcasecmp(argv[2], "restore")) {
+		for (size_t i = 0; i < tunes_length; i++)
+			tunes[i].set(tunes[i].start);
+		return;
+	}
 	if (argc < 5)
 		return;
 
@@ -145,28 +100,13 @@ void settune(int argc, char **argv) {
 	if (*endptr != '\0' || errno)
 		return;
 
-	int hit = 0;
-	for (size_t i = 0; i < SIZE(tunes); i++) {
+	for (size_t i = 0; i < tunes_length; i++) {
 		struct tune *tune = &tunes[i];
-		if (strcasecmp(tune->name, argv[2]))
+		if (tunecmp(tune->name, argv[2]))
 			continue;
 
-		hit = 1;
-		switch (tune->type) {
-		case TYPE_INT:
-			*(int *)tune->p = rdi(value);
-			break;
-		case TYPE_DOUBLE:
-			*(double *)tune->p = value;
-			break;
-		}
-
-		if (!strcasecmp(tune->name, "reduction"))
-			search_init();
-	}
-
-	if (!hit) {
-		printf("error: no option '%s'\n", argv[2]);
-		exit(1);
+		tune->set(tune->is_int_type ? round(value) : value);
+		search_init();
+		break;
 	}
 }

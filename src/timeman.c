@@ -23,16 +23,11 @@
 
 #include "util.h"
 #include "option.h"
+#include "tune.h"
 
-#ifdef TUNE
-#define CONST
-#else
-#define CONST const
-#endif
-
-CONST double maximal = 0.8;
-CONST double instability1 = 0.5;
-CONST double instability2 = 1.1;
+TUNEVAR(double, maximal, 0.8, 0.02, 0.98)
+TUNEVAR(double, instability1, 0.5, 0.0, NULL)
+TUNEVAR(double, instability2, 1.1, 0.0, NULL)
 
 void time_init(struct position *pos, struct timeinfo *ti) {
 	if (!ti)

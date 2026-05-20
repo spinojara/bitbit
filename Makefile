@@ -35,10 +35,13 @@ COPTIMIZE  = -O3 $(CARCH)
 
 ifeq ($(DEBUG), yes)
 	CDEBUG = -g3 -ggdb
+	LDFLAGS += -rdynamic
 else ifeq ($(DEBUG), thread)
 	CDEBUG = -g3 -ggdb -fsanitize=thread,undefined
+	LDFLAGS += -rdynamic
 else ifeq ($(DEBUG), address)
 	CDEBUG = -g3 -ggdb -fsanitize=address,undefined
+	LDFLAGS += -rdynamic
 else ifeq ($(DEBUG), )
 	CDEBUG = -DNDEBUG
 endif
@@ -61,18 +64,17 @@ else ifeq ($(CC), gcc)
 	CFLAGS += -flto -flto-partition=one
 endif
 
-ifneq ($(COLOR), )
+ifeq ($(COLOR), yes)
 	CFLAGS += -fdiagnostics-color=always
 endif
 
+ifeq ($(TUNE), yes)
+	CFLAGS += -DTUNE
+endif
 
 LDFLAGS    = $(CFLAGS) $(EXTRALDFLAGS)
 
-ifneq ($(DEBUG), )
-	LDFLAGS += -rdynamic
-endif
-
-ifneq ($(STATIC), )
+ifeq ($(STATIC), yes)
 	LDFLAGS += -static
 endif
 
@@ -81,7 +83,7 @@ LDLIBS     = -lm -lpthread
 TT        ?= 256
 NNUE      ?= etc/current.nnue
 
-ifneq ($(SYZYGY), )
+ifeq ($(SYZYGY), yes)
 	LDLIBS += -lfathom
 	DSYZYGY = -DSYZYGY
 endif
@@ -91,7 +93,7 @@ SRC_BASE      = bitboard.c magicbitboard.c attackgen.c move.c \
 SRC           = $(SRC_BASE) perft.c search.c evaluate.c \
 	        transposition.c init.c timeman.c history.c \
 		movepicker.c moveorder.c option.c endgame.c nnue.c \
-		nnuefile.c kpk.c kpkp.c krkp.c nnueweights.c io.c
+		nnuefile.c kpk.c kpkp.c krkp.c nnueweights.c io.c tune.c
 SRC_ALL       = $(SRC_BASE) $(SRC) $(SRC_BIBIT) \
 	        $(SRC_EPDBIT) $(SRC_HISTBIT) $(SRC_PGNBIT) \
 	        $(SRC_BASEBIT) $(SRC_BATCHBIT) \
@@ -127,7 +129,7 @@ OBJ_TUNEBIT   = $(patsubst %.c,obj/%.o,$(subst search,tune-search,\
 OBJ_CHECKBIT  = $(patsubst %.c,obj/%.o,$(SRC_CHECKBIT))
 
 BIN = bitbit weightbit epdbit histbit pgnbit basebit \
-      libbatchbit.so libvisbit.so tunebit convbit checkbit playbit
+      libbatchbit.so libvisbit.so convbit checkbit playbit
 
 PREFIX = /usr/local
 BINDIR = $(PREFIX)/bin
@@ -177,8 +179,6 @@ convbit: $(OBJ_CONVBIT)
 libbatchbit.so: $(OBJ_BATCHBIT)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 libvisbit.so: $(OBJ_VISBIT)
-	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
-tunebit: $(OBJ_TUNEBIT)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 checkbit: $(OBJ_CHECKBIT)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@

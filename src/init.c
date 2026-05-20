@@ -23,8 +23,11 @@
 #include "util.h"
 
 void version(void) {
-	printf("bitbit " XSTR(VERSION) "\n");
-	printf("Copyright (C) 2022-2025 Isak Ellmer\n");
+	printf("bitbit " XSTR(VERSION));
+#ifdef TUNE
+	printf(" (tune)");
+#endif
+	printf("\nCopyright (C) 2022-2025 Isak Ellmer\n");
 }
 
 int init(int argc, char **argv) {
