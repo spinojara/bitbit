@@ -348,7 +348,7 @@ int32_t evaluate_KQKP(const struct position *pos, int strong_side) {
 	/* r != 7th rank */
 	if (r != 6 || distance(weak_king, square) != 1 ||
 			((FILE_B | FILE_D | FILE_E | FILE_G) & pos->piece[weak_side][PAWN]))
-		eval += VALUE_WIN + material_value[QUEEN] - material_value[ROOK] - pos->halfmove;
+		eval += VALUE_WIN + material_value[QUEEN] - material_value[PAWN] - pos->halfmove;
 	return eval;
 }
 
