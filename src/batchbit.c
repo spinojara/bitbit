@@ -80,7 +80,7 @@ struct dataloader {
 	FILE *f;
 
 	struct position pos;
-	char result;
+	signed char result;
 };
 
 static inline uint16_t make_index_virtual(int turn, int square, int piece, int king_square) {
@@ -251,7 +251,7 @@ void *batch_worker(void *ptr) {
 				entry_index = 0;
 			}
 			struct entry *entry = &entries[entry_index];
-			char result = entry->result;
+			signed char result = entry->result;
 			int32_t eval = entry->eval;
 			unsigned char flag = entry->flag;
 			if (result != RESULT_UNKNOWN)
