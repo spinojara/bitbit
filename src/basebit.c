@@ -352,8 +352,10 @@ void write_bitbase(char *name, uint32_t *bitbase, size_t table_size) {
 	strcat(path, ".bin");
 
 	FILE *f = fopen(path, "w");
-	if (!f)
+	if (!f) {
 		fprintf(stderr, "Failed to open file %s.", path);
+		return;
+	}
 
 	for (size_t i = 0; i < table_size; i++) {
 		if (i % 8)
