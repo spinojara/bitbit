@@ -567,7 +567,7 @@ int pos_is_ok(const struct position *pos) {
 	if (pos->piece[WHITE][ALL] & pos->piece[BLACK][ALL])
 		return 0;
 
-	for (int sq = 0; sq < 63; sq++) {
+	for (int sq = 0; sq < 64; sq++) {
 		int cpiece = pos->mailbox[sq];
 		if (cpiece < EMPTY || cpiece > BLACK_KING)
 			return 0;
