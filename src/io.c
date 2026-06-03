@@ -152,7 +152,7 @@ int read_position(FILE *f, struct position *pos) {
 		return 1;
 
 	pos->turn = turn;
-	pos->en_passant = en_passant < 64 ? en_passant : -1;
+	pos->en_passant = en_passant < 64 ? en_passant : 0;
 	pos->castle = castle;
 	pos->halfmove = halfmove;
 	pos->fullmove = fullmove;
