@@ -75,7 +75,7 @@ int main(int argc, char **argv) {
 
 	int first = 1;
 
-	size_t games = 0;
+	ssize_t games = 0;
 	uint64_t *start = NULL;
 	uint64_t *end = NULL;
 
@@ -132,7 +132,7 @@ int main(int argc, char **argv) {
 		end[games - 1] = ftell(f);
 
 	uint64_t seed = time(NULL);
-	for (size_t k = games - 1; k > 0; k--) {
+	for (ssize_t k = games - 1; k > 0; k--) {
 		size_t j = xorshift64(&seed) % (k + 1);
 		long t;
 		t = start[k];
