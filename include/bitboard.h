@@ -101,10 +101,6 @@ static inline uint64_t single(uint64_t b) {
 	return b && !clear_ls1b(b);
 }
 
-static inline uint64_t insert_zero(uint64_t b, int i) {
-	return ((b << 1) & ~(bitboard(i + 1) - 1)) | (b & (bitboard(i) - 1));
-}
-
 extern uint64_t between_lookup[64 * 64];
 extern uint64_t line_lookup[64 * 64];
 extern uint64_t ray_lookup[64 * 64];
