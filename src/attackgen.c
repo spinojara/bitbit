@@ -43,7 +43,7 @@ uint64_t king_attacks_calc(int square) {
 	b |= shift(b, S);
 	b |= shift(b, E);
 	b |= shift(b, W);
-	return b;
+	return b & ~bitboard(square);
 }
 
 void attackgen_init(void) {
