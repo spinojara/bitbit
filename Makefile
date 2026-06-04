@@ -58,6 +58,10 @@ else ifeq ($(SIMD), vnni)
 	CFLAGS += -DVNNI -mavxvnni -mavx2
 endif
 
+ifeq ($(PEXT), yes)
+        CFLAGS += -DPEXT
+endif
+
 ifeq ($(CC), clang)
 	CFLAGS += -flto=full
 else ifeq ($(CC), gcc)

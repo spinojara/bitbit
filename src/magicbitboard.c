@@ -232,6 +232,9 @@ void magic_calc(int square, int piece) {
 	if (square == a1)
 		magic->attacks = piece == ROOK ? rook_attacks_lookup : bishop_attacks_lookup;
 
+	if (square < h8)
+		(magic + 1)->attacks = magic->attacks + (1 << popcount(magic->mask));
+
 	/* <https://www.chessprogramming.org/Traversing_Subsets_of_a_Set> */
 	uint64_t b = 0;
 	int size = 0;
@@ -248,15 +251,12 @@ void magic_calc(int square, int piece) {
 	}
 	while (b);
 
-	if (square < h8)
-		(magic + 1)->attacks = magic->attacks + size;
-
 #ifdef PEXT
 	return;
 #endif
 
 	int epoch, j = 0;
-	for (epoch = 0; j != size; epoch++) {
+	for (epoch = 1; j != size; epoch++) {
 		magic->magic = xorshift64(&seed) & xorshift64(&seed) & xorshift64(&seed);
 
 		if (popcount((magic->mask * magic->magic) >> 56) < 6)
@@ -265,6 +265,10 @@ void magic_calc(int square, int piece) {
 		for (j = 0; j < size; j++) {
 			int k = (occ[j] * magic->magic) >> magic->shift;
 
+			/* If what we stored at k is from the previous epoch, we are
+			 * safe to restore, otherwise we already stored something
+			 * this epoch and this is not a proper magic number.
+			 */
 			if (epochs[k] < epoch) {
 				epochs[k] = epoch;
 				magic->attacks[k] = attacks[j];
