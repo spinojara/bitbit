@@ -129,7 +129,7 @@ void generate_attacked(const struct position *pos, int color, uint64_t attacked[
 	piece = pos->piece[color][QUEEN];
 	while (piece) {
 		square = ctz(piece);
-		attacked[ROOK] |= queen_attacks(square, 0, all_pieces(pos) ^ pos->piece[other_color(color)][KING]);
+		attacked[QUEEN] |= queen_attacks(square, 0, all_pieces(pos) ^ pos->piece[other_color(color)][KING]);
 		piece = clear_ls1b(piece);
 	}
 
@@ -142,6 +142,9 @@ uint64_t generate_attacked_all(const struct position *pos, int color) {
 	return attacked[ALL];
 }
 
+/* Returns all pieces pinned by a piece to the king of <color>.
+ * This can include enemy pieces.
+ */
 uint64_t generate_pinned(const struct position *pos, int color) {
 	uint64_t pinners = pos->piece[other_color(color)][ALL];
 	return generate_blockers(pos, pinners, ctz(pos->piece[color][KING]));
