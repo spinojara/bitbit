@@ -75,7 +75,7 @@ int main(int argc, char **argv) {
 
 	int first = 1;
 
-	ssize_t games = 0;
+	size_t games = 0;
 	uint64_t *start = NULL;
 	uint64_t *end = NULL;
 
@@ -128,19 +128,20 @@ int main(int argc, char **argv) {
 	if (!shuffle)
 		return 0;
 
-	if (games >= 1)
+	if (games >= 1) {
 		end[games - 1] = ftell(f);
 
-	uint64_t seed = time(NULL);
-	for (ssize_t k = games - 1; k > 0; k--) {
-		size_t j = xorshift64(&seed) % (k + 1);
-		long t;
-		t = start[k];
-		start[k] = start[j];
-		start[j] = t;
-		t = end[k];
-		end[k] = end[j];
-		end[j] = t;
+		uint64_t seed = time(NULL);
+		for (size_t k = games - 1; k > 0; k--) {
+			size_t j = xorshift64(&seed) % (k + 1);
+			long t;
+			t = start[k];
+			start[k] = start[j];
+			start[j] = t;
+			t = end[k];
+			end[k] = end[j];
+			end[j] = t;
+		}
 	}
 
 	char *str = malloc(strlen(argv[i]) + 10);
