@@ -92,6 +92,17 @@ int see_geq(struct position *pos, const move_t *move, int32_t value) {
 
 	attackers |= king_attacks(to, 0) & (pos->piece[WHITE][KING] | pos->piece[BLACK][KING]);
 
+	if (generate_checkers(pos, other_color(us)) & ~tob && (!(attackers & pos->piece[other_color(us)][KING]) || attackers & pos->piece[us][ALL])) {
+		if (victim) {
+			pos->piece[them][victim] ^= tob;
+			pos->piece[them][ALL] ^= tob;
+		}
+		pos->piece[us][attacker] ^= tob | fromb;
+		pos->piece[us][ALL] ^= tob | fromb;
+
+		return 1;
+	}
+
 	uint64_t pinned[2]      = { generate_pinned(pos, BLACK) & attackers, generate_pinned(pos, WHITE) & attackers };
 	uint64_t discovery[2]   = { pinned[WHITE] & pos->piece[BLACK][ALL], pinned[BLACK] & pos->piece[WHITE][ALL] };
 	uint64_t pinners[2]     = { generate_pinners(pos, pinned[BLACK], BLACK), generate_pinners(pos, pinned[WHITE], WHITE) };
@@ -118,7 +129,7 @@ int see_geq(struct position *pos, const move_t *move, int32_t value) {
 			if ((swap = move_order_piece_value[PAWN] - swap) < ret)
 				break;
 
-			occupied ^= ls1b(turnattackers);
+			occupied ^= ls1b(turnattackers & pos->piece[turn][PAWN]);
 			/* Add x-ray pieces. */
 			attackers |= bishop_attacks(to, 0, occupied) & (pos->piece[WHITE][BISHOP] | pos->piece[WHITE][QUEEN] |
 									pos->piece[BLACK][BISHOP] | pos->piece[BLACK][QUEEN]);
@@ -127,13 +138,13 @@ int see_geq(struct position *pos, const move_t *move, int32_t value) {
 			if ((swap = move_order_piece_value[KNIGHT] - swap) < ret)
 				break;
 
-			occupied ^= ls1b(turnattackers);
+			occupied ^= ls1b(turnattackers & pos->piece[turn][KNIGHT]);
 		}
 		else if (turnattackers & pos->piece[turn][BISHOP]) {
 			if ((swap = move_order_piece_value[BISHOP] - swap) < ret)
 				break;
 
-			occupied ^= ls1b(turnattackers);
+			occupied ^= ls1b(turnattackers & pos->piece[turn][BISHOP]);
 			attackers |= bishop_attacks(to, 0, occupied) & (pos->piece[WHITE][BISHOP] | pos->piece[WHITE][QUEEN] |
 									pos->piece[BLACK][BISHOP] | pos->piece[BLACK][QUEEN]);
 		}
@@ -141,7 +152,7 @@ int see_geq(struct position *pos, const move_t *move, int32_t value) {
 			if ((swap = move_order_piece_value[ROOK] - swap) < ret)
 				break;
 
-			occupied ^= ls1b(turnattackers);
+			occupied ^= ls1b(turnattackers & pos->piece[turn][ROOK]);
 			attackers |= rook_attacks(to, 0, occupied) & (pos->piece[WHITE][ROOK] | pos->piece[WHITE][QUEEN] |
 									pos->piece[BLACK][ROOK] | pos->piece[BLACK][QUEEN]);
 		}
@@ -149,7 +160,7 @@ int see_geq(struct position *pos, const move_t *move, int32_t value) {
 			if ((swap = move_order_piece_value[QUEEN] - swap) < ret)
 				break;
 
-			occupied ^= ls1b(turnattackers);
+			occupied ^= ls1b(turnattackers & pos->piece[turn][QUEEN]);
 			attackers |= bishop_attacks(to, 0, occupied) & (pos->piece[WHITE][BISHOP] | pos->piece[WHITE][QUEEN] |
 									pos->piece[BLACK][BISHOP] | pos->piece[BLACK][QUEEN]);
 			attackers |= rook_attacks(to, 0, occupied) & (pos->piece[WHITE][ROOK] | pos->piece[WHITE][QUEEN] |
