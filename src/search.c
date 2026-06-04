@@ -44,7 +44,6 @@ int search_init_done = 0;
 #endif
 
 volatile atomic_int ucistop;
-volatile atomic_int ucigo;
 volatile atomic_int uciponder;
 
 TUNEVAR(int, razor1, 170, NULL, NULL)
@@ -284,7 +283,7 @@ static inline int32_t evaluate(const struct position *pos, const struct searchin
 	evaluation = clamp(evaluation, -VALUE_MAX, VALUE_MAX);
 
 	if (!option_deterministic)
-		evaluation += (si->seed ^ pos->zobrist_key) % 5 - 2;
+		evaluation += (int32_t)((si->seed ^ pos->zobrist_key) % 5) - 2;
 
 	return evaluation;
 }

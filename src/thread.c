@@ -27,6 +27,8 @@
 int thread_init_done = 0;
 #endif
 
+int ucigo = 0;
+
 pthread_mutex_t uci;
 
 struct threadinfo {
@@ -39,23 +41,21 @@ struct threadinfo {
 
 int is_allowed(const char *arg) {
 	assert(thread_init_done);
-	pthread_mutex_lock(&uci);
 	if (!atomic_load_explicit(&uciponder, memory_order_relaxed) && !strcmp(arg, "ponderhit")) {
-		pthread_mutex_unlock(&uci);
 		return 0;
 	}
 
-	if (!atomic_load_explicit(&ucigo, memory_order_relaxed)) {
+	pthread_mutex_lock(&uci);
+	if (!ucigo) {
 		pthread_mutex_unlock(&uci);
 		return 1;
 	}
-
-	if (!strcmp(arg, "stop") || !strcmp(arg, "ponderhit")) {
-		pthread_mutex_unlock(&uci);
-		return 1;
-	}
-
 	pthread_mutex_unlock(&uci);
+
+	if (!strcmp(arg, "stop") || !strcmp(arg, "ponderhit") || !strcmp(arg, "isready")) {
+		return 1;
+	}
+
 	return 0;
 }
 
@@ -89,7 +89,7 @@ void *search_thread(void *arg) {
 	search(pos, depth, 1, &ti, move, tt, history, 1);
 	pthread_mutex_lock(&uci);
 	atomic_store_explicit(&ucistop, 0, memory_order_relaxed);
-	atomic_store_explicit(&ucigo, 0, memory_order_relaxed);
+	ucigo = 0;
 	atomic_store_explicit(&uciponder, 0, memory_order_relaxed);
 	print_bestmove(pos, move[0], move[1]);
 	pthread_mutex_unlock(&uci);
@@ -128,5 +128,6 @@ void thread_init(void) {
 }
 
 void thread_term(void) {
+	/* The mutex will not be used by any running detached thread since ucigo must be 0 for thread_term to be called. */
 	pthread_mutex_destroy(&uci);
 }

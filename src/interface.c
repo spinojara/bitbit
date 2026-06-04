@@ -41,6 +41,7 @@
 #include "thread.h"
 #include "bench.h"
 #include "nnue.h"
+#include "endgame.h"
 
 #define LINESIZE 16384
 #define ARGSIZE 4096
@@ -203,6 +204,7 @@ int interface_position(int argc, char **argv) {
 		if (fen_is_ok(n - 2, argv + 2)) {
 			pos_from_fen(&pos, n - 2, argv + 2);
 			refresh_zobrist_key(&pos);
+			refresh_endgame_key(&pos);
 			history_reset(&pos, &history);
 			for (int i = n + 1; i < argc; i++) {
 				move_t move = string_to_move(&pos, argv[i]);
@@ -295,7 +297,7 @@ int interface_go(int argc, char **argv) {
 			atomic_store_explicit(&uciponder, 1, memory_order_relaxed);
 	}
 
-	atomic_store_explicit(&ucigo, 1, memory_order_relaxed);
+	ucigo = 1;
 	search_start(&pos, depth, &ti, &tt, &history);
 	return DONE;
 }
@@ -466,7 +468,6 @@ int parse(int margc, char **margv) {
 void interface_init(void) {
 	startpos(&pos);
 	startkey(&pos);
-	atomic_init(&ucigo, 0);
 	atomic_init(&ucistop, 0);
 	atomic_init(&uciponder, 0);
 	if (TT <= 0) {

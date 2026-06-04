@@ -21,6 +21,8 @@
 #include "transposition.h"
 #include "history.h"
 
+extern int ucigo;
+
 int is_allowed(const char *arg);
 
 void search_stop(void);
