@@ -282,7 +282,7 @@ static move_t polyglot_random_move(FILE *f, const struct position *pos, uint64_t
 			continue;
 
 		uint16_t m = buf[9] | (buf[8] << 8);
-		int promotion = (m >> 12) & 0x3F;
+		int promotion = (m >> 12) & 0x7;
 		move_t move = M((m >> 6) & 0x3F, m & 0x3F, promotion ? MOVE_PROMOTION : 0, promotion ? promotion - 1 : 0);
 
 		if (uncolored_piece(pos->mailbox[move_from(&move)]) == KING) {
