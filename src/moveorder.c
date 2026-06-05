@@ -103,6 +103,11 @@ int see_geq(struct position *pos, const move_t *move, int32_t value) {
 		return 1;
 	}
 
+	/* Pinned pieces are all pieces of both colors pinned the the king
+	 * of color <color>. pinned[BLACK] thus contains both white and black
+	 * pieces that are pinned by a white piece to the black king.
+	 * This allows us to reuse pinned pieces for discoveries.
+	 */
 	uint64_t pinned[2]      = { generate_pinned(pos, BLACK) & attackers, generate_pinned(pos, WHITE) & attackers };
 	uint64_t discovery[2]   = { pinned[WHITE] & pos->piece[BLACK][ALL], pinned[BLACK] & pos->piece[WHITE][ALL] };
 	uint64_t pinners[2]     = { generate_pinners(pos, pinned[BLACK], BLACK), generate_pinners(pos, pinned[WHITE], WHITE) };
