@@ -58,6 +58,17 @@ const char *piece_to_str(int piece) {
 	return buf;
 }
 
+const char *piece_to_str_(char *s, int piece) {
+	sprintf(s, "%s_%s", color_of_piece(piece) == WHITE ? "white" : "black",
+			uncolored_piece(piece) == PAWN ? "pawn" :
+			uncolored_piece(piece) == KNIGHT ? "knight" :
+			uncolored_piece(piece) == BISHOP ? "bishop" :
+			uncolored_piece(piece) == ROOK ? "rook" :
+			uncolored_piece(piece) == QUEEN ? "queen" :
+			uncolored_piece(piece) == KING ? "king" : "");
+	return s;
+}
+
 void exit_error(void) {
 	fprintf(stderr, "error: %s\n", GRBgeterrormsg(env));
 	exit(1);
@@ -102,8 +113,7 @@ void add_constr(struct vcol *vcol, char sense, double rhs, const char *fmt, ...)
 	vsprintf(buf, fmt, args);
 	va_end(args);
 
-	int error = GRBaddconstr(model, vcol->num, vcol->ind, vcol->val, sense, rhs, buf);
-	if (error)
+	if (GRBaddconstr(model, vcol->num, vcol->ind, vcol->val, sense, rhs, buf))
 		exit_error();
 
 	free(vcol->ind);
@@ -171,11 +181,17 @@ int piece_var_r(int ind) {
 	return -1;
 }
 
+int move_var_r(int ind) {
+	for (size_t i = 0; i < SIZE(move_vars); i++)
+		if (ind == move_vars[i])
+			return i;
+	return -1;
+}
+
 int add_var(double obj, double lb, double ub, const char *s) {
 	static int vars = 0;
 
-	int error = GRBaddvar(model, 0, NULL, NULL, obj, lb, ub, GRB_INTEGER, s);
-	if (error)
+	if (GRBaddvar(model, 0, NULL, NULL, obj, lb, ub, GRB_INTEGER, s))
 		exit_error();
 
 	return vars++;
@@ -256,12 +272,12 @@ int add_promotion_var(int piece) {
 }
 
 int has_piece(int piece) {
-	int only_pieces[] = { WHITE_QUEEN, WHITE_KING, BLACK_PAWN, BLACK_KING };
+	int exclude_pieces[] = { BLACK_QUEEN };
 
-	for (size_t i = 0; i < SIZE(only_pieces); i++)
-		if (only_pieces[i] == piece)
-			return 1;
-	return 0;
+	for (size_t i = 0; i < SIZE(exclude_pieces); i++)
+		if (exclude_pieces[i] == piece)
+			return 0;
+	return 1;
 }
 
 int main(void) {
@@ -277,18 +293,28 @@ int main(void) {
 	for (size_t i = 0; i < SIZE(promotion_vars); i++)
 		promotion_vars[i] = -1;
 
-	int error;
-
-	error = GRBemptyenv(&env);
-	if (error)
+	if (GRBemptyenv(&env))
 		exit_error();
 
-	error = GRBstartenv(env);
-	if (error)
+	if (GRBstartenv(env))
 		exit_error();
 
-	error = GRBnewmodel(env, &model, "chess", 0, NULL, NULL, NULL, NULL, NULL);
-	if (error)
+	if (GRBnewmodel(env, &model, "chess", 0, NULL, NULL, NULL, NULL, NULL))
+		exit_error();
+
+	if (GRBsetintparam(env, "MIPFocus", 2))
+		exit_error();
+
+	if (GRBsetintparam(env, "Presolve", 2))
+		exit_error();
+
+	if (GRBsetdblparam(env, "PoolGap", 0.0))
+		exit_error();
+
+	if (GRBsetintparam(env, "PrePasses", 100))
+		exit_error();
+
+	if (GRBsetintparam(env, "Cuts", 2))
 		exit_error();
 
 	for (int piece = WHITE_PAWN; piece <= BLACK_KING; piece++) {
@@ -363,17 +389,30 @@ int main(void) {
 		}
 	}
 
+#if 1
 	/* Constraints for moves blocked by other pieces */
 	for (int piece = PAWN; piece <= KING; piece++) {
 		for (int from = 0; from < 64; from++) {
 			for (int to = 0; to < 64; to++) {
-				int number_of_blockers = 0;
 				if (!has_move_var(piece, from, to))
 					continue;
 				struct vcol vcol = { 0 };
-				struct vcol vcol2 = { 0 };
-				if (piece == PAWN) {
+				int is_pawn_capture = piece == PAWN && to != from + 8 && to != from + 16;
+#if 1
+				if (is_pawn_capture) {
+					struct vcol attacked = { 0 };
+					for (int enemy = BLACK_PAWN; enemy <= BLACK_QUEEN; enemy++)
+						if (has_piece_var(enemy, to))
+							vcol_add(&attacked, piece_var(enemy, to), -1.0);
+					/* En passant */
+					if (rank_of(from) == 4)
+						if (has_piece_var(BLACK_PAWN, to - 8))
+							vcol_add(&attacked, piece_var(BLACK_PAWN, to - 8), -1.0);
+					vcol_add(&attacked, move_var(PAWN, from, to), 1.0);
+					char str[3];
+					add_constr(&attacked, GRB_LESS_EQUAL, 0.0, "pawn_move_from_%s_to_%s_needs_to_capture", algebraic(str, from), algebraic_simple(to));
 				}
+#if 1
 				else if (piece == KNIGHT || piece == KING) {
 					/* Do nothing. Constraints are added below. */
 				}
@@ -384,31 +423,53 @@ int main(void) {
 
 						for (int blocker = WHITE_PAWN; blocker <= BLACK_KING; blocker++)
 							if (has_piece_var(blocker, sq)) {
-								number_of_blockers++;
+								char str1[3], str2[3], str3[64];
+								struct vcol blocked = { 0 };
+								vcol_add(&blocked, piece_var(blocker, sq), 1.0);
+								vcol_add(&blocked, move_var(piece, from, to), 1.0);
+								add_constr(&blocked, GRB_LESS_EQUAL, 1.0, "blocked_move_for_%s_from_%s_to_%s_by_%s_on_%s", piece_to_str(piece), algebraic_simple(from), algebraic(str1, to), piece_to_str_(str3, blocker), algebraic(str2, sq));
 								vcol_add(&vcol, piece_var(blocker, sq), 1.0);
-								vcol_add(&vcol2, piece_var(blocker, sq), 1.0);
 							}
 
 						b = clear_ls1b(b);
 					}
 				}
+#endif
+#endif
 				/* We could exclude the king here if piece == KING */
-				for (int blocker = WHITE_PAWN; blocker <= WHITE_KING; blocker++)
+				for (int blocker = WHITE_PAWN; blocker <= (piece == PAWN && !is_pawn_capture ? BLACK_KING : WHITE_KING); blocker++)
 					if (has_piece_var(blocker, to)) {
+						char str1[3], str2[3], str3[64];
+						struct vcol blocked = { 0 };
+						vcol_add(&blocked, piece_var(blocker, to), 1.0);
+						vcol_add(&blocked, move_var(piece, from, to), 1.0);
+						add_constr(&blocked, GRB_LESS_EQUAL, 1.0, "blocked_move_for_%s_from_%s_to_%s_by_%s_on_%s", piece_to_str(piece), algebraic_simple(from), algebraic(str1, to), piece_to_str_(str3, blocker), algebraic(str2, to));
 						vcol_add(&vcol, piece_var(blocker, to), 1.0);
-						vcol_add(&vcol2, piece_var(blocker, to), 1.0);
-						number_of_blockers++;
 					}
-				vcol_add(&vcol, move_var(piece, from, to), (double)number_of_blockers);
-				vcol_add(&vcol2, move_var(piece, from, to), 1.0);
-				vcol_add(&vcol2, piece_var(piece, from), -1.0);
 				char str[3];
-				add_constr(&vcol, GRB_LESS_EQUAL, (double)number_of_blockers, "blocked_move_for_%s_from_%s_to_%s", piece_to_str(piece), algebraic_simple(from), algebraic(str, to));
-				add_constr(&vcol2, GRB_GREATER_EQUAL, 0.0, "must_move_if_legal_for_%s_from_%s_to_%s", piece_to_str(piece), algebraic_simple(from), algebraic(str, to));
+				double rhs = 0.0;
+				if (is_pawn_capture) {
+					rhs = -1.0;
+					for (int enemy = BLACK_PAWN; enemy <= BLACK_QUEEN; enemy++)
+						if (has_piece_var(enemy, to))
+							vcol_add(&vcol, piece_var(enemy, to), -1.0);
+					if (rank_of(from) == 4)
+						if (has_piece_var(BLACK_PAWN, to - 8))
+							vcol_add(&vcol, piece_var(BLACK_PAWN, to - 8), -1.0);
+				}
+				/* Weight move_var as 2.0, so that if there is both a capture
+				 * and en passant available. So we can place a piece and do both.
+				 */
+				vcol_add(&vcol, move_var(piece, from, to), is_pawn_capture && rank_of(from) == 4 ? 2.0 : 1.0);
+				vcol_add(&vcol, piece_var(piece, from), -1.0);
+				/* TODO: Try only adding this constraint if the move is actually a capture. */
+				add_constr(&vcol, GRB_GREATER_EQUAL, rhs, "must_move_if_legal_for_%s_from_%s_to_%s", piece_to_str(piece), algebraic_simple(from), algebraic(str, to));
 			}
 		}
 	}
+#endif
 
+#if 1
 	/* Piece counts */
 	for (int color = 0; color < 2; color++) {
 		struct vcol all = { 0 };
@@ -437,15 +498,18 @@ int main(void) {
 					}
 				}
 
-				int pieces = piece == QUEEN ? 2 : 1;
+				int pieces = piece == QUEEN ? 1 : 2;
 				vcol_add(&single, promotion_var, -1.0);
 				add_constr(&single, GRB_LESS_EQUAL, (double)pieces, "not_more_than_%d_%s_%ss", 8 + pieces, color == WHITE ? "white" : "black", piece_to_str(real_piece));
 			}
 		}
 		/* 15 because it excludes the king. */
-		add_constr(&all, GRB_LESS_EQUAL, 15.0, "not_more_than_16_%s_pieces", color == WHITE ? "white" : "black");
+		if (all.num)
+			add_constr(&all, GRB_LESS_EQUAL, 15.0, "not_more_than_16_%s_pieces", color == WHITE ? "white" : "black");
 	}
+#endif
 
+#if 1
 	for (int color = 0; color < 2; color++) {
 		struct vcol vcol = { 0 };
 		for (int piece = KNIGHT; piece <= QUEEN; piece++) {
@@ -457,9 +521,12 @@ int main(void) {
 		for (int sq = 0; sq < 64; sq++)
 			if (has_piece_var(colored_piece(PAWN, color), sq))
 				vcol_add(&vcol, piece_var(colored_piece(PAWN, color), sq), 1.0);
-		add_constr(&vcol, GRB_LESS_EQUAL, 8.0, "not_more_than_8_%s_promotions", color == WHITE ? "white" : "black");
+		if (vcol.num)
+			add_constr(&vcol, GRB_LESS_EQUAL, 8.0, "not_more_than_8_%s_promotions", color == WHITE ? "white" : "black");
 	}
+#endif
 
+#if 1
 	/* Black king can not be in check */
 	for (int piece = WHITE_PAWN; piece <= WHITE_KING; piece++)
 		/* Add all separate conditions, or add only 1? */
@@ -472,19 +539,83 @@ int main(void) {
 					char str[3];
 					add_constr(&vcol, GRB_LESS_EQUAL, 1.0, "black_king_not_in_check_on_%s_by_%s_on_%s", algebraic(str, to), piece_to_str(piece), algebraic_simple(from));
 				}
+#endif
 
-	// TODO: Add castling moves
+#if 1
+	/* White king can not be in check */
+	for (int piece = BLACK_PAWN; piece <= BLACK_QUEEN; piece++) {
+		for (int to = 0; to < 64; to++) {
+			for (int from = 0; from < 64; from++) {
+				if (!has_piece_var(piece, from))
+					continue;
+				if (piece == BLACK_PAWN) {
+					uint64_t pawn = bitboard(from);
+					uint64_t b = shift(pawn, S | E) | shift(pawn, S | W);
+					if (!(b & bitboard(to)))
+						continue;
+				}
+				else if (!(attacks(uncolored_piece(piece), from, 0, 0) & bitboard(to)))
+					continue;
+				struct vcol vcol = { 0 };
 
-	error = GRBsetintattr(model, GRB_INT_ATTR_MODELSENSE, GRB_MAXIMIZE);
-	if (error)
+				uint64_t b = between(from, to);
+				while (b) {
+					int sq = ctz(b);
+
+					for (int blocker = WHITE_PAWN; blocker <= BLACK_KING; blocker++) {
+						if (blocker == WHITE_KING)
+							continue;
+						if (piece >= BLACK_BISHOP && blocker == piece)
+							continue;
+						if (has_piece_var(blocker, sq))
+							vcol_add(&vcol, piece_var(blocker, sq), -1.0);
+					}
+
+					b = clear_ls1b(b);
+				}
+				vcol_add(&vcol, piece_var(WHITE_KING, to), 1.0);
+				vcol_add(&vcol, piece_var(piece, from), 1.0);
+				char str[3];
+				add_constr(&vcol, GRB_LESS_EQUAL, 1.0, "white_king_not_in_check_on_%s_by_%s_on_%s", algebraic(str, to), piece_to_str(piece), algebraic_simple(from));
+			}
+		}
+	}
+#endif
+
+	/* Speed up by adding redundant constraints */
+	for (int to = 0; to < 64; to++) {
+		for (int dir = 1; dir < 16; dir++) {
+			char *dirnames[] = { NULL, "north", "south", NULL, "east", "north_east", "south_east", NULL, "west", "north_west", "south_west" };
+			if (popcount(dir) > 2 || (dir & N && dir & S) || (dir & E && dir & W))
+				/* Not a real direction */
+				continue;
+			struct vcol vcol = { 0 };
+			uint64_t shifted = shift(bitboard(to), dir);
+			if (!shifted)
+				continue;
+
+			uint64_t r = ray(to, ctz(shifted));
+
+			for (int piece = BISHOP; piece <= QUEEN; piece++) {
+				 for (int from = 0; from < 64; from++) {
+					 if (bitboard(from) & r) {
+						 if (has_move_var(piece, from, to))
+							 vcol_add(&vcol, move_var(piece, from, to), 1.0);
+					 }
+				 }
+			}
+			if (vcol.num)
+				add_constr(&vcol, GRB_LESS_EQUAL, 1.0, "not_more_than_1_attacker_to_%s_from_%s", algebraic_simple(to), dirnames[dir]);
+		}
+	}
+
+	if (GRBsetintattr(model, GRB_INT_ATTR_MODELSENSE, GRB_MAXIMIZE))
 		exit_error();
 
-	error = GRBoptimize(model);
-	if (error)
+	if (GRBwrite(model, "gurobi.lp"))
 		exit_error();
 
-	error = GRBwrite(model, "gurobi.lp");
-	if (error)
+	if (GRBoptimize(model))
 		exit_error();
 
 	int solcount;
@@ -510,12 +641,21 @@ int main(void) {
 			char *vname;
 			if (GRBgetstrattrelement(model, GRB_STR_ATTR_VARNAME, j, &vname))
 				exit_error();
+			double obj;
+			if (GRBgetdblattrelement(model, GRB_DBL_ATTR_OBJ, j, &obj))
+				exit_error();
 
-			int pv = piece_var_r(j);
+			int pv = piece_var_r(j), mv = move_var_r(j);
 			if (x[j] != 0.0 && pv != -1) {
 				int sq = pv % 64;
 				int piece = pv / 64;
 				mailbox[sq] = piece;
+			}
+			else if (x[j] != 0.0 && mv != -1) {
+				int from = mv % 64;
+				int to = (mv / 64) % 64;
+				char str[3];
+				printf("%s%s: %d\n", algebraic_simple(from), algebraic(str, to), (int)round(obj * x[j]));
 			}
 		}
 		print_mailbox(mailbox);
