@@ -273,7 +273,8 @@ int add_promotion_var(int piece) {
 }
 
 int has_piece(int piece) {
-	int exclude_pieces[] = { BLACK_QUEEN };
+	/* A black bishop or queen can always be replaces with a black pawn. */
+	int exclude_pieces[] = { BLACK_BISHOP, BLACK_QUEEN };
 
 	for (size_t i = 0; i < SIZE(exclude_pieces); i++)
 		if (exclude_pieces[i] == piece)
@@ -313,9 +314,6 @@ int main(void) {
 		exit_error();
 
 	if (GRBsetintparam(env, "PrePasses", 100))
-		exit_error();
-
-	if (GRBsetintparam(env, "Symmetry", 2))
 		exit_error();
 
 	for (int piece = WHITE_PAWN; piece <= BLACK_KING; piece++) {
