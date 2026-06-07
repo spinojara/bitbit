@@ -219,7 +219,7 @@ void add_piece_var(int piece, int sq, double lb, double ub) {
 	piece_vars[index] = add_var(0.0, lb, ub, buf);
 }
 
-void add_move_var(int piece, int from, int to, double lb, double ub) {
+int add_move_var(int piece, int from, int to, double lb, double ub) {
 	if (piece < PAWN || piece > KING) {
 		fprintf(stderr, "Trying to add_move_var for piece %d\n", piece);
 		exit(2);
@@ -247,6 +247,7 @@ void add_move_var(int piece, int from, int to, double lb, double ub) {
 		exit(9);
 	}
 	move_vars[index] = add_var(obj, lb, ub, buf);
+	return move_vars[index];
 }
 
 int add_promotion_var(int piece) {
@@ -261,7 +262,7 @@ int add_promotion_var(int piece) {
 	}
 
 	char buf[4096];
-	sprintf(buf, "white_%s_%s_promotions",
+	sprintf(buf, "%s_%s_promotions",
 			color_of_piece(piece) == WHITE ? "white" : "black",
 			uncolored_piece(piece) == KNIGHT ? "knight" :
 			uncolored_piece(piece) == BISHOP ? "bishop" :
@@ -314,7 +315,7 @@ int main(void) {
 	if (GRBsetintparam(env, "PrePasses", 100))
 		exit_error();
 
-	if (GRBsetintparam(env, "Cuts", 2))
+	if (GRBsetintparam(env, "Symmetry", 2))
 		exit_error();
 
 	for (int piece = WHITE_PAWN; piece <= BLACK_KING; piece++) {
@@ -322,6 +323,11 @@ int main(void) {
 			continue;
 
 		for (int sq = 0; sq < 64; sq++) {
+			/* It is fine to remove this half. We remove this half
+			 * because we can only castle on the other side.
+			 */
+			if (piece == WHITE_KING && file_of(sq) < 4)
+				continue;
 			if (uncolored_piece(piece) == PAWN && (rank_of(sq) == 0 || rank_of(sq) == 7))
 				continue;
 			add_piece_var(piece, sq, 0.0, 1.0);
@@ -355,11 +361,30 @@ int main(void) {
 		}
 	}
 
+	/* Add castling moves */
+	int castling_target[] = { a1, h1 };
+	for (int i = 0; i < 2; i++) {
+		if (!has_piece_var(WHITE_ROOK, castling_target[i]))
+			continue;
+		int ind = add_move_var(KING, e1, castling_target[i], 0.0, 1.0);
+		/* Not very restrictive, but that's ok */
+		struct vcol vcol = { 0 };
+		vcol_add(&vcol, ind, 1.0);
+		vcol_add(&vcol, piece_var(WHITE_ROOK, castling_target[i]), -1.0);
+		add_constr(&vcol, GRB_LESS_EQUAL, 0.0, "rook_must_exist_to_castle_%s", i == 0 ? "long" : "short");
+
+		struct vcol vcol2 = { 0 };
+		vcol_add(&vcol2, ind, 1.0);
+		vcol_add(&vcol2, piece_var(WHITE_KING, e1), -1.0);
+		add_constr(&vcol2, GRB_LESS_EQUAL, 0.0, "king_must_exist_to_castle_%s", i == 0 ? "long" : "short");
+	}
+
 	/* Exactly one king */
 	for (int color = 0; color < 2; color++) {
 		struct vcol vcol = { 0 };
 		for (int sq = 0; sq < 64; sq++)
-			vcol_add(&vcol, piece_var(colored_piece(KING, color), sq), 1.0);
+			if (has_piece_var(colored_piece(KING, color), sq))
+				vcol_add(&vcol, piece_var(colored_piece(KING, color), sq), 1.0);
 		add_constr(&vcol, GRB_EQUAL, 1.0, "only_one_%s_king", color == WHITE ? "white" : "black");
 	}
 
@@ -388,7 +413,6 @@ int main(void) {
 			}
 		}
 	}
-
 #if 1
 	/* Constraints for moves blocked by other pieces */
 	for (int piece = PAWN; piece <= KING; piece++) {
@@ -436,6 +460,9 @@ int main(void) {
 				}
 #endif
 #endif
+				/* Castling are supposed to be blocked by a rook on the target square */
+				if (piece == KING && from == e1 && (to == a1 || to == h1))
+					continue;
 				/* We could exclude the king here if piece == KING */
 				for (int blocker = WHITE_PAWN; blocker <= (piece == PAWN && !is_pawn_capture ? BLACK_KING : WHITE_KING); blocker++)
 					if (has_piece_var(blocker, to)) {
@@ -444,31 +471,11 @@ int main(void) {
 						vcol_add(&blocked, piece_var(blocker, to), 1.0);
 						vcol_add(&blocked, move_var(piece, from, to), 1.0);
 						add_constr(&blocked, GRB_LESS_EQUAL, 1.0, "blocked_move_for_%s_from_%s_to_%s_by_%s_on_%s", piece_to_str(piece), algebraic_simple(from), algebraic(str1, to), piece_to_str_(str3, blocker), algebraic(str2, to));
-						vcol_add(&vcol, piece_var(blocker, to), 1.0);
 					}
-				char str[3];
-				double rhs = 0.0;
-				if (is_pawn_capture) {
-					rhs = -1.0;
-					for (int enemy = BLACK_PAWN; enemy <= BLACK_QUEEN; enemy++)
-						if (has_piece_var(enemy, to))
-							vcol_add(&vcol, piece_var(enemy, to), -1.0);
-					if (rank_of(from) == 4)
-						if (has_piece_var(BLACK_PAWN, to - 8))
-							vcol_add(&vcol, piece_var(BLACK_PAWN, to - 8), -1.0);
-				}
-				/* Weight move_var as 2.0, so that if there is both a capture
-				 * and en passant available. So we can place a piece and do both.
-				 */
-				vcol_add(&vcol, move_var(piece, from, to), is_pawn_capture && rank_of(from) == 4 ? 2.0 : 1.0);
-				vcol_add(&vcol, piece_var(piece, from), -1.0);
-				/* TODO: Try only adding this constraint if the move is actually a capture. */
-				add_constr(&vcol, GRB_GREATER_EQUAL, rhs, "must_move_if_legal_for_%s_from_%s_to_%s", piece_to_str(piece), algebraic_simple(from), algebraic(str, to));
 			}
 		}
 	}
 #endif
-
 #if 1
 	/* Piece counts */
 	for (int color = 0; color < 2; color++) {
@@ -508,7 +515,6 @@ int main(void) {
 			add_constr(&all, GRB_LESS_EQUAL, 15.0, "not_more_than_16_%s_pieces", color == WHITE ? "white" : "black");
 	}
 #endif
-
 #if 1
 	for (int color = 0; color < 2; color++) {
 		struct vcol vcol = { 0 };
@@ -527,65 +533,56 @@ int main(void) {
 #endif
 
 #if 1
-	/* Black king can not be in check */
-	for (int piece = WHITE_PAWN; piece <= WHITE_KING; piece++)
-		/* Add all separate conditions, or add only 1? */
-		for (int from = 0; from < 64; from++)
-			for (int to = 0; to < 64; to++)
-				if (has_move_var(piece, from, to)) {
-					struct vcol vcol = { 0 };
-					vcol_add(&vcol, move_var(piece, from, to), 1.0);
-					vcol_add(&vcol, piece_var(BLACK_KING, to), 1.0);
-					char str[3];
-					add_constr(&vcol, GRB_LESS_EQUAL, 1.0, "black_king_not_in_check_on_%s_by_%s_on_%s", algebraic(str, to), piece_to_str(piece), algebraic_simple(from));
-				}
-#endif
-
-#if 1
-	/* White king can not be in check */
-	for (int piece = BLACK_PAWN; piece <= BLACK_QUEEN; piece++) {
-		for (int to = 0; to < 64; to++) {
-			for (int from = 0; from < 64; from++) {
-				if (!has_piece_var(piece, from))
+	/* King can not be in check */
+	for (int color = 0; color < 2; color++) {
+		for (int attacker = PAWN; attacker <= KING; attacker++) {
+			for (int to = 0; to < 64; to++) {
+				if (!has_piece_var(colored_piece(KING, color), to))
 					continue;
-				if (piece == BLACK_PAWN) {
-					uint64_t pawn = bitboard(from);
-					uint64_t b = shift(pawn, S | E) | shift(pawn, S | W);
-					if (!(b & bitboard(to)))
+				for (int from = 0; from < 64; from++) {
+					if (!has_piece_var(colored_piece(attacker, other_color(color)), from))
 						continue;
-				}
-				else if (!(attacks(uncolored_piece(piece), from, 0, 0) & bitboard(to)))
-					continue;
-				struct vcol vcol = { 0 };
-
-				uint64_t b = between(from, to);
-				while (b) {
-					int sq = ctz(b);
-
-					for (int blocker = WHITE_PAWN; blocker <= BLACK_KING; blocker++) {
-						if (blocker == WHITE_KING)
+					if (attacker == PAWN) {
+						/* Reversed since other_color(color) is the attacker. */
+						int up = other_color(color) == WHITE ? N : S;
+						uint64_t pawn = bitboard(from);
+						uint64_t b = shift(pawn, up | E) | shift(pawn, up | W);
+						if (!(b & bitboard(to)))
 							continue;
-						if (piece >= BLACK_BISHOP && blocker == piece)
-							continue;
-						if (has_piece_var(blocker, sq))
-							vcol_add(&vcol, piece_var(blocker, sq), -1.0);
 					}
+					else if (!(attacks(attacker, from, 0, 0) & bitboard(to)))
+						continue;
+					struct vcol vcol = { 0 };
 
-					b = clear_ls1b(b);
+					uint64_t b = between(from, to);
+					while (b) {
+						int sq = ctz(b);
+
+						for (int blocker = WHITE_PAWN; blocker <= BLACK_KING; blocker++) {
+							/* King can not block itself. */
+							if (uncolored_piece(blocker) == KING && color_of_piece(blocker) == color)
+								continue;
+							if (has_piece_var(blocker, sq))
+								vcol_add(&vcol, piece_var(blocker, sq), -1.0);
+						}
+
+						b = clear_ls1b(b);
+					}
+					vcol_add(&vcol, piece_var(colored_piece(KING, color), to), 1.0);
+					vcol_add(&vcol, piece_var(colored_piece(attacker, other_color(color)), from), 1.0);
+					char str[3];
+					char str1[64];
+					add_constr(&vcol, GRB_LESS_EQUAL, 1.0, "%s_not_in_check_on_%s_by_%s_on_%s", piece_to_str_(str1, colored_piece(KING, color)), algebraic(str, to), piece_to_str(colored_piece(attacker, other_color(color))), algebraic_simple(from));
 				}
-				vcol_add(&vcol, piece_var(WHITE_KING, to), 1.0);
-				vcol_add(&vcol, piece_var(piece, from), 1.0);
-				char str[3];
-				add_constr(&vcol, GRB_LESS_EQUAL, 1.0, "white_king_not_in_check_on_%s_by_%s_on_%s", algebraic(str, to), piece_to_str(piece), algebraic_simple(from));
 			}
 		}
 	}
 #endif
 
+	const char *dirnames[] = { NULL, "north", "south", NULL, "east", "north_east", "south_east", NULL, "west", "north_west", "south_west" };
 	/* Speed up by adding redundant constraints */
 	for (int to = 0; to < 64; to++) {
 		for (int dir = 1; dir < 16; dir++) {
-			char *dirnames[] = { NULL, "north", "south", NULL, "east", "north_east", "south_east", NULL, "west", "north_west", "south_west" };
 			if (popcount(dir) > 2 || (dir & N && dir & S) || (dir & E && dir & W))
 				/* Not a real direction */
 				continue;
@@ -659,6 +656,27 @@ int main(void) {
 			}
 		}
 		print_mailbox(mailbox);
+		char pieces[] = " PNBRQKpnbrqk";
+		for (int row = 7; row >= 0; row--) {
+			int empty = 0;
+			for (int col = 0; col < 8; col++) {
+				int index = col + 8 * row;
+				if (mailbox[index]) {
+					if (empty) {
+						printf("%d", empty);
+						empty = 0;
+					}
+					printf("%c", pieces[mailbox[index]]);
+				}
+				else
+					empty++;
+			}
+			if (empty)
+				printf("%d", empty);
+			if (row)
+				printf("/");
+		}
+		printf(" w - -\n");
 		printf("Moves: %d\n", (int)round(objval));
 	}
 
