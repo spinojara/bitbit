@@ -546,15 +546,17 @@ int pos_is_ok(const struct position *pos) {
 
 	if (popcount(pos->piece[WHITE][ALL]) > 16 || popcount(pos->piece[BLACK][ALL]) > 16)
 		return 0;
-	if (popcount(pos->piece[WHITE][PAWN]) > 8 || popcount(pos->piece[BLACK][PAWN]) > 8)
+	if (popcount(pos->piece[WHITE][KING]) != 1 || popcount(pos->piece[BLACK][KING]) != 1)
 		return 0;
-	for (int piece = KNIGHT; piece <= ROOK; piece++)
-		if (popcount(pos->piece[WHITE][piece]) > 10 || popcount(pos->piece[BLACK][piece]) > 10)
+
+	int promotions[2] = { 0, 0 };
+	for (int color = 0; color < 2; color++) {
+		for (int piece = KNIGHT; piece <= QUEEN; piece++)
+			promotions[color] += max((int)popcount(pos->piece[color][piece]) - (piece == QUEEN ? 1 : 2), 0);
+
+		if (popcount(pos->piece[WHITE][PAWN]) + promotions[color] > 8)
 			return 0;
-	if (popcount(pos->piece[WHITE][QUEEN]) > 9 || popcount(pos->piece[BLACK][QUEEN]) > 9)
-		return 0;
-	if (popcount(pos->piece[WHITE][KING]) > 1 || popcount(pos->piece[BLACK][KING]) > 1)
-		return 0;
+	}
 
 	for (int color = BLACK; color <= WHITE; color++) {
 		uint64_t all = 0;
