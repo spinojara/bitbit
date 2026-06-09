@@ -114,6 +114,7 @@ extern uint64_t passed_files_lookup[64 * 2];
 extern int distance_lookup[64 * 64];
 extern int castle_lookup[64 * 64 * 16];
 
+/* Returns the squares strictly between source and target. */
 static inline uint64_t between(int source_square, int target_square) {
 	assert(bitboard_init_done);
 	return between_lookup[source_square + target_square * 64];

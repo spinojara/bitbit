@@ -44,9 +44,9 @@ struct movepicker {
 	struct position *pos;
 	const struct pstate *pstate;
 	/* We are trying to store pseudo-legal moves in 255 places which is ok.
-	 * There can be at most 218 moves in a chess position:
+	 * There can be at most 218 legal moves in a chess position:
 	 * <https://lichess.org/@/Tobs40/blog/why-a-reachable-position-can-have-at-most-218-playable-moves/a5xdxeqs>
-	 * The search even included positions with pseudo legal moves.
+	 * In fact, there can be at most 218 pseudo legal moves in a chess position.
 	 */
 	move_t moves[MOVES_MAX], *move, *badnonquiet, *end;
 	int64_t evals[MOVES_MAX], *eval;
