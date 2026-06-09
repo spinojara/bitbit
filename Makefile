@@ -43,7 +43,7 @@ else ifeq ($(DEBUG), address)
 	CDEBUG = -g3 -ggdb -fsanitize=address,undefined
 	LDFLAGS += -rdynamic
 else ifeq ($(DEBUG), )
-	CDEBUG = -DNDEBUG
+	CDEBUG = -DNDEBUG -fno-stack-protector
 endif
 
 ifneq ($(TARGET), )
