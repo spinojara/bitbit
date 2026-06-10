@@ -47,7 +47,7 @@ void evaluate_print(struct position *pos) {
 				for (int color = 0; color < 2; color++) {
 					int king_square = ctz(pos->piece[color][KING]);
 					int index = make_index(color, square, piece, king_square);
-					add_index_slow(index, accumulation, psqtaccumulation, color);
+					add_index_slow(index, accumulation[color], psqtaccumulation[color]);
 				}
 				int32_t neweval = psqtaccumulation[WHITE][0] - psqtaccumulation[BLACK][0] - oldeval;
 
