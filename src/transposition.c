@@ -192,6 +192,18 @@ void do_zobrist_key(struct position *pos, const move_t *move) {
 	default:
 		break;
 	}
+
+#if !defined(NDEBUG) && defined(FULLDEBUG)
+	uint64_t zobrist_key = pos->zobrist_key;
+	refresh_zobrist_key(pos);
+	if (zobrist_key != pos->zobrist_key) {
+		printf("ERROR DO ZOBRIST KEY\n");
+		print_position(pos);
+		print_move(move);
+		printf("\n");
+		exit(1);
+	}
+#endif
 }
 
 /* Should be called before undo_move. */
@@ -285,6 +297,18 @@ void undo_zobrist_key(struct position *pos, const move_t *move) {
 	default:
 		break;
 	}
+
+#if !defined(NDEBUG) && defined(FULLDEBUG)
+	uint64_t zobrist_key = pos->zobrist_key;
+	refresh_zobrist_key(pos);
+	if (zobrist_key != pos->zobrist_key) {
+		printf("ERROR UNDO ZOBRIST KEY\n");
+		print_position(pos);
+		print_move(move);
+		printf("\n");
+		exit(1);
+	}
+#endif
 }
 
 /* Should be called before do_null_move and then again before (un)do_null_move. */
