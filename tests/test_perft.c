@@ -1,11 +1,86 @@
-#include "perft.h"
 #include "transposition.h"
+#include "movegen.h"
+#include "nnue.h"
+#include "endgame.h"
+
+void compare_keys(const struct position *pos, uint64_t zobrist_key, uint64_t endgame_key, int16_t accumulation[2][K_HALF_DIMENSIONS], int32_t psqtaccumulation[2][PSQT_BUCKETS]) {
+	CU_ASSERT_EQUAL(pos->zobrist_key, zobrist_key);
+	CU_ASSERT_EQUAL(pos->endgame_key, endgame_key);
+	for (int color = 0; color < 2; color++) {
+		for (int i = 0; i < K_HALF_DIMENSIONS; i++)
+			CU_ASSERT_EQUAL(pos->accumulation[color][i], accumulation[color][i]);
+
+		for (int i = 0; i < PSQT_BUCKETS; i++)
+			CU_ASSERT_EQUAL(pos->psqtaccumulation[color][i], psqtaccumulation[color][i]);
+	}
+}
+
+uint64_t perft_extra_checks(struct position *pos, int depth) {
+	if (depth <= 0)
+		return 0;
+
+	move_t moves[MOVES_MAX];
+	struct pstate pstate;
+	pstate_init(pos, &pstate);
+	movegen(pos, &pstate, moves, MOVETYPE_ALL);
+
+	uint64_t nodes = 0, count;
+	for (move_t *move = moves; *move; move++) {
+		if (!legal(pos, &pstate, move))
+			continue;
+		if (depth == 1) {
+			count = 1;
+			nodes++;
+		}
+		else {
+			uint64_t zobrist_key_before = pos->zobrist_key;
+			uint64_t endgame_key_before = pos->endgame_key;
+			int16_t accumulation_before[2][K_HALF_DIMENSIONS];
+			int32_t psqtaccumulation_before[2][PSQT_BUCKETS];
+			memcpy(accumulation_before, pos->accumulation, sizeof(accumulation_before));
+			memcpy(psqtaccumulation_before, pos->psqtaccumulation, sizeof(psqtaccumulation_before));
+
+			do_zobrist_key(pos, move);
+			do_endgame_key(pos, move);
+			do_move(pos, move);
+			do_accumulator(pos, move);
+
+			uint64_t zobrist_key_after = pos->zobrist_key;
+			uint64_t endgame_key_after = pos->endgame_key;
+			int16_t accumulation_after[2][K_HALF_DIMENSIONS];
+			int32_t psqtaccumulation_after[2][PSQT_BUCKETS];
+			memcpy(accumulation_after, pos->accumulation, sizeof(accumulation_after));
+			memcpy(psqtaccumulation_after, pos->psqtaccumulation, sizeof(psqtaccumulation_after));
+
+			refresh_zobrist_key(pos);
+			refresh_endgame_key(pos);
+			refresh_accumulator(pos, WHITE);
+			refresh_accumulator(pos, BLACK);
+
+			compare_keys(pos, zobrist_key_after, endgame_key_after, accumulation_after, psqtaccumulation_after);
+
+			count = perft_extra_checks(pos, depth - 1);
+
+			undo_zobrist_key(pos, move);
+			undo_endgame_key(pos, move);
+			undo_move(pos, move);
+			undo_accumulator(pos, move);
+			nodes += count;
+
+			compare_keys(pos, zobrist_key_before, endgame_key_before, accumulation_before, psqtaccumulation_before);
+		}
+	}
+	return nodes;
+}
 
 uint64_t perft_helper(const char *fen, int depth) {
 	struct position pos;
 	pos_from_fen2(&pos, fen);
 	refresh_zobrist_key(&pos);
-	return perft(&pos, depth, 0);
+	refresh_endgame_key(&pos);
+	refresh_accumulator(&pos, WHITE);
+	refresh_accumulator(&pos, BLACK);
+	return perft_extra_checks(&pos, depth);
 }
 
 void test_perft_1(void) {
