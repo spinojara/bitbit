@@ -14,12 +14,12 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <stdio.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 
-#include "nnue.h"
 #include "io.h"
+#include "nnue.h"
 
 typedef int16_t ft_bias_t;
 typedef int16_t ft_weight_t;
@@ -77,22 +77,22 @@ void image_ft(int32_t *image) {
 #endif
 	for (int y = 0; y < 4096; y++) {
 		for (int x = 0; x < 6144; x++) {
-			int rex = x / (6 * 64);
-			int rey = y / (2 * 64);
-			int ren = rey * 16 + rex;
+			int rex             = x / (6 * 64);
+			int rey             = y / (2 * 64);
+			int ren             = rey * 16 + rex;
 
-			int sqx = (x % 64) / 8;
-			int sqy = (y % 64) / 8;
-			int sq = sqx + 8 * (7 - sqy);
+			int sqx             = (x % 64) / 8;
+			int sqy             = (y % 64) / 8;
+			int sq              = sqx + 8 * (7 - sqy);
 
-			int ksqx = x % 8;
-			int ksqy = y % 8;
-			int ksq = ksqx / 2 + 8 * (7 - ksqy);
+			int ksqx            = x % 8;
+			int ksqy            = y % 8;
+			int ksq             = ksqx / 2 + 8 * (7 - ksqy);
 
-			int color = !((y % (2 * 64)) < 64);
-			int piece = 1 + ((x % (6 * 64)) / 64) + 6 * color;
+			int color           = !((y % (2 * 64)) < 64);
+			int piece           = 1 + ((x % (6 * 64)) / 64) + 6 * color;
 
-			int index = make_index(WHITE, sq, piece, ksq);
+			int index           = make_index(WHITE, sq, piece, ksq);
 			image[x + 6144 * y] = abs(ft_weights[K_HALF_DIMENSIONS * index + ren]);
 		}
 	}
@@ -101,23 +101,23 @@ void image_ft(int32_t *image) {
 void image_psqt(int32_t *image, int piece) {
 	for (int y = 0; y < 8; y++) {
 		for (int x = 0; x < 8; x++) {
-			int square = x + 8 * (7 - y);
+			int square    = x + 8 * (7 - y);
 
 			int32_t value = 0;
-			int num = 0;
+			int num       = 0;
 			for (int turn = 0; turn <= 1; turn++) {
 				for (int king_square = 0; king_square < 64; king_square++) {
 					if (king_square == square)
 						continue;
 					num++;
-					int index = make_index(turn, square, piece, king_square);
-					value += (2 * turn - 1) * ft_weights[256 + (K_HALF_DIMENSIONS + 1) * index];
+					int index  = make_index(turn, square, piece, king_square);
+					value     += (2 * turn - 1) * ft_weights[256 + (K_HALF_DIMENSIONS + 1) * index];
 				}
 			}
 
 			if (piece == PAWN && (y == 0 || y == 7)) {
 				value = 0;
-				num = 1;
+				num   = 1;
 			}
 
 			image[x + 8 * y] = value / num;

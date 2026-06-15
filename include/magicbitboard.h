@@ -17,8 +17,8 @@
 #ifndef MAGIC_BITBOARD_H
 #define MAGIC_BITBOARD_H
 
-#include <stdint.h>
 #include <assert.h>
+#include <stdint.h>
 
 #ifdef PEXT
 #include <immintrin.h>

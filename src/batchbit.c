@@ -15,23 +15,23 @@
  */
 
 #define _GNU_SOURCE
+#include <assert.h>
+#include <errno.h>
+#include <pthread.h>
+#include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
-#include <stdint.h>
 #include <time.h>
-#include <assert.h>
-#include <pthread.h>
-#include <errno.h>
 #include <unistd.h>
 
-#include "position.h"
-#include "move.h"
-#include "nnue.h"
+#include "attackgen.h"
 #include "evaluate.h"
 #include "io.h"
 #include "magicbitboard.h"
-#include "attackgen.h"
+#include "move.h"
+#include "nnue.h"
+#include "position.h"
 
 struct entry {
 	int result;
@@ -90,17 +90,17 @@ static inline uint16_t make_index_virtual(int turn, int square, int piece, int k
 /* From https://github.com/official-stockfish/nnue-pytorch
  * but fitted to bitbit's own data. */
 double win_rate_model(int fullmove, int32_t eval, int result) {
-	double m = (fullmove < 125 ? fullmove : 125) / 64.0;
-	double x = eval / 100.0;
+	double m  = (fullmove < 125 ? fullmove : 125) / 64.0;
+	double x  = eval / 100.0;
 
-	double a = ((-0.26358 * m + 1.69976) * m + 0.18960) * m + 0.71337;
-	double b = ((-0.06160 * m + 0.40556) * m - 0.13854) * m + 0.47889;
+	double a  = ((-0.26358 * m + 1.69976) * m + 0.18960) * m + 0.71337;
+	double b  = ((-0.06160 * m + 0.40556) * m - 0.13854) * m + 0.47889;
 
-	b *= 1.5;
+	b        *= 1.5;
 
-	double w = 1.0 / (1.0 + exp((a - x) / b));
-	double l = 1.0 / (1.0 + exp((a + x) / b));
-	double d = 1.0 - w - l;
+	double w  = 1.0 / (1.0 + exp((a - x) / b));
+	double l  = 1.0 / (1.0 + exp((a + x) / b));
+	double d  = 1.0 - w - l;
 
 	switch (result) {
 	case RESULT_WIN:
@@ -120,11 +120,11 @@ int wdl_skip(int fullmove, int32_t eval, int result, uint64_t *seed) {
 
 void *batch_alloc(size_t requested_size) {
 	struct batch *batch = calloc(1, sizeof(*batch));
-	batch->ind1 = malloc(4 * 32 * requested_size * sizeof(*batch->ind1));
-	batch->ind2 = malloc(4 * 32 * requested_size * sizeof(*batch->ind2));
-	batch->eval = malloc(requested_size * sizeof(*batch->eval));
-	batch->result = malloc(requested_size * sizeof(*batch->result));
-	batch->_next = NULL;
+	batch->ind1         = malloc(4 * 32 * requested_size * sizeof(*batch->ind1));
+	batch->ind2         = malloc(4 * 32 * requested_size * sizeof(*batch->ind2));
+	batch->eval         = malloc(requested_size * sizeof(*batch->eval));
+	batch->result       = malloc(requested_size * sizeof(*batch->result));
+	batch->_next        = NULL;
 
 	return batch;
 }
@@ -146,7 +146,7 @@ void batch_append(struct dataloader *dataloader, struct batch *batch) {
 	}
 	else {
 		dataloader->last->_next = batch;
-		dataloader->last = dataloader->last->_next;
+		dataloader->last        = dataloader->last->_next;
 	}
 }
 
@@ -165,7 +165,7 @@ int entry_fetch(struct dataloader *dataloader, struct entry *entries, size_t n) 
 	}
 	pthread_mutex_unlock(&dataloader->mutex);
 	int r;
-	for (size_t i = 0; i < n; ) {
+	for (size_t i = 0; i < n;) {
 		if ((r = read_move(dataloader->f, &move))) {
 			if (r == 2 && feof(dataloader->f)) {
 				fseek(dataloader->f, 0, SEEK_SET);
@@ -184,7 +184,8 @@ int entry_fetch(struct dataloader *dataloader, struct entry *entries, size_t n) 
 			do_move(&dataloader->pos, &move);
 		}
 		else {
-			if (read_position(dataloader->f, &dataloader->pos) || read_result(dataloader->f, &dataloader->result)) {
+			if (read_position(dataloader->f, &dataloader->pos)
+			    || read_result(dataloader->f, &dataloader->result)) {
 				pthread_mutex_lock(&dataloader->mutex);
 				dataloader->stop = dataloader->error = 1;
 				pthread_cond_broadcast(&dataloader->condready);
@@ -204,11 +205,11 @@ int entry_fetch(struct dataloader *dataloader, struct entry *entries, size_t n) 
 		}
 
 		struct entry *entry = &entries[i];
-		entry->eval = eval;
-		entry->flag = flag;
+		entry->eval         = eval;
+		entry->flag         = flag;
 		memcpy(entry->piece, dataloader->pos.piece, sizeof(entry->piece));
-		entry->turn = dataloader->pos.turn;
-		entry->result = dataloader->result;
+		entry->turn     = dataloader->pos.turn;
+		entry->result   = dataloader->result;
 		entry->fullmove = dataloader->pos.fullmove;
 
 		i++;
@@ -220,10 +221,10 @@ int entry_fetch(struct dataloader *dataloader, struct entry *entries, size_t n) 
 void *batch_worker(void *ptr) {
 	struct dataloader *dataloader = ptr;
 
-	uint64_t seed = dataloader->baseseed + gettid();
+	uint64_t seed                 = dataloader->baseseed + gettid();
 
-	struct entry *entries = calloc(dataloader->internal_size, sizeof(*entries));
-	size_t entry_index = dataloader->internal_size;
+	struct entry *entries         = calloc(dataloader->internal_size, sizeof(*entries));
+	size_t entry_index            = dataloader->internal_size;
 
 	while (1) {
 		pthread_mutex_lock(&dataloader->mutex);
@@ -239,8 +240,8 @@ void *batch_worker(void *ptr) {
 		pthread_mutex_unlock(&dataloader->mutex);
 
 		struct batch *batch = batch_alloc(dataloader->requested_size);
-		batch->size = 0;
-		batch->ind_active = 0;
+		batch->size         = 0;
+		batch->ind_active   = 0;
 
 		size_t counter1 = 0, counter2 = 0;
 
@@ -251,9 +252,9 @@ void *batch_worker(void *ptr) {
 				entry_index = 0;
 			}
 			struct entry *entry = &entries[entry_index];
-			signed char result = entry->result;
-			int32_t eval = entry->eval;
-			unsigned char flag = entry->flag;
+			signed char result  = entry->result;
+			int32_t eval        = entry->eval;
+			unsigned char flag  = entry->flag;
 			if (result != RESULT_UNKNOWN)
 				result *= (2 * entry->turn - 1);
 			entry_index++;
@@ -261,15 +262,18 @@ void *batch_worker(void *ptr) {
 			if (dataloader->use_result && result == RESULT_UNKNOWN)
 				continue;
 
-			int skip = (eval == VALUE_NONE) || (flag & FLAG_SKIP) || bernoulli(dataloader->random_skip, &seed) || (dataloader->wdl_skip && result != RESULT_UNKNOWN && wdl_skip(entry->fullmove, eval, result, &seed));
+			int skip = (eval == VALUE_NONE) || (flag & FLAG_SKIP)
+			        || bernoulli(dataloader->random_skip, &seed)
+			        || (dataloader->wdl_skip && result != RESULT_UNKNOWN
+			            && wdl_skip(entry->fullmove, eval, result, &seed));
 			if (skip)
 				continue;
 
-			batch->eval[batch->size] = ((float)(FV_SCALE * eval)) / (127 * 64);
+			batch->eval[batch->size]   = ((float)(FV_SCALE * eval)) / (127 * 64);
 			batch->result[batch->size] = result != RESULT_UNKNOWN ? (result + 1.0) / 2.0 : 0.5;
 
 			int index, square;
-			int king_square[] = { ctz(entry->piece[BLACK][KING]), ctz(entry->piece[WHITE][KING]) };
+			int king_square[]   = { ctz(entry->piece[BLACK][KING]), ctz(entry->piece[WHITE][KING]) };
 			size_t counter1_was = counter1;
 			size_t counter2_was = counter2;
 			for (int piece = PAWN; piece <= KING; piece++) {
@@ -279,23 +283,30 @@ void *batch_worker(void *ptr) {
 					uint64_t b = entry->piece[turn][piece];
 					while (b) {
 						batch->ind_active += 2;
-						square = ctz(b);
-						index = make_index(entry->turn, square, colored_piece(piece, turn), king_square[entry->turn]);
+						square             = ctz(b);
+						index = make_index(entry->turn, square, colored_piece(piece, turn),
+						                   king_square[entry->turn]);
 						batch->ind1[counter1++] = batch->size;
 						batch->ind1[counter1++] = index;
 
-						index = make_index(other_color(entry->turn), square, colored_piece(piece, turn), king_square[other_color(entry->turn)]);
+						index                   = make_index(other_color(entry->turn), square,
+						                                     colored_piece(piece, turn),
+						                                     king_square[other_color(entry->turn)]);
 						batch->ind2[counter2++] = batch->size;
 						batch->ind2[counter2++] = index;
 
-						index = make_index_virtual(entry->turn, square, colored_piece(piece, turn), king_square[entry->turn]);
+						index                   = make_index_virtual(entry->turn, square,
+						                                             colored_piece(piece, turn),
+						                                             king_square[entry->turn]);
 						batch->ind1[counter1++] = batch->size;
 						batch->ind1[counter1++] = index;
 
-						index = make_index_virtual(other_color(entry->turn), square, colored_piece(piece, turn), king_square[other_color(entry->turn)]);
+						index = make_index_virtual(other_color(entry->turn), square,
+						                           colored_piece(piece, turn),
+						                           king_square[other_color(entry->turn)]);
 						batch->ind2[counter2++] = batch->size;
 						batch->ind2[counter2++] = index;
-						b = clear_ls1b(b);
+						b                       = clear_ls1b(b);
 					}
 				}
 			}
@@ -303,20 +314,20 @@ void *batch_worker(void *ptr) {
 				size_t d = c;
 
 				while (d > counter1_was + 1 && batch->ind1[d - 2] > batch->ind1[d]) {
-					int32_t temp = batch->ind1[d - 2];
-					batch->ind1[d - 2] = batch->ind1[d];
-					batch->ind1[d] = temp;
-					d -= 2;
+					int32_t temp        = batch->ind1[d - 2];
+					batch->ind1[d - 2]  = batch->ind1[d];
+					batch->ind1[d]      = temp;
+					d                  -= 2;
 				}
 			}
 			for (size_t c = counter2_was + 3; c < counter2; c += 2) {
 				size_t d = c;
 
 				while (d > counter2_was + 1 && batch->ind2[d - 2] > batch->ind2[d]) {
-					int32_t temp = batch->ind2[d - 2];
-					batch->ind2[d - 2] = batch->ind2[d];
-					batch->ind2[d] = temp;
-					d -= 2;
+					int32_t temp        = batch->ind2[d - 2];
+					batch->ind2[d - 2]  = batch->ind2[d];
+					batch->ind2[d]      = temp;
+					d                  -= 2;
 				}
 			}
 			batch->size++;
@@ -373,23 +384,23 @@ void *loader_open(const char *s, size_t requested_size, int jobs, double random_
 		return NULL;
 	}
 	struct dataloader *dataloader = calloc(1, sizeof(*dataloader));
-	dataloader->jobs = jobs;
-	dataloader->requested_size = requested_size;
-	dataloader->internal_size = requested_size;
-	dataloader->random_skip = random_skip;
-	dataloader->wdl_skip = wdl_skip;
-	dataloader->use_result = use_result;
-	dataloader->num_batches = 0;
-	dataloader->f = f;
+	dataloader->jobs              = jobs;
+	dataloader->requested_size    = requested_size;
+	dataloader->internal_size     = requested_size;
+	dataloader->random_skip       = random_skip;
+	dataloader->wdl_skip          = wdl_skip;
+	dataloader->use_result        = use_result;
+	dataloader->num_batches       = 0;
+	dataloader->f                 = f;
 
 	pthread_mutex_init(&dataloader->mutex, NULL);
 	pthread_mutex_init(&dataloader->readmutex, NULL);
 	pthread_cond_init(&dataloader->condready, NULL);
 	pthread_cond_init(&dataloader->condfetch, NULL);
 
-	dataloader->error = 0;
+	dataloader->error    = 0;
 
-	dataloader->thread = malloc(dataloader->jobs * sizeof(*dataloader->thread));
+	dataloader->thread   = malloc(dataloader->jobs * sizeof(*dataloader->thread));
 
 	dataloader->baseseed = time(NULL);
 
@@ -414,7 +425,7 @@ void loader_close(void *ptr) {
 	pthread_cond_destroy(&dataloader->condready);
 	pthread_cond_destroy(&dataloader->condfetch);
 
-	for (struct batch *batch = dataloader->first; batch; ) {
+	for (struct batch *batch = dataloader->first; batch;) {
 		dataloader->num_batches--;
 		struct batch *next = batch->_next;
 		batch_free(batch);
@@ -440,6 +451,4 @@ void batchbit_init(void) {
 	bitboard_init();
 }
 
-int batchbit_version(void) {
-	return VERSION_NNUE;
-}
+int batchbit_version(void) { return VERSION_NNUE; }

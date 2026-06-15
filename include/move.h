@@ -17,8 +17,8 @@
 #ifndef MOVE_H
 #define MOVE_H
 
-#include <stdint.h>
 #include <assert.h>
+#include <stdint.h>
 
 #include "position.h"
 
@@ -46,12 +46,13 @@ static inline void move_set_castle(move_t *move, uint64_t i) { *move |= (i << 0x
 static inline void move_set_en_passant(move_t *move, uint64_t i) { *move |= (i << 0x18); }
 static inline void move_set_halfmove(move_t *move, uint64_t i) { *move |= (i << 0x1E); }
 
-#define MOVES_MAX (256)
+#define MOVES_MAX       (256)
 #define MOVE_EN_PASSANT (1)
-#define MOVE_PROMOTION (2)
-#define MOVE_CASTLE (3)
+#define MOVE_PROMOTION  (2)
+#define MOVE_CASTLE     (3)
 
-#define M(source_square, target_square, flag, promotion) ((source_square) | ((target_square) << 6) | ((flag) << 12) | ((promotion) << 14))
+#define M(source_square, target_square, flag, promotion) \
+	((source_square) | ((target_square) << 6) | ((flag) << 12) | ((promotion) << 14))
 
 void do_move(struct position *pos, move_t *move);
 
@@ -65,17 +66,13 @@ static inline move_t new_move(int source_square, int target_square, int flag, in
 	return source_square | (target_square << 6) | (flag << 12) | (promotion << 14);
 }
 
-static inline int move_compare(move_t move1, move_t move2) {
-	return (move1 & 0xFFFF) == (move2 & 0xFFFF);
-}
+static inline int move_compare(move_t move1, move_t move2) { return (move1 & 0xFFFF) == (move2 & 0xFFFF); }
 
 int pseudo_legal(const struct position *pos, const struct pstate *pstate, const move_t *move);
 
 int legal(const struct position *pos, const struct pstate *pstate, const move_t *move);
 
-static inline int is_capture(const struct position *pos, const move_t *move) {
-	return pos->mailbox[move_to(move)];
-}
+static inline int is_capture(const struct position *pos, const move_t *move) { return pos->mailbox[move_to(move)]; }
 
 void print_move(const move_t *move);
 

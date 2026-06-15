@@ -16,13 +16,13 @@
 
 #include "magicbitboard.h"
 
+#include <stdalign.h>
 #include <stdio.h>
 #include <string.h>
-#include <stdalign.h>
 
 #include "bitboard.h"
-#include "util.h"
 #include "position.h"
+#include "util.h"
 
 #ifndef NDEBUG
 int magicbitboard_init_done = 0;
@@ -36,8 +36,8 @@ struct magic rook_magic[64];
 
 uint64_t bishop_attacks_calc(int square, uint64_t b) {
 	uint64_t attacks = 0;
-	int x = file_of(square);
-	int y = rank_of(square);
+	int x            = file_of(square);
+	int y            = rank_of(square);
 
 	for (int i = x + 1, j = y + 1; i < 8 && j < 8; i++, j++) {
 		attacks |= bitboard(i + j * 8);
@@ -72,8 +72,8 @@ uint64_t bishop_attacks_calc(int square, uint64_t b) {
 
 uint64_t rook_attacks_calc(int square, uint64_t b) {
 	uint64_t attacks = 0;
-	int x = file_of(square);
-	int y = rank_of(square);
+	int x            = file_of(square);
+	int y            = rank_of(square);
 
 	for (int i = x + 1; i < 8; i++) {
 		attacks |= bitboard(i + 8 * y);
@@ -89,14 +89,14 @@ uint64_t rook_attacks_calc(int square, uint64_t b) {
 		}
 	}
 
-	for (int i = y + 1;i < 8;i++) {
+	for (int i = y + 1; i < 8; i++) {
 		attacks |= bitboard(x + 8 * i);
 		if (b & bitboard(x + 8 * i)) {
 			break;
 		}
 	}
 
-	for (int i = y - 1;i > -1;i--) {
+	for (int i = y - 1; i > -1; i--) {
 		attacks |= bitboard(x + 8 * i);
 		if (b & bitboard(x + 8 * i)) {
 			break;
@@ -108,8 +108,8 @@ uint64_t rook_attacks_calc(int square, uint64_t b) {
 
 uint64_t bishop_mask_calc(int square) {
 	uint64_t mask = 0;
-	int x = file_of(square);
-	int y = rank_of(square);
+	int x         = file_of(square);
+	int y         = rank_of(square);
 
 	for (int i = x + 1, j = y + 1; i < 7 && j < 7; i++, j++) {
 		mask |= bitboard(i + j * 8);
@@ -132,8 +132,8 @@ uint64_t bishop_mask_calc(int square) {
 
 uint64_t rook_mask_calc(int square) {
 	uint64_t mask = 0;
-	int x = file_of(square);
-	int y = rank_of(square);
+	int x         = file_of(square);
+	int y         = rank_of(square);
 
 	for (int i = x + 1; i < 7; i++) {
 		mask |= bitboard(i + 8 * y);
@@ -156,8 +156,8 @@ uint64_t rook_mask_calc(int square) {
 
 uint64_t bishop_full_mask_calc(int square) {
 	uint64_t mask = 0;
-	int x = file_of(square);
-	int y = rank_of(square);
+	int x         = file_of(square);
+	int y         = rank_of(square);
 
 	for (int i = x + 1, j = y + 1; i < 8 && j < 8; i++, j++) {
 		mask |= bitboard(i + j * 8);
@@ -180,8 +180,8 @@ uint64_t bishop_full_mask_calc(int square) {
 
 uint64_t rook_full_mask_calc(int square) {
 	uint64_t mask = 0;
-	int x = file_of(square);
-	int y = rank_of(square);
+	int x         = file_of(square);
+	int y         = rank_of(square);
 
 	for (int i = x + 1; i < 8; i++) {
 		mask |= bitboard(i + 8 * y);
@@ -204,7 +204,7 @@ uint64_t rook_full_mask_calc(int square) {
 
 uint64_t block_mask(int i, uint64_t attack_mask) {
 	uint64_t occ = 0;
-	int j = 0;
+	int j        = 0;
 
 	while (attack_mask) {
 		if (i & bitboard(j++))
@@ -220,14 +220,14 @@ void magic_calc(int square, int piece) {
 	struct magic *magic = piece == ROOK ? &rook_magic[square] : &bishop_magic[square];
 	uint64_t occ[4096];
 	uint64_t attacks[4096];
-	int epochs[4096] = { 0 };
+	int epochs[4096]  = { 0 };
 
-	magic->mask = piece == ROOK ? rook_mask_calc(square) : bishop_mask_calc(square);
-	magic->shift = 64 - popcount(magic->mask);
+	magic->mask       = piece == ROOK ? rook_mask_calc(square) : bishop_mask_calc(square);
+	magic->shift      = 64 - popcount(magic->mask);
 
 	uint64_t seeds[2] = { 5273, 23293 };
 
-	uint64_t seed = seeds[piece == ROOK];
+	uint64_t seed     = seeds[piece == ROOK];
 
 	if (square == a1)
 		magic->attacks = piece == ROOK ? rook_attacks_lookup : bishop_attacks_lookup;
@@ -237,9 +237,9 @@ void magic_calc(int square, int piece) {
 
 	/* <https://www.chessprogramming.org/Traversing_Subsets_of_a_Set> */
 	uint64_t b = 0;
-	int size = 0;
+	int size   = 0;
 	do {
-		occ[size] = b;
+		occ[size]     = b;
 		attacks[size] = piece == ROOK ? rook_attacks_calc(square, b) : bishop_attacks_calc(square, b);
 
 #ifdef PEXT
@@ -270,7 +270,7 @@ void magic_calc(int square, int piece) {
 			 * this epoch and this is not a proper magic number.
 			 */
 			if (epochs[k] < epoch) {
-				epochs[k] = epoch;
+				epochs[k]         = epoch;
 				magic->attacks[k] = attacks[j];
 			}
 			else if (magic->attacks[k] != attacks[j])

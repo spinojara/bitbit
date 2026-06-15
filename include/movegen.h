@@ -17,8 +17,8 @@
 #ifndef MOVE_GEN_H
 #define MOVE_GEN_H
 
-#include "position.h"
 #include "move.h"
+#include "position.h"
 
 enum {
 	MOVETYPE_QUIET    = 0x1,

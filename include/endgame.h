@@ -17,21 +17,21 @@
 #ifndef ENDGAME_H
 #define ENDGAME_H
 
-#include <stdint.h>
 #include <assert.h>
+#include <stdint.h>
 
-#include "position.h"
 #include "bitboard.h"
-#include "move.h"
 #include "evaluate.h"
+#include "move.h"
 #include "option.h"
+#include "position.h"
 
 #ifndef NDEBUG
 extern int endgame_init_done;
 #endif
 
-#define ENDGAMEBITS (9)
-#define ENDGAMESIZE (1 << ENDGAMEBITS)
+#define ENDGAMEBITS  (9)
+#define ENDGAMESIZE  (1 << ENDGAMEBITS)
 #define ENDGAMEINDEX (ENDGAMESIZE - 1)
 
 struct endgame {

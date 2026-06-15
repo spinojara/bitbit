@@ -16,17 +16,17 @@
 
 #include "option.h"
 
-#include <limits.h>
-#include <strings.h>
-#include <string.h>
 #include <errno.h>
+#include <limits.h>
 #include <stdlib.h>
+#include <string.h>
+#include <strings.h>
 
-#include "util.h"
-#include "transposition.h"
 #include "interface.h"
 #include "nnue.h"
+#include "transposition.h"
 #include "tune.h"
+#include "util.h"
 
 #define OPTION_TRANSPOSITION 1
 #define OPTION_HISTORY       1
@@ -36,13 +36,13 @@
 #define OPTION_DETERMINISTIC 1
 #define OPTION_DEBUG         0
 
-int option_transposition  = OPTION_TRANSPOSITION;
-int option_history        = OPTION_HISTORY;
-int option_endgame        = OPTION_ENDGAME;
-int option_damp           = OPTION_DAMP;
-int option_ponder         = OPTION_PONDER;
-int option_deterministic  = OPTION_DETERMINISTIC;
-int option_debug          = OPTION_DEBUG;
+int option_transposition = OPTION_TRANSPOSITION;
+int option_history       = OPTION_HISTORY;
+int option_endgame       = OPTION_ENDGAME;
+int option_damp          = OPTION_DAMP;
+int option_ponder        = OPTION_PONDER;
+int option_deterministic = OPTION_DETERMINISTIC;
+int option_debug         = OPTION_DEBUG;
 
 void print_options(void) {
 	printf("option name Clear Hash type button\n");
@@ -80,12 +80,12 @@ void setoption(int argc, char **argv, struct transpositiontable *tt) {
 				transposition_free(tt);
 				if (transposition_alloc(tt, MiB * 1024 * 1024)) {
 					fprintf(stderr, "error: failed to allocate transposition table\n");
-					tt->size = 0;
+					tt->size             = 0;
 					option_transposition = 0;
 				}
 			}
 			else {
-				tt->size = 0;
+				tt->size             = 0;
 				option_transposition = 0;
 			}
 		}

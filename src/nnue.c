@@ -16,20 +16,20 @@
 
 #include "nnue.h"
 
-#include <inttypes.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdalign.h>
 #include <assert.h>
+#include <inttypes.h>
+#include <stdalign.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "bitboard.h"
-#include "util.h"
 #include "evaluate.h"
 #include "move.h"
-#include "position.h"
-#include "option.h"
 #include "nnuefile.h"
+#include "option.h"
+#include "position.h"
+#include "util.h"
 
 #ifdef VNNI
 #define AVX2
@@ -80,8 +80,6 @@ extern alignas(64) bias_t builtin_hidden2_biases[HIDDEN2_OUT_DIMS];
 extern alignas(64) weight_t builtin_output_weights[1 * HIDDEN2_OUT_DIMS];
 extern alignas(64) bias_t builtin_output_biases[1];
 
-
-
 alignas(64) ft_weight_t file_ft_weights[K_HALF_DIMENSIONS * FT_IN_DIMS];
 alignas(64) ft_bias_t file_ft_biases[K_HALF_DIMENSIONS];
 
@@ -95,8 +93,6 @@ alignas(64) bias_t file_hidden2_biases[HIDDEN2_OUT_DIMS];
 
 alignas(64) weight_t file_output_weights[1 * HIDDEN2_OUT_DIMS];
 alignas(64) bias_t file_output_biases[1];
-
-
 
 ft_weight_t *ft_weights;
 ft_bias_t *ft_biases;
@@ -147,7 +143,8 @@ void print_m256i(__m256i a, int as) {
  * output[8-15] is swapped with output[16-23] and
  * output[40-47] is swapped with output[48-55] etc.
  */
-static inline void transform(const struct position *pos, const int16_t accumulation[2][K_HALF_DIMENSIONS], int8_t *output) {
+static inline void transform(const struct position *pos, const int16_t accumulation[2][K_HALF_DIMENSIONS],
+                             int8_t *output) {
 #if defined(AVX2)
 	const int perspective[2] = { pos->turn, other_color(pos->turn) };
 	for (int j = 0; j < 2; j++) {
@@ -155,22 +152,24 @@ static inline void transform(const struct position *pos, const int16_t accumulat
 		for (int i = 0; i < K_HALF_DIMENSIONS / 32; i++) {
 			__m256i p0 = ((__m256i *)accumulation[perspective[j]])[2 * i];
 			__m256i p1 = ((__m256i *)accumulation[perspective[j]])[2 * i + 1];
-			out[i] = _mm256_max_epi8(_mm256_packs_epi16(_mm256_srai_epi16(p0, FT_SHIFT), _mm256_srai_epi16(p1, FT_SHIFT)), _mm256_setzero_si256());
+			out[i]     = _mm256_max_epi8(
+                            _mm256_packs_epi16(_mm256_srai_epi16(p0, FT_SHIFT), _mm256_srai_epi16(p1, FT_SHIFT)),
+                            _mm256_setzero_si256());
 		}
 	}
 #else
 	int16_t sum;
 	for (int i = 0; i < K_HALF_DIMENSIONS; i++) {
-		sum = accumulation[pos->turn][i];
-		output[i] = clamp(sum >> FT_SHIFT, 0, 127);
-		sum = accumulation[other_color(pos->turn)][i];
+		sum                           = accumulation[pos->turn][i];
+		output[i]                     = clamp(sum >> FT_SHIFT, 0, 127);
+		sum                           = accumulation[other_color(pos->turn)][i];
 		output[K_HALF_DIMENSIONS + i] = clamp(sum >> FT_SHIFT, 0, 127);
 	}
 #endif
 }
 
-static inline void affine_propagate_hidden1(const int8_t *input, int8_t *output,
-		const bias_t *biases, const weight_t *weights) {
+static inline void affine_propagate_hidden1(const int8_t *input, int8_t *output, const bias_t *biases,
+                                            const weight_t *weights) {
 #if defined(AVX2)
 	__m256i out0 = ((const __m256i *)biases)[0];
 	__m256i out1 = ((const __m256i *)biases)[1];
@@ -181,7 +180,7 @@ static inline void affine_propagate_hidden1(const int8_t *input, int8_t *output,
 	for (int i = 0; i < FT_OUT_DIMS / 4; i++) {
 		int32_t quad;
 		memcpy(&quad, input + 4 * i, sizeof(quad));
-		__m256i in = _mm256_set1_epi32(quad);
+		__m256i in      = _mm256_set1_epi32(quad);
 		__m256i weight0 = ((const __m256i *)weights)[2 * i];
 		__m256i weight1 = ((const __m256i *)weights)[2 * i + 1];
 #if defined(VNNI)
@@ -196,8 +195,8 @@ static inline void affine_propagate_hidden1(const int8_t *input, int8_t *output,
 	/* 16-bit words are in the order 0-3, 8-11, 4-7, 12-15. */
 	__m256i out01 = _mm256_srai_epi16(_mm256_packs_epi32(out0, out1), SHIFT);
 	/* 32-bit lanes are in the order 0-3, 8-11, 4-7, 12-15. */
-	__m128i out = _mm_packs_epi16(_mm256_castsi256_si128(out01), _mm256_extracti128_si256(out01, 1));
-	out = _mm_shuffle_epi32(out, 0xd8);
+	__m128i out        = _mm_packs_epi16(_mm256_castsi256_si128(out01), _mm256_extracti128_si256(out01, 1));
+	out                = _mm_shuffle_epi32(out, 0xd8);
 	*(__m128i *)output = _mm_max_epi8(out, _mm_setzero_si128());
 #else
 	int i, j;
@@ -214,8 +213,8 @@ static inline void affine_propagate_hidden1(const int8_t *input, int8_t *output,
 #endif
 }
 
-static inline void affine_propagate_hidden2(const int8_t *input, int8_t *output,
-		const bias_t *biases, const weight_t *weights) {
+static inline void affine_propagate_hidden2(const int8_t *input, int8_t *output, const bias_t *biases,
+                                            const weight_t *weights) {
 #if defined(AVX2)
 	__m256i out0 = ((const __m256i *)biases)[0];
 	__m256i out1 = ((const __m256i *)biases)[1];
@@ -228,7 +227,7 @@ static inline void affine_propagate_hidden2(const int8_t *input, int8_t *output,
 	for (int i = 0; i < HIDDEN1_OUT_DIMS / 4; i++) {
 		int32_t quad;
 		memcpy(&quad, input + 4 * i, sizeof(quad));
-		__m256i in = _mm256_set1_epi32(quad);
+		__m256i in      = _mm256_set1_epi32(quad);
 		__m256i weight0 = ((const __m256i *)weights)[4 * i];
 		__m256i weight1 = ((const __m256i *)weights)[4 * i + 1];
 		__m256i weight2 = ((const __m256i *)weights)[4 * i + 2];
@@ -249,8 +248,8 @@ static inline void affine_propagate_hidden2(const int8_t *input, int8_t *output,
 	__m256i out01 = _mm256_srai_epi16(_mm256_packs_epi32(out0, out1), SHIFT);
 	__m256i out23 = _mm256_srai_epi16(_mm256_packs_epi32(out2, out3), SHIFT);
 	/* 32-bit lanes are in the order 0-3, 8-11, 16-19, 24-27, 4-7, 12-15, 20-23, 28-31. */
-	__m256i out = _mm256_packs_epi16(out01, out23);
-	out = _mm256_permutevar8x32_epi32(out, _mm256_setr_epi32(0, 4, 1, 5, 2, 6, 3, 7));
+	__m256i out        = _mm256_packs_epi16(out01, out23);
+	out                = _mm256_permutevar8x32_epi32(out, _mm256_setr_epi32(0, 4, 1, 5, 2, 6, 3, 7));
 	*(__m256i *)output = _mm256_max_epi8(out, _mm256_setzero_si256());
 #else
 	int i, j;
@@ -269,7 +268,7 @@ static inline void affine_propagate_hidden2(const int8_t *input, int8_t *output,
 
 static inline int32_t output_layer(int8_t *input, const bias_t *biases, const weight_t *weights) {
 #if defined(AVX2)
-	__m256i in = *(__m256i *)input;
+	__m256i in     = *(__m256i *)input;
 	__m256i weight = *(__m256i *)weights;
 	__m256i out;
 #if defined(VNNI)
@@ -279,7 +278,7 @@ static inline int32_t output_layer(int8_t *input, const bias_t *biases, const we
 	out = _mm256_madd_epi16(out, _mm256_set1_epi16(1));
 #endif
 	__m128i sum = _mm_add_epi32(_mm256_castsi256_si128(out), _mm256_extracti128_si256(out, 1));
-	sum = _mm_add_epi32(sum, _mm_shuffle_epi32(sum, 0x1b));
+	sum         = _mm_add_epi32(sum, _mm_shuffle_epi32(sum, 0x1b));
 	return _mm_cvtsi128_si32(sum) + _mm_extract_epi32(sum, 1) + biases[0];
 #else
 	int32_t sum = biases[0];
@@ -289,14 +288,15 @@ static inline int32_t output_layer(int8_t *input, const bias_t *biases, const we
 #endif
 }
 
-static inline void add_index(unsigned index, int16_t accumulation[K_HALF_DIMENSIONS], int32_t psqtaccumulation[PSQT_BUCKETS]) {
+static inline void add_index(unsigned index, int16_t accumulation[K_HALF_DIMENSIONS],
+                             int32_t psqtaccumulation[PSQT_BUCKETS]) {
 	assert(nnue_init_done);
 	const unsigned offset = K_HALF_DIMENSIONS * index;
 #if defined(AVX2)
 	for (int j = 0; j < K_HALF_DIMENSIONS; j += 16) {
 		__m256i *a = (__m256i *)(accumulation + j);
-		__m256i b = *(__m256i *)(ft_weights + offset + j);
-		*a = _mm256_add_epi16(*a, b);
+		__m256i b  = *(__m256i *)(ft_weights + offset + j);
+		*a         = _mm256_add_epi16(*a, b);
 	}
 #else
 	for (int j = 0; j < K_HALF_DIMENSIONS; j++)
@@ -310,14 +310,15 @@ void add_index_slow(unsigned index, int16_t accumulation[K_HALF_DIMENSIONS], int
 	add_index(index, accumulation, psqtaccumulation);
 }
 
-static inline void remove_index(unsigned index, int16_t accumulation[K_HALF_DIMENSIONS], int32_t psqtaccumulation[PSQT_BUCKETS]) {
+static inline void remove_index(unsigned index, int16_t accumulation[K_HALF_DIMENSIONS],
+                                int32_t psqtaccumulation[PSQT_BUCKETS]) {
 	assert(nnue_init_done);
 	const unsigned offset = K_HALF_DIMENSIONS * index;
 #if defined(AVX2)
 	for (int j = 0; j < K_HALF_DIMENSIONS; j += 16) {
 		__m256i *a = (__m256i *)(accumulation + j);
-		__m256i b = *(__m256i *)(ft_weights + offset + j);
-		*a = _mm256_sub_epi16(*a, b);
+		__m256i b  = *(__m256i *)(ft_weights + offset + j);
+		*a         = _mm256_sub_epi16(*a, b);
 	}
 #else
 	for (int j = 0; j < K_HALF_DIMENSIONS; j++)
@@ -329,7 +330,7 @@ static inline void remove_index(unsigned index, int16_t accumulation[K_HALF_DIME
 
 void refresh_accumulator(struct position *pos, int turn) {
 	assert(nnue_init_done);
-	int king_square = ctz(pos->piece[turn][KING]);
+	int king_square       = ctz(pos->piece[turn][KING]);
 	struct ftcache *entry = &ftcache[turn][orient_horizontal(turn, king_square)];
 	if (!entry->set) {
 		memcpy(entry->accumulation, ft_biases, K_HALF_DIMENSIONS * sizeof(*ft_biases));
@@ -345,14 +346,14 @@ void refresh_accumulator(struct position *pos, int turn) {
 				continue;
 			b = pos->piece[color][piece] & ~entry->piece[color][piece];
 			while (b) {
-				square = ctz(b);
+				square    = ctz(b);
 				int index = make_index(turn, square, colored_piece(piece, color), king_square);
 				add_index(index, entry->accumulation, entry->psqtaccumulation);
 				b = clear_ls1b(b);
 			}
 			b = ~pos->piece[color][piece] & entry->piece[color][piece];
 			while (b) {
-				square = ctz(b);
+				square    = ctz(b);
 				int index = make_index(turn, square, colored_piece(piece, color), king_square);
 				remove_index(index, entry->accumulation, entry->psqtaccumulation);
 				b = clear_ls1b(b);
@@ -369,7 +370,7 @@ void refresh_accumulator(struct position *pos, int turn) {
 void do_update_accumulator(struct position *pos, move_t *move, int turn) {
 	int source_square = move_from(move);
 	int target_square = move_to(move);
-	int king_square = ctz(pos->piece[turn][KING]);
+	int king_square   = ctz(pos->piece[turn][KING]);
 	unsigned index;
 	unsigned indext;
 
@@ -393,11 +394,11 @@ void do_update_accumulator(struct position *pos, move_t *move, int turn) {
 	}
 	else if (move_flag(move) == MOVE_PROMOTION) {
 		if (pos->turn) {
-			index = make_index(turn, source_square, pos->mailbox[target_square], king_square);
+			index  = make_index(turn, source_square, pos->mailbox[target_square], king_square);
 			indext = make_index(turn, source_square, BLACK_PAWN, king_square);
 		}
 		else {
-			index = make_index(turn, source_square, pos->mailbox[target_square], king_square);
+			index  = make_index(turn, source_square, pos->mailbox[target_square], king_square);
 			indext = make_index(turn, source_square, WHITE_PAWN, king_square);
 		}
 		add_index(index, pos->accumulation[turn], pos->psqtaccumulation[turn]);
@@ -440,7 +441,7 @@ void do_update_accumulator(struct position *pos, move_t *move, int turn) {
 void undo_update_accumulator(struct position *pos, move_t *move, int turn) {
 	int source_square = move_from(move);
 	int target_square = move_to(move);
-	int king_square = ctz(pos->piece[turn][KING]);
+	int king_square   = ctz(pos->piece[turn][KING]);
 	unsigned index;
 	unsigned indext;
 
@@ -451,7 +452,8 @@ void undo_update_accumulator(struct position *pos, move_t *move, int turn) {
 	add_index(index, pos->accumulation[turn], pos->psqtaccumulation[turn]);
 
 	if (move_capture(move) && move_flag(move) != MOVE_EN_PASSANT) {
-		index = make_index(turn, target_square, colored_piece(move_capture(move), other_color(pos->turn)), king_square);
+		index = make_index(turn, target_square, colored_piece(move_capture(move), other_color(pos->turn)),
+		                   king_square);
 		add_index(index, pos->accumulation[turn], pos->psqtaccumulation[turn]);
 	}
 
@@ -464,11 +466,11 @@ void undo_update_accumulator(struct position *pos, move_t *move, int turn) {
 	}
 	else if (move_flag(move) == MOVE_PROMOTION) {
 		if (pos->turn) {
-			index = make_index(turn, target_square, move_promote(move) + 2, king_square);
+			index  = make_index(turn, target_square, move_promote(move) + 2, king_square);
 			indext = make_index(turn, target_square, WHITE_PAWN, king_square);
 		}
 		else {
-			index = make_index(turn, target_square, move_promote(move) + 8, king_square);
+			index  = make_index(turn, target_square, move_promote(move) + 8, king_square);
 			indext = make_index(turn, target_square, BLACK_PAWN, king_square);
 		}
 		remove_index(index, pos->accumulation[turn], pos->psqtaccumulation[turn]);
@@ -542,7 +544,6 @@ void do_accumulator(struct position *pos, move_t *move) {
 		}
 	}
 
-
 	for (int i = 0; i < 2; i++) {
 		for (int j = 0; j < PSQT_BUCKETS; j++) {
 			if (psqtaccumulation[i][j] != pos->psqtaccumulation[i][j]) {
@@ -590,7 +591,6 @@ void undo_accumulator(struct position *pos, move_t *move) {
 		}
 	}
 
-
 	for (int i = 0; i < 2; i++) {
 		for (int j = 0; j < PSQT_BUCKETS; j++) {
 			if (psqtaccumulation[i][j] != pos->psqtaccumulation[i][j]) {
@@ -624,7 +624,7 @@ int32_t evaluate_nnue(struct position *pos) {
 #if defined(AVX2)
 void swap_cols(weight_t *weights, int rows, int col1, int col2) {
 	for (int row = 0; row < rows; row++) {
-		weight_t t = weights[rows * col1 + row];
+		weight_t t                 = weights[rows * col1 + row];
 		weights[rows * col1 + row] = weights[rows * col2 + row];
 		weights[rows * col2 + row] = t;
 	}
@@ -637,7 +637,8 @@ static void permute_quad(weight_t *weights, int in_dims, int out_dims) {
 		for (int h = 0; h < out_dims / 8; h++)
 			for (int j = 0; j < 8; j++)
 				for (int k = 0; k < 4; k++)
-					tmp[4 * out_dims * g + 32 * h + 4 * j + k] = weights[out_dims * (4 * g + k) + 8 * h + j];
+					tmp[4 * out_dims * g + 32 * h + 4 * j + k] = weights[out_dims * (4 * g + k)
+					                                                     + 8 * h + j];
 
 	memcpy(weights, tmp, in_dims * out_dims * sizeof(*tmp));
 	free(tmp);
@@ -670,28 +671,26 @@ void file_nnue(const char *path) {
 		goto error;
 	}
 
-	if (nnuefile(f, file_ft_weights, file_ft_biases,
-			file_psqt_weights, file_hidden1_weights,
-			file_hidden1_biases, file_hidden2_weights,
-			file_hidden2_biases, file_output_weights,
-			file_output_biases) || fclose(f))
+	if (nnuefile(f, file_ft_weights, file_ft_biases, file_psqt_weights, file_hidden1_weights, file_hidden1_biases,
+	             file_hidden2_weights, file_hidden2_biases, file_output_weights, file_output_biases)
+	    || fclose(f))
 		goto error;
 
-	ft_weights = file_ft_weights;
-	ft_biases = file_ft_biases;
+	ft_weights      = file_ft_weights;
+	ft_biases       = file_ft_biases;
 
-	psqt_weights = file_psqt_weights;
+	psqt_weights    = file_psqt_weights;
 
 	hidden1_weights = file_hidden1_weights;
-	hidden1_biases = file_hidden1_biases;
+	hidden1_biases  = file_hidden1_biases;
 
 	hidden2_weights = file_hidden2_weights;
-	hidden2_biases = file_hidden2_biases;
+	hidden2_biases  = file_hidden2_biases;
 
-	output_weights = file_output_weights;
-	output_biases = file_output_biases;
+	output_weights  = file_output_weights;
+	output_biases   = file_output_biases;
 
-	builtin = 0;
+	builtin         = 0;
 	strncpy(pathnnue, path, sizeof(pathnnue));
 	pathnnue[sizeof(pathnnue) - 1] = '\0';
 
@@ -720,21 +719,21 @@ void print_nnue_info(void) {
 }
 
 void builtin_nnue(void) {
-	ft_weights = builtin_ft_weights;
-	ft_biases = builtin_ft_biases;
+	ft_weights      = builtin_ft_weights;
+	ft_biases       = builtin_ft_biases;
 
-	psqt_weights = builtin_psqt_weights;
+	psqt_weights    = builtin_psqt_weights;
 
 	hidden1_weights = builtin_hidden1_weights;
-	hidden1_biases = builtin_hidden1_biases;
+	hidden1_biases  = builtin_hidden1_biases;
 
 	hidden2_weights = builtin_hidden2_weights;
-	hidden2_biases = builtin_hidden2_biases;
+	hidden2_biases  = builtin_hidden2_biases;
 
-	output_weights = builtin_output_weights;
-	output_biases = builtin_output_biases;
+	output_weights  = builtin_output_weights;
+	output_biases   = builtin_output_biases;
 
-	builtin = 1;
+	builtin         = 1;
 
 	reset_ftcache();
 
@@ -745,10 +744,10 @@ void builtin_nnue(void) {
 
 const char *simd =
 #if defined(VNNI)
-"vnni"
+    "vnni"
 #elif defined(AVX2)
-"avx2"
+    "avx2"
 #else
-"none"
+    "none"
 #endif
-;
+    ;

@@ -17,19 +17,19 @@
 #ifndef UTIL_H
 #define UTIL_H
 
-#include <stdint.h>
 #include <math.h>
-#include <stdlib.h>
+#include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 
-#define SIZE(x) (sizeof(x) / sizeof (*(x)))
+#define SIZE(x)   (sizeof(x) / sizeof(*(x)))
 
 #define UNUSED(x) (void)(x)
 
-#define XSTR(x) STR(x)
-#define STR(x) #x
+#define XSTR(x)   STR(x)
+#define STR(x)    #x
 
-#define SEED 1274012836ull
+#define SEED      1274012836ull
 
 extern const double eps;
 

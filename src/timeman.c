@@ -17,13 +17,13 @@
 #define _POSIX_C_SOURCE 199309L
 #include "timeman.h"
 
-#include <time.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <time.h>
 
-#include "util.h"
 #include "option.h"
 #include "tune.h"
+#include "util.h"
 
 TUNEVAR(double, maximal, 0.8, 0.02, 0.98)
 TUNEVAR(double, instability1, 0.5, 0.0, NULL)
@@ -45,9 +45,9 @@ void time_init(struct position *pos, struct timeinfo *ti) {
 		return;
 	}
 
-	ti->us = pos->turn;
+	ti->us                = pos->turn;
 
-	ti->best_move = 0;
+	ti->best_move         = 0;
 	ti->best_move_changes = -1.0;
 
 	if (ti->movestogo <= 0)
@@ -55,12 +55,12 @@ void time_init(struct position *pos, struct timeinfo *ti) {
 
 	timepoint_t time_left = ti->etime[ti->us] + ti->movestogo * ti->einc[ti->us];
 
-	ti->optimal = time_left / ti->movestogo;
-	ti->maximal = maximal * ti->etime[ti->us];
+	ti->optimal           = time_left / ti->movestogo;
+	ti->maximal           = maximal * ti->etime[ti->us];
 
 	if (option_ponder) {
-		int them = other_color(ti->us);
-		time_left = ti->etime[them] + ti->movestogo * ti->einc[them];
+		int them     = other_color(ti->us);
+		time_left    = ti->etime[them] + ti->movestogo * ti->einc[them];
 		ti->optimal += min(ti->optimal / 4, time_left / (2 * ti->movestogo));
 	}
 }
@@ -74,13 +74,12 @@ int stop_searching(struct timeinfo *ti, move_t best_move) {
 	else
 		ti->best_move_changes /= 2;
 
-	ti->best_move = best_move;
+	ti->best_move      = best_move;
 
 	double instability = instability1 + instability2 * ti->best_move_changes;
 
 	timepoint_t t;
-	return (t = time_since(ti)) >= ti->maximal ||
-		t >= ti->optimal * instability;
+	return (t = time_since(ti)) >= ti->maximal || t >= ti->optimal * instability;
 }
 
 timepoint_t time_now(void) {

@@ -18,10 +18,10 @@
 
 #include <string.h>
 
-#include "transposition.h"
 #include "attackgen.h"
 #include "bitboard.h"
 #include "endgame.h"
+#include "transposition.h"
 
 #ifndef NDEBUG
 int history_init_done = 0;
@@ -32,7 +32,7 @@ static unsigned char A[8192], B[8192];
 
 void history_next(struct position *pos, struct history *h, move_t move) {
 	h->zobrist_key[h->ply] = pos->zobrist_key;
-	h->move[h->ply] = move;
+	h->move[h->ply]        = move;
 	do_zobrist_key(pos, &h->move[h->ply]);
 	do_endgame_key(pos, &h->move[h->ply]);
 	do_move(pos, &h->move[h->ply]);
@@ -63,7 +63,7 @@ int repetition(const struct position *pos, const struct history *h, int ply, int
 		return 0;
 
 	int offset = h->ply + ply;
-	int end = min(pos->halfmove, offset);
+	int end    = min(pos->halfmove, offset);
 
 	assert(h->zobrist_key[offset] == pos->zobrist_key);
 
@@ -79,19 +79,20 @@ int repetition(const struct position *pos, const struct history *h, int ply, int
 #define H1(key) ((key) & 0x1FFF)
 #define H2(key) (((key) >> 16) & 0x1FFF)
 
-#define SWAP(x, y) {       \
-	uint64_t z = (x);  \
-	(x) = (y);         \
-	(y) = z;           \
-}
+#define SWAP(x, y)                \
+	{                         \
+		uint64_t z = (x); \
+		(x)        = (y); \
+		(y)        = z;   \
+	}
 
 int upcoming_repetition(const struct position *pos, const struct history *h, int ply) {
 	if (!option_history || pos->halfmove < 3)
 		return 0;
 	assert(history_init_done);
 
-	int offset = h->ply + ply;
-	int end = min(pos->halfmove, offset);
+	int offset     = h->ply + ply;
+	int end        = min(pos->halfmove, offset);
 
 	uint64_t other = h->zobrist_key[offset] ^ h->zobrist_key[offset - 1] ^ zobrist_turn_key();
 
@@ -119,30 +120,31 @@ int upcoming_repetition(const struct position *pos, const struct history *h, int
 void history_init(void) {
 	const int max_tries = 1000000;
 	for (int piece = WHITE_PAWN; piece <= BLACK_KING; piece++) {
-	for (int a = a1; a <= h8; a++) {
-	for (int b = a + 1; b <= h8; b++) {
-		int upiece = uncolored_piece(piece);
-		if (upiece == PAWN || !((attacks(upiece, a, 0, 0) & bitboard(b))))
-			continue;
-		uint64_t mv = zobrist_piece_key(piece, a) ^ zobrist_piece_key(piece, b) ^ zobrist_turn_key();
-		uint64_t i = H1(mv);
-		int aa = a, bb = b;
-		int k;
-		for (k = 0; k < max_tries; k++) {
-			SWAP(cuckoo[i], mv);
-			SWAP(A[i], aa);
-			SWAP(B[i], bb);
+		for (int a = a1; a <= h8; a++) {
+			for (int b = a + 1; b <= h8; b++) {
+				int upiece = uncolored_piece(piece);
+				if (upiece == PAWN || !((attacks(upiece, a, 0, 0) & bitboard(b))))
+					continue;
+				uint64_t mv = zobrist_piece_key(piece, a) ^ zobrist_piece_key(piece, b)
+				            ^ zobrist_turn_key();
+				uint64_t i = H1(mv);
+				int aa = a, bb = b;
+				int k;
+				for (k = 0; k < max_tries; k++) {
+					SWAP(cuckoo[i], mv);
+					SWAP(A[i], aa);
+					SWAP(B[i], bb);
 
-			if (!mv)
-				break;
-			i = (i == H1(mv)) ? H2(mv) : H1(mv);
+					if (!mv)
+						break;
+					i = (i == H1(mv)) ? H2(mv) : H1(mv);
+				}
+				if (k == max_tries) {
+					fprintf(stderr, "error: failed to initialize cuckoo tables\n");
+					exit(1);
+				}
+			}
 		}
-		if (k == max_tries) {
-			fprintf(stderr, "error: failed to initialize cuckoo tables\n");
-			exit(1);
-		}
-	}
-	}
 	}
 
 #ifndef NDEBUG

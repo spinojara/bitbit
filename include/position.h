@@ -17,14 +17,14 @@
 #ifndef POSITION_H
 #define POSITION_H
 
+#include <assert.h>
+#include <stdalign.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <stdalign.h>
-#include <assert.h>
-#include <stddef.h>
 
 #define K_HALF_DIMENSIONS 128
-#define PSQT_BUCKETS 1
+#define PSQT_BUCKETS      1
 #define ESSENTIALPOSITION (offsetof(struct position, accumulation))
 
 struct position {
@@ -77,7 +77,21 @@ enum uncolored_piece { ALL, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING };
 
 enum color { BLACK, WHITE };
 
-enum colored_piece { EMPTY, WHITE_PAWN, WHITE_KNIGHT, WHITE_BISHOP, WHITE_ROOK, WHITE_QUEEN, WHITE_KING, BLACK_PAWN, BLACK_KNIGHT, BLACK_BISHOP, BLACK_ROOK, BLACK_QUEEN, BLACK_KING };
+enum colored_piece {
+	EMPTY,
+	WHITE_PAWN,
+	WHITE_KNIGHT,
+	WHITE_BISHOP,
+	WHITE_ROOK,
+	WHITE_QUEEN,
+	WHITE_KING,
+	BLACK_PAWN,
+	BLACK_KNIGHT,
+	BLACK_BISHOP,
+	BLACK_ROOK,
+	BLACK_QUEEN,
+	BLACK_KING
+};
 
 void pstate_init(const struct position *pos, struct pstate *pstate);
 
@@ -90,33 +104,21 @@ uint64_t generate_blockers(const struct position *pos, uint64_t pinners, int kin
 uint64_t generate_pinners(const struct position *pos, uint64_t pinned, int color);
 void generate_check_threats(const struct position *pos, int color, uint64_t check_threats[7]);
 
-static inline int other_color(int color) {
-	return color ^ WHITE ^ BLACK;
-}
+static inline int other_color(int color) { return color ^ WHITE ^ BLACK; }
 
-static inline int orient_horizontal(int turn, int square) {
-	return square ^ (turn ? 0x0 : 0x38);
-}
+static inline int orient_horizontal(int turn, int square) { return square ^ (turn ? 0x0 : 0x38); }
 
-static inline int orient_vertical(int orient, int square) {
-	return square ^ (orient ? 0x7 : 0x0);
-}
+static inline int orient_vertical(int orient, int square) { return square ^ (orient ? 0x7 : 0x0); }
 
 static inline uint64_t all_pieces(const struct position *pos) {
 	return pos->piece[BLACK][ALL] | pos->piece[WHITE][ALL];
 }
 
-static inline int colored_piece(int piece, int color) {
-	return piece + other_color(color) * KING;
-}
+static inline int colored_piece(int piece, int color) { return piece + other_color(color) * KING; }
 
-static inline int uncolored_piece(int piece) {
-	return piece - WHITE_KING * (piece > WHITE_KING);
-}
+static inline int uncolored_piece(int piece) { return piece - WHITE_KING * (piece > WHITE_KING); }
 
-static inline int color_of_piece(int piece) {
-	return piece <= WHITE_KING;
-}
+static inline int color_of_piece(int piece) { return piece <= WHITE_KING; }
 
 static inline int rank_of(int square) {
 	assert(0 <= square && square < 64);
@@ -128,9 +130,7 @@ static inline int file_of(int square) {
 	return square & 0x7;
 }
 
-static inline int make_square(int file, int rank) {
-	return file + 8 * rank;
-}
+static inline int make_square(int file, int rank) { return file + 8 * rank; }
 
 int square(const char *algebraic);
 

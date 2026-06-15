@@ -18,8 +18,8 @@
 
 #include <stdio.h>
 
-#include "magicbitboard.h"
 #include "attackgen.h"
+#include "magicbitboard.h"
 #include "position.h"
 #include "util.h"
 
@@ -86,11 +86,11 @@ uint64_t line_calc(int source, int target) {
 uint64_t ray_calc(int source, int target) {
 	uint64_t ret = 0;
 
-	int f = file_of(source);
-	int r = rank_of(source);
+	int f        = file_of(source);
+	int r        = rank_of(source);
 
-	int vf = file_of(target) - file_of(source);
-	int vr = rank_of(target) - rank_of(source);
+	int vf       = file_of(target) - file_of(source);
+	int vr       = rank_of(target) - rank_of(source);
 
 	if (source == target)
 		return ret;
@@ -105,8 +105,8 @@ uint64_t ray_calc(int source, int target) {
 
 	while (f <= 7 && f >= 0 && r <= 7 && r >= 0) {
 		ret |= bitboard(f + 8 * r);
-		f += vf;
-		r += vr;
+		f   += vf;
+		r   += vr;
 	}
 	return ret;
 }
@@ -148,7 +148,7 @@ int castle_calc(int source, int target, int castle) {
 }
 
 uint64_t file_calc(int square) {
-	int f = file_of(square);
+	int f        = file_of(square);
 	uint64_t ret = FILE_A;
 
 	for (int i = 0; i < f; i++)
@@ -157,7 +157,7 @@ uint64_t file_calc(int square) {
 }
 
 uint64_t rank_calc(int square) {
-	int r = rank_of(square);
+	int r        = rank_of(square);
 	uint64_t ret = RANK_1;
 
 	for (int i = 0; i < r; i++)
@@ -181,7 +181,7 @@ uint64_t file_right_calc(int square) {
 
 uint64_t adjacent_files_calc(int square) {
 	uint64_t ret = 0;
-	int f = file_of(square);
+	int f        = file_of(square);
 
 	if (f > 0)
 		ret |= file_left_calc(square);
@@ -192,7 +192,7 @@ uint64_t adjacent_files_calc(int square) {
 
 uint64_t passed_files_calc(int square, int color) {
 	uint64_t ret = 0;
-	int f = file_of(square);
+	int f        = file_of(square);
 
 	if (color) {
 		if (f > 0)
@@ -218,32 +218,31 @@ uint64_t same_colored_squares_calc(int square) {
 	return (square + (square / 8)) % 2 ? ~b : b;
 }
 
-uint64_t distance_calc(int a, int b) {
-	return max(abs(file_of(a) - file_of(b)), abs(rank_of(a) - rank_of(b)));
-}
+uint64_t distance_calc(int a, int b) { return max(abs(file_of(a) - file_of(b)), abs(rank_of(a) - rank_of(b))); }
 
 void bitboard_init(void) {
 	for (int i = 0; i < 64; i++) {
-		file_lookup[i] = file_calc(i);
-		rank_lookup[i] = rank_calc(i);
-		file_left_lookup[i] = file_left_calc(i);
-		file_right_lookup[i] = file_right_calc(i);
-		adjacent_files_lookup[i] = adjacent_files_calc(i);
-		passed_files_lookup[i] = passed_files_calc(i, WHITE);
-		passed_files_lookup[i + 64] = passed_files_calc(i, BLACK);
+		file_lookup[i]                 = file_calc(i);
+		rank_lookup[i]                 = rank_calc(i);
+		file_left_lookup[i]            = file_left_calc(i);
+		file_right_lookup[i]           = file_right_calc(i);
+		adjacent_files_lookup[i]       = adjacent_files_calc(i);
+		passed_files_lookup[i]         = passed_files_calc(i, WHITE);
+		passed_files_lookup[i + 64]    = passed_files_calc(i, BLACK);
 		same_colored_squares_lookup[i] = same_colored_squares_calc(i);
 		for (int j = 0; j < 64; j++) {
 			distance_lookup[i + 64 * j] = distance_calc(i, j);
-			between_lookup[i + 64 * j] = between_calc(i, j);
-			line_lookup[i + 64 * j] = line_calc(i, j);
-			ray_lookup[i + 64 * j] = ray_calc(i, j);
+			between_lookup[i + 64 * j]  = between_calc(i, j);
+			line_lookup[i + 64 * j]     = line_calc(i, j);
+			ray_lookup[i + 64 * j]      = ray_calc(i, j);
 		}
 	}
 
 	for (int source_square = 0; source_square < 64; source_square++) {
 		for (int target_square = 0; target_square < 64; target_square++) {
 			for (int castle = 0; castle < 16; castle++) {
-				castle_lookup[source_square + 64 * target_square + 64 * 64 * castle] = castle_calc(source_square, target_square, castle);
+				castle_lookup[source_square + 64 * target_square + 64 * 64 * castle] = castle_calc(
+				    source_square, target_square, castle);
 			}
 		}
 	}
@@ -253,21 +252,21 @@ void bitboard_init(void) {
 #endif
 }
 
-const uint64_t FILE_H = 0x8080808080808080;
-const uint64_t FILE_G = 0x4040404040404040;
-const uint64_t FILE_F = 0x2020202020202020;
-const uint64_t FILE_E = 0x1010101010101010;
-const uint64_t FILE_D = 0x808080808080808;
-const uint64_t FILE_C = 0x404040404040404;
-const uint64_t FILE_B = 0x202020202020202;
-const uint64_t FILE_A = 0x101010101010101;
+const uint64_t FILE_H  = 0x8080808080808080;
+const uint64_t FILE_G  = 0x4040404040404040;
+const uint64_t FILE_F  = 0x2020202020202020;
+const uint64_t FILE_E  = 0x1010101010101010;
+const uint64_t FILE_D  = 0x808080808080808;
+const uint64_t FILE_C  = 0x404040404040404;
+const uint64_t FILE_B  = 0x202020202020202;
+const uint64_t FILE_A  = 0x101010101010101;
 const uint64_t FILE_AB = 0x303030303030303;
 const uint64_t FILE_GH = 0xC0C0C0C0C0C0C0C0;
-const uint64_t RANK_8 = 0xFF00000000000000;
-const uint64_t RANK_7 = 0xFF000000000000;
-const uint64_t RANK_6 = 0xFF0000000000;
-const uint64_t RANK_5 = 0xFF00000000;
-const uint64_t RANK_4 = 0xFF000000;
-const uint64_t RANK_3 = 0xFF0000;
-const uint64_t RANK_2 = 0xFF00;
-const uint64_t RANK_1 = 0xFF;
+const uint64_t RANK_8  = 0xFF00000000000000;
+const uint64_t RANK_7  = 0xFF000000000000;
+const uint64_t RANK_6  = 0xFF0000000000;
+const uint64_t RANK_5  = 0xFF00000000;
+const uint64_t RANK_4  = 0xFF000000;
+const uint64_t RANK_3  = 0xFF0000;
+const uint64_t RANK_2  = 0xFF00;
+const uint64_t RANK_1  = 0xFF;

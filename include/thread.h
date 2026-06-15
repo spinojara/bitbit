@@ -17,9 +17,9 @@
 #ifndef THREAD_H
 #define THREAD_H
 
+#include "history.h"
 #include "position.h"
 #include "transposition.h"
-#include "history.h"
 
 extern int ucigo;
 
@@ -29,7 +29,8 @@ void search_stop(void);
 
 void search_ponderhit(void);
 
-void search_start(struct position *pos, int depth, struct timeinfo *ti, struct transpositiontable *tt, struct history *history);
+void search_start(struct position *pos, int depth, struct timeinfo *ti, struct transpositiontable *tt,
+                  struct history *history);
 
 void thread_init(void);
 

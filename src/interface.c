@@ -16,35 +16,35 @@
 
 #include "interface.h"
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdint.h>
 #include <inttypes.h>
-#include <time.h>
-#include <string.h>
-#include <strings.h>
 #include <signal.h>
 #include <stdatomic.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <time.h>
 
-#include "bitboard.h"
-#include "util.h"
-#include "position.h"
-#include "perft.h"
-#include "init.h"
-#include "search.h"
-#include "timeman.h"
-#include "evaluate.h"
-#include "transposition.h"
-#include "version.h"
-#include "history.h"
-#include "option.h"
-#include "thread.h"
 #include "bench.h"
-#include "nnue.h"
+#include "bitboard.h"
 #include "endgame.h"
+#include "evaluate.h"
+#include "history.h"
+#include "init.h"
+#include "nnue.h"
+#include "option.h"
+#include "perft.h"
+#include "position.h"
+#include "search.h"
+#include "thread.h"
+#include "timeman.h"
+#include "transposition.h"
+#include "util.h"
+#include "version.h"
 
 #define LINESIZE 16384
-#define ARGSIZE 4096
+#define ARGSIZE  4096
 
 struct command {
 	char *name;
@@ -75,26 +75,10 @@ int interface_setoption(int argc, char **argv);
 #define COMMAND(name) { #name, interface_##name }
 
 static const struct command commands[] = {
-	COMMAND(help),
-	COMMAND(move),
-	COMMAND(undo),
-	COMMAND(flip),
-	COMMAND(mirror),
-	COMMAND(perft),
-	COMMAND(position),
-	COMMAND(clear),
-	COMMAND(quit),
-	COMMAND(stop),
-	COMMAND(ponderhit),
-	COMMAND(eval),
-	COMMAND(go),
-	COMMAND(version),
-	COMMAND(tt),
-	COMMAND(isready),
-	COMMAND(uci),
-	COMMAND(setoption),
-	COMMAND(ucinewgame),
-	COMMAND(bench),
+	COMMAND(help),      COMMAND(move),     COMMAND(undo),      COMMAND(flip),       COMMAND(mirror),
+	COMMAND(perft),     COMMAND(position), COMMAND(clear),     COMMAND(quit),       COMMAND(stop),
+	COMMAND(ponderhit), COMMAND(eval),     COMMAND(go),        COMMAND(version),    COMMAND(tt),
+	COMMAND(isready),   COMMAND(uci),      COMMAND(setoption), COMMAND(ucinewgame), COMMAND(bench),
 };
 
 struct position pos;
@@ -161,14 +145,13 @@ int interface_perft(int argc, char **argv) {
 	if (argc < 2)
 		return ERR_MISS_ARG;
 
-	clock_t t = clock();
+	clock_t t  = clock();
 	uint64_t p = perft(&pos, strint(argv[1]), 1);
-	t = clock() - t;
+	t          = clock() - t;
 	printf("nodes: %" PRIu64 "\n", p);
 	printf("time: %.2f\n", (double)t / CLOCKS_PER_SEC);
 	if (t != 0)
-		printf("mnps: %" PRIu64 "\n",
-			(p * CLOCKS_PER_SEC / ((uint64_t)t * 1000000)));
+		printf("mnps: %" PRIu64 "\n", (p * CLOCKS_PER_SEC / ((uint64_t)t * 1000000)));
 
 	return DONE;
 }
@@ -262,7 +245,7 @@ int interface_eval(int argc, char **argv) {
 int interface_go(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
-	int depth = -1;
+	int depth          = -1;
 	struct timeinfo ti = { 0 };
 	for (int i = 1; i < argc; i++) {
 		if (i < argc - 1) {
@@ -277,15 +260,15 @@ int interface_go(int argc, char **argv) {
 				ti.stop_on_time = 1;
 			}
 			else if (strcmp(argv[i], "winc") == 0) {
-				ti.einc[WHITE] = strint(argv[i + 1]) * TPPERMS;
+				ti.einc[WHITE]  = strint(argv[i + 1]) * TPPERMS;
 				ti.stop_on_time = 1;
 			}
 			else if (strcmp(argv[i], "binc") == 0) {
-				ti.einc[BLACK] = strint(argv[i + 1]) * TPPERMS;
+				ti.einc[BLACK]  = strint(argv[i + 1]) * TPPERMS;
 				ti.stop_on_time = 1;
 			}
 			else if (strcmp(argv[i], "movetime") == 0) {
-				ti.movetime = strint(argv[i + 1]) * TPPERMS;
+				ti.movetime     = strint(argv[i + 1]) * TPPERMS;
 				ti.stop_on_time = 1;
 			}
 			else if (strcmp(argv[i], "movestogo") == 0)
@@ -312,7 +295,8 @@ int interface_version(int argc, char **argv) {
 	char t[8];
 	printf("compilation date: %s\n", date(t));
 	printf("simd: %s\n", simd);
-	printf("transposition table size: %zu B (%zu MiB)\n", tt.size * sizeof(*tt.table), tt.size * sizeof(*tt.table) / (1024 * 1024));
+	printf("transposition table size: %zu B (%zu MiB)\n", tt.size * sizeof(*tt.table),
+	       tt.size * sizeof(*tt.table) / (1024 * 1024));
 	printf("transposition entry size: %zu B\n", sizeof(struct transposition));
 	return DONE;
 }
@@ -369,10 +353,10 @@ int interface_bench(int argc, char **argv) {
 }
 
 int next_char(int argc, char **argv) {
-	static int argindex = 1;
+	static int argindex     = 1;
 	static size_t charindex = 0;
 
-	int c = argindex < argc ? argv[argindex][charindex++] : getchar();
+	int c                   = argindex < argc ? argv[argindex][charindex++] : getchar();
 
 	if (c == '\0') {
 		if (argindex < argc) {
@@ -385,13 +369,13 @@ int next_char(int argc, char **argv) {
 }
 
 void parse_line(int *argc, char *argv[ARGSIZE], int margc, char **margv, char *line) {
-	*argc = 0;
-	int next = 1;
+	*argc      = 0;
+	int next   = 1;
 	int escape = 0;
 
 	int i;
 	int c = 1;
-	for (i = 0; i < LINESIZE && c; ) {
+	for (i = 0; i < LINESIZE && c;) {
 		c = next_char(margc, margv);
 		if (c == '\r')
 			continue;
@@ -399,7 +383,7 @@ void parse_line(int *argc, char *argv[ARGSIZE], int margc, char **margv, char *l
 			escape = 0;
 			if (c == ' ' && !next) {
 				line[i++] = '\0';
-				next = 1;
+				next      = 1;
 			}
 			else {
 				c = line[i++] = '\0';
@@ -418,7 +402,7 @@ void parse_line(int *argc, char *argv[ARGSIZE], int margc, char **margv, char *l
 					if (*argc == ARGSIZE)
 						break;
 					argv[(*argc)++] = &line[i];
-					next = 0;
+					next            = 0;
 				}
 				line[i++] = c;
 			}
@@ -449,7 +433,7 @@ int parse(int margc, char **margv) {
 		if (f)
 			ret = f->ptr(argc, argv);
 
-		switch(ret) {
+		switch (ret) {
 		case -1:
 			fprintf(stderr, "error: %s: command not found\n", argv[0]);
 			break;
@@ -471,12 +455,12 @@ void interface_init(void) {
 	atomic_init(&ucistop, 0);
 	atomic_init(&uciponder, 0);
 	if (TT <= 0) {
-		tt.size = 0;
+		tt.size              = 0;
 		option_transposition = 0;
 	}
 	else if (transposition_alloc(&tt, TT * 1024 * 1024)) {
 		fprintf(stderr, "error: failed to allocate transposition table\n");
-		tt.size = 0;
+		tt.size              = 0;
 		option_transposition = 0;
 	}
 	history_reset(&pos, &history);
@@ -490,7 +474,8 @@ void interface_term(void) {
 
 int interface(int argc, char **argv) {
 	interface_init();
-	while (parse(argc, argv) != EXIT_LOOP);
+	while (parse(argc, argv) != EXIT_LOOP)
+		;
 	interface_term();
 	return 0;
 }

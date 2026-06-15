@@ -16,14 +16,14 @@
 
 #include "option.h"
 
-#include <stdlib.h>
 #include <errno.h>
 #include <limits.h>
-#include <strings.h>
+#include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 
-#include "util.h"
 #include "search.h"
+#include "util.h"
 
 struct tune {
 	const char *name;
@@ -54,7 +54,7 @@ int tunecmp(const char *var1, const char *var2) {
 	char *var1_clean = remove_underscore(var1);
 	char *var2_clean = remove_underscore(var2);
 
-	int ret = strcasecmp(var1_clean, var2_clean);
+	int ret          = strcasecmp(var1_clean, var2_clean);
 
 	free(var1_clean);
 	free(var2_clean);
@@ -69,7 +69,7 @@ void tune_variable(const char *name, double start, void (*set)(double), double (
 			exit(1);
 		}
 
-	tunes = realloc(tunes, (++tunes_length) * sizeof(*tunes));
+	tunes                   = realloc(tunes, (++tunes_length) * sizeof(*tunes));
 	tunes[tunes_length - 1] = (struct tune){ name, start, set, get, is_int_type };
 }
 
@@ -94,7 +94,7 @@ void settune(int argc, char **argv) {
 		return;
 
 	char *endptr;
-	errno = 0;
+	errno        = 0;
 	double value = strtod(argv[4], &endptr);
 
 	if (*endptr != '\0' || errno)

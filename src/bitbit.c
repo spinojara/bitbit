@@ -14,18 +14,18 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "init.h"
-#include "bitboard.h"
-#include "magicbitboard.h"
 #include "attackgen.h"
-#include "search.h"
-#include "evaluate.h"
-#include "transposition.h"
-#include "moveorder.h"
-#include "interface.h"
+#include "bitboard.h"
 #include "endgame.h"
+#include "evaluate.h"
 #include "history.h"
+#include "init.h"
+#include "interface.h"
+#include "magicbitboard.h"
+#include "moveorder.h"
 #include "nnue.h"
+#include "search.h"
+#include "transposition.h"
 
 int main(int argc, char **argv) {
 	int ret;

@@ -14,36 +14,38 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <stdlib.h>
+#include <ctype.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <ctype.h>
 
+#include "attackgen.h"
 #include "bitbase.h"
-#include "position.h"
 #include "bitboard.h"
 #include "magicbitboard.h"
-#include "attackgen.h"
-#include "util.h"
 #include "movegen.h"
+#include "position.h"
+#include "util.h"
 
-#define BITBASE_KXKX_INDEX_MAX (2l * 64 * 6 * 64 * 64 * 6 * 64)
-#define BITBASE_KXKX_BITS_PER_POSITION (2)
-#define BITBASE_KXKX_BITS_MASK ((1 << BITBASE_KXKX_BITS_PER_POSITION) - 1)
-#define BITBASE_KXKX_BITS_PER_ENTRY (8 * sizeof(*bitbase_KXKX))
+#define BITBASE_KXKX_INDEX_MAX           (2l * 64 * 6 * 64 * 64 * 6 * 64)
+#define BITBASE_KXKX_BITS_PER_POSITION   (2)
+#define BITBASE_KXKX_BITS_MASK           ((1 << BITBASE_KXKX_BITS_PER_POSITION) - 1)
+#define BITBASE_KXKX_BITS_PER_ENTRY      (8 * sizeof(*bitbase_KXKX))
 #define BITBASE_KXKX_POSITIONS_PER_ENTRY (BITBASE_KXKX_BITS_PER_ENTRY / BITBASE_KXKX_BITS_PER_POSITION)
-#define BITBASE_KXKX_TABLE_SIZE (BITBASE_KXKX_INDEX_MAX * BITBASE_KXKX_BITS_PER_POSITION / BITBASE_KXKX_BITS_PER_ENTRY)
+#define BITBASE_KXKX_TABLE_SIZE          (BITBASE_KXKX_INDEX_MAX * BITBASE_KXKX_BITS_PER_POSITION / BITBASE_KXKX_BITS_PER_ENTRY)
 
 uint32_t *bitbase_KXKX;
 uint32_t *invalid_KXKX;
-uint32_t bitbase_KPK[BITBASE_KPK_TABLE_SIZE] = { 0 };
+uint32_t bitbase_KPK[BITBASE_KPK_TABLE_SIZE]   = { 0 };
 uint32_t bitbase_KPKP[BITBASE_KPKP_TABLE_SIZE] = { 0 };
 uint32_t bitbase_KRKP[BITBASE_KRKP_TABLE_SIZE] = { 0 };
 
 void write_bitbase(char *name, uint32_t *bitbase, size_t table_size);
 
-long bitbase_KXKX_index_by_square(int turn, int king_white, int piece_white, int square_white, int king_black, int piece_black, int square_black) {
+long bitbase_KXKX_index_by_square(int turn, int king_white, int piece_white, int square_white, int king_black,
+                                  int piece_black, int square_black) {
+	/* clang-format off */
 	return 64 * 6 * 64 * 64 * 6 * 64 * turn
 		  + 6 * 64 * 64 * 6 * 64 * king_white
 		      + 64 * 64 * 6 * 64 * piece_white
@@ -51,65 +53,67 @@ long bitbase_KXKX_index_by_square(int turn, int king_white, int piece_white, int
 			        + 6 * 64 * king_black
 				    + 64 * piece_black
 				         + square_black;
+	/* clang-format on */
 }
 
 long bitbase_KXKX_index(const struct position *pos) {
-	int king_white = ctz(pos->piece[WHITE][KING]);
-	int king_black = ctz(pos->piece[BLACK][KING]);
-	int piece_white = 0;
+	int king_white   = ctz(pos->piece[WHITE][KING]);
+	int king_black   = ctz(pos->piece[BLACK][KING]);
+	int piece_white  = 0;
 	int square_white = 0;
-	int piece_black = 0;
+	int piece_black  = 0;
 	int square_black = 0;
 	for (int piece = PAWN; piece < KING; piece++) {
 		if (pos->piece[WHITE][piece]) {
-			piece_white = piece;
+			piece_white  = piece;
 			square_white = ctz(pos->piece[WHITE][piece]);
 		}
 		if (pos->piece[BLACK][piece]) {
-			piece_black = piece;
+			piece_black  = piece;
 			square_black = ctz(pos->piece[BLACK][piece]);
 		}
 	}
-	return bitbase_KXKX_index_by_square(pos->turn, king_white, piece_white, square_white, king_black, piece_black, square_black);
+	return bitbase_KXKX_index_by_square(pos->turn, king_white, piece_white, square_white, king_black, piece_black,
+	                                    square_black);
 }
 
 unsigned bitbase_KXKX_probe_by_index(long index) {
 	long lookup_index = index / BITBASE_KXKX_POSITIONS_PER_ENTRY;
-	long bit_index = BITBASE_KXKX_BITS_PER_POSITION * (index % BITBASE_KXKX_POSITIONS_PER_ENTRY);
+	long bit_index    = BITBASE_KXKX_BITS_PER_POSITION * (index % BITBASE_KXKX_POSITIONS_PER_ENTRY);
 	return (bitbase_KXKX[lookup_index] >> bit_index) & BITBASE_KXKX_BITS_MASK;
 }
 
-unsigned bitbase_KXKX_probe(const struct position *pos) {
-	return bitbase_KXKX_probe_by_index(bitbase_KXKX_index(pos));
-}
+unsigned bitbase_KXKX_probe(const struct position *pos) { return bitbase_KXKX_probe_by_index(bitbase_KXKX_index(pos)); }
 
 void bitbase_KXKX_store_by_index(long index, unsigned eval) {
-	long lookup_index = index / BITBASE_KXKX_POSITIONS_PER_ENTRY;
-	long bit_index = BITBASE_KXKX_BITS_PER_POSITION * (index % BITBASE_KXKX_POSITIONS_PER_ENTRY);
+	long lookup_index           = index / BITBASE_KXKX_POSITIONS_PER_ENTRY;
+	long bit_index              = BITBASE_KXKX_BITS_PER_POSITION * (index % BITBASE_KXKX_POSITIONS_PER_ENTRY);
 	bitbase_KXKX[lookup_index] &= ~(BITBASE_KXKX_BITS_MASK << bit_index);
 	bitbase_KXKX[lookup_index] |= (eval << bit_index);
 }
 
 void invalid_KXKX_store_by_index(long index) {
-	long lookup_index = index / BITBASE_KXKX_BITS_PER_ENTRY;
-	long bit_index = index % BITBASE_KXKX_BITS_PER_ENTRY;
+	long lookup_index           = index / BITBASE_KXKX_BITS_PER_ENTRY;
+	long bit_index              = index % BITBASE_KXKX_BITS_PER_ENTRY;
 	invalid_KXKX[lookup_index] |= (1 << bit_index);
 }
 
 unsigned invalid_KXKX_probe_by_index(long index) {
 	long lookup_index = index / BITBASE_KXKX_BITS_PER_ENTRY;
-	long bit_index = index % BITBASE_KXKX_BITS_PER_ENTRY;
+	long bit_index    = index % BITBASE_KXKX_BITS_PER_ENTRY;
 	return (invalid_KXKX[lookup_index] >> bit_index) & 0x1;
 }
 
-static inline int legal_position(const struct position *pos, int king_white, int piece_white, int square_white, int king_black, int piece_black, int square_black) {
+static inline int legal_position(const struct position *pos, int king_white, int piece_white, int square_white,
+                                 int king_black, int piece_black, int square_black) {
 	UNUSED(king_white);
 	UNUSED(king_black);
 	if ((!piece_white && square_white) || (!piece_black && square_black))
 		return 0;
 
 	/* No pawns on rank 1 and 8. */
-	if ((piece_white == PAWN && (square_white < 8 || square_white > 56)) || (piece_black == PAWN && (square_black < 8 || square_black > 56)))
+	if ((piece_white == PAWN && (square_white < 8 || square_white > 56))
+	    || (piece_black == PAWN && (square_black < 8 || square_black > 56)))
 		return 0;
 
 	/* Makes sure that all 2 to 4 squares are distinct. */
@@ -144,36 +148,37 @@ int main(void) {
 	bitbase_KXKX = calloc(BITBASE_KXKX_TABLE_SIZE, sizeof(*bitbase_KXKX));
 	invalid_KXKX = calloc(BITBASE_KXKX_TABLE_SIZE / BITBASE_KXKX_BITS_PER_POSITION, sizeof(*bitbase_KXKX));
 
-	long total = 0;
+	long total   = 0;
 	long counter = 0;
 	for (long index = 0; index < BITBASE_KXKX_INDEX_MAX; index++) {
 		bitbase_KXKX_store_by_index(index, BITBASE_UNKNOWN);
-		int turn = index / (64l * 6 * 64 * 64 * 6 * 64);
-		int king_white = (index % (64 * 6 * 64 * 64 * 6 * 64)) / (6 * 64 * 64 * 6 * 64);
-		int piece_white = (index % (6 * 64 * 64 * 6 * 64)) / (64 * 64 * 6 * 64);
+		int turn         = index / (64l * 6 * 64 * 64 * 6 * 64);
+		int king_white   = (index % (64 * 6 * 64 * 64 * 6 * 64)) / (6 * 64 * 64 * 6 * 64);
+		int piece_white  = (index % (6 * 64 * 64 * 6 * 64)) / (64 * 64 * 6 * 64);
 		int square_white = (index % (64 * 64 * 6 * 64)) / (64 * 6 * 64);
-		int king_black = (index % (64 * 6 * 64)) / (6 * 64);
-		int piece_black = (index % (6 * 64)) / 64;
+		int king_black   = (index % (64 * 6 * 64)) / (6 * 64);
+		int piece_black  = (index % (6 * 64)) / 64;
 		int square_black = (index % (64)) / 1;
 
 		memset(&pos, 0, sizeof(pos));
-		pos.turn = turn;
-		pos.piece[WHITE][KING] = bitboard(king_white);
+		pos.turn                = turn;
+		pos.piece[WHITE][KING]  = bitboard(king_white);
 		pos.mailbox[king_white] = WHITE_KING;
-		pos.piece[BLACK][KING] = bitboard(king_black);
+		pos.piece[BLACK][KING]  = bitboard(king_black);
 		pos.mailbox[king_black] = BLACK_KING;
 		if (piece_white) {
 			pos.piece[WHITE][piece_white] = bitboard(square_white);
-			pos.mailbox[square_white] = piece_white;
+			pos.mailbox[square_white]     = piece_white;
 		}
 		if (piece_black) {
 			pos.piece[BLACK][piece_black] = bitboard(square_black);
-			pos.mailbox[square_black] = piece_black + 6;
+			pos.mailbox[square_black]     = piece_black + 6;
 		}
 		pos.piece[WHITE][ALL] = pos.piece[WHITE][KING] | pos.piece[WHITE][piece_white];
 		pos.piece[BLACK][ALL] = pos.piece[BLACK][KING] | pos.piece[BLACK][piece_black];
 
-		if (!legal_position(&pos, king_white, piece_white, square_white, king_black, piece_black, square_black)) {
+		if (!legal_position(&pos, king_white, piece_white, square_white, king_black, piece_black,
+		                    square_black)) {
 			total++;
 			invalid_KXKX_store_by_index(index);
 			continue;
@@ -192,42 +197,41 @@ int main(void) {
 			counter++;
 			bitbase_KXKX_store_by_index(index, BITBASE_DRAW);
 		}
-
 	}
 	printf("There are %ld total legal positions.\n", total);
 	printf("There are %ld positions where a checkmate or stalemate occured.\n", counter);
 
 	int iteration = 1;
-	int changed = 1;
+	int changed   = 1;
 	while (changed) {
-		changed = 0;
-		total = 0;
+		changed   = 0;
+		total     = 0;
 		clock_t t = clock();
 		for (long index = 0; index < BITBASE_KXKX_INDEX_MAX; index++) {
 			if (invalid_KXKX_probe_by_index(index) || bitbase_KXKX_probe_by_index(index) != BITBASE_UNKNOWN)
 				continue;
 
-			int turn = index / (64l * 6 * 64 * 64 * 6 * 64);
-			int king_white = (index % (64 * 6 * 64 * 64 * 6 * 64)) / (6 * 64 * 64 * 6 * 64);
-			int piece_white = (index % (6 * 64 * 64 * 6 * 64)) / (64 * 64 * 6 * 64);
+			int turn         = index / (64l * 6 * 64 * 64 * 6 * 64);
+			int king_white   = (index % (64 * 6 * 64 * 64 * 6 * 64)) / (6 * 64 * 64 * 6 * 64);
+			int piece_white  = (index % (6 * 64 * 64 * 6 * 64)) / (64 * 64 * 6 * 64);
 			int square_white = (index % (64 * 64 * 6 * 64)) / (64 * 6 * 64);
-			int king_black = (index % (64 * 6 * 64)) / (6 * 64);
-			int piece_black = (index % (6 * 64)) / 64;
+			int king_black   = (index % (64 * 6 * 64)) / (6 * 64);
+			int piece_black  = (index % (6 * 64)) / 64;
 			int square_black = (index % (64)) / 1;
 
 			memset(&pos, 0, sizeof(pos));
-			pos.turn = turn;
-			pos.piece[WHITE][KING] = bitboard(king_white);
+			pos.turn                = turn;
+			pos.piece[WHITE][KING]  = bitboard(king_white);
 			pos.mailbox[king_white] = WHITE_KING;
-			pos.piece[BLACK][KING] = bitboard(king_black);
+			pos.piece[BLACK][KING]  = bitboard(king_black);
 			pos.mailbox[king_black] = BLACK_KING;
 			if (piece_white) {
 				pos.piece[WHITE][piece_white] = bitboard(square_white);
-				pos.mailbox[square_white] = piece_white;
+				pos.mailbox[square_white]     = piece_white;
 			}
 			if (piece_black) {
 				pos.piece[BLACK][piece_black] = bitboard(square_black);
-				pos.mailbox[square_black] = piece_black + 6;
+				pos.mailbox[square_black]     = piece_black + 6;
 			}
 			pos.piece[WHITE][ALL] = pos.piece[WHITE][KING] | pos.piece[WHITE][piece_white];
 			pos.piece[BLACK][ALL] = pos.piece[BLACK][KING] | pos.piece[BLACK][piece_black];
@@ -288,11 +292,11 @@ int main(void) {
 			for (int pawn_white = 8; pawn_white < 56; pawn_white++) {
 				for (int king_black = 0; king_black < 64; king_black++) {
 					memset(&pos, 0, sizeof(pos));
-					pos.turn = turn;
+					pos.turn               = turn;
 					pos.piece[WHITE][KING] = bitboard(king_white);
 					pos.piece[WHITE][PAWN] = bitboard(pawn_white);
 					pos.piece[BLACK][KING] = bitboard(king_black);
-					unsigned p = bitbase_KXKX_probe(&pos);
+					unsigned p             = bitbase_KXKX_probe(&pos);
 					bitbase_KPK_store(&pos, p);
 				}
 			}
@@ -306,12 +310,12 @@ int main(void) {
 				for (int king_black = 0; king_black < 64; king_black++) {
 					for (int pawn_black = 8; pawn_black < 56; pawn_black++) {
 						memset(&pos, 0, sizeof(pos));
-						pos.turn = turn;
+						pos.turn               = turn;
 						pos.piece[WHITE][KING] = bitboard(king_white);
 						pos.piece[WHITE][PAWN] = bitboard(pawn_white);
 						pos.piece[BLACK][KING] = bitboard(king_black);
 						pos.piece[BLACK][PAWN] = bitboard(pawn_black);
-						unsigned p = bitbase_KXKX_probe(&pos);
+						unsigned p             = bitbase_KXKX_probe(&pos);
 						bitbase_KPKP_store(&pos, p);
 					}
 				}
@@ -326,12 +330,12 @@ int main(void) {
 				for (int king_black = 0; king_black < 64; king_black++) {
 					for (int pawn_black = 8; pawn_black < 56; pawn_black++) {
 						memset(&pos, 0, sizeof(pos));
-						pos.turn = turn;
+						pos.turn               = turn;
 						pos.piece[WHITE][KING] = bitboard(king_white);
 						pos.piece[WHITE][ROOK] = bitboard(rook_white);
 						pos.piece[BLACK][KING] = bitboard(king_black);
 						pos.piece[BLACK][PAWN] = bitboard(pawn_black);
-						unsigned p = bitbase_KXKX_probe(&pos);
+						unsigned p             = bitbase_KXKX_probe(&pos);
 						bitbase_KRKP_store(&pos, p);
 					}
 				}

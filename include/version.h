@@ -19,46 +19,38 @@
 
 char compiler[] =
 #if __clang__
-"clang "
-XSTR(__clang_major__)"."
-XSTR(__clang_minor__)"."
-XSTR(__clang_patchlevel__)
+    "clang " XSTR(__clang_major__) "." XSTR(__clang_minor__) "." XSTR(__clang_patchlevel__)
 #elif _MSC_VER
-"MSVC "
-XSTR(_MSC_FULL_VER)"."
-XSTR(_MSC_BUILD)
+    "MSVC " XSTR(_MSC_FULL_VER) "." XSTR(_MSC_BUILD)
 #elif __GNUC__
-"gcc "
-XSTR(__GNUC__)"."
-XSTR(__GNUC_MINOR__)"."
-XSTR(__GNUC_PATCHLEVEL__)
+    "gcc " XSTR(__GNUC__) "." XSTR(__GNUC_MINOR__) "." XSTR(__GNUC_PATCHLEVEL__)
 #else
-"unknown"
+    "unknown"
 #endif
 #if __MINGW64__
-" (MinGW-w64)"
+	" (MinGW-w64)"
 #elif __MINGW32__
-" (MinGW-w32)"
+	" (MinGW-w32)"
 #endif
-;
+    ;
 
 char environment[] =
 #if __APPLE__
-"Apple"
+    "Apple"
 #elif __CYGWIN__
-"Cygwin"
+    "Cygwin"
 #elif _WIN64
-"Microsoft Windows 64-bit"
+    "Microsoft Windows 64-bit"
 #elif _WIN32
-"Microsoft Windows 32-bit"
+    "Microsoft Windows 32-bit"
 #elif __linux__
-"Linux"
+    "Linux"
 #elif __unix__
-"Unix"
+    "Unix"
 #else
-"unknown"
+    "unknown"
 #endif
-;
+    ;
 
 /* MSVC does not allow a macro based transformation. */
 char *date(char *str) {
@@ -70,19 +62,28 @@ char *date(char *str) {
 	/* Oct, Nov, Dev. */
 	str[2] = (__DATE__[0] == 'O' || __DATE__[0] == 'N' || __DATE__[0] == 'D') ? '1' : '0';
 	/* second digit of month */
-	str[3] =
-	(__DATE__[2] == 'l') ? '7' : /* Jul. */
-	(__DATE__[2] == 'g') ? '8' : /* Aug. */
-	(__DATE__[1] == 'u') ? '6' : /* Jun. */
-	(__DATE__[2] == 'n') ? '1' : /* Jan. */
-	(__DATE__[2] == 'y') ? '5' : /* May. */
-	(__DATE__[1] == 'a') ? '3' : /* Mar. */
-	(__DATE__[2] == 'b') ? '2' : /* Feb. */
-	(__DATE__[0] == 'A') ? '4' : /* Apr. */
-	(__DATE__[2] == 'p') ? '9' : /* Sep. */
-	(__DATE__[2] == 't') ? '0' : /* Oct. */
-	(__DATE__[2] == 'v') ? '1' : /* Nov. */
-	'2'; /* Dec. */
+	str[3] = (__DATE__[2] == 'l') ? '7' : /* Jul. */
+	             (__DATE__[2] == 'g') ? '8'
+	                                  : /* Aug. */
+	             (__DATE__[1] == 'u') ? '6'
+	                                  : /* Jun. */
+	             (__DATE__[2] == 'n') ? '1'
+	                                  : /* Jan. */
+	             (__DATE__[2] == 'y') ? '5'
+	                                  : /* May. */
+	             (__DATE__[1] == 'a') ? '3'
+	                                  : /* Mar. */
+	             (__DATE__[2] == 'b') ? '2'
+	                                  : /* Feb. */
+	             (__DATE__[0] == 'A') ? '4'
+	                                  : /* Apr. */
+	             (__DATE__[2] == 'p') ? '9'
+	                                  : /* Sep. */
+	             (__DATE__[2] == 't') ? '0'
+	                                  : /* Oct. */
+	             (__DATE__[2] == 'v') ? '1'
+	                                  : /* Nov. */
+	             '2';                   /* Dec. */
 
 	/* First digit of day. */
 	str[4] = (__DATE__[4] == ' ') ? '0' : __DATE__[4];

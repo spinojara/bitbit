@@ -16,13 +16,13 @@
 
 #include "perft.h"
 
-#include <stdlib.h>
-#include <stdio.h>
 #include <inttypes.h>
+#include <stdio.h>
+#include <stdlib.h>
 
+#include "interface.h"
 #include "move.h"
 #include "movegen.h"
-#include "interface.h"
 
 uint64_t perft(struct position *pos, int depth, int verbose) {
 	if (depth <= 0)

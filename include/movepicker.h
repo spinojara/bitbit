@@ -17,8 +17,8 @@
 #ifndef MOVEPICKER_H
 #define MOVEPICKER_H
 
-#include "position.h"
 #include "move.h"
+#include "position.h"
 #include "search.h"
 #include "transposition.h"
 
@@ -63,7 +63,9 @@ struct movepicker {
 
 move_t next_move(struct movepicker *mp);
 
-void movepicker_init(struct movepicker *mp, int quiescence, struct position *pos, const struct pstate *pstate, move_t ttmove, move_t killer1, move_t killer2, move_t counter_move, const struct searchinfo *si, const struct searchstack *ss);
+void movepicker_init(struct movepicker *mp, int quiescence, struct position *pos, const struct pstate *pstate,
+                     move_t ttmove, move_t killer1, move_t killer2, move_t counter_move, const struct searchinfo *si,
+                     const struct searchstack *ss);
 
 void sort_moves(struct movepicker *mp);
 

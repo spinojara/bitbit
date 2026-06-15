@@ -17,17 +17,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "move.h"
-#include "position.h"
-#include "evaluate.h"
-#include "util.h"
-#include "magicbitboard.h"
 #include "attackgen.h"
-#include "option.h"
 #include "endgame.h"
-#include "kpk.h"
+#include "evaluate.h"
 #include "io.h"
+#include "kpk.h"
+#include "magicbitboard.h"
+#include "move.h"
 #include "nnue.h"
+#include "option.h"
+#include "position.h"
+#include "util.h"
 
 void store_information(struct position *pos, uint64_t piece_square[7][64]) {
 	for (int color = 0; color < 2; color++) {
@@ -35,7 +35,7 @@ void store_information(struct position *pos, uint64_t piece_square[7][64]) {
 			uint64_t b = pos->piece[color][piece];
 			while (b) {
 				int square = ctz(b);
-				square = orient_horizontal(color, square);
+				square     = orient_horizontal(color, square);
 				piece_square[piece][square]++;
 				b = clear_ls1b(b);
 			}
@@ -77,12 +77,12 @@ int main(int argc, char **argv) {
 	uint64_t piece_square[7][64] = { 0 };
 
 	move_t move;
-	char result = 0;
-	int32_t eval = 0;
-	size_t total = 0;
-	size_t count = 0;
-	size_t games = 0;
-	size_t draws = 0;
+	char result        = 0;
+	int32_t eval       = 0;
+	size_t total       = 0;
+	size_t count       = 0;
+	size_t games       = 0;
+	size_t draws       = 0;
 	char startfen[128] = { 0 };
 	char fen[128];
 	char movestr[16];
@@ -102,7 +102,8 @@ int main(int argc, char **argv) {
 			struct pstate ps;
 			pstate_init(&pos, &ps);
 			if (!pseudo_legal(&pos, &ps, &move) || !legal(&pos, &ps, &move)) {
-				fprintf(stderr, "error: illegal move %s for position %s\n", move_str_algebraic(movestr, &move), pos_to_fen(fen, &pos));
+				fprintf(stderr, "error: illegal move %s for position %s\n",
+				        move_str_algebraic(movestr, &move), pos_to_fen(fen, &pos));
 				exit(1);
 			}
 			do_move(&pos, &move);
@@ -124,11 +125,16 @@ int main(int argc, char **argv) {
 
 		if (eval == VALUE_NONE || flag & FLAG_SKIP)
 			continue;
-		if (popcount(all_pieces(&pos)) < 6 && ((result == RESULT_LOSS && (2 * pos.turn - 1) * eval >= VALUE_WIN) || (result == RESULT_WIN && (2 * pos.turn - 1) * eval <= -VALUE_WIN))) {
+		if (popcount(all_pieces(&pos)) < 6
+		    && ((result == RESULT_LOSS && (2 * pos.turn - 1) * eval >= VALUE_WIN)
+		        || (result == RESULT_WIN && (2 * pos.turn - 1) * eval <= -VALUE_WIN))) {
 			print_position(&pos);
 			print_fen(&pos);
 			printf("eval: %d\n", eval);
-			printf("result: %s\n", result == RESULT_DRAW ? "draw" : result == RESULT_LOSS ? "black wins" : result == RESULT_WIN ? "white wins" : "unknown");
+			printf("result: %s\n", result == RESULT_DRAW   ? "draw"
+			                       : result == RESULT_LOSS ? "black wins"
+			                       : result == RESULT_WIN  ? "white wins"
+			                                               : "unknown");
 		}
 #if 0
 		const int material_values[] = { 0, 1, 3, 3, 5, 9, 0 };

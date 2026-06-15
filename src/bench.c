@@ -16,14 +16,14 @@
 
 #include "bench.h"
 
-#include <pthread.h>
 #include <inttypes.h>
+#include <pthread.h>
 
+#include "history.h"
+#include "move.h"
+#include "search.h"
 #include "timeman.h"
 #include "util.h"
-#include "search.h"
-#include "move.h"
-#include "history.h"
 
 static const char *fens[] = {
 	"rnbqkbnr/2ppppp1/p7/1p5p/7P/N4P2/PPPPP1P1/R1BQKBNR w KQkq - 0 1",
@@ -321,7 +321,7 @@ static const int nodes = 100000;
 static struct position pos;
 
 void *bench_thread(void *tt) {
-	struct history h = { 0 };
+	struct history h   = { 0 };
 	struct timeinfo ti = { .nodes = nodes };
 	move_t move[2];
 	timepoint_t start = time_now();
@@ -342,9 +342,8 @@ void bench(struct transpositiontable *tt) {
 	pthread_t thread;
 	pthread_attr_t attr;
 
-	if (pthread_attr_init(&attr) ||
-			pthread_attr_setstacksize(&attr, 8 * 1024 * 1024) ||
-			pthread_create(&thread, &attr, &bench_thread, tt)) {
+	if (pthread_attr_init(&attr) || pthread_attr_setstacksize(&attr, 8 * 1024 * 1024)
+	    || pthread_create(&thread, &attr, &bench_thread, tt)) {
 		fprintf(stderr, "error: failed to create thread\n");
 		exit(4);
 	}

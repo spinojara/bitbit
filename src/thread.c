@@ -78,12 +78,12 @@ void search_ponderhit(void) {
 
 void *search_thread(void *arg) {
 	assert(thread_init_done);
-	struct threadinfo *tdi = arg;
-	struct position *pos = tdi->pos;
-	int depth = tdi->depth;
-	struct timeinfo ti = tdi->ti;
+	struct threadinfo *tdi        = arg;
+	struct position *pos          = tdi->pos;
+	int depth                     = tdi->depth;
+	struct timeinfo ti            = tdi->ti;
 	struct transpositiontable *tt = tdi->tt;
-	struct history *history = tdi->history;
+	struct history *history       = tdi->history;
 	free(arg);
 	move_t move[2];
 	search(pos, depth, 1, &ti, move, tt, history, 1);
@@ -96,24 +96,23 @@ void *search_thread(void *arg) {
 	return NULL;
 }
 
-void search_start(struct position *pos, int depth, struct timeinfo *ti, struct transpositiontable *tt, struct history *history) {
+void search_start(struct position *pos, int depth, struct timeinfo *ti, struct transpositiontable *tt,
+                  struct history *history) {
 	struct threadinfo *tdi = malloc(sizeof(*tdi));
 	if (!tdi) {
 		fprintf(stderr, "error: failed to allocate thread info\n");
 		exit(5);
 	}
-	tdi->pos = pos;
-	tdi->depth = depth;
-	tdi->ti = *ti;
-	tdi->tt = tt;
+	tdi->pos     = pos;
+	tdi->depth   = depth;
+	tdi->ti      = *ti;
+	tdi->tt      = tt;
 	tdi->history = history;
 	pthread_t thread;
 	pthread_attr_t attr;
 
-	if (pthread_attr_init(&attr) ||
-			pthread_attr_setstacksize(&attr, 8 * 1024 * 1024) ||
-			pthread_create(&thread, &attr, &search_thread, tdi) ||
-			pthread_detach(thread)) {
+	if (pthread_attr_init(&attr) || pthread_attr_setstacksize(&attr, 8 * 1024 * 1024)
+	    || pthread_create(&thread, &attr, &search_thread, tdi) || pthread_detach(thread)) {
 		fprintf(stderr, "error: failed to create thread\n");
 		exit(4);
 	}
@@ -128,6 +127,7 @@ void thread_init(void) {
 }
 
 void thread_term(void) {
-	/* The mutex will not be used by any running detached thread since ucigo must be 0 for thread_term to be called. */
+	/* The mutex will not be used by any running detached thread since ucigo must be 0 for thread_term to be called.
+	 */
 	pthread_mutex_destroy(&uci);
 }

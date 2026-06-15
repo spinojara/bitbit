@@ -17,8 +17,8 @@
 #ifndef MOVE_ORDER_H
 #define MOVE_ORDER_H
 
-#include <stdint.h>
 #include <assert.h>
+#include <stdint.h>
 
 #include "move.h"
 #include "position.h"

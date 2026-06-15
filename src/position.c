@@ -16,17 +16,17 @@
 
 #include "position.h"
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 
-#include "bitboard.h"
-#include "util.h"
 #include "attackgen.h"
-#include "movegen.h"
+#include "bitboard.h"
 #include "history.h"
 #include "interface.h"
+#include "movegen.h"
+#include "util.h"
 
 #ifndef NDEBUG
 int position_init_done = 0;
@@ -37,7 +37,7 @@ static struct position start;
 void print_position(const struct position *pos) {
 	const int flip = 0;
 	int i, j, t;
-	char pieces[] = " PNBRQKpnbrqk";
+	char pieces[]  = " PNBRQKpnbrqk";
 	char letters[] = "abcdefgh";
 
 	printf("\n   ");
@@ -64,12 +64,14 @@ void print_fen(const struct position *pos) {
 }
 
 void pstate_init(const struct position *pos, struct pstate *pstate) {
-	const int us = pos->turn;
-	const int them = other_color(us);
+	const int us     = pos->turn;
+	const int them   = other_color(us);
 	pstate->checkers = generate_checkers(pos, us);
 	generate_attacked(pos, them, pstate->attacked);
-	pstate->checkray = single(pstate->checkers) ? between(ctz(pos->piece[us][KING]), ctz(pstate->checkers)) | pstate->checkers : 0;
-	pstate->pinned = generate_pinned(pos, us);
+	pstate->checkray = single(pstate->checkers)
+	                     ? between(ctz(pos->piece[us][KING]), ctz(pstate->checkers)) | pstate->checkers
+	                     : 0;
+	pstate->pinned   = generate_pinned(pos, us);
 	generate_check_threats(pos, us, pstate->check_threats);
 }
 
@@ -79,11 +81,13 @@ uint64_t generate_checkers(const struct position *pos, int color) {
 
 uint64_t generate_attackers(const struct position *pos, int square, int color) {
 	uint64_t attackers = 0;
-	const unsigned up = color ? S : N;
+	const unsigned up  = color ? S : N;
 
 	attackers |= (shift(bitboard(square), up | E) | shift(bitboard(square), up | W)) & pos->piece[color][PAWN];
-	attackers |= rook_attacks(square, 0, pos->piece[WHITE][ALL] | pos->piece[BLACK][ALL]) & (pos->piece[color][ROOK] | pos->piece[color][QUEEN]);
-	attackers |= bishop_attacks(square, 0, pos->piece[WHITE][ALL] | pos->piece[BLACK][ALL]) & (pos->piece[color][BISHOP] | pos->piece[color][QUEEN]);
+	attackers |= rook_attacks(square, 0, pos->piece[WHITE][ALL] | pos->piece[BLACK][ALL])
+	           & (pos->piece[color][ROOK] | pos->piece[color][QUEEN]);
+	attackers |= bishop_attacks(square, 0, pos->piece[WHITE][ALL] | pos->piece[BLACK][ALL])
+	           & (pos->piece[color][BISHOP] | pos->piece[color][QUEEN]);
 	attackers |= knight_attacks(square, 0) & pos->piece[color][KNIGHT];
 
 	return attackers;
@@ -94,46 +98,47 @@ void generate_attacked(const struct position *pos, int color, uint64_t attacked[
 	uint64_t piece;
 	int square;
 
-	square = ctz(pos->piece[color][KING]);
+	square            = ctz(pos->piece[color][KING]);
 
-	attacked[KING] = king_attacks(square, 0);
-	attacked[PAWN] = 0;
-	attacked[PAWN] |= shift(pos->piece[color][PAWN], up | E);
-	attacked[PAWN] |= shift(pos->piece[color][PAWN], up | W);
+	attacked[KING]    = king_attacks(square, 0);
+	attacked[PAWN]    = 0;
+	attacked[PAWN]   |= shift(pos->piece[color][PAWN], up | E);
+	attacked[PAWN]   |= shift(pos->piece[color][PAWN], up | W);
 
-	attacked[KNIGHT] = 0;
-	piece = pos->piece[color][KNIGHT];
+	attacked[KNIGHT]  = 0;
+	piece             = pos->piece[color][KNIGHT];
 	while (piece) {
-		square = ctz(piece);
+		square            = ctz(piece);
 		attacked[KNIGHT] |= knight_attacks(square, 0);
-		piece = clear_ls1b(piece);
+		piece             = clear_ls1b(piece);
 	}
 
 	attacked[BISHOP] = 0;
-	piece = pos->piece[color][BISHOP];
+	piece            = pos->piece[color][BISHOP];
 	while (piece) {
-		square = ctz(piece);
+		square            = ctz(piece);
 		attacked[BISHOP] |= bishop_attacks(square, 0, all_pieces(pos) ^ pos->piece[other_color(color)][KING]);
-		piece = clear_ls1b(piece);
+		piece             = clear_ls1b(piece);
 	}
 
 	attacked[ROOK] = 0;
-	piece = pos->piece[color][ROOK];
+	piece          = pos->piece[color][ROOK];
 	while (piece) {
-		square = ctz(piece);
+		square          = ctz(piece);
 		attacked[ROOK] |= rook_attacks(square, 0, all_pieces(pos) ^ pos->piece[other_color(color)][KING]);
-		piece = clear_ls1b(piece);
+		piece           = clear_ls1b(piece);
 	}
 
 	attacked[QUEEN] = 0;
-	piece = pos->piece[color][QUEEN];
+	piece           = pos->piece[color][QUEEN];
 	while (piece) {
-		square = ctz(piece);
+		square           = ctz(piece);
 		attacked[QUEEN] |= queen_attacks(square, 0, all_pieces(pos) ^ pos->piece[other_color(color)][KING]);
-		piece = clear_ls1b(piece);
+		piece            = clear_ls1b(piece);
 	}
 
-	attacked[ALL] = attacked[PAWN] | attacked[KNIGHT] | attacked[BISHOP] | attacked[ROOK] | attacked[QUEEN] | attacked[KING];
+	attacked[ALL] = attacked[PAWN] | attacked[KNIGHT] | attacked[BISHOP] | attacked[ROOK] | attacked[QUEEN]
+	              | attacked[KING];
 }
 
 uint64_t generate_attacked_all(const struct position *pos, int color) {
@@ -153,9 +158,13 @@ uint64_t generate_pinned(const struct position *pos, int color) {
 uint64_t generate_blockers(const struct position *pos, uint64_t pinners, int king_square) {
 	uint64_t pinned = 0;
 
-	pinners = ((rook_attacks(king_square, 0, 0) & (pos->piece[WHITE][ROOK] | pos->piece[BLACK][ROOK] | pos->piece[WHITE][QUEEN] | pos->piece[BLACK][QUEEN]))
-		| (bishop_attacks(king_square, 0, 0) & (pos->piece[WHITE][BISHOP] | pos->piece[BLACK][BISHOP] | pos->piece[WHITE][QUEEN] | pos->piece[BLACK][QUEEN])))
-		& pinners;
+	pinners         = ((rook_attacks(king_square, 0, 0)
+                    & (pos->piece[WHITE][ROOK] | pos->piece[BLACK][ROOK] | pos->piece[WHITE][QUEEN]
+                       | pos->piece[BLACK][QUEEN]))
+                   | (bishop_attacks(king_square, 0, 0)
+                      & (pos->piece[WHITE][BISHOP] | pos->piece[BLACK][BISHOP] | pos->piece[WHITE][QUEEN]
+                         | pos->piece[BLACK][QUEEN])))
+	        & pinners;
 
 	while (pinners) {
 		int square = ctz(pinners);
@@ -170,10 +179,12 @@ uint64_t generate_blockers(const struct position *pos, uint64_t pinners, int kin
 }
 
 uint64_t generate_pinners(const struct position *pos, uint64_t pinned, int color) {
-	int king_square = ctz(pos->piece[color][KING]);
-	uint64_t ret = 0;
-	uint64_t pinners = (rook_attacks(king_square, 0, pos->piece[other_color(color)][ALL]) & (pos->piece[other_color(color)][ROOK] | pos->piece[other_color(color)][QUEEN]))
-			 | (bishop_attacks(king_square, 0, pos->piece[other_color(color)][ALL]) & (pos->piece[other_color(color)][BISHOP] | pos->piece[other_color(color)][QUEEN]));
+	int king_square  = ctz(pos->piece[color][KING]);
+	uint64_t ret     = 0;
+	uint64_t pinners = (rook_attacks(king_square, 0, pos->piece[other_color(color)][ALL])
+	                    & (pos->piece[other_color(color)][ROOK] | pos->piece[other_color(color)][QUEEN]))
+	                 | (bishop_attacks(king_square, 0, pos->piece[other_color(color)][ALL])
+	                    & (pos->piece[other_color(color)][BISHOP] | pos->piece[other_color(color)][QUEEN]));
 
 	while (pinned) {
 		int square = ctz(pinned);
@@ -186,11 +197,11 @@ uint64_t generate_pinners(const struct position *pos, uint64_t pinned, int color
 }
 
 void generate_check_threats(const struct position *pos, int color, uint64_t check_threats[7]) {
-	const int them = other_color(color);
+	const int them      = other_color(color);
 	const unsigned down = color ? S : N;
-	int square = ctz(pos->piece[them][KING]);
+	int square          = ctz(pos->piece[them][KING]);
 
-	check_threats[ALL] = 0;
+	check_threats[ALL]  = 0;
 	check_threats[PAWN] = shift(pos->piece[them][KING], down | W) | shift(pos->piece[them][KING], down | E);
 	for (int piece = KNIGHT; piece <= QUEEN; piece++)
 		check_threats[piece] = attacks(piece, square, 0, all_pieces(pos));
@@ -246,7 +257,7 @@ void pos_from_fen2(struct position *pos, const char *str) {
 		char *c = strchr(argv[argc - 1], ' ');
 		if (!c)
 			break;
-		*c = '\0';
+		*c         = '\0';
 		argv[argc] = &c[1];
 	}
 	pos_from_fen(pos, argc, argv);
@@ -282,12 +293,12 @@ void pos_from_fen(struct position *pos, int argc, char **argv) {
 		case 'k':
 			t = find_char(" PNBRQKpnbrqk", argv[0][i]);
 			if (t < 7) {
-				pos->piece[WHITE][t] = set_bit(pos->piece[WHITE][t], counter);
+				pos->piece[WHITE][t]  = set_bit(pos->piece[WHITE][t], counter);
 				pos->mailbox[counter] = t;
 			}
 			else {
 				pos->piece[BLACK][t - 6] = set_bit(pos->piece[BLACK][t - 6], counter);
-				pos->mailbox[counter] = t;
+				pos->mailbox[counter]    = t;
 			}
 			counter++;
 			break;
@@ -316,8 +327,8 @@ void pos_from_fen(struct position *pos, int argc, char **argv) {
 
 	pos->en_passant = square(argv[3]) == -1 ? 0 : square(argv[3]);
 
-	pos->halfmove = 0;
-	pos->fullmove = 1;
+	pos->halfmove   = 0;
+	pos->fullmove   = 1;
 	if (argc >= 5)
 		pos->halfmove = strint(argv[4]);
 	if (argc >= 6)
@@ -330,27 +341,27 @@ void mirror_position(struct position *pos) {
 	pos->turn = other_color(pos->turn);
 
 	for (int wsq = a1; wsq <= h4; wsq++) {
-		int bsq = orient_horizontal(BLACK, wsq);
-		int wp = pos->mailbox[wsq];
-		int bp = pos->mailbox[bsq];
+		int bsq           = orient_horizontal(BLACK, wsq);
+		int wp            = pos->mailbox[wsq];
+		int bp            = pos->mailbox[bsq];
 		pos->mailbox[wsq] = bp ? colored_piece(uncolored_piece(bp), WHITE) : EMPTY;
 		pos->mailbox[bsq] = wp ? colored_piece(uncolored_piece(wp), BLACK) : EMPTY;
 	}
 
 	for (int color = 0; color < 2; color++) {
 		for (int piece = ALL; piece <= KING; piece++) {
-			uint64_t b = pos->piece[color][piece];
+			uint64_t b               = pos->piece[color][piece];
 			pos->piece[color][piece] = 0;
 			while (b) {
-				int sq = ctz(b);
+				int sq                    = ctz(b);
 				pos->piece[color][piece] |= bitboard(orient_horizontal(BLACK, sq));
-				b = clear_ls1b(b);
+				b                         = clear_ls1b(b);
 			}
 		}
 	}
 
 	for (int piece = ALL; piece <= KING; piece++) {
-		uint64_t b = pos->piece[WHITE][piece];
+		uint64_t b               = pos->piece[WHITE][piece];
 		pos->piece[WHITE][piece] = pos->piece[BLACK][piece];
 		pos->piece[BLACK][piece] = b;
 	}
@@ -369,7 +380,7 @@ int fen_is_ok2(const char *str) {
 		char *c = strchr(argv[argc - 1], ' ');
 		if (!c)
 			break;
-		*c = '\0';
+		*c         = '\0';
 		argv[argc] = &c[1];
 	}
 	return fen_is_ok(argc, argv);
@@ -387,8 +398,8 @@ int fen_is_ok(int argc, char **argv) {
 	if (argc >= 6 && strint(argv[5]) > 6000)
 		return 0;
 
-	int counter = 56;
-	int counter_mem = counter + 16;
+	int counter      = 56;
+	int counter_mem  = counter + 16;
 	int current_line = 0;
 
 	int king1 = 0, king2 = 0;
@@ -418,7 +429,7 @@ int fen_is_ok(int argc, char **argv) {
 		case 'q':
 			if (counter > 63 || current_line >= 8)
 				return 0;
-			t = find_char(" PNBRQKpnbrqk", argv[0][i]);
+			t                = find_char(" PNBRQKpnbrqk", argv[0][i]);
 			mailbox[counter] = t;
 			counter++;
 			current_line++;
@@ -426,14 +437,14 @@ int fen_is_ok(int argc, char **argv) {
 		case '/':
 			if (counter % 8 || counter + 8 != counter_mem)
 				return 0;
-			counter_mem = counter;
-			counter -= 16;
-			current_line = 0;
+			counter_mem   = counter;
+			counter      -= 16;
+			current_line  = 0;
 			break;
 		default:
 			if (find_char("12345678", argv[0][i]) == -1 || current_line >= 8)
 				return 0;
-			counter += find_char(" 12345678", argv[0][i]);
+			counter      += find_char(" 12345678", argv[0][i]);
 			current_line += find_char(" 12345678", argv[0][i]);
 		}
 	}
@@ -442,7 +453,7 @@ int fen_is_ok(int argc, char **argv) {
 		return 0;
 
 	for (i = 0; i < strlen(argv[2]); i++) {
-		switch(argv[2][i]) {
+		switch (argv[2][i]) {
 		case 'K':
 		case 'Q':
 		case 'k':
@@ -473,7 +484,7 @@ int fen_is_ok(int argc, char **argv) {
 			return 0;
 
 	for (i = 0; i < strlen(argv[3]); i++) {
-		switch(argv[3][i]) {
+		switch (argv[3][i]) {
 		case 'a':
 		case 'b':
 		case 'c':
@@ -508,23 +519,18 @@ int fen_is_ok(int argc, char **argv) {
 	t = square(argv[3]);
 	if (t != -1) {
 		if (t / 8 == 2) {
-			if (mailbox[t + 8] != WHITE_PAWN ||
-					mailbox[t] != EMPTY ||
-					mailbox[t - 8] != EMPTY ||
-					argv[1][0] != 'b')
+			if (mailbox[t + 8] != WHITE_PAWN || mailbox[t] != EMPTY || mailbox[t - 8] != EMPTY
+			    || argv[1][0] != 'b')
 				return 0;
 		}
 		else if (t / 8 == 5) {
-			if (mailbox[t - 8] != BLACK_PAWN ||
-					mailbox[t] != EMPTY ||
-					mailbox[t + 8] != EMPTY ||
-					argv[1][0] != 'w')
+			if (mailbox[t - 8] != BLACK_PAWN || mailbox[t] != EMPTY || mailbox[t + 8] != EMPTY
+			    || argv[1][0] != 'w')
 				return 0;
 		}
 		else {
 			return 0;
 		}
-
 	}
 
 	for (i = 0; i < 8; i++)
@@ -590,11 +596,13 @@ int pos_is_ok(const struct position *pos) {
 	}
 
 	if (pos->en_passant) {
-		if (pos->turn && (pos->en_passant / 8 != 5 || pos->mailbox[pos->en_passant - 8] != BLACK_PAWN ||
-				pos->mailbox[pos->en_passant + 8] != EMPTY || pos->mailbox[pos->en_passant] != EMPTY))
+		if (pos->turn
+		    && (pos->en_passant / 8 != 5 || pos->mailbox[pos->en_passant - 8] != BLACK_PAWN
+		        || pos->mailbox[pos->en_passant + 8] != EMPTY || pos->mailbox[pos->en_passant] != EMPTY))
 			return 0;
-		if (!pos->turn && (pos->en_passant / 8 != 2 || pos->mailbox[pos->en_passant + 8] != WHITE_PAWN ||
-				pos->mailbox[pos->en_passant - 8] != EMPTY || pos->mailbox[pos->en_passant] != EMPTY))
+		if (!pos->turn
+		    && (pos->en_passant / 8 != 2 || pos->mailbox[pos->en_passant + 8] != WHITE_PAWN
+		        || pos->mailbox[pos->en_passant - 8] != EMPTY || pos->mailbox[pos->en_passant] != EMPTY))
 			return 0;
 	}
 
@@ -622,7 +630,7 @@ char *pos_to_fen(char *fen, const struct position *pos) {
 		if (pos->mailbox[i]) {
 			if (j)
 				fen[k++] = " 12345678"[j];
-			j = 0;
+			j        = 0;
 			fen[k++] = " PNBRQKpnbrqk"[pos->mailbox[i]];
 		}
 		else {
@@ -634,12 +642,12 @@ char *pos_to_fen(char *fen, const struct position *pos) {
 				fen[k++] = " 12345678"[j];
 			break;
 		}
-		if (i % 8 == 0)  {
+		if (i % 8 == 0) {
 			if (j)
 				fen[k++] = " 12345678"[j];
-			j = 0;
-			fen[k++] = '/';
-			i -= 16;
+			j         = 0;
+			fen[k++]  = '/';
+			i        -= 16;
 		}
 	}
 	fen[k++] = ' ';
@@ -703,8 +711,8 @@ char *poscmp(const struct position *pos1, const struct position *pos2, int check
 	 * but is not actually attacked by any enemy pawns.
 	 */
 	int en_passant_error = 0;
-	int en_passant1 = pos1->en_passant;
-	int en_passant2 = pos2->en_passant;
+	int en_passant1      = pos1->en_passant;
+	int en_passant2      = pos2->en_passant;
 	if (en_passant1 < 8 || en_passant1 >= 56)
 		en_passant1 = 0;
 	if (en_passant2 < 8 || en_passant2 >= 56)
@@ -713,11 +721,10 @@ char *poscmp(const struct position *pos1, const struct position *pos2, int check
 	if ((en_passant1 && !en_passant2) || (!en_passant1 && en_passant2)) {
 		const struct position *pos = en_passant1 ? pos1 : pos2;
 
-		int en_passant = max(en_passant1, en_passant2);
+		int en_passant             = max(en_passant1, en_passant2);
 		en_passant1 = en_passant2 = 0;
 		struct pstate ps;
 		pstate_init(pos, &ps);
-
 
 		int from[2];
 		if (pos->turn) {
@@ -731,7 +738,8 @@ char *poscmp(const struct position *pos1, const struct position *pos2, int check
 
 		for (int i = 0; i < 2; i++) {
 			move_t move = M(from[i], en_passant, 0, 0);
-			if (uncolored_piece(pos->mailbox[from[i]]) == PAWN && pseudo_legal(pos, &ps, &move) && legal(pos, &ps, &move)) {
+			if (uncolored_piece(pos->mailbox[from[i]]) == PAWN && pseudo_legal(pos, &ps, &move)
+			    && legal(pos, &ps, &move)) {
 				en_passant_error = 1;
 				break;
 			}

@@ -17,14 +17,14 @@
 #ifndef TIMEMAN_H
 #define TIMEMAN_H
 
+#include <stdatomic.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <time.h>
-#include <stddef.h>
-#include <stdatomic.h>
 
-#include "search.h"
 #include "move.h"
 #include "position.h"
+#include "search.h"
 
 extern volatile atomic_int uciponder;
 
@@ -65,9 +65,7 @@ int stop_searching(struct timeinfo *si, move_t best_move);
 
 timepoint_t time_now(void);
 
-static inline timepoint_t time_since(const struct timeinfo *ti) {
-	return time_now() - ti->start;
-}
+static inline timepoint_t time_since(const struct timeinfo *ti) { return time_now() - ti->start; }
 
 /* We should check at least a couple of times per millisecond.
  * We are usually above 1 million nps. Checking every 256 nodes
@@ -75,9 +73,8 @@ static inline timepoint_t time_since(const struct timeinfo *ti) {
  * 0x100 = 256.
  */
 static inline int check_time(const struct searchinfo *si) {
-	return !(si->nodes & (0x100 - 1)) && si->ti &&
-		time_since(si->ti) >= si->ti->maximal && si->ti->stop_on_time &&
-		!atomic_load_explicit(&uciponder, memory_order_relaxed);
+	return !(si->nodes & (0x100 - 1)) && si->ti && time_since(si->ti) >= si->ti->maximal && si->ti->stop_on_time
+	    && !atomic_load_explicit(&uciponder, memory_order_relaxed);
 }
 
 #endif

@@ -14,19 +14,19 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <stdio.h>
-#include <string.h>
 #include <errno.h>
 #include <getopt.h>
+#include <stdio.h>
+#include <string.h>
 
+#include "attackgen.h"
+#include "bitboard.h"
+#include "evaluate.h"
 #include "io.h"
+#include "magicbitboard.h"
 #include "move.h"
 #include "movegen.h"
 #include "util.h"
-#include "evaluate.h"
-#include "magicbitboard.h"
-#include "attackgen.h"
-#include "bitboard.h"
 
 long count1, count2;
 
@@ -52,8 +52,8 @@ move_t difference(struct position *before, const struct position *after) {
 	if (before->turn == after->turn || before->halfmove + 1 < after->halfmove)
 		return 0;
 
-	int from = -1;
-	int to = -1;
+	int from      = -1;
+	int to        = -1;
 	uint64_t diff = before->piece[before->turn][ALL] ^ after->piece[before->turn][ALL];
 	switch (popcount(diff & before->piece[before->turn][ALL])) {
 	case 1:
@@ -77,7 +77,7 @@ move_t difference(struct position *before, const struct position *after) {
 	}
 
 	if (to != -1 && from != -1) {
-		int flag = 0;
+		int flag  = 0;
 		int piece = uncolored_piece(before->mailbox[from]);
 
 		if (piece == PAWN) {
@@ -101,7 +101,7 @@ move_t difference(struct position *before, const struct position *after) {
 			flag = MOVE_CASTLE;
 
 		int promotion = flag == MOVE_PROMOTION ? uncolored_piece(after->mailbox[to]) - KNIGHT : 0;
-		move_t move = M(from, to, flag, promotion);
+		move_t move   = M(from, to, flag, promotion);
 
 		struct pstate ps;
 		pstate_init(before, &ps);
@@ -154,7 +154,7 @@ int main(int argc, char **argv) {
 	char *inpath, *outpath;
 	static struct option opts[] = {
 		{ "scale-eval", required_argument, NULL, 's' },
-		{ NULL,         0,                 NULL,  0  },
+		{         NULL,                 0, NULL,   0 },
 	};
 	char *endptr;
 	int c, option_index = 0;
@@ -162,7 +162,7 @@ int main(int argc, char **argv) {
 	while ((c = getopt_long(argc, argv, "s:", opts, &option_index)) != -1) {
 		switch (c) {
 		case 's':
-			errno = 0;
+			errno      = 0;
 			scale_eval = strtod(optarg, &endptr);
 			if (errno || *endptr || scale_eval <= 0.0)
 				error = 1;
@@ -177,8 +177,8 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "usage: %s [--scale-eval] infile outfile\n", argv[0]);
 		return 1;
 	}
-	inpath = argv[optind];
-	outpath = argv[optind + 1];
+	inpath   = argv[optind];
+	outpath  = argv[optind + 1];
 
 	FILE *in = fopen(inpath, "r");
 	if (!in) {
@@ -196,12 +196,12 @@ int main(int argc, char **argv) {
 	attackgen_init();
 	bitboard_init();
 
-	char fen[128] = { 0 };
-	char move[64] = { 0 };
-	char score[64] = { 0 };
-	char ply[64] = { 0 };
+	char fen[128]   = { 0 };
+	char move[64]   = { 0 };
+	char score[64]  = { 0 };
+	char ply[64]    = { 0 };
 	char result[64] = { 0 };
-	char e[64] = { 0 };
+	char e[64]      = { 0 };
 
 	struct position pos, new;
 	move_t m;
@@ -218,12 +218,15 @@ int main(int argc, char **argv) {
 		fgets(e, sizeof(e), in);
 
 		/* Remove newline. */
-		fen[strcspn(fen, "\n")] = '\0';
-		move[strcspn(move, "\n")] = '\0';
+		fen[strcspn(fen, "\n")]       = '\0';
+		move[strcspn(move, "\n")]     = '\0';
 		result[strcspn(result, "\n")] = '\0';
 
-		flag = 0;
-		resultnow = result[7] == '1' ? RESULT_WIN : result[7] == '0' ? RESULT_DRAW : result[7] == '-' ? RESULT_LOSS : RESULT_UNKNOWN;
+		flag                          = 0;
+		resultnow                     = result[7] == '1' ? RESULT_WIN
+		                              : result[7] == '0' ? RESULT_DRAW
+		                              : result[7] == '-' ? RESULT_LOSS
+		                                                 : RESULT_UNKNOWN;
 
 		if (resultnow == RESULT_UNKNOWN) {
 			fprintf(stderr, "error: bad result '%s'\n", result);
@@ -262,7 +265,7 @@ int main(int argc, char **argv) {
 		}
 
 		errno = 0;
-		eval = strtol(score + 6, &endptr, 10);
+		eval  = strtol(score + 6, &endptr, 10);
 		if (errno || *endptr != '\n') {
 			fprintf(stderr, "error: %s", score);
 			return 5;

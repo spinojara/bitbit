@@ -18,12 +18,12 @@
 
 #include <assert.h>
 
-#include "moveorder.h"
 #include "bitboard.h"
 #include "movegen.h"
+#include "moveorder.h"
 #include "search.h"
-#include "util.h"
 #include "tune.h"
+#include "util.h"
 
 TUNEVAR(int, from_attack, 10000, NULL, NULL)
 TUNEVAR(int, into_attack, 15000, NULL, NULL)
@@ -47,9 +47,9 @@ int find_next(struct movepicker *mp, int (*filter)(struct position *, move_t *, 
 	for (int i = 0; mp->move[i]; i++) {
 		if (filter(mp->pos, &mp->move[i], threshold)) {
 			for (int j = i - 1; j >= 0; j--) {
-				move_t move = mp->move[j + 1];
+				move_t move     = mp->move[j + 1];
 				mp->move[j + 1] = mp->move[j];
-				mp->move[j] = move;
+				mp->move[j]     = move;
 			}
 			return 1;
 		}
@@ -61,7 +61,7 @@ void sort_moves(struct movepicker *mp) {
 	if (!mp->move[0])
 		return;
 	for (int i = 1; mp->move[i]; i++) {
-		move_t move = mp->move[i];
+		move_t move  = mp->move[i];
 		int64_t eval = mp->eval[i];
 		int j;
 		for (j = i - 1; j >= 0 && mp->eval[j] < eval; j--) {
@@ -75,11 +75,11 @@ void sort_moves(struct movepicker *mp) {
 
 void evaluate_nonquiet(struct movepicker *mp) {
 	for (int i = 0; mp->move[i]; i++) {
-		move_t *move = &mp->move[i];
+		move_t *move    = &mp->move[i];
 		int square_from = move_from(move);
-		int square_to = move_to(move);
-		int attacker = mp->pos->mailbox[square_from];
-		int victim = move_flag(move) == MOVE_EN_PASSANT ? PAWN : uncolored_piece(mp->pos->mailbox[square_to]);
+		int square_to   = move_to(move);
+		int attacker    = mp->pos->mailbox[square_from];
+		int victim  = move_flag(move) == MOVE_EN_PASSANT ? PAWN : uncolored_piece(mp->pos->mailbox[square_to]);
 		mp->eval[i] = mp->si->capture_history[attacker][victim][square_to] / 4;
 #ifdef TUNE
 		mp->eval[i] += mvv_lva_factor * (victim ? mvv_lva(uncolored_piece(attacker), victim) : 0);
@@ -92,32 +92,35 @@ void evaluate_nonquiet(struct movepicker *mp) {
 void evaluate_quiet(struct movepicker *mp) {
 	uint64_t attacked[7] = { 0 };
 	attacked[KNIGHT] = attacked[BISHOP] = mp->pstate->attacked[PAWN];
-	attacked[ROOK] = attacked[BISHOP] | mp->pstate->attacked[KNIGHT] | mp->pstate->attacked[BISHOP];
+	attacked[ROOK]  = attacked[BISHOP] | mp->pstate->attacked[KNIGHT] | mp->pstate->attacked[BISHOP];
 	attacked[QUEEN] = attacked[ROOK] | mp->pstate->attacked[ROOK];
 
 	for (int i = 0; mp->move[i]; i++) {
-		move_t *move = &mp->move[i];
+		move_t *move    = &mp->move[i];
 		int from_square = move_from(move);
-		uint64_t from = bitboard(from_square);
-		int to_square = move_to(move);
-		uint64_t to = bitboard(to_square);
-		int attacker = mp->pos->mailbox[from_square];
-		mp->eval[i] = mp->si->quiet_history[attacker][from_square][to_square];
+		uint64_t from   = bitboard(from_square);
+		int to_square   = move_to(move);
+		uint64_t to     = bitboard(to_square);
+		int attacker    = mp->pos->mailbox[from_square];
+		mp->eval[i]     = mp->si->quiet_history[attacker][from_square][to_square];
 		if ((mp->ss - 1)->move)
 #ifdef TUNE
-			mp->eval[i] += continuation_history_factor * (*(mp->ss - 1)->continuation_history_entry)[attacker][to_square];
+			mp->eval[i] += continuation_history_factor
+			             * (*(mp->ss - 1)->continuation_history_entry)[attacker][to_square];
 #else
 			mp->eval[i] += 10 * (*(mp->ss - 1)->continuation_history_entry)[attacker][to_square];
 #endif
 		if ((mp->ss - 2)->move)
 #ifdef TUNE
-			mp->eval[i] += continuation_history_factor * (*(mp->ss - 2)->continuation_history_entry)[attacker][to_square];
+			mp->eval[i] += continuation_history_factor
+			             * (*(mp->ss - 2)->continuation_history_entry)[attacker][to_square];
 #else
 			mp->eval[i] += 10 * (*(mp->ss - 2)->continuation_history_entry)[attacker][to_square];
 #endif
 		if ((mp->ss - 4)->move)
 #ifdef TUNE
-			mp->eval[i] += continuation_history_factor * (*(mp->ss - 4)->continuation_history_entry)[attacker][to_square];
+			mp->eval[i] += continuation_history_factor
+			             * (*(mp->ss - 4)->continuation_history_entry)[attacker][to_square];
 #else
 			mp->eval[i] += 10 * (*(mp->ss - 4)->continuation_history_entry)[attacker][to_square];
 #endif
@@ -135,12 +138,10 @@ void evaluate_quiet(struct movepicker *mp) {
 
 void filter_moves(struct movepicker *mp) {
 	for (int i = 0; mp->move[i]; i++) {
-		if (move_compare(mp->move[i], mp->ttmove) ||
-				move_compare(mp->move[i], mp->killer1) ||
-				move_compare(mp->move[i], mp->killer2) ||
-				move_compare(mp->move[i], mp->counter_move)) {
+		if (move_compare(mp->move[i], mp->ttmove) || move_compare(mp->move[i], mp->killer1)
+		    || move_compare(mp->move[i], mp->killer2) || move_compare(mp->move[i], mp->counter_move)) {
 			mp->move[i] = mp->end[-1];
-			*--mp->end = 0;
+			*--mp->end  = 0;
 		}
 	}
 }
@@ -181,21 +182,19 @@ move_t next_move(struct movepicker *mp) {
 		/* fallthrough */
 	case STAGE_KILLER1:
 		mp->stage++;
-		if (!move_compare(mp->killer1, mp->ttmove) &&
-				pseudo_legal(mp->pos, mp->pstate, &mp->killer1))
+		if (!move_compare(mp->killer1, mp->ttmove) && pseudo_legal(mp->pos, mp->pstate, &mp->killer1))
 			return mp->killer1;
 		/* fallthrough */
 	case STAGE_KILLER2:
 		mp->stage++;
-		if (!move_compare(mp->killer2, mp->ttmove) &&
-				pseudo_legal(mp->pos, mp->pstate, &mp->killer2))
+		if (!move_compare(mp->killer2, mp->ttmove) && pseudo_legal(mp->pos, mp->pstate, &mp->killer2))
 			return mp->killer2;
 		/* fallthrough */
 	case STAGE_COUNTER_MOVE:
 		mp->stage++;
-		if (!move_compare(mp->counter_move, mp->ttmove) && !move_compare(mp->counter_move, mp->killer1) &&
-				!move_compare(mp->counter_move, mp->killer2) &&
-				pseudo_legal(mp->pos, mp->pstate, &mp->counter_move)) {
+		if (!move_compare(mp->counter_move, mp->ttmove) && !move_compare(mp->counter_move, mp->killer1)
+		    && !move_compare(mp->counter_move, mp->killer2)
+		    && pseudo_legal(mp->pos, mp->pstate, &mp->counter_move)) {
 			return mp->counter_move;
 		}
 		/* fallthrough */
@@ -239,24 +238,26 @@ move_t next_move(struct movepicker *mp) {
 	}
 }
 
-void movepicker_init(struct movepicker *mp, int quiescence, struct position *pos, const struct pstate *pstate, move_t ttmove, move_t killer1, move_t killer2, move_t counter_move, const struct searchinfo *si, const struct searchstack *ss) {
-	mp->quiescence = quiescence && !pstate->checkers;
-	mp->prune = 0;
+void movepicker_init(struct movepicker *mp, int quiescence, struct position *pos, const struct pstate *pstate,
+                     move_t ttmove, move_t killer1, move_t killer2, move_t counter_move, const struct searchinfo *si,
+                     const struct searchstack *ss) {
+	mp->quiescence   = quiescence && !pstate->checkers;
+	mp->prune        = 0;
 
-	mp->move = mp->moves;
-	mp->move[0] = 0;
-	mp->eval = mp->evals;
-	mp->badnonquiet = &mp->moves[MOVES_MAX - 1];
+	mp->move         = mp->moves;
+	mp->move[0]      = 0;
+	mp->eval         = mp->evals;
+	mp->badnonquiet  = &mp->moves[MOVES_MAX - 1];
 
-	mp->pos = pos;
-	mp->pstate = pstate;
-	mp->si = si;
-	mp->ss = ss;
-	mp->ttmove = ttmove;
+	mp->pos          = pos;
+	mp->pstate       = pstate;
+	mp->si           = si;
+	mp->ss           = ss;
+	mp->ttmove       = ttmove;
 
-	mp->killer1 = killer1;
-	mp->killer2 = killer2;
+	mp->killer1      = killer1;
+	mp->killer2      = killer2;
 	mp->counter_move = counter_move;
 
-	mp->stage = STAGE_TT;
+	mp->stage        = STAGE_TT;
 }

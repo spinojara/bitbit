@@ -15,51 +15,50 @@
  */
 
 #define _GNU_SOURCE
-#include <sys/mman.h>
-#include <getopt.h>
 #include <errno.h>
-#include <pthread.h>
-#include <string.h>
-#include <sys/stat.h>
-#include <stdlib.h>
 #include <fcntl.h>
+#include <getopt.h>
 #include <limits.h>
-#include <sys/param.h>
-#include <signal.h>
+#include <pthread.h>
 #include <regex.h>
+#include <signal.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/mman.h>
+#include <sys/param.h>
 #include <sys/resource.h>
+#include <sys/stat.h>
 
 #ifdef SYZYGY
 #include <tbprobe.h>
 #endif
 
-#include "search.h"
-#include "move.h"
-#include "transposition.h"
-#include "option.h"
-#include "nnue.h"
-#include "magicbitboard.h"
 #include "attackgen.h"
 #include "bitboard.h"
-#include "moveorder.h"
-#include "position.h"
-#include "transposition.h"
 #include "endgame.h"
 #include "history.h"
-#include "util.h"
-#include "movegen.h"
-#include "movepicker.h"
-#include "timeman.h"
 #include "io.h"
+#include "magicbitboard.h"
+#include "move.h"
+#include "movegen.h"
+#include "moveorder.h"
+#include "movepicker.h"
+#include "nnue.h"
+#include "option.h"
 #include "polyglot.h"
+#include "position.h"
+#include "search.h"
+#include "timeman.h"
+#include "transposition.h"
+#include "util.h"
 
 const struct searchinfo gsi = { 0 };
 
 static const char *prefix;
 
-static int niceness = 0;
-static int jobs = 1;
-static long max_file_size = 1024 * 1024;
+static int niceness         = 0;
+static int jobs             = 1;
+static long max_file_size   = 1024 * 1024;
 static int random_moves_min = 4;
 static int random_moves_max = 8;
 
@@ -74,9 +73,9 @@ static atomic_int stopvar;
 
 static pthread_mutex_t filemutex;
 
-static const char *syzygy = NULL;
+static const char *syzygy   = NULL;
 static const char *openings = NULL;
-static int nosyzygy = 0;
+static int nosyzygy         = 0;
 
 static atomic_uint_fast64_t bytes;
 static atomic_uint_fast64_t positions;
@@ -91,15 +90,13 @@ static inline void do_stop(void) {
 		pthread_mutex_unlock(&pausemutex[i]);
 }
 
-static inline int is_stopped(void) {
-	return atomic_load_explicit(&stopvar, memory_order_relaxed);
-}
+static inline int is_stopped(void) { return atomic_load_explicit(&stopvar, memory_order_relaxed); }
 
 FILE *newfile(void) {
 	if (is_stopped())
 		return NULL;
 
-	static long n = 1;
+	static long n        = 1;
 	static char date[64] = { 0 };
 
 	pthread_mutex_lock(&filemutex);
@@ -128,7 +125,7 @@ FILE *newfile(void) {
 	for (fd = -1; n < LONG_MAX && fd == -1; n++) {
 		sprintf(name, "%s/selfplay-%s/%ld.bit", prefix, date, n);
 		errno = 0;
-		fd = open(name, O_WRONLY | O_CREAT | O_EXCL, 0644);
+		fd    = open(name, O_WRONLY | O_CREAT | O_EXCL, 0644);
 		if (fd == -1 && errno != EEXIST) {
 			fprintf(stderr, "error: failed to create file %s\n", name);
 			do_stop();
@@ -142,17 +139,18 @@ FILE *newfile(void) {
 	return fd != -1 ? fdopen(fd, "wb") : NULL;
 }
 
-void custom_search(struct position *pos, uint64_t nodes, move_t moves[MOVES_MAX], int64_t evals[MOVES_MAX], struct transpositiontable *tt, struct history *history, uint64_t seed) {
-	struct searchinfo si = { 0 };
-	si.tt = tt;
-	si.ti = NULL;
-	si.history = history;
-	si.max_nodes = nodes;
-	si.hard_max_nodes = 5 * si.max_nodes;
-	si.seed = seed;
+void custom_search(struct position *pos, uint64_t nodes, move_t moves[MOVES_MAX], int64_t evals[MOVES_MAX],
+                   struct transpositiontable *tt, struct history *history, uint64_t seed) {
+	struct searchinfo si                   = { 0 };
+	si.tt                                  = tt;
+	si.ti                                  = NULL;
+	si.history                             = history;
+	si.max_nodes                           = nodes;
+	si.hard_max_nodes                      = 5 * si.max_nodes;
+	si.seed                                = seed;
 
 	struct searchstack realss[PLY_MAX + 4] = { 0 };
-	struct searchstack *ss = &realss[4];
+	struct searchstack *ss                 = &realss[4];
 
 	refresh_accumulator(pos, 0);
 	refresh_accumulator(pos, 1);
@@ -164,10 +162,10 @@ void custom_search(struct position *pos, uint64_t nodes, move_t moves[MOVES_MAX]
 	movegen_legal(pos, moves, MOVETYPE_ALL);
 
 	struct movepicker mp = { 0 };
-	mp.move = moves;
-	mp.eval = evals;
+	mp.move              = moves;
+	mp.eval              = evals;
 
-	int ply = 0;
+	int ply              = 0;
 	history_store(pos, si.history, ply);
 
 	for (int depth = 1; depth <= PLY_MAX / 2 && !si.interrupt && si.nodes < si.max_nodes; depth++) {
@@ -178,8 +176,9 @@ void custom_search(struct position *pos, uint64_t nodes, move_t moves[MOVES_MAX]
 			do_endgame_key(pos, move);
 			do_move(pos, move);
 			do_accumulator(pos, move);
-			ss[0].move = *move;
-			ss[0].continuation_history_entry = &(si.continuation_history[pos->mailbox[move_to(move)]][move_to(move)]);
+			ss[0].move                       = *move;
+			ss[0].continuation_history_entry = &(
+			    si.continuation_history[pos->mailbox[move_to(move)]][move_to(move)]);
 			si.nodes++;
 
 			int32_t eval = -negamax(pos, depth - 1, ply + 1, -VALUE_MATE, VALUE_MATE, 0, &si, ss + 1);
@@ -282,7 +281,7 @@ move_t random_move(struct position *pos, uint64_t *seed) {
 
 	int32_t eval = search_material(pos, -VALUE_INFINITE, VALUE_INFINITE);
 
-	int nmoves = 0;
+	int nmoves   = 0;
 	for (int i = 0; moves[i]; i++) {
 		move_t *move = &moves[i];
 		if (!filter_move(pos, move, eval))
@@ -302,8 +301,8 @@ void play_game(FILE *openingsfile, struct transpositiontable *tt, uint64_t nodes
 	struct history h = { 0 };
 	struct position pos;
 
-	char result = RESULT_UNKNOWN;
-	move_t move = 0;
+	char result                   = RESULT_UNKNOWN;
+	move_t move                   = 0;
 
 	int move_value_diff_threshold = 50;
 
@@ -335,14 +334,14 @@ void play_game(FILE *openingsfile, struct transpositiontable *tt, uint64_t nodes
 	refresh_endgame_key(&pos);
 	refresh_zobrist_key(&pos);
 
-	int32_t eval[POSITIONS_MAX] = { 0 };
+	int32_t eval[POSITIONS_MAX]       = { 0 };
 	unsigned char flag[POSITIONS_MAX] = { 0 };
 
-	int tb_draw = 0;
+	int tb_draw                       = 0;
 
 	while (1) {
 		int is_check = generate_checkers(&pos, pos.turn) != 0;
-		int tb_move = 0;
+		int tb_move  = 0;
 
 		movegen_legal(&pos, moves, MOVETYPE_ALL);
 		if (!moves[0]) {
@@ -352,8 +351,8 @@ void play_game(FILE *openingsfile, struct transpositiontable *tt, uint64_t nodes
 
 		h.zobrist_key[h.ply] = pos.zobrist_key;
 
-		move_t *bestmove = NULL;
-		eval[h.ply] = VALUE_NONE;
+		move_t *bestmove     = NULL;
+		eval[h.ply]          = VALUE_NONE;
 
 		if (popcount(all_pieces(&pos)) <= 2) {
 			result = RESULT_DRAW;
@@ -361,24 +360,25 @@ void play_game(FILE *openingsfile, struct transpositiontable *tt, uint64_t nodes
 		}
 #ifdef SYZYGY
 		else if (syzygy && popcount(all_pieces(&pos)) <= TB_LARGEST && !pos.castle) {
-			uint64_t white = pos.piece[WHITE][ALL];
-			uint64_t black = pos.piece[BLACK][ALL];
-			uint64_t kings = pos.piece[WHITE][KING] | pos.piece[BLACK][KING];
-			uint64_t queens = pos.piece[WHITE][QUEEN] | pos.piece[BLACK][QUEEN];
-			uint64_t rooks = pos.piece[WHITE][ROOK] | pos.piece[BLACK][ROOK];
-			uint64_t bishops = pos.piece[WHITE][BISHOP] | pos.piece[BLACK][BISHOP];
-			uint64_t knights = pos.piece[WHITE][KNIGHT] | pos.piece[BLACK][KNIGHT];
-			uint64_t pawns = pos.piece[WHITE][PAWN] | pos.piece[BLACK][PAWN];
-			unsigned rule50 = 0;
+			uint64_t white    = pos.piece[WHITE][ALL];
+			uint64_t black    = pos.piece[BLACK][ALL];
+			uint64_t kings    = pos.piece[WHITE][KING] | pos.piece[BLACK][KING];
+			uint64_t queens   = pos.piece[WHITE][QUEEN] | pos.piece[BLACK][QUEEN];
+			uint64_t rooks    = pos.piece[WHITE][ROOK] | pos.piece[BLACK][ROOK];
+			uint64_t bishops  = pos.piece[WHITE][BISHOP] | pos.piece[BLACK][BISHOP];
+			uint64_t knights  = pos.piece[WHITE][KNIGHT] | pos.piece[BLACK][KNIGHT];
+			uint64_t pawns    = pos.piece[WHITE][PAWN] | pos.piece[BLACK][PAWN];
+			unsigned rule50   = 0;
 			unsigned castling = 0;
-			unsigned ep = 0;
-			int turn = pos.turn;
+			unsigned ep       = 0;
+			int turn          = pos.turn;
 			unsigned ret;
-			ret = tb_probe_root(white, black, kings, queens, rooks, bishops, knights, pawns, rule50, castling, ep, turn, NULL);
+			ret = tb_probe_root(white, black, kings, queens, rooks, bishops, knights, pawns, rule50,
+			                    castling, ep, turn, NULL);
 			if (ret != TB_RESULT_FAILED) {
-				unsigned wdl = TB_GET_WDL(ret);
-				unsigned from = TB_GET_FROM(ret);
-				unsigned to = TB_GET_TO(ret);
+				unsigned wdl     = TB_GET_WDL(ret);
+				unsigned from    = TB_GET_FROM(ret);
+				unsigned to      = TB_GET_TO(ret);
 				unsigned promote = TB_GET_PROMOTES(ret);
 				if (wdl == TB_DRAW)
 					eval[h.ply] = 0;
@@ -404,15 +404,18 @@ void play_game(FILE *openingsfile, struct transpositiontable *tt, uint64_t nodes
 				}
 
 				for (int i = 0; moves[i]; i++) {
-					if (move_from(&moves[i]) == from && move_to(&moves[i]) == to && (move_flag(&moves[i]) != MOVE_PROMOTION || move_promote(&moves[i]) == promote)) {
-						tb_move = 1;
+					if (move_from(&moves[i]) == from && move_to(&moves[i]) == to
+					    && (move_flag(&moves[i]) != MOVE_PROMOTION
+					        || move_promote(&moves[i]) == promote)) {
+						tb_move  = 1;
 						bestmove = &moves[i];
 						break;
 					}
 				}
 			}
 			else {
-				ret = tb_probe_wdl(white, black, kings, queens, rooks, bishops, knights, pawns, rule50, castling, ep, turn);
+				ret = tb_probe_wdl(white, black, kings, queens, rooks, bishops, knights, pawns, rule50,
+				                   castling, ep, turn);
 				if (ret != TB_RESULT_FAILED) {
 					if (ret == TB_DRAW)
 						eval[h.ply] = 0;
@@ -447,8 +450,8 @@ void play_game(FILE *openingsfile, struct transpositiontable *tt, uint64_t nodes
 			result = is_check ? (pos.turn ? RESULT_LOSS : RESULT_WIN) : RESULT_DRAW;
 			break;
 		}
-		else if ((((h.ply >= 80 && draw_counter >= 10) || h.ply >= 240) && (tb_draw || !tb_move)) ||
-				repetition(&pos, &h, 0, 2) || pos.halfmove >= 100) {
+		else if ((((h.ply >= 80 && draw_counter >= 10) || h.ply >= 240) && (tb_draw || !tb_move))
+		         || repetition(&pos, &h, 0, 2) || pos.halfmove >= 100) {
 			result = RESULT_DRAW;
 			if (eval_now != VALUE_NONE && !tb_draw) {
 				int32_t v = eval_now * (2 * pos.turn - 1);
@@ -464,7 +467,7 @@ void play_game(FILE *openingsfile, struct transpositiontable *tt, uint64_t nodes
 
 		if (!skip && (e = endgame_probe(&pos))) {
 			int32_t v = endgame_evaluate(e, &pos);
-			result = RESULT_DRAW;
+			result    = RESULT_DRAW;
 			if (v != VALUE_NONE && !tb_draw) {
 				v *= 2 * pos.turn - 1;
 				if (v > VALUE_WIN / 2)
@@ -496,7 +499,7 @@ void play_game(FILE *openingsfile, struct transpositiontable *tt, uint64_t nodes
 #else
 			double r = uniform(seed);
 #endif
-			r = MIN(MAX(r, 0.0), 0.999);
+			r    = MIN(MAX(r, 0.0), 0.999);
 			move = moves[(int)(nmoves * r)];
 		}
 		else {
@@ -555,9 +558,9 @@ struct threadinfo {
 void *playthread(void *arg) {
 	/* This is Linux specific. */
 	setpriority(PRIO_PROCESS, gettid(), niceness);
-	struct threadinfo *ti = (struct threadinfo *)arg;
-	uint64_t seed = ti->seed;
-	uint64_t nodes = ti->nodes;
+	struct threadinfo *ti        = (struct threadinfo *)arg;
+	uint64_t seed                = ti->seed;
+	uint64_t nodes               = ti->nodes;
 	struct transpositiontable tt = { 0 };
 	if (transposition_alloc(&tt, ti->tt_size)) {
 		fprintf(stderr, "error: failed to allocate transposition table\n");
@@ -598,7 +601,6 @@ void *playthread(void *arg) {
 		}
 
 		fclose(f);
-
 	}
 
 	transposition_free(&tt);
@@ -620,7 +622,10 @@ struct pattern {
 };
 
 void print_help(const char *argv0) {
-	fprintf(stderr, "usage: %s [--help] [--jobs n] [--tt n] [--nodes n] [--without-syzygy]\n\t[--syzygy path] [--openings file] [[--not] --date regex] datadir\n", argv0);
+	fprintf(stderr,
+	        "usage: %s [--help] [--jobs n] [--tt n] [--nodes n] [--without-syzygy]\n\t[--syzygy path] [--openings "
+	        "file] [[--not] --date regex] datadir\n",
+	        argv0);
 	fprintf(stderr, "\noptions:\n");
 	fprintf(stderr, "\t--help\t\t\tDisplay this page.\n");
 	fprintf(stderr, "\t--jobs n\t\tRun n parallel jobs.\n");
@@ -629,12 +634,19 @@ void print_help(const char *argv0) {
 	fprintf(stderr, "\t--without-syzygy\tDo not use syzygy tablebases.\n");
 	fprintf(stderr, "\t--syzygy path\t\tColon separated list of syzygy tablebases\n\t\t\t\tdirectories.\n");
 	fprintf(stderr, "\t--openings file\t\tUse openings file in polyglot format.\n");
-	fprintf(stderr, "\t--date regex\t\tOnly run when time in format\n\t\t\t\t'Saturday 20251028 22:56' matches regex.\n");
-	fprintf(stderr, "\t--not --date regex\tOnly run when time in format\n\t\t\t\t'Saturday 20251028 22:56' does not match regex.\n");
+	fprintf(stderr,
+	        "\t--date regex\t\tOnly run when time in format\n\t\t\t\t'Saturday 20251028 22:56' matches regex.\n");
+	fprintf(stderr, "\t--not --date regex\tOnly run when time in format\n\t\t\t\t'Saturday 20251028 22:56' does "
+	                "not match regex.\n");
 	fprintf(stderr, "\t--niceness n\t\tSet the niceness to n.\n");
 	fprintf(stderr, "\nexamples:\n");
-	fprintf(stderr, "\tRun playbit with 11 parallel jobs, a total tt of 8 GiB, without syzygy\n\ttablesbases on weekdays when it's not between 17:00 and 22:00.\n");
-	fprintf(stderr, "\t$ %s /srv/selfplay --jobs 11 --tt 8192 \\\n\t\t--syzygy /srv/syzygy/3-4-5-wdl:/srv/syzygy/6-wdl \\\n\t\t--not --date 'Saturday .*' --not --date 'Sunday .*' \\\n\t\t--date '.* (0[0-9]|1[0-6]|2[2-3]):[0-9]{2}'\n", argv0);
+	fprintf(stderr, "\tRun playbit with 11 parallel jobs, a total tt of 8 GiB, without syzygy\n\ttablesbases on "
+	                "weekdays when it's not between 17:00 and 22:00.\n");
+	fprintf(stderr,
+	        "\t$ %s /srv/selfplay --jobs 11 --tt 8192 \\\n\t\t--syzygy /srv/syzygy/3-4-5-wdl:/srv/syzygy/6-wdl "
+	        "\\\n\t\t--not --date 'Saturday .*' --not --date 'Sunday .*' \\\n\t\t--date '.* "
+	        "(0[0-9]|1[0-6]|2[2-3]):[0-9]{2}'\n",
+	        argv0);
 }
 
 int main(int argc, char **argv) {
@@ -647,23 +659,23 @@ int main(int argc, char **argv) {
 	pthread_cond_init(&pausecond, NULL);
 	pthread_mutex_init(&filemutex, NULL);
 
-	int tt_MiB = 6 * 1024;
-	int nodes = 10000;
+	int tt_MiB                  = 6 * 1024;
+	int nodes                   = 10000;
 	static struct option opts[] = {
-		{ "jobs",           required_argument, NULL, 'j' },
-		{ "tt",             required_argument, NULL, 't' },
-		{ "nodes",          required_argument, NULL, 'n' },
-		{ "without-syzygy", no_argument,       NULL, 'w' },
-		{ "syzygy",         required_argument, NULL, 'z' },
-		{ "openings",       required_argument, NULL, 'o' },
-		{ "date",           required_argument, NULL, 'd' },
-		{ "not",            no_argument,       NULL, '!' },
-		{ "help",           no_argument,       NULL, 'h' },
-		{ "niceness",       required_argument, NULL, 'c' },
-		{ 0,                0,                 0,     0  },
+		{           "jobs", required_argument, NULL, 'j' },
+		{             "tt", required_argument, NULL, 't' },
+		{          "nodes", required_argument, NULL, 'n' },
+		{ "without-syzygy",       no_argument, NULL, 'w' },
+		{         "syzygy", required_argument, NULL, 'z' },
+		{       "openings", required_argument, NULL, 'o' },
+		{           "date", required_argument, NULL, 'd' },
+		{            "not",       no_argument, NULL, '!' },
+		{           "help",       no_argument, NULL, 'h' },
+		{       "niceness", required_argument, NULL, 'c' },
+		{                0,                 0,    0,   0 },
 	};
 
-	int ndates = 0;
+	int ndates            = 0;
 	struct pattern *dates = NULL;
 
 	char *endptr;
@@ -677,7 +689,7 @@ int main(int argc, char **argv) {
 		}
 		switch (c) {
 		case 't':
-			errno = 0;
+			errno  = 0;
 			tt_MiB = strtol(optarg, &endptr, 10);
 			if (errno || *endptr != '\0' || tt_MiB <= 1024) {
 				error = 1;
@@ -686,7 +698,7 @@ int main(int argc, char **argv) {
 			break;
 		case 'j':
 			errno = 0;
-			jobs = strtol(optarg, &endptr, 10);
+			jobs  = strtol(optarg, &endptr, 10);
 			if (errno || *endptr != '\0' || jobs < 1 || jobs > 1024) {
 				error = 1;
 				fprintf(stderr, "error: bad argument: jobs\n");
@@ -701,7 +713,7 @@ int main(int argc, char **argv) {
 			}
 			break;
 		case 'c':
-			errno = 0;
+			errno    = 0;
 			niceness = strtoll(optarg, &endptr, 10);
 			if (errno || *endptr != '\0') {
 				error = 1;
@@ -719,9 +731,9 @@ int main(int argc, char **argv) {
 			break;
 		case 'd':
 			ndates++;
-			dates = realloc(dates, ndates * sizeof(*dates));
+			dates             = realloc(dates, ndates * sizeof(*dates));
 			dates[ndates - 1] = (struct pattern){ .regex = optarg, .not_flag = not_flag };
-			not_flag = 0;
+			not_flag          = 0;
 			break;
 		case '!':
 			not_flag = 1;
@@ -796,32 +808,32 @@ int main(int argc, char **argv) {
 	history_init();
 	nnue_init();
 
-	option_history = 1;
-	option_transposition = 1;
-	option_deterministic = 0;
+	option_history        = 1;
+	option_transposition  = 1;
+	option_deterministic  = 0;
 
-	timepoint_t t = time_now();
+	timepoint_t t         = time_now();
 
-	int is_paused = pausevar;
-	pthread_t *thread = malloc(jobs * sizeof(*thread));
+	int is_paused         = pausevar;
+	pthread_t *thread     = malloc(jobs * sizeof(*thread));
 	struct threadinfo *ti = malloc(jobs * sizeof(*ti));
-	pausemutex = malloc(jobs * sizeof(*pausemutex));
+	pausemutex            = malloc(jobs * sizeof(*pausemutex));
 
 	for (int i = 0; i < jobs; i++)
 		pthread_mutex_init(&pausemutex[i], NULL);
 
 	for (int i = 0; i < jobs; i++) {
-		ti[i].jobn = i;
-		ti[i].seed = t + i;
+		ti[i].jobn    = i;
+		ti[i].seed    = t + i;
 		ti[i].tt_size = 1024ll * 1024ll * tt_MiB / jobs;
-		ti[i].nodes = nodes;
+		ti[i].nodes   = nodes;
 
 		pthread_create(&thread[i], NULL, &playthread, &ti[i]);
 	}
 
 	timepoint_t last = 0;
 	while (!is_stopped()) {
-		time_t localnow = time(NULL);
+		time_t localnow    = time(NULL);
 		char timestr[1024] = { 0 };
 		strftime(timestr, sizeof(timestr), "%A %Y%m%d %H:%M", localtime(&localnow));
 
@@ -849,13 +861,14 @@ int main(int argc, char **argv) {
 				pthread_mutex_unlock(&pausemutex[i]);
 		}
 
-		timepoint_t now = time_now();
-		timepoint_t elapsed = now - last;
+		timepoint_t now       = time_now();
+		timepoint_t elapsed   = now - last;
 
-		uint64_t bytesnow = atomic_exchange(&bytes, 0);
+		uint64_t bytesnow     = atomic_exchange(&bytes, 0);
 		uint64_t positionsnow = atomic_exchange(&positions, 0);
 		if (last) {
-			printf("\33[2K%ld fens/s (%ld bytes/s)%s\r", positionsnow * TPPERSEC / elapsed, bytesnow * TPPERSEC / elapsed, matches ? "" : " (paused)");
+			printf("\33[2K%ld fens/s (%ld bytes/s)%s\r", positionsnow * TPPERSEC / elapsed,
+			       bytesnow * TPPERSEC / elapsed, matches ? "" : " (paused)");
 			fflush(stdout);
 		}
 		last = now;

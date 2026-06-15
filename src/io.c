@@ -62,11 +62,13 @@ int read_uintx(FILE *f, void *p, size_t x) {
 		*(uint16_t *)p = (uint16_t)buf[0] | (uint16_t)buf[1] << 8;
 		break;
 	case 4:
-		*(uint32_t *)p = (uint32_t)buf[0] | (uint32_t)buf[1] << 8 | (uint32_t)buf[2] << 16 | (uint32_t)buf[3] << 24;
+		*(uint32_t *)p = (uint32_t)buf[0] | (uint32_t)buf[1] << 8 | (uint32_t)buf[2] << 16
+		               | (uint32_t)buf[3] << 24;
 		break;
 	case 8:
-		*(uint64_t *)p = (uint64_t)buf[0] | (uint64_t)buf[1] << 8 | (uint64_t)buf[2] << 16 | (uint64_t)buf[3] << 24 |
-			         (uint64_t)buf[4] << 32 | (uint64_t)buf[5] << 40 | (uint64_t)buf[6] << 48 | (uint64_t)buf[7] << 56;
+		*(uint64_t *)p = (uint64_t)buf[0] | (uint64_t)buf[1] << 8 | (uint64_t)buf[2] << 16
+		               | (uint64_t)buf[3] << 24 | (uint64_t)buf[4] << 32 | (uint64_t)buf[5] << 40
+		               | (uint64_t)buf[6] << 48 | (uint64_t)buf[7] << 56;
 		break;
 	default:
 		return -1;
@@ -76,20 +78,20 @@ int read_uintx(FILE *f, void *p, size_t x) {
 
 int write_position(FILE *f, const struct position *pos) {
 	uint8_t buf[62] = { ctz(pos->piece[WHITE][KING]), ctz(pos->piece[BLACK][KING]) };
-	int index = 2, sq;
+	int index       = 2, sq;
 	uint64_t b;
 
 	for (int turn = 0; turn < 2; turn++) {
 		for (int piece = PAWN; piece < KING; piece++) {
 			if (index >= 62)
 				break;
-			b = pos->piece[turn][piece];
+			b          = pos->piece[turn][piece];
 			int cpiece = colored_piece(piece, turn);
 			while (b) {
-				sq = ctz(b);
+				sq           = ctz(b);
 				buf[index++] = cpiece;
 				buf[index++] = sq;
-				b = clear_ls1b(b);
+				b            = clear_ls1b(b);
 			}
 		}
 	}
@@ -120,20 +122,20 @@ int read_position(FILE *f, struct position *pos) {
 	pos->piece[WHITE][ALL] = pos->piece[WHITE][KING] = bitboard(buf[0]);
 	pos->piece[BLACK][ALL] = pos->piece[BLACK][KING] = bitboard(buf[1]);
 
-	pos->mailbox[buf[0]] = WHITE_KING;
-	pos->mailbox[buf[1]] = BLACK_KING;
+	pos->mailbox[buf[0]]                             = WHITE_KING;
+	pos->mailbox[buf[1]]                             = BLACK_KING;
 
-	for (int index = 2; index <= 62 - 2; ) {
+	for (int index = 2; index <= 62 - 2;) {
 		int cpiece = buf[index++];
 		if (!cpiece)
 			break;
-		int piece = uncolored_piece(cpiece);
-		int color = color_of_piece(cpiece);
-		int sq = buf[index++];
+		int piece                 = uncolored_piece(cpiece);
+		int color                 = color_of_piece(cpiece);
+		int sq                    = buf[index++];
 
 		pos->piece[color][piece] |= bitboard(sq);
-		pos->piece[color][ALL] |= pos->piece[color][piece];
-		pos->mailbox[sq] = cpiece;
+		pos->piece[color][ALL]   |= pos->piece[color][piece];
+		pos->mailbox[sq]          = cpiece;
 	}
 	uint8_t turn;
 	if (read_uintx(f, &turn, 1))
@@ -151,17 +153,15 @@ int read_position(FILE *f, struct position *pos) {
 	if (read_uintx(f, &fullmove, 2))
 		return 1;
 
-	pos->turn = turn;
+	pos->turn       = turn;
 	pos->en_passant = en_passant < 64 ? en_passant : 0;
-	pos->castle = castle;
-	pos->halfmove = halfmove;
-	pos->fullmove = fullmove;
+	pos->castle     = castle;
+	pos->halfmove   = halfmove;
+	pos->fullmove   = fullmove;
 	return 0;
 }
 
-int write_move(FILE *f, move_t move) {
-	return write_uintx(f, move, 2);
-}
+int write_move(FILE *f, move_t move) { return write_uintx(f, move, 2); }
 
 int read_move(FILE *f, move_t *move) {
 	uint16_t temp;
@@ -173,9 +173,7 @@ int read_move(FILE *f, move_t *move) {
 	return 0;
 }
 
-int write_eval(FILE *f, int32_t eval) {
-	return write_uintx(f, eval, 2);
-}
+int write_eval(FILE *f, int32_t eval) { return write_uintx(f, eval, 2); }
 
 int read_eval(FILE *f, int32_t *eval) {
 	union {
@@ -190,18 +188,10 @@ int read_eval(FILE *f, int32_t *eval) {
 	return 0;
 }
 
-int write_result(FILE *f, char result) {
-	return write_uintx(f, result, 1);
-}
+int write_result(FILE *f, char result) { return write_uintx(f, result, 1); }
 
-int read_result(FILE *f, char *result) {
-	return read_uintx(f, result, 1);
-}
+int read_result(FILE *f, char *result) { return read_uintx(f, result, 1); }
 
-int write_flag(FILE *f, unsigned char flag) {
-	return write_uintx(f, flag, 1);
-}
+int write_flag(FILE *f, unsigned char flag) { return write_uintx(f, flag, 1); }
 
-int read_flag(FILE *f, unsigned char *flag) {
-	return read_uintx(f, flag, 1);
-}
+int read_flag(FILE *f, unsigned char *flag) { return read_uintx(f, flag, 1); }

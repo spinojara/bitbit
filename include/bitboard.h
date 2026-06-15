@@ -17,8 +17,8 @@
 #ifndef BITBOARD_H
 #define BITBOARD_H
 
-#include <stdint.h>
 #include <assert.h>
+#include <stdint.h>
 
 #if defined(_MSC_VER)
 #include <intrin.h>
@@ -54,9 +54,7 @@ static inline uint64_t clz(uint64_t b) {
 #endif
 }
 
-static inline uint64_t clzm(uint64_t b) {
-	return 63 ^ clz(b);
-}
+static inline uint64_t clzm(uint64_t b) { return 63 ^ clz(b); }
 
 static inline uint64_t popcount(uint64_t b) {
 #if defined(__GNUC__)
@@ -66,40 +64,26 @@ static inline uint64_t popcount(uint64_t b) {
 #endif
 }
 
-static inline uint64_t bitboard(int i) {
-	return (uint64_t)1 << i;
-}
+static inline uint64_t bitboard(int i) { return (uint64_t)1 << i; }
 
-static inline uint64_t get_bit(uint64_t b, int i) {
-	return b & bitboard(i);
-}
+static inline uint64_t get_bit(uint64_t b, int i) { return b & bitboard(i); }
 
-static inline uint64_t set_bit(uint64_t b, int i) {
-	return b | bitboard(i);
-}
+static inline uint64_t set_bit(uint64_t b, int i) { return b | bitboard(i); }
 
-static inline uint64_t clear_bit(uint64_t b, int i) {
-	return b & ~bitboard(i);
-}
+static inline uint64_t clear_bit(uint64_t b, int i) { return b & ~bitboard(i); }
 
-static inline uint64_t clear_ls1b(uint64_t b) {
-	return b & (b - 1);
-}
+static inline uint64_t clear_ls1b(uint64_t b) { return b & (b - 1); }
 
-static inline uint64_t ls1b(uint64_t b) {
-	return b & -b;
-}
+static inline uint64_t ls1b(uint64_t b) { return b & -b; }
 
 static inline uint64_t rotate_bytes(uint64_t b) {
-	return (b >> 56) | ((b & 0xFF000000000000) >> 40) | ((b & 0xFF0000000000) >> 24) | ((b & 0xFF00000000) >> 8) |
-		((b & 0xFF000000) << 8) | ((b & 0xFF0000) << 24) | ((b & 0xFF00) << 40) | (b << 56);
+	return (b >> 56) | ((b & 0xFF000000000000) >> 40) | ((b & 0xFF0000000000) >> 24) | ((b & 0xFF00000000) >> 8)
+	     | ((b & 0xFF000000) << 8) | ((b & 0xFF0000) << 24) | ((b & 0xFF00) << 40) | (b << 56);
 }
 
 void print_bitboard(uint64_t b);
 
-static inline uint64_t single(uint64_t b) {
-	return b && !clear_ls1b(b);
-}
+static inline uint64_t single(uint64_t b) { return b && !clear_ls1b(b); }
 
 extern uint64_t between_lookup[64 * 64];
 extern uint64_t line_lookup[64 * 64];
@@ -225,9 +209,7 @@ static inline uint64_t shift(uint64_t b, unsigned direction) {
 	}
 }
 
-static inline uint64_t shift_twice(uint64_t b, unsigned direction) {
-	return shift(shift(b, direction), direction);
-}
+static inline uint64_t shift_twice(uint64_t b, unsigned direction) { return shift(shift(b, direction), direction); }
 
 /* Should suffice to loop and shift 7 times instead of 8. */
 static inline uint64_t fill(uint64_t b, unsigned direction) {

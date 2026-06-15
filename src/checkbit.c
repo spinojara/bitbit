@@ -19,13 +19,12 @@
 #include <string.h>
 #include <time.h>
 
-#include "position.h"
-#include "move.h"
-#include "io.h"
-#include "evaluate.h"
-#include "magicbitboard.h"
 #include "attackgen.h"
 #include "bitboard.h"
+#include "evaluate.h"
+#include "io.h"
+#include "magicbitboard.h"
+#include "move.h"
 #include "position.h"
 #include "util.h"
 
@@ -43,15 +42,15 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 	int shuffle = 0;
-	int i = 1;
+	int i       = 1;
 	if (argc == 3) {
 		if (!strcmp(argv[1], "--shuffle")) {
 			shuffle = 1;
-			i = 2;
+			i       = 2;
 		}
 		else if (!strcmp(argv[2], "--shuffle")) {
 			shuffle = 1;
-			i = 1;
+			i       = 1;
 		}
 	}
 	if (!ends_with(argv[i], ".bit"))
@@ -73,11 +72,11 @@ int main(int argc, char **argv) {
 	move_t move;
 	unsigned char flag;
 
-	int first = 1;
+	int first       = 1;
 
-	size_t games = 0;
+	size_t games    = 0;
 	uint64_t *start = NULL;
-	uint64_t *end = NULL;
+	uint64_t *end   = NULL;
 
 	while (1) {
 		int r;
@@ -96,7 +95,8 @@ int main(int argc, char **argv) {
 			char movestr[16];
 			char fen[128];
 			if (!pseudo_legal(&pos, &ps, &move) || !legal(&pos, &ps, &move)) {
-				fprintf(stderr, "error: illegal move %s for position %s\n", move_str_algebraic(movestr, &move), pos_to_fen(fen, &pos));
+				fprintf(stderr, "error: illegal move %s for position %s\n",
+				        move_str_algebraic(movestr, &move), pos_to_fen(fen, &pos));
 				return 4;
 			}
 			do_move(&pos, &move);
@@ -104,8 +104,8 @@ int main(int argc, char **argv) {
 		else {
 			if (shuffle) {
 				games++;
-				start = realloc(start, sizeof(*start) * games);
-				end = realloc(end, sizeof(*end) * games);
+				start            = realloc(start, sizeof(*start) * games);
+				end              = realloc(end, sizeof(*end) * games);
 				start[games - 1] = ftell(f) - 2;
 				if (games >= 2)
 					end[games - 2] = start[games - 1];
@@ -114,7 +114,9 @@ int main(int argc, char **argv) {
 				return 5;
 			if (!pos_is_ok(&pos))
 				return 6;
-			if (read_result(f, &result) || (result != RESULT_LOSS && result != RESULT_DRAW && result != RESULT_WIN && result != RESULT_UNKNOWN))
+			if (read_result(f, &result)
+			    || (result != RESULT_LOSS && result != RESULT_DRAW && result != RESULT_WIN
+			        && result != RESULT_UNKNOWN))
 				return 7;
 		}
 		first = 0;
@@ -131,16 +133,16 @@ int main(int argc, char **argv) {
 	if (games >= 1) {
 		end[games - 1] = ftell(f);
 
-		uint64_t seed = time(NULL);
+		uint64_t seed  = time(NULL);
 		for (size_t k = games - 1; k > 0; k--) {
 			size_t j = xorshift64(&seed) % (k + 1);
 			long t;
-			t = start[k];
+			t        = start[k];
 			start[k] = start[j];
 			start[j] = t;
-			t = end[k];
-			end[k] = end[j];
-			end[j] = t;
+			t        = end[k];
+			end[k]   = end[j];
+			end[j]   = t;
 		}
 	}
 

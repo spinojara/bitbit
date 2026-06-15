@@ -24,23 +24,21 @@ void settune(int argc, char **argv);
 void tune_variable(const char *name, double start, void (*set)(double), double (*get)(void), int is_int_type);
 
 #ifdef TUNE
-#define TUNEVAR(type, var, start, min, max) \
-type var = (start); \
-void tune_set_ ## var (double x) { \
-	if (_Generic((min), void *: 0, default: 1) && (type)_Generic((min), void *: 0, default: (min)) > x) { \
-		x = (type)_Generic(min, void *: 0, default: (min)); \
-	} \
-	if (_Generic((max), void *: 0, default: 1) && (type)_Generic((max), void *: 0, default: (max)) < x) { \
-		x = (type)_Generic(max, void *: 0, default: (max)); \
-	} \
-	var = (type)x; \
-}\
-double tune_get_ ## var (void) { \
-	return (double)(var); \
-}\
-__attribute__((constructor)) void tune_ ## var (void) { \
-	tune_variable(#var, (start), tune_set_ ## var, tune_get_ ## var, (type)1 / 2 == (type)0); \
-}
+#define TUNEVAR(type, var, start, min, max)                                                                            \
+	type var = (start);                                                                                            \
+	void tune_set_##var(double x) {                                                                                \
+		if (_Generic((min), void *: 0, default: 1) && (type) _Generic((min), void *: 0, default: (min)) > x) { \
+			x = (type) _Generic(min, void *: 0, default: (min));                                           \
+		}                                                                                                      \
+		if (_Generic((max), void *: 0, default: 1) && (type) _Generic((max), void *: 0, default: (max)) < x) { \
+			x = (type) _Generic(max, void *: 0, default: (max));                                           \
+		}                                                                                                      \
+		var = (type)x;                                                                                         \
+	}                                                                                                              \
+	double tune_get_##var(void) { return (double)(var); }                                                          \
+	__attribute__((constructor)) void tune_##var(void) {                                                           \
+		tune_variable(#var, (start), tune_set_##var, tune_get_##var, (type)1 / 2 == (type)0);                  \
+	}
 #else
 #define TUNEVAR(type, var, start, min, max) const type var = (start);
 #endif

@@ -15,36 +15,36 @@
  */
 
 #define _GNU_SOURCE
-#include <stdio.h>
-#include <stdint.h>
-#include <string.h>
-#include <stdlib.h>
-#include <inttypes.h>
-#include <time.h>
-#include <math.h>
-#include <getopt.h>
 #include <errno.h>
+#include <getopt.h>
+#include <inttypes.h>
+#include <math.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
 
-#include "util.h"
-#include "bitboard.h"
-#include "magicbitboard.h"
 #include "attackgen.h"
-#include "position.h"
-#include "move.h"
-#include "option.h"
-#include "moveorder.h"
+#include "bitboard.h"
 #include "endgame.h"
-#include "movegen.h"
-#include "movepicker.h"
 #include "io.h"
+#include "magicbitboard.h"
+#include "move.h"
+#include "movegen.h"
+#include "moveorder.h"
+#include "movepicker.h"
+#include "option.h"
+#include "position.h"
+#include "util.h"
 
-int skip_mates = 0;
-int shuffle = 0;
-int quiet = 0;
-int skip_endgames = 0;
-int skip_halfmove = 0;
-int skip_checks = 0;
-int verbose = 0;
+int skip_mates                     = 0;
+int shuffle                        = 0;
+int quiet                          = 0;
+int skip_endgames                  = 0;
+int skip_halfmove                  = 0;
+int skip_checks                    = 0;
+int verbose                        = 0;
 
 static const struct searchinfo gsi = { 0 };
 
@@ -125,7 +125,7 @@ void start_fen(struct position *pos, FILE *f) {
 	while (fgets(line, sizeof(line), f)) {
 		if (strstr(line, "[FEN")) {
 			char *ptr, *fen[6];
-			int i = 0;
+			int i    = 0;
 			fen[i++] = line + 6;
 			for (; i < 7; i++) {
 				ptr = strchr(fen[i - 1], ' ');
@@ -146,8 +146,8 @@ void start_fen(struct position *pos, FILE *f) {
 
 void line_error(FILE *f, const char *error) {
 	long newlines = 0;
-	long chars = 0;
-	long p = ftell(f);
+	long chars    = 0;
+	long p        = ftell(f);
 	fseek(f, 0, SEEK_SET);
 	for (long q = 1; q <= p; q++) {
 		chars++;
@@ -170,7 +170,7 @@ void line_expect(FILE *f, const char *expect, const char *got) {
 
 char *parse_quote(char *line, char *quotes) {
 	int in_quote = 0;
-	int index = 0;
+	int index    = 0;
 
 	for (char *c = line; *c; c++) {
 		if (*c == '"') {
@@ -180,7 +180,7 @@ char *parse_quote(char *line, char *quotes) {
 
 		if (in_quote) {
 			quotes[index++] = *c;
-			quotes[index] = '\0';
+			quotes[index]   = '\0';
 		}
 	}
 
@@ -210,7 +210,7 @@ char *next_token(char *token, int n, FILE *f) {
 			/* fallthrough */
 		default:
 			token[index++] = c;
-			token[index] = '\0';
+			token[index]   = '\0';
 		}
 	}
 	return token;
@@ -224,7 +224,7 @@ void parse_pgn(FILE *infile, FILE *outfile) {
 	startpos(&pos);
 	int plycount = -1;
 	unsigned char flag;
-	int result = RESULT_UNKNOWN;
+	int result         = RESULT_UNKNOWN;
 	char white[BUFSIZ] = { 0 };
 	char black[BUFSIZ] = { 0 };
 	char line[BUFSIZ], quotes[BUFSIZ], *endptr;
@@ -259,7 +259,8 @@ void parse_pgn(FILE *infile, FILE *outfile) {
 		}
 		else if (!strncmp(line, "[PlyCount ", 10)) {
 			errno = 0;
-			if (!parse_quote(line, quotes) || (plycount = strtol(quotes, &endptr, 10)) <= 0 || errno || *endptr != '\0')
+			if (!parse_quote(line, quotes) || (plycount = strtol(quotes, &endptr, 10)) <= 0 || errno
+			    || *endptr != '\0')
 				line_error(infile, "bad plycount");
 		}
 		else if (!strncmp(line, "[Termination ", 13)) {
@@ -303,8 +304,6 @@ void parse_pgn(FILE *infile, FILE *outfile) {
 		if (!move)
 			line_error(infile, "bad move");
 
-
-
 		/* comment */
 		eval = VALUE_NONE;
 		flag = 0;
@@ -320,15 +319,16 @@ void parse_pgn(FILE *infile, FILE *outfile) {
 					flag |= FLAG_SKIP;
 				}
 				else {
-					errno = 0;
+					errno   = 0;
 					int ply = strtol(&token[2], &endptr, 10);
-					if ((token[0] != '+' && token[0] != '-') || errno || *endptr != '\0' || ply <= 0)
+					if ((token[0] != '+' && token[0] != '-') || errno || *endptr != '\0'
+					    || ply <= 0)
 						line_error(infile, "bad mate score");
 					eval = (2 * (token[0] == '+') - 1) * (VALUE_MATE - ply);
 				}
 			}
 			else {
-				errno = 0;
+				errno        = 0;
 				double score = strtod(token, &endptr);
 				if (errno || *endptr != '\0')
 					line_error(infile, "bad score");
@@ -348,11 +348,10 @@ void parse_pgn(FILE *infile, FILE *outfile) {
 		if (!(flag & FLAG_SKIP) && skip_halfmove && !gbernoulli(exp(-pos.halfmove)))
 			flag |= FLAG_SKIP;
 
-		if (!(flag & FLAG_SKIP) && quiet && (generate_checkers(&pos, pos.turn) ||
-					is_capture(&pos, &move) ||
-					move_flag(&move) == MOVE_EN_PASSANT ||
-					move_flag(&move) == MOVE_PROMOTION ||
-					search_material(&pos, -VALUE_INFINITE, VALUE_INFINITE) != evaluate_material(&pos)))
+		if (!(flag & FLAG_SKIP) && quiet
+		    && (generate_checkers(&pos, pos.turn) || is_capture(&pos, &move)
+		        || move_flag(&move) == MOVE_EN_PASSANT || move_flag(&move) == MOVE_PROMOTION
+		        || search_material(&pos, -VALUE_INFINITE, VALUE_INFINITE) != evaluate_material(&pos)))
 			flag |= FLAG_SKIP;
 
 		do_move(&pos, &move);
@@ -380,14 +379,14 @@ int main(int argc, char **argv) {
 	char *inpath;
 	char *outpath;
 	static struct option opts[] = {
-		{ "verbose",       no_argument,       NULL, 'v' },
-		{ "skip-mates",    no_argument,       NULL, 'm' },
-		{ "shuffle",       no_argument,       NULL, 's' },
-		{ "quiet",         no_argument,       NULL, 'q' },
-		{ "skip-checks",   no_argument,       NULL, 'c' },
-		{ "skip-endgames", no_argument,       NULL, 'e' },
-		{ "skip-halfmove", no_argument,       NULL, 'h' },
-		{ NULL,            0,                 NULL,  0  },
+		{       "verbose", no_argument, NULL, 'v' },
+                {    "skip-mates", no_argument, NULL, 'm' },
+		{       "shuffle", no_argument, NULL, 's' },
+                {         "quiet", no_argument, NULL, 'q' },
+		{   "skip-checks", no_argument, NULL, 'c' },
+                { "skip-endgames", no_argument, NULL, 'e' },
+		{ "skip-halfmove", no_argument, NULL, 'h' },
+                {            NULL,           0, NULL,   0 },
 	};
 	int c, option_index = 0;
 	int error = 0;
@@ -423,8 +422,8 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "usage: %s infile outfile\n", argv[0]);
 		return 3;
 	}
-	inpath = argv[optind];
-	outpath = argv[optind + 1];
+	inpath       = argv[optind];
+	outpath      = argv[optind + 1];
 
 	FILE *infile = fopen(inpath, "r");
 	if (!infile) {
@@ -438,9 +437,9 @@ int main(int argc, char **argv) {
 	}
 
 	option_transposition = 0;
-	option_history = 0;
-	option_endgame = 1;
-	option_damp = 0;
+	option_history       = 0;
+	option_endgame       = 1;
+	option_damp          = 0;
 
 	magicbitboard_init();
 	attackgen_init();
@@ -450,7 +449,7 @@ int main(int argc, char **argv) {
 	endgame_init();
 	uint64_t seed = time(NULL);
 
-	size_t total = 0, count;
+	size_t total  = 0, count;
 	char line[BUFSIZ];
 	while (fgets(line, sizeof(line), infile))
 		if (!strncmp(line, "[Event ", 7))
@@ -466,8 +465,8 @@ int main(int argc, char **argv) {
 	/* Fisher-Yates shuffle. */
 	if (shuffle) {
 		for (size_t i = total - 1; i > 0; i--) {
-			size_t j = xorshift64(&seed) % (i + 1);
-			long t = offset[i];
+			size_t j  = xorshift64(&seed) % (i + 1);
+			long t    = offset[i];
 			offset[i] = offset[j];
 			offset[j] = t;
 		}

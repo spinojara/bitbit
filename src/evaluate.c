@@ -18,12 +18,12 @@
 
 #include <string.h>
 
-#include "bitboard.h"
-#include "util.h"
 #include "attackgen.h"
+#include "bitboard.h"
 #include "movegen.h"
 #include "nnue.h"
 #include "option.h"
+#include "util.h"
 
 const int material_value[7] = { 0, 100, 300, 300, 500, 1000, 0 };
 
@@ -41,12 +41,12 @@ void evaluate_print(struct position *pos) {
 		printf("\n|");
 		for (int f = 0; f < 8; f++) {
 			int square = make_square(f, r);
-			int piece = pos->mailbox[square];
+			int piece  = pos->mailbox[square];
 			if (uncolored_piece(piece) && uncolored_piece(piece) != KING) {
 				int32_t oldeval = psqtaccumulation[WHITE][0] - psqtaccumulation[BLACK][0];
 				for (int color = 0; color < 2; color++) {
 					int king_square = ctz(pos->piece[color][KING]);
-					int index = make_index(color, square, piece, king_square);
+					int index       = make_index(color, square, piece, king_square);
 					add_index_slow(index, accumulation[color], psqtaccumulation[color]);
 				}
 				int32_t neweval = psqtaccumulation[WHITE][0] - psqtaccumulation[BLACK][0] - oldeval;
@@ -64,6 +64,8 @@ void evaluate_print(struct position *pos) {
 	}
 	printf("Psqt: %+.2f\n", (double)(psqtaccumulation[WHITE][0] - psqtaccumulation[BLACK][0]) / 200);
 	int32_t eval = evaluate_nnue(pos);
-	printf("Positional %+.2f\n", (double)((2 * pos->turn - 1) * eval - (psqtaccumulation[WHITE][0] - psqtaccumulation[BLACK][0]) / 2) / 100);
+	printf("Positional %+.2f\n",
+	       (double)((2 * pos->turn - 1) * eval - (psqtaccumulation[WHITE][0] - psqtaccumulation[BLACK][0]) / 2)
+	           / 100);
 	printf("NNUE Evaluation: %+.2f\n", (double)(2 * pos->turn - 1) * eval / 100);
 }

@@ -16,10 +16,10 @@
 
 #include <string.h>
 
-#include "nnue.h"
-#include "util.h"
 #include "io.h"
+#include "nnue.h"
 #include "nnuefile.h"
+#include "util.h"
 
 alignas(64) static ft_weight_t ft_weights[K_HALF_DIMENSIONS * FT_IN_DIMS];
 alignas(64) static ft_bias_t ft_biases[K_HALF_DIMENSIONS];
@@ -48,11 +48,8 @@ int main(int argc, char **argv) {
 		return 2;
 	}
 
-	if ((i = nnuefile(f, ft_weights, ft_biases,
-			psqt_weights, hidden1_weights,
-			hidden1_biases, hidden2_weights,
-			hidden2_biases, output_weights,
-			output_biases))) {
+	if ((i = nnuefile(f, ft_weights, ft_biases, psqt_weights, hidden1_weights, hidden1_biases, hidden2_weights,
+	                  hidden2_biases, output_weights, output_biases))) {
 		if (i == 2)
 			fprintf(stderr, "error: wrong nnue version\n");
 		else

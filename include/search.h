@@ -19,11 +19,11 @@
 
 #include <stdatomic.h>
 
-#include "position.h"
-#include "move.h"
-#include "interface.h"
-#include "transposition.h"
 #include "evaluate.h"
+#include "interface.h"
+#include "move.h"
+#include "position.h"
+#include "transposition.h"
 
 extern volatile atomic_int ucistop;
 extern volatile atomic_int uciponder;
@@ -64,9 +64,11 @@ struct searchinfo {
 	uint64_t seed;
 };
 
-int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t beta, int cut_node, struct searchinfo *si, struct searchstack *ss);
+int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t beta, int cut_node,
+                struct searchinfo *si, struct searchstack *ss);
 
-int32_t search(struct position *pos, int depth, int verbose, struct timeinfo *ti, move_t move[2], struct transpositiontable *tt, struct history *history, int iterative);
+int32_t search(struct position *pos, int depth, int verbose, struct timeinfo *ti, move_t move[2],
+               struct transpositiontable *tt, struct history *history, int iterative);
 
 void print_bestmove(struct position *pos, move_t best_move, move_t ponder_move);
 

@@ -20,8 +20,8 @@
 #include <stdint.h>
 
 #include "bitboard.h"
-#include "position.h"
 #include "magicbitboard.h"
+#include "position.h"
 
 #ifndef NDEBUG
 extern int attackgen_init_done;

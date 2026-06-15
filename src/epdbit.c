@@ -15,40 +15,40 @@
  */
 
 #define _GNU_SOURCE
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdint.h>
-#include <time.h>
 #include <getopt.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
 
-#include "util.h"
-#include "option.h"
-#include "position.h"
+#include "attackgen.h"
 #include "bitboard.h"
 #include "magicbitboard.h"
-#include "attackgen.h"
 #include "movegen.h"
-#include "transposition.h"
-#include "search.h"
 #include "moveorder.h"
-#include "timeman.h"
 #include "nnue.h"
+#include "option.h"
+#include "position.h"
+#include "search.h"
+#include "timeman.h"
+#include "transposition.h"
+#include "util.h"
 
 /* I don't currently want to spend time refactoring the code to allow for
  * chess960 castling. Since castling is important for game outcomes we require
  * that the rooks and king are in their original position. This option is thus
  * actually chess18.
  */
-static int chess960 = 0;
-static char *endgame = NULL;
-static int moves_max = 16;
-static int moves_min = 8;
-static int unique = 0;
-static int centipawns = -1;
+static int chess960     = 0;
+static char *endgame    = NULL;
+static int moves_max    = 16;
+static int moves_min    = 8;
+static int unique       = 0;
+static int centipawns   = -1;
 static int filter_depth = -1;
 static int minor_pieces = 0;
-static int verbose = 0;
+static int verbose      = 0;
 
 void startpos_chess960(struct position *pos, uint64_t *seed) {
 	for (int sq = b1; sq < h1; sq++) {
@@ -60,10 +60,10 @@ void startpos_chess960(struct position *pos, uint64_t *seed) {
 	pos->piece[BLACK][KNIGHT] = pos->piece[BLACK][BISHOP] = pos->piece[BLACK][QUEEN] = 0;
 
 	/* Dark squared bishop. Can be c1 or g1. */
-	int db[2] = { c1, g1 };
+	int db[2]                              = { c1, g1 };
 	pos->mailbox[db[xorshift64(seed) % 2]] = WHITE_BISHOP;
 	/* Light squared bishop. Can be b1, d1 or f1. */
-	int lb[3] = { b1, d1, f1 };
+	int lb[3]                              = { b1, d1, f1 };
 	pos->mailbox[lb[xorshift64(seed) % 3]] = WHITE_BISHOP;
 
 	/* Queen square. One of the remaining 3 squares.
@@ -83,9 +83,9 @@ void startpos_chess960(struct position *pos, uint64_t *seed) {
 	for (int sq = b1; sq < h1; sq++) {
 		if (sq == e1)
 			continue;
-		int piece = uncolored_piece(pos->mailbox[sq]);
-		int bsq = orient_horizontal(BLACK, sq);
-		pos->mailbox[bsq] = colored_piece(piece, BLACK);
+		int piece                 = uncolored_piece(pos->mailbox[sq]);
+		int bsq                   = orient_horizontal(BLACK, sq);
+		pos->mailbox[bsq]         = colored_piece(piece, BLACK);
 		pos->piece[WHITE][piece] |= bitboard(sq);
 		pos->piece[BLACK][piece] |= bitboard(bsq);
 	}
@@ -101,7 +101,7 @@ int startpos_endgame(struct position *pos, uint64_t *seed) {
 	int color = xorshift64(seed) % 2;
 
 	memset(pos, 0, sizeof(*pos));
-	pos->turn = color;
+	pos->turn     = color;
 	pos->fullmove = 1;
 
 	uint64_t available;
@@ -110,7 +110,6 @@ int startpos_endgame(struct position *pos, uint64_t *seed) {
 	int piece, upiece, square;
 
 	for (char *c = endgame; *c; c++) {
-		//printf("looping: %c\n", *c);
 		switch (*c) {
 		case 'P':
 			piece = colored_piece(PAWN, color);
@@ -137,7 +136,7 @@ int startpos_endgame(struct position *pos, uint64_t *seed) {
 			return 1;
 		}
 
-		upiece = uncolored_piece(piece);
+		upiece    = uncolored_piece(piece);
 
 		available = ~(pos->piece[BLACK][ALL] | pos->piece[WHITE][ALL]);
 		if (king_counter == 2 && upiece == KING)
@@ -150,8 +149,6 @@ int startpos_endgame(struct position *pos, uint64_t *seed) {
 		int available_num = popcount(available);
 		int index = 0, max_index = xorshift64(seed) % available_num;
 
-		//print_bitboard(available);
-
 		square = 0;
 		while (1) {
 			if (get_bit(available, square)) {
@@ -162,12 +159,10 @@ int startpos_endgame(struct position *pos, uint64_t *seed) {
 			square++;
 		}
 
-		pos->mailbox[square] = piece;
+		pos->mailbox[square]       = piece;
 		pos->piece[color][upiece] |= bitboard(square);
-		pos->piece[color][ALL] |= bitboard(square);
+		pos->piece[color][ALL]    |= bitboard(square);
 	}
-
-	//print_position(pos);
 
 	if (king_counter != 2)
 		return 1;
@@ -197,12 +192,13 @@ int already_written(struct position *pos, uint64_t *written_keys, int i) {
 	return 0;
 }
 
-int epdbit_position(struct position *pos, struct transpositiontable *tt, uint64_t *written_keys, int i, uint64_t *seed) {
+int epdbit_position(struct position *pos, struct transpositiontable *tt, uint64_t *written_keys, int i,
+                    uint64_t *seed) {
 	epdbit_startpos(pos, seed);
 
 	move_t moves[MOVES_MAX];
-	int moves_num = moves_min;
-	moves_num += xorshift64(seed) % (moves_max + 1 - moves_min);
+	int moves_num  = moves_min;
+	moves_num     += xorshift64(seed) % (moves_max + 1 - moves_min);
 
 	for (int m = 0; m < moves_num; m++) {
 		movegen_legal(pos, moves, MOVETYPE_ALL);
@@ -212,7 +208,7 @@ int epdbit_position(struct position *pos, struct transpositiontable *tt, uint64_
 
 		move_t move = 0;
 		for (int j = 0; j < 16 && move == 0; j++) {
-			move = moves[xorshift64(seed) % c];
+			move      = moves[xorshift64(seed) % c];
 			int piece = uncolored_piece(pos->mailbox[move_from(&move)]);
 			if (minor_pieces && (piece == ROOK || piece == QUEEN || piece == KING))
 				move = 0;
@@ -224,9 +220,9 @@ int epdbit_position(struct position *pos, struct transpositiontable *tt, uint64_
 
 	movegen_legal(pos, moves, MOVETYPE_ALL);
 	struct timeinfo ti = { 0 };
-	if (!moves[0] ||
-			(unique && already_written(pos, written_keys, i)) ||
-			(centipawns >= 0 && filter_depth >= 0 && abs(search(pos, filter_depth, 0, &ti, NULL, tt, NULL, 1)) > centipawns))
+	if (!moves[0] || (unique && already_written(pos, written_keys, i))
+	    || (centipawns >= 0 && filter_depth >= 0
+	        && abs(search(pos, filter_depth, 0, &ti, NULL, tt, NULL, 1)) > centipawns))
 		return 1;
 	return 0;
 }
@@ -235,16 +231,16 @@ int main(int argc, char **argv) {
 	long count;
 	char *path;
 	static struct option opts[] = {
-		{ "verbose",      no_argument,       NULL, 'v' },
-		{ "chess960",     no_argument,       NULL, 'c' },
-		{ "minor-pieces", no_argument,       NULL, 'm' },
-		{ "unique",       no_argument,       NULL, 'u' },
-		{ "centipawns",   required_argument, NULL, 'p' },
-		{ "filter-depth", required_argument, NULL, 'd' },
-		{ "moves-min",    required_argument, NULL, 'n' },
-		{ "moves-max",    required_argument, NULL, 'N' },
-		{ "endgame",      required_argument, NULL, 'e' },
-		{ NULL,           0,                 NULL,  0  },
+		{      "verbose",       no_argument, NULL, 'v' },
+                {     "chess960",       no_argument, NULL, 'c' },
+		{ "minor-pieces",       no_argument, NULL, 'm' },
+                {       "unique",       no_argument, NULL, 'u' },
+		{   "centipawns", required_argument, NULL, 'p' },
+                { "filter-depth", required_argument, NULL, 'd' },
+		{    "moves-min", required_argument, NULL, 'n' },
+                {    "moves-max", required_argument, NULL, 'N' },
+		{      "endgame", required_argument, NULL, 'e' },
+                {           NULL,                 0, NULL,   0 },
 	};
 
 	char *endptr;
@@ -302,7 +298,7 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "error: moves-min must be at least 0 and moves-max cannot be less than moves-min\n");
 		return 1;
 	}
-	path = argv[optind + 1];
+	path       = argv[optind + 1];
 
 	FILE *file = fopen(path, "w");
 	if (!file) {
@@ -311,9 +307,9 @@ int main(int argc, char **argv) {
 	}
 
 	option_transposition = 1;
-	option_history = 0;
-	option_endgame = 0;
-	option_damp = 0;
+	option_history       = 0;
+	option_endgame       = 0;
+	option_damp          = 0;
 
 	magicbitboard_init();
 	attackgen_init();

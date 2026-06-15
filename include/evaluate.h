@@ -21,12 +21,12 @@
 
 #include "position.h"
 
-#define PLY_MAX 127
-#define VALUE_NONE 0x7FFF
-#define VALUE_INFINITE 0x7FFE
-#define VALUE_MATE 0x7F00
-#define VALUE_WIN 0x2000
-#define VALUE_MAX (VALUE_WIN / 2)
+#define PLY_MAX               127
+#define VALUE_NONE            0x7FFF
+#define VALUE_INFINITE        0x7FFE
+#define VALUE_MATE            0x7F00
+#define VALUE_WIN             0x2000
+#define VALUE_MAX             (VALUE_WIN / 2)
 #define VALUE_MATE_IN_MAX_PLY (VALUE_MATE - PLY_MAX)
 
 enum { mg, eg };
@@ -35,7 +35,7 @@ typedef int32_t score_t;
 
 extern const int material_value[7];
 
-#define PHASE (256)
+#define PHASE        (256)
 #define NORMAL_SCALE (256)
 
 struct evaluationinfo {
@@ -79,9 +79,8 @@ static inline int32_t score_eg(score_t eval) {
 void evaluate_print(struct position *pos);
 
 static inline int normal_eval(int32_t eval) {
-	return (-VALUE_MAX <= eval && eval <= VALUE_MAX) ||
-		eval <= -VALUE_MATE_IN_MAX_PLY ||
-		eval >= VALUE_MATE_IN_MAX_PLY;
+	return (-VALUE_MAX <= eval && eval <= VALUE_MAX) || eval <= -VALUE_MATE_IN_MAX_PLY
+	    || eval >= VALUE_MATE_IN_MAX_PLY;
 }
 
 #endif

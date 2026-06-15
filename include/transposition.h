@@ -17,14 +17,14 @@
 #ifndef TRANSPOSITION_TABLE_H
 #define TRANSPOSITION_TABLE_H
 
-#include <stdint.h>
 #include <assert.h>
+#include <stdint.h>
 
-#include "position.h"
-#include "transposition.h"
 #include "evaluate.h"
 #include "move.h"
+#include "position.h"
 #include "search.h"
+#include "transposition.h"
 #include "util.h"
 
 #ifndef NDEBUG
@@ -64,16 +64,15 @@ struct transpositiontable {
 extern uint64_t zobrist_keys[];
 extern uint64_t *test;
 
-static inline uint64_t transposition_index(uint64_t size, uint64_t key) {
-	return ((key & 0xFFFFFFFF) * size) >> 32;
-}
+static inline uint64_t transposition_index(uint64_t size, uint64_t key) { return ((key & 0xFFFFFFFF) * size) >> 32; }
 
 static inline struct transposition *transposition_get(const struct transpositiontable *tt, const struct position *pos) {
 	assert(transposition_init_done);
 	return &tt->table[transposition_index(tt->size, pos->zobrist_key)];
 }
 
-static inline struct transposition *transposition_probe(const struct transpositiontable *tt, const struct position *pos) {
+static inline struct transposition *transposition_probe(const struct transpositiontable *tt,
+                                                        const struct position *pos) {
 	if (!option_transposition)
 		return NULL;
 	assert(transposition_init_done);
@@ -83,30 +82,31 @@ static inline struct transposition *transposition_probe(const struct transpositi
 	return NULL;
 }
 
-static inline void transposition_set(struct transposition *e, const struct position *pos, int32_t evaluation, int32_t static_eval, int depth, int bound, move_t move) {
+static inline void transposition_set(struct transposition *e, const struct position *pos, int32_t evaluation,
+                                     int32_t static_eval, int depth, int bound, move_t move) {
 	assert(transposition_init_done);
 	assert(-VALUE_INFINITE < evaluation && evaluation < VALUE_INFINITE);
 	assert(-VALUE_INFINITE < static_eval && static_eval < VALUE_INFINITE);
 	e->zobrist_key = pos->zobrist_key;
-	e->boundflags = bound;
+	e->boundflags  = bound;
 	/* Keep old move if none available. */
 	if (move)
 		e->move = (uint16_t)move;
 	else
 		e->boundflags |= TRANSPOSITION_OLD_MOVE;
-	e->eval = evaluation;
+	e->eval        = evaluation;
 	e->static_eval = static_eval;
-	e->depth = depth;
+	e->depth       = depth;
 }
 
-static inline void transposition_store(struct transpositiontable *tt, const struct position *pos, int32_t evaluation, int32_t static_eval, int depth, int bound, move_t move) {
+static inline void transposition_store(struct transpositiontable *tt, const struct position *pos, int32_t evaluation,
+                                       int32_t static_eval, int depth, int bound, move_t move) {
 	if (!option_transposition)
 		return;
 	assert(transposition_init_done);
 	struct transposition *e = transposition_get(tt, pos);
-	if (e->zobrist_key != pos->zobrist_key ||
-			depth >= e->depth ||
-			(bound == BOUND_EXACT && (e->boundflags & BOUND_EXACT) != BOUND_EXACT))
+	if (e->zobrist_key != pos->zobrist_key || depth >= e->depth
+	    || (bound == BOUND_EXACT && (e->boundflags & BOUND_EXACT) != BOUND_EXACT))
 		transposition_set(e, pos, evaluation, static_eval, depth, bound, move);
 	else if (move && e->boundflags & TRANSPOSITION_OLD_MOVE)
 		e->move = (uint16_t)move;
