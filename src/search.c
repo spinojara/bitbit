@@ -46,8 +46,8 @@ int search_init_done = 0;
 volatile atomic_int ucistop;
 volatile atomic_int uciponder;
 
-TUNEVAR(int, razor1, 170, NULL, NULL)
-TUNEVAR(int, razor2, 156, NULL, NULL)
+TUNEVAR(int, razor1, -74, NULL, NULL)
+TUNEVAR(int, razor2, 187, NULL, NULL)
 TUNEVAR(int, futility, 76, NULL, NULL)
 TUNEVAR(double, futility_improving, 1.09, NULL, NULL)
 TUNEVAR(double, red, 25.439, 0.0, NULL)
