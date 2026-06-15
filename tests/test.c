@@ -1,15 +1,15 @@
 #include <CUnit/Basic.h>
 
-#include "magicbitboard.h"
 #include "attackgen.h"
 #include "bitboard.h"
-#include "search.h"
-#include "moveorder.h"
-#include "position.h"
-#include "transposition.h"
 #include "endgame.h"
 #include "history.h"
+#include "magicbitboard.h"
+#include "moveorder.h"
 #include "nnue.h"
+#include "position.h"
+#include "search.h"
+#include "transposition.h"
 
 #include "test_perft.c"
 #include "test_repetition.c"

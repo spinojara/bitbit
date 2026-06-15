@@ -1,7 +1,7 @@
 #include <string.h>
 
-#include "position.h"
 #include "history.h"
+#include "position.h"
 
 int repetition_helper(const char *str, int upcoming_rep, int repetition_once, int repetition_twice) {
 	struct position pos;
@@ -11,7 +11,7 @@ int repetition_helper(const char *str, int upcoming_rep, int repetition_once, in
 	strcpy(strcopy, str);
 
 	char *moves = strstr(strcopy, "moves");
-	moves[-1] = '\0';
+	moves[-1]   = '\0';
 
 	if (!strcmp(strcopy, "startpos"))
 		startpos(&pos);
@@ -42,9 +42,7 @@ void test_repetition_1(void) {
 	repetition_helper("startpos moves e2e4 c7c5 g1f3 b8c6 f1b5 g7g6 e1g1 f8g7 b1c3 e7e5 b5c4 g8e7", 0, 0, 0);
 }
 
-void test_repetition_2(void) {
-	repetition_helper("startpos moves e2e4 e7e5 e1e2 e8e7 e2e1", 0, 0, 0);
-}
+void test_repetition_2(void) { repetition_helper("startpos moves e2e4 e7e5 e1e2 e8e7 e2e1", 0, 0, 0); }
 
 void test_repetition_3(void) {
 	repetition_helper("startpos moves e2e4 e7e5 e1e2 e8e7 e2e1 e7e8", 0, 0, 0);
@@ -67,10 +65,12 @@ void test_repetition_5(void) {
 
 void test_repetition_6(void) {
 	repetition_helper("rnbqkbnr/ppp1pppp/8/3p4/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 2 moves c8h3 d1d3 h3d7", 0, 0, 0);
-	repetition_helper("rnbqkbnr/ppp1pppp/8/3p4/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 2 moves c8h3 d1d3 h3d7 d3d1", 1, 0, 0);
+	repetition_helper("rnbqkbnr/ppp1pppp/8/3p4/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 2 moves c8h3 d1d3 h3d7 d3d1", 1,
+	                  0, 0);
 }
 
 void test_repetition_7(void) {
 	repetition_helper("rnbqkbnr/1ppppppp/8/p7/P7/8/1PPPPPPP/RNBQKBNR w Kk - 0 2 moves a1a3 a8a6 a3h3", 0, 0, 0);
-	repetition_helper("rnbqkbnr/1ppppppp/8/p7/P7/8/1PPPPPPP/RNBQKBNR w Kk - 0 2 moves a1a3 a8a6 a3h3 a6a8", 1, 0, 0);
+	repetition_helper("rnbqkbnr/1ppppppp/8/p7/P7/8/1PPPPPPP/RNBQKBNR w Kk - 0 2 moves a1a3 a8a6 a3h3 a6a8", 1, 0,
+	                  0);
 }

@@ -1,6 +1,6 @@
-#include "position.h"
 #include "move.h"
 #include "moveorder.h"
+#include "position.h"
 
 int see_helper(const char *fen, const char *movestr, int geq) {
 	struct position pos;
