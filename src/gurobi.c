@@ -1,25 +1,24 @@
 #define _XOPEN_SOURCE 500
-#include <stdio.h>
-#include <string.h>
 #include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <gurobi_c.h>
 
 #include "attackgen.h"
+#include "bitboard.h"
+#include "magicbitboard.h"
 #include "position.h"
 #include "util.h"
-#include "attackgen.h"
-#include "magicbitboard.h"
-#include "bitboard.h"
 
-GRBenv *env = NULL;
+GRBenv *env     = NULL;
 GRBmodel *model = NULL;
 
 void print_mailbox(int *mailbox) {
 	const int flip = 0;
 	int i, j, t;
-	char pieces[] = " PNBRQKpnbrqk";
+	char pieces[]  = " PNBRQKpnbrqk";
 	char letters[] = "abcdefgh";
 
 	printf("\n   ");
@@ -49,23 +48,25 @@ const char *piece_to_str(int piece) {
 	static char buf[4096];
 
 	sprintf(buf, "%s_%s", color_of_piece(piece) == WHITE ? "white" : "black",
-			uncolored_piece(piece) == PAWN ? "pawn" :
-			uncolored_piece(piece) == KNIGHT ? "knight" :
-			uncolored_piece(piece) == BISHOP ? "bishop" :
-			uncolored_piece(piece) == ROOK ? "rook" :
-			uncolored_piece(piece) == QUEEN ? "queen" :
-			uncolored_piece(piece) == KING ? "king" : "");
+	        uncolored_piece(piece) == PAWN     ? "pawn"
+	        : uncolored_piece(piece) == KNIGHT ? "knight"
+	        : uncolored_piece(piece) == BISHOP ? "bishop"
+	        : uncolored_piece(piece) == ROOK   ? "rook"
+	        : uncolored_piece(piece) == QUEEN  ? "queen"
+	        : uncolored_piece(piece) == KING   ? "king"
+	                                           : "");
 	return buf;
 }
 
 const char *piece_to_str_(char *s, int piece) {
 	sprintf(s, "%s_%s", color_of_piece(piece) == WHITE ? "white" : "black",
-			uncolored_piece(piece) == PAWN ? "pawn" :
-			uncolored_piece(piece) == KNIGHT ? "knight" :
-			uncolored_piece(piece) == BISHOP ? "bishop" :
-			uncolored_piece(piece) == ROOK ? "rook" :
-			uncolored_piece(piece) == QUEEN ? "queen" :
-			uncolored_piece(piece) == KING ? "king" : "");
+	        uncolored_piece(piece) == PAWN     ? "pawn"
+	        : uncolored_piece(piece) == KNIGHT ? "knight"
+	        : uncolored_piece(piece) == BISHOP ? "bishop"
+	        : uncolored_piece(piece) == ROOK   ? "rook"
+	        : uncolored_piece(piece) == QUEEN  ? "queen"
+	        : uncolored_piece(piece) == KING   ? "king"
+	                                           : "");
 	return s;
 }
 
@@ -94,8 +95,8 @@ void vcol_add(struct vcol *vcol, int ind, double val) {
 	}
 
 	vcol->num++;
-	vcol->ind = realloc(vcol->ind, vcol->num * sizeof(*vcol->ind));
-	vcol->val = realloc(vcol->val, vcol->num * sizeof(*vcol->val));
+	vcol->ind                = realloc(vcol->ind, vcol->num * sizeof(*vcol->ind));
+	vcol->val                = realloc(vcol->val, vcol->num * sizeof(*vcol->val));
 	vcol->ind[vcol->num - 1] = ind;
 	vcol->val[vcol->num - 1] = val;
 }
@@ -157,13 +158,9 @@ int move_var(int piece, int from, int to) {
 	return ret;
 }
 
-int has_piece_var(int piece, int sq) {
-	return piece_vars[piece_index(piece, sq)] != -1;
-}
+int has_piece_var(int piece, int sq) { return piece_vars[piece_index(piece, sq)] != -1; }
 
-int has_move_var(int piece, int from, int to) {
-	return move_vars[move_index(piece, from, to)] != -1;
-}
+int has_move_var(int piece, int from, int to) { return move_vars[move_index(piece, from, to)] != -1; }
 
 int piece_var(int piece, int sq) {
 	int ret = piece_vars[piece_index(piece, sq)];
@@ -205,12 +202,14 @@ void add_piece_var(int piece, int sq, double lb, double ub) {
 	char sqstr[3];
 	char buf[4096];
 	sprintf(buf, "%s_%s_on_%s", color_of_piece(piece) == WHITE ? "white" : "black",
-			uncolored_piece(piece) == PAWN ? "pawn" :
-			uncolored_piece(piece) == KNIGHT ? "knight" :
-			uncolored_piece(piece) == BISHOP ? "bishop" :
-			uncolored_piece(piece) == ROOK ? "rook" :
-			uncolored_piece(piece) == QUEEN ? "queen" :
-			uncolored_piece(piece) == KING ? "king" : "", algebraic(sqstr, sq));
+	        uncolored_piece(piece) == PAWN     ? "pawn"
+	        : uncolored_piece(piece) == KNIGHT ? "knight"
+	        : uncolored_piece(piece) == BISHOP ? "bishop"
+	        : uncolored_piece(piece) == ROOK   ? "rook"
+	        : uncolored_piece(piece) == QUEEN  ? "queen"
+	        : uncolored_piece(piece) == KING   ? "king"
+	                                           : "",
+	        algebraic(sqstr, sq));
 	int index = piece_index(piece, sq);
 	if (piece_vars[index] != -1) {
 		fprintf(stderr, "Piece var already stored for %d %d\n", piece, sq);
@@ -232,14 +231,14 @@ int add_move_var(int piece, int from, int to, double lb, double ub) {
 	char sq1[3], sq2[3];
 	char buf[4096];
 	sprintf(buf, "white_%s_moving_from_%s_to_%s",
-			piece == PAWN ? "pawn" :
-			piece == KNIGHT ? "knight" :
-			piece == BISHOP ? "bishop" :
-			piece == ROOK ? "rook" :
-			piece == QUEEN ? "queen" :
-			piece == KING ? "king" : "",
-			algebraic(sq1, from),
-			algebraic(sq2, to));
+	        piece == PAWN     ? "pawn"
+	        : piece == KNIGHT ? "knight"
+	        : piece == BISHOP ? "bishop"
+	        : piece == ROOK   ? "rook"
+	        : piece == QUEEN  ? "queen"
+	        : piece == KING   ? "king"
+	                          : "",
+	        algebraic(sq1, from), algebraic(sq2, to));
 
 	int index = move_index(piece, from, to);
 	if (move_vars[index] != -1) {
@@ -262,12 +261,12 @@ int add_promotion_var(int piece) {
 	}
 
 	char buf[4096];
-	sprintf(buf, "%s_%s_promotions",
-			color_of_piece(piece) == WHITE ? "white" : "black",
-			uncolored_piece(piece) == KNIGHT ? "knight" :
-			uncolored_piece(piece) == BISHOP ? "bishop" :
-			uncolored_piece(piece) == ROOK ? "rook" :
-			uncolored_piece(piece) == QUEEN ? "queen" : "");
+	sprintf(buf, "%s_%s_promotions", color_of_piece(piece) == WHITE ? "white" : "black",
+	        uncolored_piece(piece) == KNIGHT   ? "knight"
+	        : uncolored_piece(piece) == BISHOP ? "bishop"
+	        : uncolored_piece(piece) == ROOK   ? "rook"
+	        : uncolored_piece(piece) == QUEEN  ? "queen"
+	                                           : "");
 	promotion_vars[piece] = add_var(0.0, 0.0, 8.0, buf);
 	return promotion_vars[piece];
 }
@@ -331,10 +330,10 @@ int main(void) {
 			add_piece_var(piece, sq, 0.0, 1.0);
 
 			if (piece == WHITE_PAWN) {
-				uint64_t pawn = bitboard(sq);
-				uint64_t b = shift(pawn, N);
-				b |= shift(pawn, N | E);
-				b |= shift(pawn, N | W);
+				uint64_t pawn  = bitboard(sq);
+				uint64_t b     = shift(pawn, N);
+				b             |= shift(pawn, N | E);
+				b             |= shift(pawn, N | W);
 				if (rank_of(sq) == 1)
 					b |= shift_twice(pawn, N);
 				while (b) {
@@ -344,7 +343,6 @@ int main(void) {
 
 					b = clear_ls1b(b);
 				}
-
 			}
 			else if (piece <= WHITE_KING) {
 				uint64_t b = attacks(uncolored_piece(piece), sq, 0, 0);
@@ -407,7 +405,8 @@ int main(void) {
 				vcol_add(&vcol, move_var(piece, sq, to), 1.0);
 				vcol_add(&vcol, piece_var(piece, sq), -1.0);
 				char sqstr[3];
-				add_constr(&vcol, GRB_LESS_EQUAL, 0.0, "move_to_%s_only_allowed_if_%s_on_%s", algebraic(sqstr, to), piece_to_str(piece), algebraic_simple(sq));
+				add_constr(&vcol, GRB_LESS_EQUAL, 0.0, "move_to_%s_only_allowed_if_%s_on_%s",
+				           algebraic(sqstr, to), piece_to_str(piece), algebraic_simple(sq));
 			}
 		}
 	}
@@ -418,7 +417,7 @@ int main(void) {
 			for (int to = 0; to < 64; to++) {
 				if (!has_move_var(piece, from, to))
 					continue;
-				struct vcol vcol = { 0 };
+				struct vcol vcol    = { 0 };
 				int is_pawn_capture = piece == PAWN && to != from + 8 && to != from + 16;
 #if 1
 				if (is_pawn_capture) {
@@ -432,7 +431,9 @@ int main(void) {
 							vcol_add(&attacked, piece_var(BLACK_PAWN, to - 8), -1.0);
 					vcol_add(&attacked, move_var(PAWN, from, to), 1.0);
 					char str[3];
-					add_constr(&attacked, GRB_LESS_EQUAL, 0.0, "pawn_move_from_%s_to_%s_needs_to_capture", algebraic(str, from), algebraic_simple(to));
+					add_constr(&attacked, GRB_LESS_EQUAL, 0.0,
+					           "pawn_move_from_%s_to_%s_needs_to_capture", algebraic(str, from),
+					           algebraic_simple(to));
 				}
 #if 1
 				else if (piece == KNIGHT || piece == KING) {
@@ -449,7 +450,12 @@ int main(void) {
 								struct vcol blocked = { 0 };
 								vcol_add(&blocked, piece_var(blocker, sq), 1.0);
 								vcol_add(&blocked, move_var(piece, from, to), 1.0);
-								add_constr(&blocked, GRB_LESS_EQUAL, 1.0, "blocked_move_for_%s_from_%s_to_%s_by_%s_on_%s", piece_to_str(piece), algebraic_simple(from), algebraic(str1, to), piece_to_str_(str3, blocker), algebraic(str2, sq));
+								add_constr(
+								    &blocked, GRB_LESS_EQUAL, 1.0,
+								    "blocked_move_for_%s_from_%s_to_%s_by_%s_on_%s",
+								    piece_to_str(piece), algebraic_simple(from),
+								    algebraic(str1, to), piece_to_str_(str3, blocker),
+								    algebraic(str2, sq));
 								vcol_add(&vcol, piece_var(blocker, sq), 1.0);
 							}
 
@@ -462,13 +468,19 @@ int main(void) {
 				if (piece == KING && from == e1 && (to == a1 || to == h1))
 					continue;
 				/* We could exclude the king here if piece == KING */
-				for (int blocker = WHITE_PAWN; blocker <= (piece == PAWN && !is_pawn_capture ? BLACK_KING : WHITE_KING); blocker++)
+				for (int blocker = WHITE_PAWN;
+				     blocker <= (piece == PAWN && !is_pawn_capture ? BLACK_KING : WHITE_KING);
+				     blocker++)
 					if (has_piece_var(blocker, to)) {
 						char str1[3], str2[3], str3[64];
 						struct vcol blocked = { 0 };
 						vcol_add(&blocked, piece_var(blocker, to), 1.0);
 						vcol_add(&blocked, move_var(piece, from, to), 1.0);
-						add_constr(&blocked, GRB_LESS_EQUAL, 1.0, "blocked_move_for_%s_from_%s_to_%s_by_%s_on_%s", piece_to_str(piece), algebraic_simple(from), algebraic(str1, to), piece_to_str_(str3, blocker), algebraic(str2, to));
+						add_constr(&blocked, GRB_LESS_EQUAL, 1.0,
+						           "blocked_move_for_%s_from_%s_to_%s_by_%s_on_%s",
+						           piece_to_str(piece), algebraic_simple(from),
+						           algebraic(str1, to), piece_to_str_(str3, blocker),
+						           algebraic(str2, to));
 					}
 			}
 		}
@@ -490,10 +502,11 @@ int main(void) {
 						vcol_add(&all, piece_var(real_piece, sq), 1.0);
 					}
 				}
-				add_constr(&single, GRB_LESS_EQUAL, 8.0, "not_more_than_8_%s_%ss", color == WHITE ? "white" : "black", piece_to_str(real_piece));
+				add_constr(&single, GRB_LESS_EQUAL, 8.0, "not_more_than_8_%s_%ss",
+				           color == WHITE ? "white" : "black", piece_to_str(real_piece));
 			}
 			else {
-				int promotion_var = add_promotion_var(real_piece);
+				int promotion_var  = add_promotion_var(real_piece);
 
 				struct vcol single = { 0 };
 				for (int sq = 0; sq < 64; sq++) {
@@ -505,12 +518,14 @@ int main(void) {
 
 				int pieces = piece == QUEEN ? 1 : 2;
 				vcol_add(&single, promotion_var, -1.0);
-				add_constr(&single, GRB_LESS_EQUAL, (double)pieces, "not_more_than_%d_%s_%ss", 8 + pieces, color == WHITE ? "white" : "black", piece_to_str(real_piece));
+				add_constr(&single, GRB_LESS_EQUAL, (double)pieces, "not_more_than_%d_%s_%ss",
+				           8 + pieces, color == WHITE ? "white" : "black", piece_to_str(real_piece));
 			}
 		}
 		/* 15 because it excludes the king. */
 		if (all.num)
-			add_constr(&all, GRB_LESS_EQUAL, 15.0, "not_more_than_16_%s_pieces", color == WHITE ? "white" : "black");
+			add_constr(&all, GRB_LESS_EQUAL, 15.0, "not_more_than_16_%s_pieces",
+			           color == WHITE ? "white" : "black");
 	}
 #endif
 #if 1
@@ -526,7 +541,8 @@ int main(void) {
 			if (has_piece_var(colored_piece(PAWN, color), sq))
 				vcol_add(&vcol, piece_var(colored_piece(PAWN, color), sq), 1.0);
 		if (vcol.num)
-			add_constr(&vcol, GRB_LESS_EQUAL, 8.0, "not_more_than_8_%s_promotions", color == WHITE ? "white" : "black");
+			add_constr(&vcol, GRB_LESS_EQUAL, 8.0, "not_more_than_8_%s_promotions",
+			           color == WHITE ? "white" : "black");
 	}
 #endif
 
@@ -542,9 +558,9 @@ int main(void) {
 						continue;
 					if (attacker == PAWN) {
 						/* Reversed since other_color(color) is the attacker. */
-						int up = other_color(color) == WHITE ? N : S;
+						int up        = other_color(color) == WHITE ? N : S;
 						uint64_t pawn = bitboard(from);
-						uint64_t b = shift(pawn, up | E) | shift(pawn, up | W);
+						uint64_t b    = shift(pawn, up | E) | shift(pawn, up | W);
 						if (!(b & bitboard(to)))
 							continue;
 					}
@@ -552,13 +568,14 @@ int main(void) {
 						continue;
 					struct vcol vcol = { 0 };
 
-					uint64_t b = between(from, to);
+					uint64_t b       = between(from, to);
 					while (b) {
 						int sq = ctz(b);
 
 						for (int blocker = WHITE_PAWN; blocker <= BLACK_KING; blocker++) {
 							/* King can not block itself. */
-							if (uncolored_piece(blocker) == KING && color_of_piece(blocker) == color)
+							if (uncolored_piece(blocker) == KING
+							    && color_of_piece(blocker) == color)
 								continue;
 							if (has_piece_var(blocker, sq))
 								vcol_add(&vcol, piece_var(blocker, sq), -1.0);
@@ -567,17 +584,22 @@ int main(void) {
 						b = clear_ls1b(b);
 					}
 					vcol_add(&vcol, piece_var(colored_piece(KING, color), to), 1.0);
-					vcol_add(&vcol, piece_var(colored_piece(attacker, other_color(color)), from), 1.0);
+					vcol_add(&vcol, piece_var(colored_piece(attacker, other_color(color)), from),
+					         1.0);
 					char str[3];
 					char str1[64];
-					add_constr(&vcol, GRB_LESS_EQUAL, 1.0, "%s_not_in_check_on_%s_by_%s_on_%s", piece_to_str_(str1, colored_piece(KING, color)), algebraic(str, to), piece_to_str(colored_piece(attacker, other_color(color))), algebraic_simple(from));
+					add_constr(&vcol, GRB_LESS_EQUAL, 1.0, "%s_not_in_check_on_%s_by_%s_on_%s",
+					           piece_to_str_(str1, colored_piece(KING, color)), algebraic(str, to),
+					           piece_to_str(colored_piece(attacker, other_color(color))),
+					           algebraic_simple(from));
 				}
 			}
 		}
 	}
 #endif
 
-	const char *dirnames[] = { NULL, "north", "south", NULL, "east", "north_east", "south_east", NULL, "west", "north_west", "south_west" };
+	const char *dirnames[] = { NULL,         "north", "south", NULL,         "east",      "north_east",
+		                   "south_east", NULL,    "west",  "north_west", "south_west" };
 	/* Speed up by adding redundant constraints */
 	for (int to = 0; to < 64; to++) {
 		for (int dir = 1; dir < 16; dir++) {
@@ -592,15 +614,16 @@ int main(void) {
 			uint64_t r = ray(to, ctz(shifted));
 
 			for (int piece = BISHOP; piece <= QUEEN; piece++) {
-				 for (int from = 0; from < 64; from++) {
-					 if (bitboard(from) & r) {
-						 if (has_move_var(piece, from, to))
-							 vcol_add(&vcol, move_var(piece, from, to), 1.0);
-					 }
-				 }
+				for (int from = 0; from < 64; from++) {
+					if (bitboard(from) & r) {
+						if (has_move_var(piece, from, to))
+							vcol_add(&vcol, move_var(piece, from, to), 1.0);
+					}
+				}
 			}
 			if (vcol.num)
-				add_constr(&vcol, GRB_LESS_EQUAL, 1.0, "not_more_than_1_attacker_to_%s_from_%s", algebraic_simple(to), dirnames[dir]);
+				add_constr(&vcol, GRB_LESS_EQUAL, 1.0, "not_more_than_1_attacker_to_%s_from_%s",
+				           algebraic_simple(to), dirnames[dir]);
 		}
 	}
 
@@ -642,15 +665,16 @@ int main(void) {
 
 			int pv = piece_var_r(j), mv = move_var_r(j);
 			if (x[j] != 0.0 && pv != -1) {
-				int sq = pv % 64;
-				int piece = pv / 64;
+				int sq      = pv % 64;
+				int piece   = pv / 64;
 				mailbox[sq] = piece;
 			}
 			else if (x[j] != 0.0 && mv != -1) {
 				int from = mv % 64;
-				int to = (mv / 64) % 64;
+				int to   = (mv / 64) % 64;
 				char str[3];
-				printf("%s%s: %d\n", algebraic_simple(from), algebraic(str, to), (int)round(obj * x[j]));
+				printf("%s%s: %d\n", algebraic_simple(from), algebraic(str, to),
+				       (int)round(obj * x[j]));
 			}
 		}
 		print_mailbox(mailbox);
