@@ -1,0 +1,25 @@
+BasedOnStyle: LLVM
+UseTab: AlignWithSpaces
+PointerAlignment: Right
+IndentWidth: 8
+TabWidth: 8
+AlignConsecutiveAssignments:
+  Enabled: true
+  AcrossEmptyLines: true
+  AcrossComments: false
+  AlignCompound: true
+AlignConsecutiveMacros:
+  Enabled: true
+  AcrossEmptyLines: true
+  AcrossComments: true
+Cpp11BracedListStyle: false
+ColumnLimit: 120
+AlignOperands: AlignAfterOperator
+PenaltyBreakAssignment: 100000
+BreakBeforeBinaryOperators: true
+BreakBeforeBraces: Custom
+BraceWrapping:
+  BeforeElse: true
+  BeforeWhile: true
+AlignArrayOfStructures: Right
+AlignEscapedNewlines: Left
