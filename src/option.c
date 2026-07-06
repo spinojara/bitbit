@@ -83,6 +83,9 @@ void setoption(int argc, char **argv, struct transpositiontable *tt) {
 					tt->size             = 0;
 					option_transposition = 0;
 				}
+				else {
+					option_transposition = 1;
+				}
 			}
 			else {
 				tt->size             = 0;
