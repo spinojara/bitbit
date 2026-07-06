@@ -560,7 +560,7 @@ int pos_is_ok(const struct position *pos) {
 		for (int piece = KNIGHT; piece <= QUEEN; piece++)
 			promotions[color] += max((int)popcount(pos->piece[color][piece]) - (piece == QUEEN ? 1 : 2), 0);
 
-		if (popcount(pos->piece[WHITE][PAWN]) + promotions[color] > 8)
+		if (popcount(pos->piece[color][PAWN]) + promotions[color] > 8)
 			return 0;
 	}
 
