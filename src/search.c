@@ -111,7 +111,7 @@ void print_pv(struct position *pos, move_t *pv_move, int ply, struct history *hi
 	    || repetition(pos, history, ply, 2) || pos->halfmove >= 100)
 		return;
 	if (ply == 0)
-		printf("pv");
+		printf(" pv");
 	printf(" %s", move_str_algebraic(str, pv_move));
 	do_zobrist_key(pos, pv_move);
 	do_move(pos, pv_move);
@@ -122,25 +122,36 @@ void print_pv(struct position *pos, move_t *pv_move, int ply, struct history *hi
 
 void print_info(struct position *pos, struct searchinfo *si, int depth, int32_t eval, int bound) {
 	timepoint_t tp = time_since(si->ti);
-	printf("info depth %d seldepth %d ", depth, si->sel_depth);
-	printf("score ");
-	if (eval >= VALUE_MATE_IN_MAX_PLY)
-		printf("mate %d", (VALUE_MATE - eval + 1) / 2);
-	else if (eval <= -VALUE_MATE_IN_MAX_PLY)
-		printf("mate %d", (-VALUE_MATE - eval) / 2);
-	else
-		printf("cp %d", eval);
-	if (bound == BOUND_LOWER)
-		printf(" lowerbound");
-	else if (bound == BOUND_UPPER)
-		printf(" upperbound");
-	printf(" nodes %" PRIu64 " time %" PRId64 " ", si->nodes, tp / TPPERMS + 1);
+	printf("info");
+	if (depth >= 0) {
+		printf(" depth %d", depth);
+		if (si->sel_depth >= 0)
+			printf(" seldepth %d", si->sel_depth);
+	}
+	if (eval != VALUE_NONE) {
+		printf(" score");
+
+		if (eval >= VALUE_MATE_IN_MAX_PLY)
+			printf(" mate %d", (VALUE_MATE - eval + 1) / 2);
+		else if (eval <= -VALUE_MATE_IN_MAX_PLY)
+			printf(" mate %d", (-VALUE_MATE - eval) / 2);
+		else
+			printf(" cp %d", eval);
+
+		if (bound == BOUND_LOWER)
+			printf(" lowerbound");
+		else if (bound == BOUND_UPPER)
+			printf(" upperbound");
+	}
+
+	printf(" nodes %" PRIu64 " time %" PRId64, si->nodes, tp / TPPERMS + 1);
 	if (tp > 0)
-		printf("nps %" PRIu64 " ", (uint64_t)((double)TPPERSEC * si->nodes / tp));
+		printf(" nps %" PRIu64, (uint64_t)((double)TPPERSEC * si->nodes / tp));
+
 	if (tp >= TPPERSEC && option_transposition) {
 		int hf = hashfull(si->tt);
 		if (hf >= 0)
-			printf("hashfull %d ", hf);
+			printf(" hashfull %d", hf);
 	}
 	print_pv(pos, si->pv[0], 0, si->history);
 	printf("\n");
@@ -313,7 +324,7 @@ int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, s
 	if (ply >= PLY_MAX)
 		return evaluate(pos, si);
 	if (check_time(si) || atomic_load_explicit(&ucistop, memory_order_relaxed)
-	    || (si->max_nodes > 0 && si->nodes >= si->hard_max_nodes)) {
+	    || (si->max_nodes > 0 && si->nodes > si->hard_max_nodes)) {
 		si->interrupt = 1;
 		return 0;
 	}
@@ -431,7 +442,7 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 	if (ply >= PLY_MAX)
 		return evaluate(pos, si);
 	if (check_time(si) || atomic_load_explicit(&ucistop, memory_order_relaxed)
-	    || (si->max_nodes > 0 && si->nodes >= si->hard_max_nodes)) {
+	    || (si->max_nodes > 0 && si->nodes > si->hard_max_nodes)) {
 		si->interrupt = 1;
 		return 0;
 	}
@@ -805,6 +816,16 @@ int32_t search(struct position *pos, int depth, int verbose, struct timeinfo *ti
 
 	int32_t eval = VALUE_NONE;
 
+	move_t moves[MOVES_MAX];
+	movegen_legal(pos, moves, MOVETYPE_ALL);
+	if (!moves[0]) {
+		uint64_t checkers = generate_checkers(pos, pos->turn);
+		printf("info string %s\n", checkers ? "mate" : "draw");
+		if (move)
+			move[0] = move[1] = 0;
+		return checkers ? -VALUE_MATE : 0;
+	}
+
 	refresh_accumulator(pos, 0);
 	refresh_accumulator(pos, 1);
 	refresh_endgame_key(pos);
@@ -813,6 +834,7 @@ int32_t search(struct position *pos, int depth, int verbose, struct timeinfo *ti
 	if (verbose)
 		print_nnue_info();
 
+	int has_previously_printed = 0;
 	move_t best_move = 0, ponder_move = 0;
 	for (int d = iterative ? 1 : depth; d <= depth; d++) {
 		si.root_depth = d;
@@ -824,28 +846,39 @@ int32_t search(struct position *pos, int depth, int verbose, struct timeinfo *ti
 		else
 			eval = aspiration_window(pos, d, verbose, eval, &si, ss);
 
+		move_t best_move_old = best_move;
+		move_t ponder_move_old = ponder_move;
 		/* 16 elo.
 		 * Use move even from a partial and interrupted search.
 		 */
 		best_move   = si.pv[0][0];
 		ponder_move = si.pv[0][1];
 
-		if (si.interrupt || (si.max_nodes && si.nodes >= si.max_nodes))
+		if (si.interrupt || (si.max_nodes && si.nodes > si.max_nodes)) {
+			if (verbose) {
+				if (!has_previously_printed || best_move != best_move_old || ponder_move != ponder_move_old) {
+					print_info(pos, &si, -1, VALUE_NONE, 0);
+					has_previously_printed = 1;
+				}
+			}
 			break;
+		}
 
 		si.done_depth = d;
 
-		if (verbose)
+		if (verbose) {
+			has_previously_printed = 1;
 			print_info(pos, &si, d, eval, 0);
+		}
 
 		if (stop_searching(si.ti, best_move))
 			break;
 	}
 
 	if (!best_move) {
-		move_t moves[MOVES_MAX];
-		movegen_legal(pos, moves, MOVETYPE_ALL);
 		best_move = moves[0];
+		char str[6];
+		printf("info pv %s\n", move_str_algebraic(str, &best_move));
 	}
 
 	if (option_debug)
