@@ -95,6 +95,7 @@ enum colored_piece {
 
 void pstate_init(const struct position *pos, struct pstate *pstate);
 
+/* Returns all pieces which attack king of color <color>. */
 uint64_t generate_checkers(const struct position *pos, int color);
 uint64_t generate_attackers(const struct position *pos, int square, int color);
 void generate_attacked(const struct position *pos, int color, uint64_t attacked[7]);
