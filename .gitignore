@@ -6,6 +6,7 @@
 !TODO
 !COPYING
 !Makefile
+!release.sh
 
 !src
 src/nnueweights.c

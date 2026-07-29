@@ -33,6 +33,8 @@ CSTANDARD  = -std=c11
 CWARNINGS  = -Wall -Wextra -Wshadow -pedantic -Wno-unused-result -Wvla
 COPTIMIZE  = -O3 $(CARCH)
 
+HOSTCC     = clang
+
 ifeq ($(DEBUG), yes)
 	CDEBUG = -g3 -ggdb
 	LDFLAGS += -rdynamic
@@ -47,10 +49,26 @@ else ifeq ($(DEBUG), )
 endif
 
 ifneq ($(TARGET), )
-	CTARGET = -target $(TARGET)
+ifneq ($(findstring clang,$(CC)), )
+	CTARGET = --target=$(TARGET)
+endif
+	BUILD   = $(TARGET)
+else
+	BUILD   = native
 endif
 
-CFLAGS     = $(CSTANDARD) $(CWARNINGS) $(COPTIMIZE) $(CDEBUG) $(CTARGET) -Iinclude -pthread $(EXTRACFLAGS)
+RUNNER =
+ifneq ($(findstring mingw,$(TARGET)), )
+      RUNNER = wine
+endif
+
+OBJDIR = obj/$(BUILD)
+DEPDIR = dep/$(BUILD)
+
+EXE ?= bitbit
+
+CFLAGS     = $(CSTANDARD) $(CWARNINGS) $(CDEBUG) $(COPTIMIZE) $(CTARGET) -Iinclude -pthread $(EXTRACFLAGS)
+HOSTCFLAGS = $(CSTANDARD) $(CWARNINGS) $(CDEBUG) -O2 -Iinclude
 
 ifeq ($(SIMD), avx2)
 	CFLAGS += -DAVX2 -mavx2
@@ -62,9 +80,9 @@ ifeq ($(PEXT), yes)
         CFLAGS += -DPEXT
 endif
 
-ifeq ($(CC), clang)
+ifneq ($(findstring clang,$(CC)), )
 	CFLAGS += -flto=full
-else ifeq ($(CC), gcc)
+else ifneq ($(findstring gcc,$(CC)), )
 	CFLAGS += -flto -flto-partition=one
 endif
 
@@ -77,6 +95,9 @@ ifeq ($(TUNE), yes)
 endif
 
 LDFLAGS    = $(CFLAGS) $(EXTRALDFLAGS)
+ifneq ($(findstring clang,$(CC)), )
+	LDFLAGS += -fuse-ld=lld
+endif
 
 ifeq ($(STATIC), yes)
 	LDFLAGS += -static
@@ -114,26 +135,22 @@ SRC_BATCHBIT  = $(addprefix pic-,batchbit.c io.c $(SRC_BASE))
 SRC_VISBIT    = $(addprefix pic-,visbit.c io.c)
 SRC_CHECKBIT  = checkbit.c io.c $(SRC_BASE)
 
-DEP           = $(sort $(patsubst %.c,dep/%.d,$(SRC_ALL)))
+DEP           = $(sort $(patsubst %.c,$(DEPDIR)/%.d,$(SRC_ALL)))
 
-OBJ_BITBIT    = $(patsubst %.c,obj/%.o,$(SRC_BITBIT))
-OBJ_WEIGHTBIT = $(patsubst %.c,obj/%.o,$(SRC_WEIGHTBIT))
-OBJ_EPDBIT    = $(patsubst %.c,obj/%.o,$(SRC_EPDBIT))
-OBJ_HISTBIT   = $(patsubst %.c,obj/%.o,$(SRC_HISTBIT))
-OBJ_PGNBIT    = $(patsubst %.c,obj/%.o,$(SRC_PGNBIT))
-OBJ_BASEBIT   = $(patsubst %.c,obj/%.o,$(SRC_BASEBIT))
-OBJ_PLAYBIT   = $(patsubst %.c,obj/%.o,$(SRC_PLAYBIT))
-OBJ_CONVBIT   = $(patsubst %.c,obj/%.o,$(SRC_CONVBIT))
-OBJ_BATCHBIT  = $(patsubst %.c,obj/%.o,$(SRC_BATCHBIT))
-OBJ_VISBIT    = $(patsubst %.c,obj/%.o,$(SRC_VISBIT))
-OBJ_TUNEBIT   = $(patsubst %.c,obj/%.o,$(subst search,tune-search,\
-		$(subst option,tune-option,$(subst timeman,tune-timeman,\
-		$(subst movepicker,tune-movepicker,\
-		$(SRC_BITBIT) tune.c)))))
-OBJ_CHECKBIT  = $(patsubst %.c,obj/%.o,$(SRC_CHECKBIT))
+OBJ_BITBIT    = $(patsubst %.c,$(OBJDIR)/%.o,$(SRC_BITBIT))
+OBJ_EPDBIT    = $(patsubst %.c,$(OBJDIR)/%.o,$(SRC_EPDBIT))
+OBJ_HISTBIT   = $(patsubst %.c,$(OBJDIR)/%.o,$(SRC_HISTBIT))
+OBJ_PGNBIT    = $(patsubst %.c,$(OBJDIR)/%.o,$(SRC_PGNBIT))
+OBJ_BASEBIT   = $(patsubst %.c,$(OBJDIR)/%.o,$(SRC_BASEBIT))
+OBJ_PLAYBIT   = $(patsubst %.c,$(OBJDIR)/%.o,$(SRC_PLAYBIT))
+OBJ_CONVBIT   = $(patsubst %.c,$(OBJDIR)/%.o,$(SRC_CONVBIT))
+OBJ_BATCHBIT  = $(patsubst %.c,$(OBJDIR)/%.o,$(SRC_BATCHBIT))
+OBJ_VISBIT    = $(patsubst %.c,$(OBJDIR)/%.o,$(SRC_VISBIT))
+OBJ_CHECKBIT  = $(patsubst %.c,$(OBJDIR)/%.o,$(SRC_CHECKBIT))
 
-BIN = bitbit weightbit epdbit histbit pgnbit basebit \
-      libbatchbit.so libvisbit.so convbit checkbit playbit
+BIN = $(EXE) weightbit epdbit histbit pgnbit \
+      basebit libbatchbit.so libvisbit.so convbit \
+      checkbit playbit
 
 PREFIX = /usr/local
 BINDIR = $(PREFIX)/bin
@@ -142,31 +159,29 @@ MANPREFIX = $(PREFIX)/share
 MANDIR = $(MANPREFIX)/man
 MAN6DIR = $(MANDIR)/man6
 
-all: bitbit
+all: $(EXE)
 
-nnue: nnueclean bitbit
+nnue: nnueclean $(EXE)
 
-bitbit-pgo: objclean pgoclean
-	$(MAKE) CC=$(CC) ARCH=$(ARCH) DEBUG=$(DEBUG) TARGET=$(TARGET) $(CC)-pgo
+bitbit-pgo:
+	$(MAKE) $(CC)-pgo
 
-clang-pgo:
-	$(MAKE) CC=clang ARCH=$(ARCH) DEBUG=$(DEBUG) TARGET=$(TARGET) EXTRACFLAGS="-fprofile-generate" bitbit
-	./bitbit bench , quit > /dev/null
+clang-pgo: objclean pgoclean
+	$(MAKE) EXTRACFLAGS="-fprofile-generate" $(EXE)
+	$(RUNNER) ./$(EXE) bench , quit > /dev/null
 	llvm-profdata merge *.profraw -output=bitbit.profdata
-	$(MAKE) CC=clang ARCH=$(ARCH) DEBUG=$(DEBUG) TARGET=$(TARGET) objclean
-	$(MAKE) CC=clang ARCH=$(ARCH) DEBUG=$(DEBUG) TARGET=$(TARGET) EXTRACFLAGS="-fprofile-use=bitbit.profdata" bitbit
+	$(MAKE) objclean
+	$(MAKE) EXTRACFLAGS="-fprofile-use=bitbit.profdata" $(EXE)
 
-gcc-pgo:
-	$(MAKE) CC=gcc ARCH=$(ARCH) DEBUG=$(DEBUG) TARGET=$(TARGET) EXTRACFLAGS="-fprofile-generate=profdir" bitbit
-	./bitbit bench , quit > /dev/null
-	$(MAKE) CC=gcc ARCH=$(ARCH) DEBUG=$(DEBUG) TARGET=$(TARGET) objclean
-	$(MAKE) CC=gcc ARCH=$(ARCH) DEBUG=$(DEBUG) TARGET=$(TARGET) EXTRACFLAGS="-fprofile-use=profdir" bitbit
+gcc-pgo: objclean pgoclean
+	$(MAKE) EXTRACFLAGS="-fprofile-generate=profdir -fprofile-update=single" $(EXE)
+	$(RUNNER) ./$(EXE) bench , quit > /dev/null
+	$(MAKE) objclean
+	$(MAKE) EXTRACFLAGS="-fprofile-use=profdir" $(EXE)
 
 everything: $(BIN)
 
-bitbit: $(OBJ_BITBIT)
-	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
-weightbit: $(OBJ_WEIGHTBIT)
+$(EXE): $(OBJ_BITBIT)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 epdbit: $(OBJ_EPDBIT)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
@@ -187,14 +202,17 @@ libvisbit.so: $(OBJ_VISBIT)
 checkbit: $(OBJ_CHECKBIT)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
-obj/%.o: src/%.c dep/%.d
-	@$(MKDIR_P) obj
+weightbit: $(patsubst %.c,src/%.c,$(SRC_WEIGHTBIT))
+	$(HOSTCC) $(HOSTCFLAGS) $^ -o $@ -lm
+
+$(OBJDIR)/%.o: src/%.c $(DEPDIR)/%.d
+	@$(MKDIR_P) $(OBJDIR)
 	$(CC) $(CFLAGS) -c $< -o $@
-obj/pic-%.o: src/%.c dep/%.d
-	@$(MKDIR_P) obj
+$(OBJDIR)/pic-%.o: src/%.c $(DEPDIR)/%.d
+	@$(MKDIR_P) $(OBJDIR)
 	$(CC) $(CFLAGS) -fPIC -c $< -o $@
-obj/tune-%.o: src/%.c dep/%.d
-	@$(MKDIR_P) obj
+$(OBJDIR)/tune-%.o: src/%.c $(DEPDIR)/%.d
+	@$(MKDIR_P) $(OBJDIR)
 	$(CC) $(CFLAGS) -DTUNE -c $< -o $@
 
 src/nnueweights.c: weightbit Makefile
@@ -202,21 +220,21 @@ src/nnueweights.c: weightbit Makefile
 
 %.so:                            LDFLAGS += -shared
 
-obj/playbit.o:                   CFLAGS += $(DSYZYGY)
-obj/init.o obj/interface.o:      CFLAGS += -DVERSION=$(VERSION)
-obj/interface.o obj/option.o obj/tune-option.o: CFLAGS += -DTT=$(TT)
+$(OBJDIR)/playbit.o:             CFLAGS += $(DSYZYGY)
+$(OBJDIR)/init.o $(OBJDIR)/interface.o: CFLAGS += -DVERSION=$(VERSION)
+$(OBJDIR)/interface.o $(OBJDIR)/option.o $(OBJDIR)/tune-option.o: CFLAGS += -DTT=$(TT)
 
-dep/nnueweights.d:
-	@$(MKDIR_P) dep
-	@touch dep/nnueweights.d
-dep/%.d: src/%.c Makefile
-	@$(MKDIR_P) dep
-	@$(CC) -MM -MT "$@ $(<:src/%.c=obj/%.o)" $(CFLAGS) $< -o $@
+$(DEPDIR)/nnueweights.d:
+	@$(MKDIR_P) $(DEPDIR)
+	@touch $(DEPDIR)/nnueweights.d
+$(DEPDIR)/%.d: src/%.c Makefile
+	@$(MKDIR_P) $(DEPDIR)
+	@$(CC) -MM -MT "$@ $(<:src/%.c=$(OBJDIR)/%.o)" $(CFLAGS) $< -o $@
 
 install: all
 	$(MKDIR_P) $(DESTDIR)$(BINDIR)
 	$(MKDIR_P) $(DESTDIR)$(MAN6DIR)
-	$(INSTALL) -m 0755 bitbit $(DESTDIR)$(BINDIR)
+	$(INSTALL) -m 0755 $(EXE) $(DESTDIR)$(BINDIR)/bitbit
 	$(INSTALL) -m 0644 man/bitbit.6 $(DESTDIR)$(MAN6DIR)
 
 install-everything: everything install
@@ -256,6 +274,6 @@ objclean:
 	$(RM) -rf obj dep $(BIN)
 
 -include $(DEP)
-.PRECIOUS: dep/%.d
+.PRECIOUS: $(DEPDIR)/%.d
 .SUFFIXES: .c .h .d
 .PHONY: all everything clean nnueclean pgoclean objclean install install-everything uninstall bitbit-pgo clang-pgo gcc-pgo test

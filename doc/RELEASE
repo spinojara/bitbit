@@ -1,13 +1,19 @@
 Building releases
 =================
-Following is a table of binaries and their corresponding make invocation.
+Following is a table of binaries and their corresponding make invocation. The windows binaries
+are preferably built using cross compilation with target x86_64-w64-mingw32. If cross compiling
+is not an option, the windows binaries can also be built using an MSYS2 clang64 environment.
 
-+----------------------------+---------------------------------------------------------------------+
-| Binary                     | Command                                                             |
-+----------------------------+---------------------------------------------------------------------+
-| bitbit-x.y-z-x86-64        | make bitbit-pgo CC=clang ARCH=x86-64-v2 TT=256 STATIC=yes           |
-|                            |                                                                     |
-| bitbit-x.x-z-x86-64-avx2   | make bitbit-pgo CC=clang ARCH=x86-64-v3 TT=256 STATIC=yes SIMD=avx2 |
-+----------------------------+---------------------------------------------------------------------+
+See also release.sh.
 
-The windows binaries are produced using MSYS2.
++------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------+
+| Binary                             | Command                                                                                                                              |
++------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------+
+| bitbit-x.y-linux-x86-64            | make bitbit-pgo CC=clang ARCH=x86-64-v2 TT=256 STATIC=yes EXE=bitbit-x.y-linux-x86-64                                                |
+|                                    |                                                                                                                                      |
+| bitbit-x.y-linux-x86-64-avx2       | make bitbit-pgo CC=clang ARCH=x86-64-v3 TT=256 STATIC=yes EXE=bitbit-x.y-linux-x86-64-avx2 SIMD=avx2                                 |
+|                                    |                                                                                                                                      |
+| bitbit-x.y-windows-x86-64.exe      | make bitbit-pgo CC=clang ARCH=x86-64-v2 TT=256 STATIC=yes EXE=bitbit-x.y-windows-x86-64.exe TARGET=x86_64-w64-mingw32                |
+|                                    |                                                                                                                                      |
+| bitbit-x.y-windows-x86-64-avx2.exe | make bitbit-pgo CC=clang ARCH=x86-64-v3 TT=256 STATIC=yes EXE=bitbit-x.y-windows-x86-64-avx2.exe SIMD=avx2 TARGET=x86_64-w64-mingw32 |
++------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------+
