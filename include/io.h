@@ -50,9 +50,9 @@ int write_eval(FILE *f, int32_t eval);
 int read_eval(FILE *f, int32_t *eval);
 int read_eval_mem(const unsigned char *data, int32_t *eval, size_t *index, size_t size);
 
-int write_result(FILE *f, char result);
-int read_result(FILE *f, char *result);
-int read_result_mem(const unsigned char *data, char *result, size_t *index, size_t size);
+int write_result(FILE *f, signed char result);
+int read_result(FILE *f, signed char *result);
+int read_result_mem(const unsigned char *data, signed char *result, size_t *index, size_t size);
 
 int write_flag(FILE *f, unsigned char flag);
 int read_flag(FILE *f, unsigned char *flag);

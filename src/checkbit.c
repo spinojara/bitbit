@@ -67,7 +67,7 @@ int main(int argc, char **argv) {
 	position_init();
 
 	struct position pos = { 0 };
-	char result;
+	signed char result;
 	int32_t eval;
 	move_t move;
 	unsigned char flag;

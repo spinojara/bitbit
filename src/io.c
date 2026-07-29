@@ -188,9 +188,9 @@ int read_eval(FILE *f, int32_t *eval) {
 	return 0;
 }
 
-int write_result(FILE *f, char result) { return write_uintx(f, result, 1); }
+int write_result(FILE *f, signed char result) { return write_uintx(f, result, 1); }
 
-int read_result(FILE *f, char *result) { return read_uintx(f, result, 1); }
+int read_result(FILE *f, signed char *result) { return read_uintx(f, result, 1); }
 
 int write_flag(FILE *f, unsigned char flag) { return write_uintx(f, flag, 1); }
 

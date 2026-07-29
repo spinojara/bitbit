@@ -77,7 +77,7 @@ int main(int argc, char **argv) {
 	uint64_t piece_square[7][64] = { 0 };
 
 	move_t move;
-	char result        = 0;
+	signed char result = 0;
 	int32_t eval       = 0;
 	size_t total       = 0;
 	size_t count       = 0;
