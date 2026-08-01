@@ -396,6 +396,8 @@ int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, s
 		move_index++;
 
 		do_zobrist_key(pos, &move);
+		if (option_transposition)
+			__builtin_prefetch(transposition_get(si->tt, pos));
 		do_endgame_key(pos, &move);
 		do_move(pos, &move);
 		ss->move                       = move;
@@ -641,6 +643,8 @@ skip_pruning:;
 		}
 
 		do_zobrist_key(pos, &move);
+		if (option_transposition)
+			__builtin_prefetch(transposition_get(si->tt, pos));
 		do_endgame_key(pos, &move);
 		do_move(pos, &move);
 		ss->move                       = move;
