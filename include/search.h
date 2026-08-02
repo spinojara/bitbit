@@ -25,8 +25,8 @@
 #include "position.h"
 #include "transposition.h"
 
-extern volatile atomic_int ucistop;
-extern volatile atomic_int uciponder;
+extern atomic_int ucistop;
+extern atomic_int uciponder;
 
 typedef int64_t timepoint_t;
 

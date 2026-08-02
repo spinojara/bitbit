@@ -27,10 +27,6 @@
 int thread_init_done = 0;
 #endif
 
-int ucigo = 0;
-
-pthread_mutex_t uci;
-
 struct threadinfo {
 	struct position *pos;
 	int depth;
@@ -52,7 +48,7 @@ int is_allowed(const char *arg) {
 	}
 	pthread_mutex_unlock(&uci);
 
-	if (!strcmp(arg, "stop") || !strcmp(arg, "ponderhit") || !strcmp(arg, "isready")) {
+	if (!strcmp(arg, "stop") || !strcmp(arg, "ponderhit") || !strcmp(arg, "isready") || !strcmp(arg, "quit")) {
 		return 1;
 	}
 
@@ -65,6 +61,7 @@ void search_stop(void) {
 	if (ucigo) {
 		atomic_store_explicit(&ucistop, 1, memory_order_relaxed);
 		atomic_store_explicit(&uciponder, 0, memory_order_relaxed);
+		pthread_cond_broadcast(&ucicond);
 	}
 	pthread_mutex_unlock(&uci);
 }
@@ -73,6 +70,7 @@ void search_ponderhit(void) {
 	assert(thread_init_done);
 	pthread_mutex_lock(&uci);
 	atomic_store_explicit(&uciponder, 0, memory_order_relaxed);
+	pthread_cond_broadcast(&ucicond);
 	pthread_mutex_unlock(&uci);
 }
 
@@ -88,10 +86,11 @@ void *search_thread(void *arg) {
 	move_t move[2];
 	search(pos, depth, 1, &ti, move, tt, history, 1);
 	pthread_mutex_lock(&uci);
-	atomic_store_explicit(&ucistop, 0, memory_order_relaxed);
-	ucigo = 0;
-	atomic_store_explicit(&uciponder, 0, memory_order_relaxed);
 	print_bestmove(pos, move[0], move[1]);
+	atomic_store_explicit(&ucistop, 0, memory_order_relaxed);
+	atomic_store_explicit(&uciponder, 0, memory_order_relaxed);
+	ucigo = 0;
+	pthread_cond_broadcast(&ucicond);
 	pthread_mutex_unlock(&uci);
 	return NULL;
 }
@@ -119,15 +118,15 @@ void search_start(struct position *pos, int depth, struct timeinfo *ti, struct t
 }
 
 void thread_init(void) {
-	pthread_mutex_init(&uci, NULL);
-
 #ifndef NDEBUG
 	thread_init_done = 1;
 #endif
 }
 
 void thread_term(void) {
-	/* The mutex will not be used by any running detached thread since ucigo must be 0 for thread_term to be called.
-	 */
-	pthread_mutex_destroy(&uci);
+	pthread_mutex_lock(&uci);
+	/* Wait for eventual search to finish. */
+	while (ucigo)
+		pthread_cond_wait(&ucicond, &uci);
+	pthread_mutex_unlock(&uci);
 }

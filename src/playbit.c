@@ -66,7 +66,7 @@ static int random_moves_max = 8;
 static int32_t eval_limit = 1500;
 #endif
 
-static pthread_mutex_t *pausemutex;
+static pthread_mutex_t pausemutex;
 static pthread_cond_t pausecond;
 static int pausevar = 1;
 static atomic_int stopvar;
@@ -81,13 +81,16 @@ static atomic_uint_fast64_t bytes;
 static atomic_uint_fast64_t positions;
 
 static inline void do_stop(void) {
+	/* Ok to not signal pausecond here. main will do it when it exits soon. */
 	atomic_store_explicit(&stopvar, 1, memory_order_relaxed);
-	for (int i = 0; i < jobs; i++)
-		pthread_mutex_lock(&pausemutex[i]);
+}
+
+static void do_full_stop(void) {
+	atomic_store_explicit(&stopvar, 1, memory_order_relaxed);
+	pthread_mutex_lock(&pausemutex);
 	pausevar = 0;
 	pthread_cond_broadcast(&pausecond);
-	for (int i = 0; i < jobs; i++)
-		pthread_mutex_unlock(&pausemutex[i]);
+	pthread_mutex_unlock(&pausemutex);
 }
 
 static inline int is_stopped(void) { return atomic_load_explicit(&stopvar, memory_order_relaxed); }
@@ -543,8 +546,8 @@ void play_game(FILE *openingsfile, struct transpositiontable *tt, uint64_t nodes
 				}
 			}
 		}
-		atomic_fetch_add(&bytes, 69 + 5 * h.ply);
-		atomic_fetch_add(&positions, count);
+		atomic_fetch_add_explicit(&bytes, 69 + 5 * h.ply, memory_order_relaxed);
+		atomic_fetch_add_explicit(&positions, count, memory_order_relaxed);
 	}
 }
 
@@ -574,10 +577,10 @@ void *playthread(void *arg) {
 	}
 
 	while (!is_stopped()) {
-		pthread_mutex_lock(&pausemutex[ti->jobn]);
+		pthread_mutex_lock(&pausemutex);
 		while (pausevar)
-			pthread_cond_wait(&pausecond, &pausemutex[ti->jobn]);
-		pthread_mutex_unlock(&pausemutex[ti->jobn]);
+			pthread_cond_wait(&pausecond, &pausemutex);
+		pthread_mutex_unlock(&pausemutex);
 
 		if (is_stopped())
 			break;
@@ -592,12 +595,12 @@ void *playthread(void *arg) {
 		while (ftell(f) < max_file_size && !is_stopped()) {
 			play_game(openingsfile, &tt, nodes, &seed, f);
 
-			pthread_mutex_lock(&pausemutex[ti->jobn]);
+			pthread_mutex_lock(&pausemutex);
 			if (pausevar) {
-				pthread_mutex_unlock(&pausemutex[ti->jobn]);
+				pthread_mutex_unlock(&pausemutex);
 				break;
 			}
-			pthread_mutex_unlock(&pausemutex[ti->jobn]);
+			pthread_mutex_unlock(&pausemutex);
 		}
 
 		fclose(f);
@@ -817,10 +820,7 @@ int main(int argc, char **argv) {
 	int is_paused         = pausevar;
 	pthread_t *thread     = malloc(jobs * sizeof(*thread));
 	struct threadinfo *ti = malloc(jobs * sizeof(*ti));
-	pausemutex            = malloc(jobs * sizeof(*pausemutex));
-
-	for (int i = 0; i < jobs; i++)
-		pthread_mutex_init(&pausemutex[i], NULL);
+	pthread_mutex_init(&pausemutex, NULL);
 
 	for (int i = 0; i < jobs; i++) {
 		ti[i].jobn    = i;
@@ -845,36 +845,35 @@ int main(int argc, char **argv) {
 
 		if (matches && is_paused) {
 			is_paused = 0;
-			for (int i = 0; i < jobs; i++)
-				pthread_mutex_lock(&pausemutex[i]);
+			pthread_mutex_lock(&pausemutex);
 			pausevar = 0;
 			pthread_cond_broadcast(&pausecond);
-			for (int i = 0; i < jobs; i++)
-				pthread_mutex_unlock(&pausemutex[i]);
+			pthread_mutex_unlock(&pausemutex);
 		}
 		else if (!matches && !is_paused) {
 			is_paused = 1;
-			for (int i = 0; i < jobs; i++)
-				pthread_mutex_lock(&pausemutex[i]);
+			pthread_mutex_lock(&pausemutex);
 			pausevar = 1;
-			for (int i = 0; i < jobs; i++)
-				pthread_mutex_unlock(&pausemutex[i]);
+			pthread_mutex_unlock(&pausemutex);
 		}
 
 		timepoint_t now       = time_now();
 		timepoint_t elapsed   = now - last;
 
-		uint64_t bytesnow     = atomic_exchange(&bytes, 0);
-		uint64_t positionsnow = atomic_exchange(&positions, 0);
+		uint64_t bytesnow     = atomic_exchange_explicit(&bytes, 0, memory_order_relaxed);
+		uint64_t positionsnow = atomic_exchange_explicit(&positions, 0, memory_order_relaxed);
 		if (last) {
 			printf("\33[2K%ld fens/s (%ld bytes/s)%s\r", positionsnow * TPPERSEC / elapsed,
 			       bytesnow * TPPERSEC / elapsed, matches ? "" : " (paused)");
 			fflush(stdout);
 		}
 		last = now;
-		sleep(10);
+		if (!is_stopped())
+			sleep(10);
 	}
 	printf("\n");
+
+	do_full_stop();
 
 	for (int i = 0; i < jobs; i++)
 		pthread_join(thread[i], NULL);
@@ -884,9 +883,7 @@ int main(int argc, char **argv) {
 
 	free(ti);
 	free(thread);
-	for (int i = 0; i < jobs; i++)
-		pthread_mutex_destroy(&pausemutex[i]);
-	free(pausemutex);
+	pthread_mutex_destroy(&pausemutex);
 	for (int i = 0; i < ndates; i++)
 		regfree(&dates[i].preg);
 	free(dates);

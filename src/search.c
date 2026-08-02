@@ -38,13 +38,18 @@
 #include "transposition.h"
 #include "tune.h"
 #include "util.h"
+#include "thread.h"
+
+atomic_int ucistop;
+atomic_int uciponder;
+int ucigo;
+
+pthread_mutex_t uci = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t ucicond = PTHREAD_COND_INITIALIZER;
 
 #ifndef NDEBUG
 int search_init_done = 0;
 #endif
-
-volatile atomic_int ucistop;
-volatile atomic_int uciponder;
 
 TUNEVAR(int, razor1, -74, NULL, NULL)
 TUNEVAR(int, razor2, 187, NULL, NULL)
@@ -891,8 +896,10 @@ int32_t search(struct position *pos, int depth, int verbose, struct timeinfo *ti
 	/* We are not allowed to exit the search before either a ponderhit
 	 * or stop command. Both of these commands will set uciponder to 0.
 	 */
+	pthread_mutex_lock(&uci);
 	while (atomic_load_explicit(&uciponder, memory_order_relaxed))
-		;
+		pthread_cond_wait(&ucicond, &uci);
+	pthread_mutex_unlock(&uci);
 
 	if (move) {
 		move[0] = best_move;

@@ -224,7 +224,7 @@ int interface_stop(int argc, char **argv) {
 int interface_quit(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
-	interface_stop(argc, argv);
+	search_stop();
 	return EXIT_LOOP;
 }
 
@@ -247,6 +247,7 @@ int interface_go(int argc, char **argv) {
 	UNUSED(argv);
 	int depth          = -1;
 	struct timeinfo ti = { 0 };
+	atomic_store_explicit(&uciponder, 0, memory_order_relaxed);
 	for (int i = 1; i < argc; i++) {
 		if (i < argc - 1) {
 			if (strcmp(argv[i], "depth") == 0)
@@ -452,8 +453,6 @@ int parse(int margc, char **margv) {
 void interface_init(void) {
 	startpos(&pos);
 	startkey(&pos);
-	atomic_init(&ucistop, 0);
-	atomic_init(&uciponder, 0);
 	if (TT <= 0) {
 		tt.size              = 0;
 		option_transposition = 0;
@@ -474,8 +473,7 @@ void interface_term(void) {
 
 int interface(int argc, char **argv) {
 	interface_init();
-	while (parse(argc, argv) != EXIT_LOOP)
-		;
+	while (parse(argc, argv) != EXIT_LOOP);
 	interface_term();
 	return 0;
 }

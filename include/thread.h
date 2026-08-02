@@ -17,10 +17,16 @@
 #ifndef THREAD_H
 #define THREAD_H
 
+#include <pthread.h>
+
 #include "history.h"
 #include "position.h"
 #include "transposition.h"
 
+extern pthread_mutex_t uci;
+extern pthread_cond_t ucicond;
+extern atomic_int ucistop;
+extern atomic_int uciponder;
 extern int ucigo;
 
 int is_allowed(const char *arg);

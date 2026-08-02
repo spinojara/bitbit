@@ -26,7 +26,7 @@
 #include "position.h"
 #include "search.h"
 
-extern volatile atomic_int uciponder;
+extern atomic_int uciponder;
 
 /* timepoint_t is given in nanoseconds. */
 typedef int64_t timepoint_t;
