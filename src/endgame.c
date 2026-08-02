@@ -66,11 +66,11 @@ void refresh_endgame_key(struct position *pos) {
 	}
 }
 
-void endgame_store(const char *str, int32_t (*evaluate)(const struct position *pos, int strong_side)) {
+static void endgame_store(const char *str, int32_t (*evaluate)(const struct position *pos, int strong_side)) {
 	struct position pos;
 	for (int color = 0; color < 2; color++) {
-		char strong[64];
-		char weak[64];
+		char strong[64] = { 0 };
+		char weak[64] = { 0 };
 		for (size_t i = 0, j = 0, k = 0, K = 0; i < strlen(str); i++) {
 			if (str[i] == 'K')
 				K++;

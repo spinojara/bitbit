@@ -865,10 +865,8 @@ int32_t search(struct position *pos, int depth, int verbose, struct timeinfo *ti
 
 		if (si.interrupt || (si.max_nodes && si.nodes > si.max_nodes)) {
 			if (verbose) {
-				if (!has_previously_printed || best_move != best_move_old || ponder_move != ponder_move_old) {
+				if (!has_previously_printed || best_move != best_move_old || ponder_move != ponder_move_old)
 					print_info(pos, &si, -1, VALUE_NONE, 0);
-					has_previously_printed = 1;
-				}
 			}
 			break;
 		}
