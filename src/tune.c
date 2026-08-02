@@ -23,6 +23,7 @@
 #include <strings.h>
 
 #include "search.h"
+#include "tune.h"
 #include "util.h"
 
 struct tune {
@@ -36,7 +37,7 @@ struct tune {
 size_t tunes_length;
 struct tune *tunes;
 
-char *remove_underscore(const char *var) {
+static char *remove_underscore(const char *var) {
 	char *copy = malloc(strlen(var) + 1);
 
 	size_t j, i;
@@ -50,7 +51,7 @@ char *remove_underscore(const char *var) {
 	return copy;
 }
 
-int tunecmp(const char *var1, const char *var2) {
+static int tunecmp(const char *var1, const char *var2) {
 	char *var1_clean = remove_underscore(var1);
 	char *var2_clean = remove_underscore(var2);
 

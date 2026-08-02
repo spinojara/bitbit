@@ -28,7 +28,7 @@
 #include "position.h"
 #include "util.h"
 
-int ends_with(const char *string, const char *end) {
+static int ends_with(const char *string, const char *end) {
 	unsigned len = strlen(end);
 	if (len > strlen(string))
 		return 1;

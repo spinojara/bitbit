@@ -34,7 +34,7 @@ uint64_t rook_attacks_lookup[102400];
 struct magic bishop_magic[64];
 struct magic rook_magic[64];
 
-uint64_t bishop_attacks_calc(int square, uint64_t b) {
+static uint64_t bishop_attacks_calc(int square, uint64_t b) {
 	uint64_t attacks = 0;
 	int x            = file_of(square);
 	int y            = rank_of(square);
@@ -70,7 +70,7 @@ uint64_t bishop_attacks_calc(int square, uint64_t b) {
 	return attacks;
 }
 
-uint64_t rook_attacks_calc(int square, uint64_t b) {
+static uint64_t rook_attacks_calc(int square, uint64_t b) {
 	uint64_t attacks = 0;
 	int x            = file_of(square);
 	int y            = rank_of(square);
@@ -106,7 +106,7 @@ uint64_t rook_attacks_calc(int square, uint64_t b) {
 	return attacks;
 }
 
-uint64_t bishop_mask_calc(int square) {
+static uint64_t bishop_mask_calc(int square) {
 	uint64_t mask = 0;
 	int x         = file_of(square);
 	int y         = rank_of(square);
@@ -130,7 +130,7 @@ uint64_t bishop_mask_calc(int square) {
 	return mask;
 }
 
-uint64_t rook_mask_calc(int square) {
+static uint64_t rook_mask_calc(int square) {
 	uint64_t mask = 0;
 	int x         = file_of(square);
 	int y         = rank_of(square);
@@ -202,21 +202,7 @@ uint64_t rook_full_mask_calc(int square) {
 	return mask;
 }
 
-uint64_t block_mask(int i, uint64_t attack_mask) {
-	uint64_t occ = 0;
-	int j        = 0;
-
-	while (attack_mask) {
-		if (i & bitboard(j++))
-			occ |= bitboard(ctz(attack_mask));
-
-		attack_mask = clear_ls1b(attack_mask);
-	}
-
-	return occ;
-}
-
-void magic_calc(int square, int piece) {
+static void magic_calc(int square, int piece) {
 	struct magic *magic = piece == ROOK ? &rook_magic[square] : &bishop_magic[square];
 	uint64_t occ[4096];
 	uint64_t attacks[4096];

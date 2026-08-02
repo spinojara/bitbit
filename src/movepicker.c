@@ -43,7 +43,7 @@ static inline int promotion(struct position *pos, move_t *move, int threshold) {
 	return move_flag(move) == MOVE_PROMOTION && (int)move_promote(move) + 2 >= threshold;
 }
 
-int find_next(struct movepicker *mp, int (*filter)(struct position *, move_t *, int), int threshold) {
+static int find_next(struct movepicker *mp, int (*filter)(struct position *, move_t *, int), int threshold) {
 	for (int i = 0; mp->move[i]; i++) {
 		if (filter(mp->pos, &mp->move[i], threshold)) {
 			for (int j = i - 1; j >= 0; j--) {
@@ -73,7 +73,7 @@ void sort_moves(struct movepicker *mp) {
 	}
 }
 
-void evaluate_nonquiet(struct movepicker *mp) {
+static void evaluate_nonquiet(struct movepicker *mp) {
 	for (int i = 0; mp->move[i]; i++) {
 		move_t *move    = &mp->move[i];
 		int square_from = move_from(move);
@@ -89,7 +89,7 @@ void evaluate_nonquiet(struct movepicker *mp) {
 	}
 }
 
-void evaluate_quiet(struct movepicker *mp) {
+static void evaluate_quiet(struct movepicker *mp) {
 	uint64_t attacked[7] = { 0 };
 	attacked[KNIGHT] = attacked[BISHOP] = mp->pstate->attacked[PAWN];
 	attacked[ROOK]  = attacked[BISHOP] | mp->pstate->attacked[KNIGHT] | mp->pstate->attacked[BISHOP];
@@ -136,7 +136,7 @@ void evaluate_quiet(struct movepicker *mp) {
 	}
 }
 
-void filter_moves(struct movepicker *mp) {
+static void filter_moves(struct movepicker *mp) {
 	for (int i = 0; mp->move[i]; i++) {
 		if (move_compare(mp->move[i], mp->ttmove) || move_compare(mp->move[i], mp->killer1)
 		    || move_compare(mp->move[i], mp->killer2) || move_compare(mp->move[i], mp->counter_move)) {

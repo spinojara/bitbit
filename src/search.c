@@ -107,7 +107,7 @@ static inline int late_move_reduction(int improvement, int index, int depth) {
 #endif
 }
 
-void print_pv(struct position *pos, move_t *pv_move, int ply, struct history *history) {
+static void print_pv(struct position *pos, move_t *pv_move, int ply, struct history *history) {
 	struct pstate pstate;
 	pstate_init(pos, &pstate);
 	char str[8];
@@ -125,7 +125,7 @@ void print_pv(struct position *pos, move_t *pv_move, int ply, struct history *hi
 	undo_move(pos, pv_move);
 }
 
-void print_info(struct position *pos, struct searchinfo *si, int depth, int32_t eval, int bound) {
+static void print_info(struct position *pos, struct searchinfo *si, int depth, int32_t eval, int bound) {
 	timepoint_t tp = time_since(si->ti);
 	printf("info");
 	if (depth >= 0) {
@@ -322,7 +322,7 @@ static inline int32_t evaluate(const struct position *pos, const struct searchin
 	return evaluation;
 }
 
-int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, struct searchinfo *si,
+static int32_t quiescence(struct position *pos, int ply, int32_t alpha, int32_t beta, struct searchinfo *si,
                    const struct pstate *pstateptr, struct searchstack *ss) {
 	if (si->interrupt)
 		return 0;
@@ -766,7 +766,7 @@ skip_pruning:;
 	return best_eval;
 }
 
-int32_t aspiration_window(struct position *pos, int depth, int verbose, int32_t eval, struct searchinfo *si,
+static int32_t aspiration_window(struct position *pos, int depth, int verbose, int32_t eval, struct searchinfo *si,
                           struct searchstack *ss) {
 	int32_t delta = asp + eval * eval / 16384;
 	int32_t alpha = max(eval - delta, -VALUE_INFINITE);

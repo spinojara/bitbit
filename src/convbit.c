@@ -30,7 +30,8 @@
 
 long count1, count2;
 
-move_t difference_brute(struct position *before, const struct position *after) {
+#if 0
+static move_t difference_brute(struct position *before, const struct position *after) {
 	move_t moves[MOVES_MAX];
 
 	movegen_legal(before, moves, MOVETYPE_ALL);
@@ -47,8 +48,9 @@ move_t difference_brute(struct position *before, const struct position *after) {
 
 	return 0;
 }
+#endif
 
-move_t difference(struct position *before, const struct position *after) {
+static move_t difference(struct position *before, const struct position *after) {
 	if (before->turn == after->turn || before->halfmove + 1 < after->halfmove)
 		return 0;
 

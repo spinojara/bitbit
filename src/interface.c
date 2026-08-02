@@ -52,25 +52,25 @@ struct command {
 };
 
 int interface_version(int argc, char **argv);
-int interface_help(int argc, char **argv);
-int interface_quit(int argc, char **argv);
-int interface_ponderhit(int argc, char **argv);
-int interface_stop(int argc, char **argv);
-int interface_clear(int argc, char **argv);
-int interface_move(int argc, char **argv);
-int interface_undo(int argc, char **argv);
-int interface_flip(int argc, char **argv);
-int interface_mirror(int argc, char **argv);
-int interface_perft(int argc, char **argv);
-int interface_position(int argc, char **argv);
-int interface_eval(int argc, char **argv);
-int interface_go(int argc, char **argv);
-int interface_tt(int argc, char **argv);
-int interface_isready(int argc, char **argv);
-int interface_uci(int argc, char **argv);
-int interface_ucinewgame(int argc, char **argv);
-int interface_bench(int argc, char **argv);
-int interface_setoption(int argc, char **argv);
+static int interface_help(int argc, char **argv);
+static int interface_quit(int argc, char **argv);
+static int interface_ponderhit(int argc, char **argv);
+static int interface_stop(int argc, char **argv);
+static int interface_clear(int argc, char **argv);
+static int interface_move(int argc, char **argv);
+static int interface_undo(int argc, char **argv);
+static int interface_flip(int argc, char **argv);
+static int interface_mirror(int argc, char **argv);
+static int interface_perft(int argc, char **argv);
+static int interface_position(int argc, char **argv);
+static int interface_eval(int argc, char **argv);
+static int interface_go(int argc, char **argv);
+static int interface_tt(int argc, char **argv);
+static int interface_isready(int argc, char **argv);
+static int interface_uci(int argc, char **argv);
+static int interface_ucinewgame(int argc, char **argv);
+static int interface_bench(int argc, char **argv);
+static int interface_setoption(int argc, char **argv);
 
 #define COMMAND(name) { #name, interface_##name }
 
@@ -85,7 +85,7 @@ struct position pos;
 struct transpositiontable tt;
 struct history history;
 
-int interface_help(int argc, char **argv) {
+static int interface_help(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
 	printf("The following commands are available in bitbit:\n");
@@ -95,7 +95,7 @@ int interface_help(int argc, char **argv) {
 	return DONE;
 }
 
-int interface_move(int argc, char **argv) {
+static int interface_move(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
 	if (argc < 2) {
@@ -111,7 +111,7 @@ int interface_move(int argc, char **argv) {
 	return DONE;
 }
 
-int interface_undo(int argc, char **argv) {
+static int interface_undo(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
 	if (history.ply)
@@ -119,7 +119,7 @@ int interface_undo(int argc, char **argv) {
 	return DONE;
 }
 
-int interface_flip(int argc, char **argv) {
+static int interface_flip(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
 	if (!generate_checkers(&pos, pos.turn)) {
@@ -132,14 +132,14 @@ int interface_flip(int argc, char **argv) {
 	return DONE;
 }
 
-int interface_mirror(int argc, char **argv) {
+static int interface_mirror(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
 	mirror_position(&pos);
 	return DONE;
 }
 
-int interface_perft(int argc, char **argv) {
+static int interface_perft(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
 	if (argc < 2)
@@ -156,7 +156,7 @@ int interface_perft(int argc, char **argv) {
 	return DONE;
 }
 
-int interface_position(int argc, char **argv) {
+static int interface_position(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
 	int n;
@@ -207,42 +207,42 @@ int interface_position(int argc, char **argv) {
 	return DONE;
 }
 
-int interface_clear(int argc, char **argv) {
+static int interface_clear(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
 	printf("\033[1;1H\033[2J");
 	return DONE;
 }
 
-int interface_stop(int argc, char **argv) {
+static int interface_stop(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
 	search_stop();
 	return DONE;
 }
 
-int interface_quit(int argc, char **argv) {
+static int interface_quit(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
 	search_stop();
 	return EXIT_LOOP;
 }
 
-int interface_ponderhit(int argc, char **argv) {
+static int interface_ponderhit(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
 	search_ponderhit();
 	return DONE;
 }
 
-int interface_eval(int argc, char **argv) {
+static int interface_eval(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
 	evaluate_print(&pos);
 	return DONE;
 }
 
-int interface_go(int argc, char **argv) {
+static int interface_go(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
 	int depth          = -1;
@@ -302,7 +302,7 @@ int interface_version(int argc, char **argv) {
 	return DONE;
 }
 
-int interface_tt(int argc, char **argv) {
+static int interface_tt(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
 	printf("pv    nodes: %4d pm\n", transposition_occupancy(&tt, BOUND_EXACT));
@@ -312,14 +312,14 @@ int interface_tt(int argc, char **argv) {
 	return DONE;
 }
 
-int interface_isready(int argc, char **argv) {
+static int interface_isready(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
 	printf("readyok\n");
 	return DONE;
 }
 
-int interface_uci(int argc, char **argv) {
+static int interface_uci(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
 	printf("id name bitbit " XSTR(VERSION) "\n");
@@ -329,14 +329,14 @@ int interface_uci(int argc, char **argv) {
 	return DONE;
 }
 
-int interface_setoption(int argc, char **argv) {
+static int interface_setoption(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
 	setoption(argc, argv, &tt);
 	return DONE;
 }
 
-int interface_ucinewgame(int argc, char **argv) {
+static int interface_ucinewgame(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
 	startpos(&pos);
@@ -346,14 +346,14 @@ int interface_ucinewgame(int argc, char **argv) {
 	return DONE;
 }
 
-int interface_bench(int argc, char **argv) {
+static int interface_bench(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
 	bench(&tt);
 	return DONE;
 }
 
-int next_char(int argc, char **argv) {
+static int next_char(int argc, char **argv) {
 	static int argindex     = 1;
 	static size_t charindex = 0;
 
@@ -369,7 +369,7 @@ int next_char(int argc, char **argv) {
 	return c;
 }
 
-void parse_line(int *argc, char *argv[ARGSIZE], int margc, char **margv, char *line) {
+static void parse_line(int *argc, char *argv[ARGSIZE], int margc, char **margv, char *line) {
 	*argc      = 0;
 	int next   = 1;
 	int escape = 0;
@@ -415,7 +415,7 @@ void parse_line(int *argc, char *argv[ARGSIZE], int margc, char **margv, char *l
 	}
 }
 
-int parse(int margc, char **margv) {
+static int parse(int margc, char **margv) {
 	char line[LINESIZE];
 	int ret = -1;
 	int argc;
@@ -450,7 +450,7 @@ int parse(int margc, char **margv) {
 	return ret;
 }
 
-void interface_init(void) {
+static void interface_init(void) {
 	startpos(&pos);
 	startkey(&pos);
 	if (TT <= 0) {
@@ -466,7 +466,7 @@ void interface_init(void) {
 	thread_init();
 }
 
-void interface_term(void) {
+static void interface_term(void) {
 	thread_term();
 	transposition_free(&tt);
 }

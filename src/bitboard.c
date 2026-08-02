@@ -58,7 +58,7 @@ void print_bitboard(uint64_t b) {
 	printf("       a   b   c   d   e   f   g   h\n\n");
 }
 
-uint64_t between_calc(int source, int target) {
+static uint64_t between_calc(int source, int target) {
 	if (source == target)
 		return 0;
 	int sourcef = file_of(source);
@@ -72,7 +72,7 @@ uint64_t between_calc(int source, int target) {
 	return 0;
 }
 
-uint64_t line_calc(int source, int target) {
+static uint64_t line_calc(int source, int target) {
 	if (source == target)
 		return 0;
 	if (file_of(source) == file_of(target) || rank_of(source) == rank_of(target)) {
@@ -83,7 +83,7 @@ uint64_t line_calc(int source, int target) {
 	}
 }
 
-uint64_t ray_calc(int source, int target) {
+static uint64_t ray_calc(int source, int target) {
 	uint64_t ret = 0;
 
 	int f        = file_of(source);
@@ -111,7 +111,7 @@ uint64_t ray_calc(int source, int target) {
 	return ret;
 }
 
-int castle_calc(int source, int target, int castle) {
+static int castle_calc(int source, int target, int castle) {
 	if (source == 0) {
 		castle = clear_bit(castle, 1);
 	}
@@ -147,7 +147,7 @@ int castle_calc(int source, int target, int castle) {
 	return castle;
 }
 
-uint64_t file_calc(int square) {
+static uint64_t file_calc(int square) {
 	int f        = file_of(square);
 	uint64_t ret = FILE_A;
 
@@ -156,7 +156,7 @@ uint64_t file_calc(int square) {
 	return ret;
 }
 
-uint64_t rank_calc(int square) {
+static uint64_t rank_calc(int square) {
 	int r        = rank_of(square);
 	uint64_t ret = RANK_1;
 
@@ -165,21 +165,21 @@ uint64_t rank_calc(int square) {
 	return ret;
 }
 
-uint64_t file_left_calc(int square) {
+static uint64_t file_left_calc(int square) {
 	int f = file_of(square);
 	if (f == 0)
 		return 0;
 	return file_calc(square - 1);
 }
 
-uint64_t file_right_calc(int square) {
+static uint64_t file_right_calc(int square) {
 	int f = file_of(square);
 	if (f == 7)
 		return 0;
 	return file_calc(square + 1);
 }
 
-uint64_t adjacent_files_calc(int square) {
+static uint64_t adjacent_files_calc(int square) {
 	uint64_t ret = 0;
 	int f        = file_of(square);
 
@@ -190,7 +190,7 @@ uint64_t adjacent_files_calc(int square) {
 	return ret;
 }
 
-uint64_t passed_files_calc(int square, int color) {
+static uint64_t passed_files_calc(int square, int color) {
 	uint64_t ret = 0;
 	int f        = file_of(square);
 
@@ -211,14 +211,14 @@ uint64_t passed_files_calc(int square, int color) {
 	return ret;
 }
 
-uint64_t same_colored_squares_calc(int square) {
+static uint64_t same_colored_squares_calc(int square) {
 	uint64_t b = 0;
 	for (int i = 0; i < 32; i++)
 		b |= bitboard(2 * i + ((i / 4) % 2 ? 1 : 0));
 	return (square + (square / 8)) % 2 ? ~b : b;
 }
 
-uint64_t distance_calc(int a, int b) { return max(abs(file_of(a) - file_of(b)), abs(rank_of(a) - rank_of(b))); }
+static uint64_t distance_calc(int a, int b) { return max(abs(file_of(a) - file_of(b)), abs(rank_of(a) - rank_of(b))); }
 
 void bitboard_init(void) {
 	for (int i = 0; i < 64; i++) {

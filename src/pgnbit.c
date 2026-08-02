@@ -48,7 +48,7 @@ int verbose                        = 0;
 
 static const struct searchinfo gsi = { 0 };
 
-int32_t evaluate_material(const struct position *pos) {
+static int32_t evaluate_material(const struct position *pos) {
 	int32_t eval = 0;
 	for (int piece = PAWN; piece < KING; piece++)
 		eval += popcount(pos->piece[WHITE][piece]) * material_value[piece];
@@ -57,7 +57,8 @@ int32_t evaluate_material(const struct position *pos) {
 	return pos->turn ? eval : -eval;
 }
 
-int32_t total_material(const struct position *pos) {
+#if 0
+static int32_t total_material(const struct position *pos) {
 	int32_t mat = 0;
 	for (int piece = PAWN; piece < KING; piece++)
 		mat += popcount(pos->piece[WHITE][piece]) * material_value[piece];
@@ -65,8 +66,9 @@ int32_t total_material(const struct position *pos) {
 		mat += popcount(pos->piece[BLACK][piece]) * material_value[piece];
 	return mat;
 }
+#endif
 
-int32_t search_material(struct position *pos, int alpha, int beta) {
+static int32_t search_material(struct position *pos, int alpha, int beta) {
 	uint64_t checkers = generate_checkers(pos, pos->turn);
 	int32_t eval = evaluate_material(pos), best_eval = -VALUE_INFINITE;
 
@@ -105,7 +107,8 @@ int32_t search_material(struct position *pos, int alpha, int beta) {
 	return best_eval;
 }
 
-int parse_result(FILE *f) {
+#if 0
+static int parse_result(FILE *f) {
 	char line[BUFSIZ];
 	while (fgets(line, sizeof(line), f)) {
 		if (strstr(line, "[Result")) {
@@ -120,7 +123,7 @@ int parse_result(FILE *f) {
 	return 2;
 }
 
-void start_fen(struct position *pos, FILE *f) {
+static void start_fen(struct position *pos, FILE *f) {
 	char line[BUFSIZ];
 	while (fgets(line, sizeof(line), f)) {
 		if (strstr(line, "[FEN")) {
@@ -143,8 +146,9 @@ void start_fen(struct position *pos, FILE *f) {
 	}
 	return;
 }
+#endif
 
-void line_error(FILE *f, const char *error) {
+static void line_error(FILE *f, const char *error) {
 	long newlines = 0;
 	long chars    = 0;
 	long p        = ftell(f);
@@ -162,13 +166,13 @@ void line_error(FILE *f, const char *error) {
 	exit(1);
 }
 
-void line_expect(FILE *f, const char *expect, const char *got) {
+static void line_expect(FILE *f, const char *expect, const char *got) {
 	char error[3 * BUFSIZ];
 	sprintf(error, "expected '%s' but got '%s'", expect, got);
 	line_error(f, error);
 }
 
-char *parse_quote(char *line, char *quotes) {
+static char *parse_quote(char *line, char *quotes) {
 	int in_quote = 0;
 	int index    = 0;
 
@@ -187,7 +191,7 @@ char *parse_quote(char *line, char *quotes) {
 	return index && in_quote == 0 ? quotes : NULL;
 }
 
-char *next_token(char *token, int n, FILE *f) {
+static char *next_token(char *token, int n, FILE *f) {
 	int c, index = 0, in_braces = 0;
 	token[0] = '\0';
 
@@ -216,7 +220,7 @@ char *next_token(char *token, int n, FILE *f) {
 	return token;
 }
 
-void parse_pgn(FILE *infile, FILE *outfile) {
+static void parse_pgn(FILE *infile, FILE *outfile) {
 	struct position pos;
 	move_t move;
 	int32_t eval;

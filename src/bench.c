@@ -320,7 +320,7 @@ static const char *fens[] = {
 static const int nodes = 100000;
 static struct position pos;
 
-void *bench_thread(void *tt) {
+static void *bench_thread(void *tt) {
 	struct history h   = { 0 };
 	struct timeinfo ti = { .nodes = nodes };
 	move_t move[2];

@@ -23,7 +23,7 @@ int attackgen_init_done = 0;
 uint64_t knight_attacks_lookup[64];
 uint64_t king_attacks_lookup[64];
 
-uint64_t knight_attacks_calc(int square) {
+static uint64_t knight_attacks_calc(int square) {
 	uint64_t b         = 0;
 	uint64_t square_b  = bitboard(square);
 	b                 |= shift(shift_twice(square_b, N), E);
@@ -37,7 +37,7 @@ uint64_t knight_attacks_calc(int square) {
 	return b;
 }
 
-uint64_t king_attacks_calc(int square) {
+static uint64_t king_attacks_calc(int square) {
 	uint64_t b  = bitboard(square);
 	b          |= shift(b, N);
 	b          |= shift(b, S);

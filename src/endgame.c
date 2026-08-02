@@ -40,7 +40,8 @@ struct endgame endgame_KXK[2]             = { 0 };
 
 const uint32_t mv[6]                      = { 0, 0x1, 0x10, 0x100, 0x1000, 0x10000 };
 
-int verify_material(const struct position *pos, int color, int material_verify) {
+#ifndef NDEBUG
+static int verify_material(const struct position *pos, int color, int material_verify) {
 	int material = 0;
 	for (int piece = PAWN; piece <= QUEEN; piece++)
 		material += mv[piece] * popcount(pos->piece[color][piece]);
@@ -48,6 +49,7 @@ int verify_material(const struct position *pos, int color, int material_verify) 
 		return 0;
 	return 1;
 }
+#endif
 
 static inline uint64_t endgame_key(int color, int piece, int count) {
 	assert(color == 0 || color == 1);
@@ -116,7 +118,7 @@ static void endgame_store(const char *str, int32_t (*evaluate)(const struct posi
 
 #ifndef NDEBUG
 /* This function makes sure that the hashing of endgames is injective. */
-void endgame_test(void) {
+static void endgame_test(void) {
 	struct position pos = { 0 };
 	size_t max_pieces[] = { 0, 9, 11, 11, 11, 10 };
 	size_t max_index    = 1;
@@ -193,7 +195,7 @@ static inline int32_t push_toward(int square1, int square2) { return 7 - distanc
 
 static inline int32_t push_away(int square1, int square2) { return distance(square1, square2); }
 
-int32_t evaluate_KPK(const struct position *pos, int strong_side) {
+static int32_t evaluate_KPK(const struct position *pos, int strong_side) {
 	int weak_side = other_color(strong_side);
 	UNUSED(weak_side);
 	assert(verify_material(pos, strong_side, mv[PAWN]));
@@ -206,7 +208,7 @@ int32_t evaluate_KPK(const struct position *pos, int strong_side) {
 	return eval;
 }
 
-int32_t evaluate_KPKP(const struct position *pos, int strong_side) {
+static int32_t evaluate_KPKP(const struct position *pos, int strong_side) {
 	int weak_side = other_color(strong_side);
 	UNUSED(weak_side);
 	assert(verify_material(pos, strong_side, mv[PAWN]));
@@ -224,7 +226,7 @@ int32_t evaluate_KPKP(const struct position *pos, int strong_side) {
 	return eval;
 }
 
-int32_t evaluate_KBPK(const struct position *pos, int strong_side) {
+static int32_t evaluate_KBPK(const struct position *pos, int strong_side) {
 	int weak_side = other_color(strong_side);
 	UNUSED(weak_side);
 	assert(verify_material(pos, strong_side, mv[BISHOP] + mv[PAWN]));
@@ -242,7 +244,7 @@ int32_t evaluate_KBPK(const struct position *pos, int strong_side) {
 	return eval;
 }
 
-int32_t evaluate_KNPK(const struct position *pos, int strong_side) {
+static int32_t evaluate_KNPK(const struct position *pos, int strong_side) {
 	int weak_side = other_color(strong_side);
 	UNUSED(weak_side);
 	assert(verify_material(pos, strong_side, mv[KNIGHT] + mv[PAWN]));
@@ -256,7 +258,7 @@ int32_t evaluate_KNPK(const struct position *pos, int strong_side) {
 	return eval;
 }
 
-int32_t evaluate_KRKP(const struct position *pos, int strong_side) {
+static int32_t evaluate_KRKP(const struct position *pos, int strong_side) {
 	int weak_side = other_color(strong_side);
 	assert(verify_material(pos, strong_side, mv[ROOK]));
 	assert(verify_material(pos, weak_side, mv[PAWN]));
@@ -274,7 +276,7 @@ int32_t evaluate_KRKP(const struct position *pos, int strong_side) {
 	return eval;
 }
 
-int32_t evaluate_KRKN(const struct position *pos, int strong_side) {
+static int32_t evaluate_KRKN(const struct position *pos, int strong_side) {
 	int weak_side = other_color(strong_side);
 	assert(verify_material(pos, strong_side, mv[ROOK]));
 	assert(verify_material(pos, weak_side, mv[KNIGHT]));
@@ -285,7 +287,7 @@ int32_t evaluate_KRKN(const struct position *pos, int strong_side) {
 	     + 3 * push_toward(weak_king, strong_king);
 }
 
-int32_t evaluate_KRKB(const struct position *pos, int strong_side) {
+static int32_t evaluate_KRKB(const struct position *pos, int strong_side) {
 	int weak_side = other_color(strong_side);
 	assert(verify_material(pos, strong_side, mv[ROOK]));
 	assert(verify_material(pos, weak_side, mv[BISHOP]));
@@ -294,7 +296,7 @@ int32_t evaluate_KRKB(const struct position *pos, int strong_side) {
 }
 
 /* Drawish because of 50 move rule. */
-int32_t evaluate_KBBKN(const struct position *pos, int strong_side) {
+static int32_t evaluate_KBBKN(const struct position *pos, int strong_side) {
 	int weak_side = other_color(strong_side);
 	assert(verify_material(pos, strong_side, 2 * mv[BISHOP]));
 	assert(verify_material(pos, weak_side, mv[KNIGHT]));
@@ -303,7 +305,7 @@ int32_t evaluate_KBBKN(const struct position *pos, int strong_side) {
 	return push_toward(strong_king, weak_king) + 4 * push_toward_edge(weak_king);
 }
 
-int32_t evaluate_KNNK(const struct position *pos, int strong_side) {
+static int32_t evaluate_KNNK(const struct position *pos, int strong_side) {
 	int weak_side = other_color(strong_side);
 	UNUSED(weak_side);
 	UNUSED(pos);
@@ -312,7 +314,7 @@ int32_t evaluate_KNNK(const struct position *pos, int strong_side) {
 	return 0;
 }
 
-int32_t evaluate_KNNKP(const struct position *pos, int strong_side) {
+static int32_t evaluate_KNNKP(const struct position *pos, int strong_side) {
 	int weak_side = other_color(strong_side);
 	assert(verify_material(pos, strong_side, 2 * mv[KNIGHT]));
 	assert(verify_material(pos, weak_side, mv[PAWN]));
@@ -322,7 +324,7 @@ int32_t evaluate_KNNKP(const struct position *pos, int strong_side) {
 	return 3 * push_toward_edge(weak_king) - 4 * r;
 }
 
-int32_t evaluate_KBNK(const struct position *pos, int strong_side) {
+static int32_t evaluate_KBNK(const struct position *pos, int strong_side) {
 	int weak_side = other_color(strong_side);
 	assert(verify_material(pos, strong_side, mv[BISHOP] + mv[KNIGHT]));
 	assert(verify_material(pos, weak_side, 0));
@@ -336,7 +338,7 @@ int32_t evaluate_KBNK(const struct position *pos, int strong_side) {
 	     + 0x8 * push_toward(closest_corner, weak_king) - pos->halfmove;
 }
 
-int32_t evaluate_KQKP(const struct position *pos, int strong_side) {
+static int32_t evaluate_KQKP(const struct position *pos, int strong_side) {
 	int weak_side = other_color(strong_side);
 	assert(verify_material(pos, strong_side, mv[QUEEN]));
 	assert(verify_material(pos, weak_side, mv[PAWN]));
@@ -353,7 +355,7 @@ int32_t evaluate_KQKP(const struct position *pos, int strong_side) {
 	return eval;
 }
 
-int32_t evaluate_KQKX(const struct position *pos, int strong_side) {
+static int32_t evaluate_KQKX(const struct position *pos, int strong_side) {
 	int weak_side   = other_color(strong_side);
 	int piece       = pos->piece[weak_side][KNIGHT] ? KNIGHT : pos->piece[weak_side][BISHOP] ? BISHOP : ROOK;
 	int weak_king   = ctz(pos->piece[weak_side][KING]);
@@ -364,7 +366,7 @@ int32_t evaluate_KQKX(const struct position *pos, int strong_side) {
 	     + 0x8 * push_toward_edge(weak_king) - pos->halfmove;
 }
 
-int32_t evaluate_KXK(const struct position *pos, int strong_side) {
+static int32_t evaluate_KXK(const struct position *pos, int strong_side) {
 	int weak_side = other_color(strong_side);
 	assert(verify_material(pos, weak_side, 0));
 	int weak_king    = ctz(pos->piece[weak_side][KING]);

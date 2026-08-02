@@ -53,7 +53,7 @@ char environment[] =
     ;
 
 /* MSVC does not allow a macro based transformation. */
-char *date(char *str) {
+static char *date(char *str) {
 #ifdef __DATE__
 	/* Year. */
 	str[0] = __DATE__[9];

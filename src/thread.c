@@ -74,7 +74,7 @@ void search_ponderhit(void) {
 	pthread_mutex_unlock(&uci);
 }
 
-void *search_thread(void *arg) {
+static void *search_thread(void *arg) {
 	assert(thread_init_done);
 	struct threadinfo *tdi        = arg;
 	struct position *pos          = tdi->pos;

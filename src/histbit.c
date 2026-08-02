@@ -29,7 +29,7 @@
 #include "position.h"
 #include "util.h"
 
-void store_information(struct position *pos, uint64_t piece_square[7][64]) {
+static void store_information(struct position *pos, uint64_t piece_square[7][64]) {
 	for (int color = 0; color < 2; color++) {
 		for (int piece = PAWN; piece <= KING; piece++) {
 			uint64_t b = pos->piece[color][piece];
@@ -43,7 +43,7 @@ void store_information(struct position *pos, uint64_t piece_square[7][64]) {
 	}
 }
 
-void print_information(uint64_t square[64], uint64_t total) {
+static void print_information(uint64_t square[64], uint64_t total) {
 	for (int r = 7; r >= 0; r--) {
 		printf("+-------+-------+-------+-------+-------+-------+-------+-------+\n|");
 		for (int f = 0; f < 8; f++) {

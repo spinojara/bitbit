@@ -50,7 +50,7 @@ static int filter_depth = -1;
 static int minor_pieces = 0;
 static int verbose      = 0;
 
-void startpos_chess960(struct position *pos, uint64_t *seed) {
+static void startpos_chess960(struct position *pos, uint64_t *seed) {
 	for (int sq = b1; sq < h1; sq++) {
 		if (sq == e1)
 			continue;
@@ -97,7 +97,7 @@ void startpos_chess960(struct position *pos, uint64_t *seed) {
 	}
 }
 
-int startpos_endgame(struct position *pos, uint64_t *seed) {
+static int startpos_endgame(struct position *pos, uint64_t *seed) {
 	int color = xorshift64(seed) % 2;
 
 	memset(pos, 0, sizeof(*pos));
@@ -170,7 +170,7 @@ int startpos_endgame(struct position *pos, uint64_t *seed) {
 	return 0;
 }
 
-void epdbit_startpos(struct position *pos, uint64_t *seed) {
+static void epdbit_startpos(struct position *pos, uint64_t *seed) {
 	startpos(pos);
 
 	if (chess960)
@@ -184,7 +184,7 @@ void epdbit_startpos(struct position *pos, uint64_t *seed) {
 	}
 }
 
-int already_written(struct position *pos, uint64_t *written_keys, int i) {
+static int already_written(struct position *pos, uint64_t *written_keys, int i) {
 	refresh_zobrist_key(pos);
 	for (int j = 0; j < i; j++)
 		if (written_keys[j] == pos->zobrist_key)
@@ -192,7 +192,7 @@ int already_written(struct position *pos, uint64_t *written_keys, int i) {
 	return 0;
 }
 
-int epdbit_position(struct position *pos, struct transpositiontable *tt, uint64_t *written_keys, int i,
+static int epdbit_position(struct position *pos, struct transpositiontable *tt, uint64_t *written_keys, int i,
                     uint64_t *seed) {
 	epdbit_startpos(pos, seed);
 

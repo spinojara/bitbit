@@ -95,7 +95,7 @@ static void do_full_stop(void) {
 
 static inline int is_stopped(void) { return atomic_load_explicit(&stopvar, memory_order_relaxed); }
 
-FILE *newfile(void) {
+static FILE *newfile(void) {
 	if (is_stopped())
 		return NULL;
 
@@ -142,7 +142,7 @@ FILE *newfile(void) {
 	return fd != -1 ? fdopen(fd, "wb") : NULL;
 }
 
-void custom_search(struct position *pos, uint64_t nodes, move_t moves[MOVES_MAX], int64_t evals[MOVES_MAX],
+static void custom_search(struct position *pos, uint64_t nodes, move_t moves[MOVES_MAX], int64_t evals[MOVES_MAX],
                    struct transpositiontable *tt, struct history *history, uint64_t seed) {
 	struct searchinfo si                   = { 0 };
 	si.tt                                  = tt;
@@ -206,7 +206,7 @@ void custom_search(struct position *pos, uint64_t nodes, move_t moves[MOVES_MAX]
 	}
 }
 
-int32_t evaluate_material(const struct position *pos) {
+static int32_t evaluate_material(const struct position *pos) {
 	int32_t eval = 0;
 	for (int piece = PAWN; piece < KING; piece++)
 		eval += popcount(pos->piece[WHITE][piece]) * material_value[piece];
@@ -215,7 +215,7 @@ int32_t evaluate_material(const struct position *pos) {
 	return pos->turn ? eval : -eval;
 }
 
-int32_t search_material(struct position *pos, int alpha, int beta) {
+static int32_t search_material(struct position *pos, int alpha, int beta) {
 	uint64_t checkers = generate_checkers(pos, pos->turn);
 	int32_t eval = evaluate_material(pos), best_eval = -VALUE_INFINITE;
 
@@ -254,7 +254,7 @@ int32_t search_material(struct position *pos, int alpha, int beta) {
 	return best_eval;
 }
 
-int filter_move(struct position *pos, move_t *move, int32_t eval) {
+static int filter_move(struct position *pos, move_t *move, int32_t eval) {
 	UNUSED(pos);
 	UNUSED(move);
 	UNUSED(eval);
@@ -278,7 +278,7 @@ int filter_move(struct position *pos, move_t *move, int32_t eval) {
 	return ret;
 }
 
-move_t random_move(struct position *pos, uint64_t *seed) {
+static move_t random_move(struct position *pos, uint64_t *seed) {
 	move_t moves[MOVES_MAX], filtered[MOVES_MAX] = { 0 };
 	movegen_legal(pos, moves, MOVETYPE_ALL);
 
@@ -297,7 +297,7 @@ move_t random_move(struct position *pos, uint64_t *seed) {
 	return filtered[uniformint(seed, 0, nmoves)];
 }
 
-void play_game(FILE *openingsfile, struct transpositiontable *tt, uint64_t nodes, uint64_t *seed, FILE *out) {
+static void play_game(FILE *openingsfile, struct transpositiontable *tt, uint64_t nodes, uint64_t *seed, FILE *out) {
 	move_t moves[MOVES_MAX];
 	int64_t evals[MOVES_MAX];
 
@@ -558,7 +558,7 @@ struct threadinfo {
 	size_t tt_size;
 };
 
-void *playthread(void *arg) {
+static void *playthread(void *arg) {
 	/* This is Linux specific. */
 	setpriority(PRIO_PROCESS, gettid(), niceness);
 	struct threadinfo *ti        = (struct threadinfo *)arg;
@@ -624,7 +624,7 @@ struct pattern {
 	regex_t preg;
 };
 
-void print_help(const char *argv0) {
+static void print_help(const char *argv0) {
 	fprintf(stderr,
 	        "usage: %s [--help] [--jobs n] [--tt n] [--nodes n] [--without-syzygy]\n\t[--syzygy path] [--openings "
 	        "file] [[--not] --date regex] datadir\n",

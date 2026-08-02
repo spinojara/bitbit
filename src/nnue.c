@@ -54,7 +54,7 @@ struct ftcache {
 
 struct ftcache ftcache[2][64];
 
-void reset_ftcache(void) {
+static void reset_ftcache(void) {
 	for (int color = 0; color < 2; color++)
 		for (int sq = 0; sq < 64; sq++)
 			ftcache[color][sq].set = 0;
@@ -622,7 +622,7 @@ int32_t evaluate_nnue(struct position *pos) {
 }
 
 #if defined(AVX2)
-void swap_cols(weight_t *weights, int rows, int col1, int col2) {
+static void swap_cols(weight_t *weights, int rows, int col1, int col2) {
 	for (int row = 0; row < rows; row++) {
 		weight_t t                 = weights[rows * col1 + row];
 		weights[rows * col1 + row] = weights[rows * col2 + row];
@@ -645,7 +645,7 @@ static void permute_quad(weight_t *weights, int in_dims, int out_dims) {
 }
 #endif
 
-void permute_weights(void) {
+static void permute_weights(void) {
 #if defined(AVX2)
 	for (int col = 0; col < FT_OUT_DIMS; col++)
 		if (8 <= col % 32 && col % 32 < 16)

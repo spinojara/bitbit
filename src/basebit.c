@@ -41,9 +41,9 @@ uint32_t bitbase_KPK[BITBASE_KPK_TABLE_SIZE]   = { 0 };
 uint32_t bitbase_KPKP[BITBASE_KPKP_TABLE_SIZE] = { 0 };
 uint32_t bitbase_KRKP[BITBASE_KRKP_TABLE_SIZE] = { 0 };
 
-void write_bitbase(char *name, uint32_t *bitbase, size_t table_size);
+static void write_bitbase(char *name, uint32_t *bitbase, size_t table_size);
 
-long bitbase_KXKX_index_by_square(int turn, int king_white, int piece_white, int square_white, int king_black,
+static long bitbase_KXKX_index_by_square(int turn, int king_white, int piece_white, int square_white, int king_black,
                                   int piece_black, int square_black) {
 	/* clang-format off */
 	return 64 * 6 * 64 * 64 * 6 * 64 * turn
@@ -56,7 +56,7 @@ long bitbase_KXKX_index_by_square(int turn, int king_white, int piece_white, int
 	/* clang-format on */
 }
 
-long bitbase_KXKX_index(const struct position *pos) {
+static long bitbase_KXKX_index(const struct position *pos) {
 	int king_white   = ctz(pos->piece[WHITE][KING]);
 	int king_black   = ctz(pos->piece[BLACK][KING]);
 	int piece_white  = 0;
@@ -77,28 +77,28 @@ long bitbase_KXKX_index(const struct position *pos) {
 	                                    square_black);
 }
 
-unsigned bitbase_KXKX_probe_by_index(long index) {
+static unsigned bitbase_KXKX_probe_by_index(long index) {
 	long lookup_index = index / BITBASE_KXKX_POSITIONS_PER_ENTRY;
 	long bit_index    = BITBASE_KXKX_BITS_PER_POSITION * (index % BITBASE_KXKX_POSITIONS_PER_ENTRY);
 	return (bitbase_KXKX[lookup_index] >> bit_index) & BITBASE_KXKX_BITS_MASK;
 }
 
-unsigned bitbase_KXKX_probe(const struct position *pos) { return bitbase_KXKX_probe_by_index(bitbase_KXKX_index(pos)); }
+static unsigned bitbase_KXKX_probe(const struct position *pos) { return bitbase_KXKX_probe_by_index(bitbase_KXKX_index(pos)); }
 
-void bitbase_KXKX_store_by_index(long index, unsigned eval) {
+static void bitbase_KXKX_store_by_index(long index, unsigned eval) {
 	long lookup_index           = index / BITBASE_KXKX_POSITIONS_PER_ENTRY;
 	long bit_index              = BITBASE_KXKX_BITS_PER_POSITION * (index % BITBASE_KXKX_POSITIONS_PER_ENTRY);
 	bitbase_KXKX[lookup_index] &= ~(BITBASE_KXKX_BITS_MASK << bit_index);
 	bitbase_KXKX[lookup_index] |= (eval << bit_index);
 }
 
-void invalid_KXKX_store_by_index(long index) {
+static void invalid_KXKX_store_by_index(long index) {
 	long lookup_index           = index / BITBASE_KXKX_BITS_PER_ENTRY;
 	long bit_index              = index % BITBASE_KXKX_BITS_PER_ENTRY;
 	invalid_KXKX[lookup_index] |= (1 << bit_index);
 }
 
-unsigned invalid_KXKX_probe_by_index(long index) {
+static unsigned invalid_KXKX_probe_by_index(long index) {
 	long lookup_index = index / BITBASE_KXKX_BITS_PER_ENTRY;
 	long bit_index    = index % BITBASE_KXKX_BITS_PER_ENTRY;
 	return (invalid_KXKX[lookup_index] >> bit_index) & 0x1;
@@ -127,7 +127,7 @@ static inline int legal_position(const struct position *pos, int king_white, int
 	return 1;
 }
 
-int mate(const struct position *pos) {
+static int mate(const struct position *pos) {
 	move_t moves[MOVES_MAX];
 	struct pstate pstate;
 	pstate_init(pos, &pstate);
@@ -350,7 +350,7 @@ int main(void) {
 	free(invalid_KXKX);
 }
 
-void write_bitbase(char *name, uint32_t *bitbase, size_t table_size) {
+static void write_bitbase(char *name, uint32_t *bitbase, size_t table_size) {
 	char path[BUFSIZ] = "files/";
 	strcat(path, name);
 	strcat(path, ".bin");
