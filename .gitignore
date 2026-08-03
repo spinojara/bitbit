@@ -14,3 +14,4 @@ src/nnueweights.c
 !etc
 !man
 !doc
+!tests

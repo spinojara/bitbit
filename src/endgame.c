@@ -116,55 +116,6 @@ static void endgame_store(const char *str, int32_t (*evaluate)(const struct posi
 	}
 }
 
-#ifndef NDEBUG
-/* This function makes sure that the hashing of endgames is injective. */
-static void endgame_test(void) {
-	struct position pos = { 0 };
-	size_t max_pieces[] = { 0, 9, 11, 11, 11, 10 };
-	size_t max_index    = 1;
-	for (size_t i = PAWN; i < KING; i++)
-		max_index *= max_pieces[i] * max_pieces[i];
-	for (size_t index = 0; index < max_index; index++) {
-		int pieces[2][7];
-		pieces[WHITE][KING] = pieces[BLACK][KING] = 1;
-		size_t denominator                        = 1;
-		for (int color = 0; color < 2; color++) {
-			int total = 1;
-			for (int piece = PAWN; piece < KING; piece++) {
-				pieces[color][piece]  = (index / denominator) % max_pieces[piece];
-				denominator          *= max_pieces[piece];
-				total                += pieces[color][piece];
-				if (total > 16)
-					goto outer;
-			}
-		}
-
-		pos.piece[WHITE][ALL] = pos.piece[BLACK][ALL] = 0;
-		for (int color = 0; color < 2; color++) {
-			int sign  = 2 * color - 1;
-			int total = 0;
-			for (int piece = PAWN; piece <= KING; piece++) {
-				pos.piece[color][piece]   = (1 << pieces[color][piece]) - 1;
-				total                    += pieces[color][piece];
-				pos.piece[color][piece] <<= 32 - sign * total - pieces[BLACK][piece] * (color == BLACK);
-				pos.piece[color][ALL]    |= pos.piece[color][piece];
-			}
-		}
-
-		refresh_endgame_key(&pos);
-		struct endgame *e = endgame_probe(&pos);
-		/* Asserts verify_material. */
-		if (e)
-			endgame_evaluate(e, &pos);
-
-	outer:;
-		if (index % (max_index / 100) == 0)
-			printf("%zu%%\r", 100 * index / max_index);
-	}
-	printf("Endgame table works correctly.\n");
-}
-#endif
-
 /* +---+---+---+---+---+---+---+---+
  * | 6 | 5 | 4 | 3 | 3 | 4 | 5 | 6 |
  * +---+---+---+---+---+---+---+---+

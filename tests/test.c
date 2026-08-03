@@ -14,6 +14,7 @@
 #include "test_perft.c"
 #include "test_repetition.c"
 #include "test_sse.c"
+#include "test_endgame.c"
 
 int main(void) {
 	magicbitboard_init();
@@ -53,6 +54,9 @@ int main(void) {
 	CU_add_test(pSuite, "SSE added pieces", test_sse_2);
 	CU_add_test(pSuite, "SSE pins", test_sse_3);
 	CU_add_test(pSuite, "SSE discovery", test_sse_4);
+
+	pSuite = CU_add_suite("Endgame", NULL, NULL);
+	CU_add_test(pSuite, "Endgame hash injectivity", test_endgame_injectivity);
 
 	CU_basic_set_mode(CU_BRM_NORMAL);
 	CU_basic_run_tests();
