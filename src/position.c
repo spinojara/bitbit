@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
 #include "attackgen.h"
 #include "bitboard.h"
@@ -329,10 +330,11 @@ void pos_from_fen(struct position *pos, int argc, char **argv) {
 
 	pos->halfmove   = 0;
 	pos->fullmove   = 1;
+	/* Cannot do any error checking here, but it has been done by fen_is_ok already. */
 	if (argc >= 5)
-		pos->halfmove = strint(argv[4]);
+		pos->halfmove = strtol(argv[4], NULL, 10);
 	if (argc >= 6)
-		pos->fullmove = strint(argv[5]);
+		pos->fullmove = strtol(argv[5], NULL, 10);
 }
 
 void mirror_position(struct position *pos) {
@@ -393,10 +395,17 @@ int fen_is_ok(int argc, char **argv) {
 	if (argc < 4)
 		return 0;
 
-	if (argc >= 5 && strint(argv[4]) > 100)
+	errno = 0;
+	char *endptr;
+	long r;
+	if (argc >= 5 && ((r = strtol(argv[4], &endptr, 10)) > 100 || r < 0 || errno || *endptr != '\0')) {
+		printf("what?\n");
 		return 0;
-	if (argc >= 6 && strint(argv[5]) > 6000)
+	}
+	if (argc >= 6 && ((r = strtol(argv[5], &endptr, 10)) > 6000 || r <= 0 || errno || *endptr != '\0')) {
+		printf("what2?\n");
 		return 0;
+	}
 
 	int counter      = 56;
 	int counter_mem  = counter + 16;

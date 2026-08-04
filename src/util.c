@@ -52,17 +52,6 @@ int find_char(const char *s, char c) {
 	return -1;
 }
 
-int strint(const char *s) {
-	int ret = 0;
-	for (int i = 0; s[i]; i++) {
-		if (s[i] < '0' || s[i] > '9')
-			return 0;
-		else
-			ret = ret * 10 + s[i] - '0';
-	}
-	return ret;
-}
-
 #if !defined(NDEBUG) && defined(__GNUC__) && defined(__linux__)
 /* <https://www.gnu.org/software/libc/manual/html_node/Backtraces.html> */
 void stacktrace(void) {

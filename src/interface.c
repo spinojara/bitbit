@@ -25,6 +25,8 @@
 #include <string.h>
 #include <strings.h>
 #include <time.h>
+#include <errno.h>
+#include <limits.h>
 
 #include "bench.h"
 #include "bitboard.h"
@@ -145,8 +147,13 @@ static int interface_perft(int argc, char **argv) {
 	if (argc < 2)
 		return ERR_MISS_ARG;
 
+	char *endptr;
+	errno = 0;
+	long depth = strtol(argv[1], &endptr, 10);
+	if (errno || *endptr != '\0' || depth < 0 || depth > INT_MAX)
+		return ERR_BAD_ARG;
 	clock_t t  = clock();
-	uint64_t p = perft(&pos, strint(argv[1]), 1);
+	uint64_t p = perft(&pos, depth, 1);
 	t          = clock() - t;
 	printf("nodes: %" PRIu64 "\n", p);
 	printf("time: %.2f\n", (double)t / CLOCKS_PER_SEC);
@@ -245,37 +252,84 @@ static int interface_eval(int argc, char **argv) {
 static int interface_go(int argc, char **argv) {
 	UNUSED(argc);
 	UNUSED(argv);
-	int depth          = -1;
+	int64_t depth          = -1;
 	struct timeinfo ti = { 0 };
 	atomic_store_explicit(&uciponder, 0, memory_order_relaxed);
+	char *endptr;
 	for (int i = 1; i < argc; i++) {
 		if (i < argc - 1) {
-			if (strcmp(argv[i], "depth") == 0)
-				depth = strint(argv[i + 1]);
+			if (strcmp(argv[i], "depth") == 0) {
+				errno = 0;
+				depth = strtol(argv[i + 1], &endptr, 10);
+				if (depth < 0 || depth > INT_MAX || errno || *endptr != '\0')
+					return ERR_BAD_ARG;
+			}
 			else if (strcmp(argv[i], "wtime") == 0) {
-				ti.etime[WHITE] = strint(argv[i + 1]) * TPPERMS;
+				errno = 0;
+				int64_t a = strtol(argv[i + 1], &endptr, 10);
+				if (errno || *endptr != '\0' || a > UINT32_MAX)
+					return ERR_BAD_ARG;
+				/* Time is actually allowed to be negative. */
+				if (a < 0)
+					a = 0;
+				ti.etime[WHITE] = a * TPPERMS;
 				ti.stop_on_time = 1;
 			}
 			else if (strcmp(argv[i], "btime") == 0) {
-				ti.etime[BLACK] = strint(argv[i + 1]) * TPPERMS;
+				errno = 0;
+				int64_t a = strtol(argv[i + 1], &endptr, 10);
+				if (errno || *endptr != '\0' || a > UINT32_MAX)
+					return ERR_BAD_ARG;
+				if (a < 0)
+					a = 0;
+				ti.etime[BLACK] = a * TPPERMS;
 				ti.stop_on_time = 1;
 			}
 			else if (strcmp(argv[i], "winc") == 0) {
-				ti.einc[WHITE]  = strint(argv[i + 1]) * TPPERMS;
+				errno = 0;
+				int64_t a = strtol(argv[i + 1], &endptr, 10);
+				if (errno || *endptr != '\0' || a > UINT32_MAX)
+					return ERR_BAD_ARG;
+				/* What kind of a weird gamemode is this? */
+				if (a < 0)
+					a = 0;
+				ti.einc[WHITE]  = a * TPPERMS;
 				ti.stop_on_time = 1;
 			}
 			else if (strcmp(argv[i], "binc") == 0) {
-				ti.einc[BLACK]  = strint(argv[i + 1]) * TPPERMS;
+				errno = 0;
+				int64_t a = strtol(argv[i + 1], &endptr, 10);
+				if (errno || *endptr != '\0' || a > UINT32_MAX)
+					return ERR_BAD_ARG;
+				if (a < 0)
+					a = 0;
+				ti.einc[BLACK]  = a * TPPERMS;
 				ti.stop_on_time = 1;
 			}
 			else if (strcmp(argv[i], "movetime") == 0) {
-				ti.movetime     = strint(argv[i + 1]) * TPPERMS;
+				errno = 0;
+				int64_t a = strtol(argv[i + 1], &endptr, 10);
+				if (errno || *endptr != '\0' || a > UINT32_MAX)
+					return ERR_BAD_ARG;
+				if (a < 0)
+					a = 0;
+				ti.movetime     = a * TPPERMS;
 				ti.stop_on_time = 1;
 			}
-			else if (strcmp(argv[i], "movestogo") == 0)
-				ti.movestogo = strint(argv[i + 1]);
-			else if (strcmp(argv[i], "nodes") == 0)
-				ti.nodes = strint(argv[i + 1]);
+			else if (strcmp(argv[i], "movestogo") == 0) {
+				errno = 0;
+				int64_t a = strtol(argv[i + 1], &endptr, 10);
+				if (errno || *endptr != '\0' || a > 100000 || a < 0)
+					return ERR_BAD_ARG;
+				ti.movestogo = a;
+			}
+			else if (strcmp(argv[i], "nodes") == 0) {
+				errno = 0;
+				int64_t a = strtoll(argv[i + 1], &endptr, 10);
+				if (errno || *endptr != '\0' || a < 0)
+					return ERR_BAD_ARG;
+				ti.nodes = a;
+			}
 		}
 		if (strcmp(argv[i], "ponder") == 0)
 			atomic_store_explicit(&uciponder, 1, memory_order_relaxed);
