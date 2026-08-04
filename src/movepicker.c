@@ -121,11 +121,14 @@ static void evaluate_quiet(struct movepicker *mp) {
 }
 
 static void filter_moves(struct movepicker *mp) {
-	for (int i = 0; mp->move[i]; i++) {
+	for (int i = 0; mp->move[i]; ) {
 		if (move_compare(mp->move[i], mp->ttmove) || move_compare(mp->move[i], mp->killer1)
 		    || move_compare(mp->move[i], mp->killer2) || move_compare(mp->move[i], mp->counter_move)) {
 			mp->move[i] = mp->end[-1];
-			*--mp->end  = 0;
+			*--mp->end = 0;
+		}
+		else {
+			i++;
 		}
 	}
 }
