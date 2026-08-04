@@ -17,6 +17,8 @@
 #ifndef TUNE_H
 #define TUNE_H
 
+#include <math.h>
+
 void print_tune(void);
 
 void settune(int argc, char **argv);
@@ -39,8 +41,15 @@ void tune_variable(const char *name, double start, void (*set)(double), double (
 	__attribute__((constructor)) static void tune_##var(void) {                                                    \
 		tune_variable(#var, (start), tune_set_##var, tune_get_##var, (type)1 / 2 == (type)0);                  \
 	}
+
+#define TUNECASTINT(var) (var)
+#define TUNECASTMULTIPLY(var, multiplier) TUNECASTINT(var)
+#define TUNEDIVIDE(multiplier) 1
 #else
 #define TUNEVAR(type, var, start, min, max) const type var = (start);
+#define TUNECASTINT(var) ((int)round(var))
+#define TUNECASTMULTIPLY(var, multiplier) TUNECASTINT((var) * (multiplier))
+#define TUNEDIVIDE(multiplier) (multiplier)
 #endif
 
 #endif

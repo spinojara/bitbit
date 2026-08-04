@@ -63,8 +63,6 @@ TUNEVAR(int, futility_depth, 6, NULL, NULL)
 TUNEVAR(int, quad_bonus, 28, NULL, NULL)
 TUNEVAR(int, quad_malus, 21, NULL, NULL)
 
-TUNEVAR(double, history_regularization, 0.0625, NULL, NULL)
-
 TUNEVAR(int, aspiration_depth, 5, 0, NULL)
 
 TUNEVAR(int, base_lmr, 277, NULL, NULL)
@@ -100,11 +98,7 @@ static inline int late_move_reduction(int improvement, int index, int depth) {
 	assert(search_init_done);
 	assert(0 <= depth && depth < PLY_MAX);
 	int r = reductions[index] * reductions[depth];
-#ifdef TUNE
-	return r + reduce_non_improving * r * max(-improvement, 0) / 128;
-#else
-	return r + 102 * r * max(-improvement, 0) / 32768;
-#endif
+	return r + TUNECASTMULTIPLY(reduce_non_improving, 256) * r * max(-improvement, 0) / (128 * TUNEDIVIDE(256));
 }
 
 static void print_pv(struct position *pos, move_t *pv_move, int ply, struct history *history) {
@@ -217,11 +211,7 @@ static inline int32_t corrected_evaluation(const struct searchinfo *si, const st
 	                                                      ^ pos->piece_key[0][KING])
 	                                                     & 0xffff];
 
-#ifdef TUNE
-	return static_eval + (pawn_correction_weight * pc + non_pawn_correction_weight * (npcw + npcb)) / 1024;
-#else
-	return static_eval + (16 * pc + 14 * (npcw + npcb)) / 1024;
-#endif
+	return static_eval + (TUNECASTINT(pawn_correction_weight) * pc + TUNECASTINT(non_pawn_correction_weight) * (npcw + npcb)) / 1024;
 }
 
 static inline void update_correction_history(struct searchinfo *si, const struct position *pos, int depth,
@@ -544,11 +534,7 @@ int32_t negamax(struct position *pos, int depth, int ply, int32_t alpha, int32_t
 
 	/* Futility pruning (60+-8 Elo). */
 	if (!pv_node && depth <= futility_depth &&
-#ifdef TUNE
-	    ss->eval - futility * depth + futility_improving * max(improvement, 0) >= beta &&
-#else
-	    ss->eval - futility * depth + 279 * max(improvement, 0) / 256 >= beta &&
-#endif
+	    ss->eval - futility * depth + TUNECASTMULTIPLY(futility_improving, 256) * max(improvement, 0) / TUNEDIVIDE(256) >= beta &&
 	    ss->eval >= beta)
 		return ss->eval;
 

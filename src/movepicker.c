@@ -81,11 +81,7 @@ static void evaluate_nonquiet(struct movepicker *mp) {
 		int attacker    = mp->pos->mailbox[square_from];
 		int victim  = move_flag(move) == MOVE_EN_PASSANT ? PAWN : uncolored_piece(mp->pos->mailbox[square_to]);
 		mp->eval[i] = mp->si->capture_history[attacker][victim][square_to] / 4;
-#ifdef TUNE
-		mp->eval[i] += mvv_lva_factor * (victim ? mvv_lva(uncolored_piece(attacker), victim) : 0);
-#else
-		mp->eval[i] += 12 * (victim ? mvv_lva(uncolored_piece(attacker), victim) : 0);
-#endif
+		mp->eval[i] += TUNECASTINT(mvv_lva_factor) * (victim ? mvv_lva(uncolored_piece(attacker), victim) : 0);
 	}
 }
 
@@ -104,26 +100,14 @@ static void evaluate_quiet(struct movepicker *mp) {
 		int attacker    = mp->pos->mailbox[from_square];
 		mp->eval[i]     = mp->si->quiet_history[attacker][from_square][to_square];
 		if ((mp->ss - 1)->move)
-#ifdef TUNE
-			mp->eval[i] += continuation_history_factor
+			mp->eval[i] += TUNECASTINT(continuation_history_factor)
 			             * (*(mp->ss - 1)->continuation_history_entry)[attacker][to_square];
-#else
-			mp->eval[i] += 10 * (*(mp->ss - 1)->continuation_history_entry)[attacker][to_square];
-#endif
 		if ((mp->ss - 2)->move)
-#ifdef TUNE
-			mp->eval[i] += continuation_history_factor
+			mp->eval[i] += TUNECASTINT(continuation_history_factor)
 			             * (*(mp->ss - 2)->continuation_history_entry)[attacker][to_square];
-#else
-			mp->eval[i] += 10 * (*(mp->ss - 2)->continuation_history_entry)[attacker][to_square];
-#endif
 		if ((mp->ss - 4)->move)
-#ifdef TUNE
-			mp->eval[i] += continuation_history_factor
+			mp->eval[i] += TUNECASTINT(continuation_history_factor)
 			             * (*(mp->ss - 4)->continuation_history_entry)[attacker][to_square];
-#else
-			mp->eval[i] += 10 * (*(mp->ss - 4)->continuation_history_entry)[attacker][to_square];
-#endif
 		attacker = uncolored_piece(attacker);
 		if (from & attacked[attacker])
 			mp->eval[i] += 100000000;
